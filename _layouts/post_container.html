@@ -1,0 +1,33 @@
+---
+layout: compress
+# Default layout
+---
+
+<!DOCTYPE html>
+
+{% capture prefer_mode %}
+  {% if site.theme_mode %}
+    mode="{{ site.theme_mode }}"
+  {% endif %}
+{% endcapture %}
+
+<html lang="{{ site.lang | default: "en-US" }}" {{ prefer_mode }}>
+
+  {% include head.html %}
+
+  <body data-spy="scroll" data-target="#toc">
+
+    <div id="main-wrapper" style="margin-left: 0px;">
+      <div id="main">
+        {% include refactor-content.html content=content %}
+      </div>
+
+    </div> <!-- #main-wrapper -->
+
+    {% if page.mermaid %}
+      {% include mermaid.html %}
+    {% endif %}
+
+  </body>
+
+</html>
