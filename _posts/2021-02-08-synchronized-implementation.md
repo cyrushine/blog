@@ -7,7 +7,7 @@ tags: [synchronized]
 
 ## monitor 指令
 
-在 [Lock（二）AQS 源码分析以及 Lock 的实现](/posts/aqs-lock-implementation/) 这篇文章里介绍了基于 AQS 的 `Lock`，它是双向链表的排队队列和系统调用 `futex` 实现的
+在 [Lock（二）AQS 源码分析以及 Lock 的实现](../aqs-lock-implementation/) 这篇文章里介绍了基于 AQS 的 `Lock`，它是双向链表的排队队列和系统调用 `futex` 实现的
 
 其实 java 语言规范里自带了 Lock 的实现：`synchronized` 关键字，下面看看 ART 是怎么实现它的
 
@@ -698,6 +698,6 @@ void Monitor::SignalWaiterAndReleaseMonitorLock(Thread* self) {
 总结下 `synchronized` 和 `Lock` 的区别：
 
 - `synchronized` 使用 `Object` 作为锁，也即所有的 `Object` 都可以当做锁使用；但具体的 lock/unlock 逻辑是在 `Monitor` 实现的，严谨地说是 `Object` + `Monitor` = Lock
-- 偏向锁和轻量级锁并没有使用 `Monitor`，而是用 cas，`Object::monitor` 和自旋实现排他性；直到重量级锁时才构造 `Monitor`；`Monitor` 除了扮演 Lock 的角色外，[还扮演了 Condition 的角色](https://www.notion.so/Lock-Condition-Object-wait-Object-notify-b2f7e87137d143328966045bf5c8ae70)，所以一旦调用 Object.wait/Object.notify，就会立刻升级为重量级锁
+- 偏向锁和轻量级锁并没有使用 `Monitor`，而是用 cas，`Object::monitor` 和自旋实现排他性；直到重量级锁时才构造 `Monitor`；`Monitor` 除了扮演 Lock 的角色外，[还扮演了 Condition 的角色](../wait-notify/)，所以一旦调用 Object.wait/Object.notify，就会立刻升级为重量级锁
 - Lock 用排队队列来组织挂起的线程，而且以 FIFO 的优先级排队；`synchronized` 没有组织挂起的线程，完全由 CPU 决定谁能获得锁，可能会发生「饥饿」问题
 - Lock 全靠 futex/mutex 阻塞线程，而 `synchronized` 先让线程自旋一会在陷入阻塞

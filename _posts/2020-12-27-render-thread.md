@@ -5,7 +5,7 @@ categories: [Android, Framework]
 tags: [vsync, render thread]
 ---
 
-接着[上一篇文章](/posts/ui-thread-in-vsync/)，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 `DisplayList`，而 render thread 会根据 `DisplayList` 执行真正的渲染工作，主要是 `DrawFrameTask.syncFrameState` 和 `CanvasContext.draw` 这两个方法
+接着[上一篇文章](../ui-thread-in-vsync/)，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 `DisplayList`，而 render thread 会根据 `DisplayList` 执行真正的渲染工作，主要是 `DrawFrameTask.syncFrameState` 和 `CanvasContext.draw` 这两个方法
 
 ## syncFrameState
 
@@ -209,7 +209,7 @@ void RenderNode::syncDisplayList(TreeObserver& observer, TreeInfo* info) {
 }
 ```
 
-还记得在[上篇文章](https://www.notion.so/ui-thread-e665b75191274ca89d9d76ceb637fdf2)里提到， DisplayList 在 endRecording 阶段被放在 `RenderNode.mStagingDisplayList`，这时候转移到 `mDisplayList`
+还记得在[上篇文章](../ui-thread-in-vsync/)里提到， DisplayList 在 endRecording 阶段被放在 `RenderNode.mStagingDisplayList`，这时候转移到 `mDisplayList`
 
 ```cpp
 bool SkiaDisplayList::prepareListAndChildren(TreeObserver& observer, TreeInfo& info, bool functorsNeedLayer,

@@ -5,9 +5,9 @@ categories: [Android, Art]
 tags: [wait, notify]
 ---
 
-在 [Lock（三）利用 Lock 实现 Condition](/posts/condition-by-lock/) 我们介绍了如何用 `Lock` 来实现 `Condition`，而 `Condition` 对标的是 `Object.wait` 和 `Object.notify`
+在 [Lock（三）利用 Lock 实现 Condition](../condition-by-lock/) 我们介绍了如何用 `Lock` 来实现 `Condition`，而 `Condition` 对标的是 `Object.wait` 和 `Object.notify`
 
-我们来看看 ART 是怎么实现 wait/notify 的（最好先了解下 [synchronized 的基础知识](/posts/synchronized-implementation/)）
+我们来看看 ART 是怎么实现 wait/notify 的（最好先了解下 [synchronized 的基础知识](../synchronized-implementation/)）
 
 ## ConditionVariable
 

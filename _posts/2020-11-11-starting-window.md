@@ -16,7 +16,7 @@ tags: [windowDisablePreview, starting window]
 
 网上搜索下，发现是 starting widow 引起的，我决定看看这个 starting window 是怎么打开和关闭的，以及如何设置它的背景色来匹配启动页的黑色背景
 
-跟寻[上一篇文章](/posts/launch-activity-sequence/)的脚步，找到 start point：`ActivityStarter.startActivityUnchecked`
+跟寻[上一篇文章](../launch-activity-sequence/)的脚步，找到 start point：`ActivityStarter.startActivityUnchecked`
 
 ![starting_window.jpg](/assets/2020-11-11-starting-window/starting_window.jpg)
 

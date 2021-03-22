@@ -324,7 +324,7 @@ Handler TinkerApplication.createInlineFence(Application app, int tinkerFlags, St
 }
 ```
 
-`Application.mBase(ContextImpl).mPackageInfo(LoadedApk).mClassLoader` 在实例化 `Activity` 时会用到，在[这篇文章](https://www.notion.so/Activity-87dcf657510b48a49ad989be060cbc82)里可以找到入口点：
+`Application.mBase(ContextImpl).mPackageInfo(LoadedApk).mClassLoader` 在实例化 `Activity` 时会用到，在[这篇文章](../launch-activity-sequence/)里可以找到入口点：
 
 ```java
 ActivityThread.handleLaunchActivity(ActivityClientRecord r, PendingTransactionActions pendingActions, Intent customIntent)=
@@ -543,7 +543,7 @@ TinkerResourceLoader.isResourceCanPatch(Context context) throws Throwable {
 
 ### local resources
 
-另一块是针对局部 `Context` 的，比如 `Activity`，从[Activity 启动流程时序图](/posts/launch-activity-sequence/)可以找到创建 `Activity` 的入口点
+另一块是针对局部 `Context` 的，比如 `Activity`，从[Activity 启动流程时序图](../launch-activity-sequence/)可以找到创建 `Activity` 的入口点
 
 创建 `Activity` 的时候会创建并使用它自己的 `Context`，而且把 `Context.getResources` 指向从 `ActivityThread.mPackages` 里找到的资源目录，所以 Tinker 会在 `monkeyPatchExistingResources` 修改 `ActivityThread.mPackages` 指向新资源包
 
