@@ -67,3 +67,17 @@
 
 还找不到问题，就在 logcat 里搜索 anr 找到 anr 相关日志，它会有一个 CPU 负载统计，如果 io 占比很大说明卡在 io 上了，继续往上找找看当时正在做什么文件操作，或者在 trace 文件里找找
 
+## Double Check 会有什么问题？
+
+`mSingleton = new Object();` 这行语句实际上会分解为多条 CPU 指令：
+1. 为 `Object` 分配一块内存
+2. 初始化 `Object` 实例
+3. 把 `mSingleton` 指向这块内存
+
+但是「指令重排」可能导致第三部与第二部交换位置，也就是说把 `mSingleton` 指向了一块尚未初始化的内存区域；此时线程 B 在执行 `if (mSingleton == null)` 时就会发现 `mSingleton` 的确不为 null 并返回 `mSingleton`，从而导致程序异常（因为 `mSingleton` 指向的内存还没有初始化）
+
+使用 `volatile` 修饰 `mSingleton` 即可，`volatile` 可以防止相关指令的重排
+
+## `IdleHandler` 是怎么实现的？
+
+在 `MessageQueue.next` 里，当队列为空，或者还不到第一个消息的执行时间时（`Message` 是按照执行时间排序的），在 `MessageQueue.mIdleHandlers` 里的 `IdleHandler` 会被执行
