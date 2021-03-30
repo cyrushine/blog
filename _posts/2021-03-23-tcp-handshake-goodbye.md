@@ -1,7 +1,7 @@
 ---
 title: TCP 的三次握手和四次挥手
 date: 2021-03-13 12:00:00 +0800
-categories: [网络, tcp]
+categories: [网络]
 tags: [tcp]
 ---
 
