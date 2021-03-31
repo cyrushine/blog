@@ -389,7 +389,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
 
 上面两个阻塞队列是 `FIFO` 排序的，而这个可以用 `Comparator` 和 `Comparable` 自定义优先级
 
-底层用 **小顶堆** 实现的优先队列，小顶堆是用数组实现的二叉树（左右节点要大于父节点）；入队元素添加到叶子那层的最左边，然后自下往上跟父节点比较，如果小则交换，这个操作叫 `siftUp`；出队元素固定是树的根节点，出队后把最后一个节点作为根节点，从上往下跟左右节点比较，如果大则交换，这个操作叫 `siftDown`
+底层用 **小顶堆** 实现的优先队列，小顶堆是用数组实现的二叉树（左右节点要大于父节点）；入队元素添加到叶子那层的最左边，然后自下往上跟父节点比较，如果小则交换，这个操作叫 `siftUp`；出队元素固定是树的根节点，出队后把最后一个节点作为根节点，从上往下跟左右节点比较，如果大则交换，这个操作叫 `siftDown`（参考 <a href="../threadpool/">这篇文章</a> 里堆的介绍）
 
 ```java
 public class PriorityBlockingQueue<E> extends AbstractQueue<E>
