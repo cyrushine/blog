@@ -1,5 +1,5 @@
 ---
-title: JUC 下的一些容器
+title: JUC 下一些线程安全的容器
 date: 2021-03-31 12:00:00 +0800
 categories: [JDK, JUC]
 tags: [JUC, 线程安全]
@@ -9,8 +9,7 @@ tags: [JUC, 线程安全]
 
 ### `CopyOnWriteArrayList`
 
-使用 **写时复制** 实现的线程安全版 `ArrayList`
-当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组
+使用 **写时复制** 实现的线程安全版 `ArrayList`，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组
 
 ```java
 public boolean add(E e) {
@@ -25,11 +24,7 @@ public boolean add(E e) {
 }
 ```
 
-也就是说所有的修改操作都不会修改原数组，这样所有的读操作（get、iterate）都可以不加锁，从而实现高效的读（虽然有可能会读到旧数据）
-
-因为它的写操作是很昂贵的（复制一份出来），但同时它的读操作和迭代很高效（不上锁），所以它适用于读操作远大于写操作的情况
-
-`CopyOnWriteArraySet` 内部是通过 `CopyOnWriteArrayList` 实现的
+也就是说所有的修改操作都不会修改原数组，这样所有的读操作（get、iterate）都可以不加锁，从而实现高效的读（虽然有可能会读到旧数据）；因为它的写操作是很昂贵的（复制一份出来），但同时它的读操作和迭代很高效（不上锁），所以它适用于读操作远大于写操作的情况；`CopyOnWriteArraySet` 内部是通过 `CopyOnWriteArrayList` 实现的
 
 ## 分段加锁
 
