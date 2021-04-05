@@ -459,3 +459,61 @@ RunnableScheduledFuture<?> DelayedWorkQueue.poll(long timeout, TimeUnit unit)
     }
 }
 ```
+
+## 如果 worker 数量超过 maximumPoolSize，task 会被 reject
+
+`ThreadPoolExecutor` 提供了 `RejectedExecutionHandler` 来处理这种情况，平常通过 `Executors` 创建的线程池使用默认的 `AbortPolicy`，它会抛出异常
+
+```java
+/**
+ * A handler for rejected tasks that throws a
+ * {@code RejectedExecutionException}.
+ */
+public static class AbortPolicy implements RejectedExecutionHandler {
+    /**
+     * Creates an {@code AbortPolicy}.
+     */
+    public AbortPolicy() { }
+
+    /**
+     * Always throws RejectedExecutionException.
+     *
+     * @param r the runnable task requested to be executed
+     * @param e the executor attempting to execute this task
+     * @throws RejectedExecutionException always
+     */
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        throw new RejectedExecutionException("Task " + r.toString() +
+                                             " rejected from " +
+                                             e.toString());
+    }
+}
+```
+
+其他的还有：
+
+```java
+// 扔掉 task 不做任何处理
+public static class DiscardPolicy implements RejectedExecutionHandler {
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {}
+}
+
+// 既然 workQueue 满了那我就扔掉一个，然后把这个 task 入队
+public static class DiscardOldestPolicy implements RejectedExecutionHandler {
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        if (!e.isShutdown()) {
+            e.getQueue().poll();
+            e.execute(r);
+        }
+    }
+}
+
+// 由提交 task 的线程负责执行 task
+public static class CallerRunsPolicy implements RejectedExecutionHandler {
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        if (!e.isShutdown()) {
+            r.run();
+        }
+    }
+}        
+```

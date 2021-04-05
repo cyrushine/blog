@@ -208,7 +208,7 @@ static class Node<K,V> implements Map.Entry<K,V> {
 ## `BlockingQueue`
 
 它提供的阻塞操作包括：
-|                                    |                         |
+
 |------------------------------------|-------------------------|
 | `put(e)`                           | 入队                     |
 | `offer(e, timeout, unit)`          | 设置超时的入队             |
