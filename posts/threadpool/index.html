@@ -1,0 +1,438 @@
+<!DOCTYPE html><html lang="zh-CN" mode="dark" ><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="pv-cache-enabled" content="false"><meta name="generator" content="Jekyll v4.2.0" /><meta property="og:title" content="线程池 ThreadPool 的实现" /><meta name="author" content="Cyrus" /><meta property="og:locale" content="zh_CN" /><meta name="description" content="基础知识" /><meta property="og:description" content="基础知识" /><link rel="canonical" href="https://cyruslin.com/blog/blog/posts/threadpool/" /><meta property="og:url" content="https://cyruslin.com/blog/blog/posts/threadpool/" /><meta property="og:site_name" content="Cyrus" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2021-02-19T12:00:00+08:00" /><meta name="twitter:card" content="summary" /><meta property="twitter:title" content="线程池 ThreadPool 的实现" /><meta name="twitter:site" content="@magicboy_linw" /><meta name="twitter:creator" content="@Cyrus" /><meta name="google-site-verification" content="google_meta_tag_verification" /> <script type="application/ld+json"> {"headline":"线程池 ThreadPool 的实现","dateModified":"2021-04-05T18:12:01+08:00","datePublished":"2021-02-19T12:00:00+08:00","description":"基础知识","url":"https://cyruslin.com/blog/blog/posts/threadpool/","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://cyruslin.com/blog/blog/posts/threadpool/"},"author":{"@type":"Person","name":"Cyrus"},"@context":"https://schema.org"}</script><title>线程池 ThreadPool 的实现 | Cyrus</title><link rel="shortcut icon" href="/blog/assets/img/favicons/favicon.ico" type="image/x-icon"><link rel="icon" href="/blog/assets/img/favicons/favicon.ico" type="image/x-icon"><link rel="apple-touch-icon" href="/blog/assets/img/favicons/apple-icon.png"><link rel="apple-touch-icon" href="/blog/assets/img/favicons/apple-icon-precomposed.png"><link rel="apple-touch-icon" sizes="57x57" href="/blog/assets/img/favicons/apple-icon-57x57.png"><link rel="apple-touch-icon" sizes="60x60" href="/blog/assets/img/favicons/apple-icon-60x60.png"><link rel="apple-touch-icon" sizes="72x72" href="/blog/assets/img/favicons/apple-icon-72x72.png"><link rel="apple-touch-icon" sizes="76x76" href="/blog/assets/img/favicons/apple-icon-76x76.png"><link rel="apple-touch-icon" sizes="114x114" href="/blog/assets/img/favicons/apple-icon-114x114.png"><link rel="apple-touch-icon" sizes="120x120" href="/blog/assets/img/favicons/apple-icon-120x120.png"><link rel="apple-touch-icon" sizes="144x144" href="/blog/assets/img/favicons/apple-icon-144x144.png"><link rel="apple-touch-icon" sizes="152x152" href="/blog/assets/img/favicons/apple-icon-152x152.png"><link rel="apple-touch-icon" sizes="180x180" href="/blog/assets/img/favicons/apple-icon-180x180.png"><link rel="icon" type="image/png" sizes="192x192" href="/blog/assets/img/favicons/android-icon-192x192.png"><link rel="icon" type="image/png" sizes="32x32" href="/blog/assets/img/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="96x96" href="/blog/assets/img/favicons/favicon-96x96.png"><link rel="icon" type="image/png" sizes="16x16" href="/blog/assets/img/favicons/favicon-16x16.png"><link rel="manifest" href="/blog/assets/img/favicons/manifest.json"><meta name='msapplication-config' content='/blog/assets/img/favicons/browserconfig.xml'><meta name="msapplication-TileColor" content="#ffffff"><meta name="msapplication-TileImage" content="/blog/assets/img/favicons/ms-icon-144x144.png"><meta name="theme-color" content="#ffffff"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://fonts.gstatic.com"><link rel="preconnect" href="https://www.google-analytics.com" crossorigin="use-credentials"><link rel="dns-prefetch" href="https://www.google-analytics.com"><link rel="preconnect" href="https://www.googletagmanager.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://www.googletagmanager.com"><link rel="preconnect" href="cdn.jsdelivr.net"><link rel="dns-prefetch" href="cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha256-LA89z+k9fjgMKQ/kq4OO2Mrf8VltYml/VES+Rg0fh20=" crossorigin="anonymous"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.11.2/css/all.min.css" integrity="sha256-+N4/V/SbAFiW1MPBCXnfnP9QSN3+Keu+NlB+0ev/YKQ=" crossorigin="anonymous"><link rel="stylesheet" href="/blog/assets/css/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.css"> <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script> <script defer src="https://cdn.jsdelivr.net/combine/npm/popper.js@1.15.0,npm/bootstrap@4/dist/js/bootstrap.min.js"></script> <script defer src="/blog/assets/js/dist/post.min.js"></script> <script defer src="/blog/app.js"></script> <script defer src="https://www.googletagmanager.com/gtag/js?id="></script> <script> document.addEventListener("DOMContentLoaded", function(event) { window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', ''); }); </script><body data-spy="scroll" data-target="#toc"><div id="main-wrapper" style="margin-left: 0px;"><div id="main"><div class="row" style="padding-left: 0px;"><div id="post-wrapper" class="col-12 col-lg-11 col-xl-8" style="max-width: 75%;margin-top: 0rem;padding-left: 0.5rem;"><div class="post pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><h1 data-toc-skip>线程池 ThreadPool 的实现</h1><div class="post-meta text-muted d-flex flex-column"><div> <span class="timeago " data-toggle="tooltip" data-placement="bottom" title="Fri, Feb 19, 2021, 12:00 PM +0800" > Feb 19 <i class="unloaded">2021-02-19T12:00:00+08:00</i> </span> by <span class="author"> Cyrus </span></div><div> <span> Updated <span class="timeago lastmod" data-toggle="tooltip" data-placement="bottom" title="Mon, Apr 5, 2021, 6:12 PM +0800" > Apr 5 <i class="unloaded">2021-04-05T18:12:01+08:00</i> </span> </span> <span class="readtime" data-toggle="tooltip" data-placement="bottom" title="3367 words">18 min</span></div></div><div class="post-content"><h2 id="基础知识">基础知识</h2><p>线程池有几个重要的参数：</p><ul><li><code class="language-plaintext highlighter-rouge">maximumPoolSize</code> 最大线程数量，如果新提交的任务因为 <code class="language-plaintext highlighter-rouge">workQueue</code> 的容量限制而无法入队，则会尝试新开一个线程执行任务，而如果此时总线程数超过 <code class="language-plaintext highlighter-rouge">maximumPoolSize</code> 的限制，那么不再新开一个线程而是提交失败<li><code class="language-plaintext highlighter-rouge">corePoolSize</code> 核心线程数量，当任务执行完毕，线程也将结束它的生命周期，但最少不会低于 <code class="language-plaintext highlighter-rouge">corePoolSize</code><li><code class="language-plaintext highlighter-rouge">keepAliveTime</code> 空闲线程的存活时间，执行完任务的线程会存活至少 <code class="language-plaintext highlighter-rouge">keepAliveTime</code>，再根据当前线程数量和 <code class="language-plaintext highlighter-rouge">corePoolSize</code> 决定要不要结束生命<li><code class="language-plaintext highlighter-rouge">workQueue</code> 任务队列，当提交的任务不能被立刻执行时（线程数 &gt; <code class="language-plaintext highlighter-rouge">corePoolSize</code>），会放在 <code class="language-plaintext highlighter-rouge">workQueue</code> 排队等待执行</ul><p>线程池的内部状态：</p><ul><li><code class="language-plaintext highlighter-rouge">RUNNING</code>，可以提交新任务<li><code class="language-plaintext highlighter-rouge">SHUTDOWN</code>，不能提交新任务，但可以继续把 workQueue 里的任务执行完<li><code class="language-plaintext highlighter-rouge">STOP</code>，不能提交新任务，不执行 workQueue 里的任务，且中断正在执行的任务<li><code class="language-plaintext highlighter-rouge">TIDYING</code>，所有任务都已结束，此时线程数为零，准备执行 terminated()<li><code class="language-plaintext highlighter-rouge">TERMINATED</code>，<code class="language-plaintext highlighter-rouge">terminated()</code> 执行完毕</ul><h2 id="生产者---消费者模式的-worker">生产者 - 消费者模式的 worker</h2><p>线程（worker）作为消费者，不断地从任务队列（workQueue）里获取任务并执行</p><div class="language-java highlighter-rouge"><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-code"><pre><span class="kd">private</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">Worker</span> <span class="kd">extends</span> <span class="nc">AbstractQueuedSynchronizer</span> <span class="kd">implements</span> <span class="nc">Runnable</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">runWorker</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+    <span class="o">}</span>	
+<span class="o">}</span>
+
+<span class="c1">// worker 的执行流程</span>
+<span class="c1">// 用一个 while 循环不断地从 workQueue 里获取任务（blocked &amp; timeouted）</span>
+<span class="c1">// getTask 返回 null 导致当前线程结束生命</span>
+<span class="kt">void</span> <span class="nc">ThreadPoolExecutor</span><span class="o">.</span><span class="na">runWorker</span><span class="o">(</span><span class="nc">Worker</span> <span class="n">w</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">Thread</span> <span class="n">wt</span> <span class="o">=</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">();</span>
+    <span class="nc">Runnable</span> <span class="n">task</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="na">firstTask</span><span class="o">;</span>
+    <span class="n">w</span><span class="o">.</span><span class="na">firstTask</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="n">w</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span> <span class="c1">// allow interrupts</span>
+    <span class="kt">boolean</span> <span class="n">completedAbruptly</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="k">while</span> <span class="o">(</span><span class="n">task</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">||</span> <span class="o">(</span><span class="n">task</span> <span class="o">=</span> <span class="n">getTask</span><span class="o">())</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">w</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+            <span class="c1">// If pool is stopping, ensure thread is interrupted;</span>
+            <span class="c1">// if not, ensure thread is not interrupted.  This</span>
+            <span class="c1">// requires a recheck in second case to deal with</span>
+            <span class="c1">// shutdownNow race while clearing interrupt</span>
+            <span class="k">if</span> <span class="o">((</span><span class="n">runStateAtLeast</span><span class="o">(</span><span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">(),</span> <span class="no">STOP</span><span class="o">)</span> <span class="o">||</span>
+                 <span class="o">(</span><span class="nc">Thread</span><span class="o">.</span><span class="na">interrupted</span><span class="o">()</span> <span class="o">&amp;&amp;</span>
+                  <span class="n">runStateAtLeast</span><span class="o">(</span><span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">(),</span> <span class="no">STOP</span><span class="o">)))</span> <span class="o">&amp;&amp;</span>
+                <span class="o">!</span><span class="n">wt</span><span class="o">.</span><span class="na">isInterrupted</span><span class="o">())</span>
+                <span class="n">wt</span><span class="o">.</span><span class="na">interrupt</span><span class="o">();</span>
+            <span class="k">try</span> <span class="o">{</span>
+                <span class="n">beforeExecute</span><span class="o">(</span><span class="n">wt</span><span class="o">,</span> <span class="n">task</span><span class="o">);</span>
+                <span class="nc">Throwable</span> <span class="n">thrown</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="k">try</span> <span class="o">{</span>
+                    <span class="n">task</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
+                <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">RuntimeException</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">thrown</span> <span class="o">=</span> <span class="n">x</span><span class="o">;</span> <span class="k">throw</span> <span class="n">x</span><span class="o">;</span>
+                <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">Error</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">thrown</span> <span class="o">=</span> <span class="n">x</span><span class="o">;</span> <span class="k">throw</span> <span class="n">x</span><span class="o">;</span>
+                <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">Throwable</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">thrown</span> <span class="o">=</span> <span class="n">x</span><span class="o">;</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">Error</span><span class="o">(</span><span class="n">x</span><span class="o">);</span>
+                <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+                    <span class="n">afterExecute</span><span class="o">(</span><span class="n">task</span><span class="o">,</span> <span class="n">thrown</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+                <span class="n">task</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="n">w</span><span class="o">.</span><span class="na">completedTasks</span><span class="o">++;</span>
+                <span class="n">w</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="n">completedAbruptly</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+        <span class="n">processWorkerExit</span><span class="o">(</span><span class="n">w</span><span class="o">,</span> <span class="n">completedAbruptly</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// 从 workQueue 获取任务（blocked &amp; timeouted）</span>
+<span class="nc">Runnable</span> <span class="nc">ThreadPoolExecutor</span><span class="o">.</span><span class="na">getTask</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kt">boolean</span> <span class="n">timedOut</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span> <span class="c1">// Did the last poll() time out?</span>
+    <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+        <span class="kt">int</span> <span class="n">rs</span> <span class="o">=</span> <span class="n">runStateOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+        
+        <span class="c1">// 1. 线程池已 shutdown（只需把 workQueue 执行完毕），但 workQueue 已清空</span>
+        <span class="c1">// 2. 线程池已 stop，无需执行 workQueue 剩下的任务</span>
+        <span class="c1">// 此时返回 null 结束线程 </span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">rs</span> <span class="o">&gt;=</span> <span class="no">SHUTDOWN</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">rs</span> <span class="o">&gt;=</span> <span class="no">STOP</span> <span class="o">||</span> <span class="n">workQueue</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">()))</span> <span class="o">{</span>
+            <span class="n">decrementWorkerCount</span><span class="o">();</span>
+            <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="o">}</span>
+
+        <span class="c1">// 当线程数 &gt; corePoolSize，如果阻塞 keepAliveTime 时间段都没有新任务进来，则返回 null 结束当前线程</span>
+        <span class="c1">// 当线程数 &gt; maximumPoolSize 且 workQueue 为空，也要结束当前线程，从而降低线程数</span>
+        <span class="kt">int</span> <span class="n">wc</span> <span class="o">=</span> <span class="n">workerCountOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+        <span class="kt">boolean</span> <span class="n">timed</span> <span class="o">=</span> <span class="n">allowCoreThreadTimeOut</span> <span class="o">||</span> <span class="n">wc</span> <span class="o">&gt;</span> <span class="n">corePoolSize</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">((</span><span class="n">wc</span> <span class="o">&gt;</span> <span class="n">maximumPoolSize</span> <span class="o">||</span> <span class="o">(</span><span class="n">timed</span> <span class="o">&amp;&amp;</span> <span class="n">timedOut</span><span class="o">))</span>
+            <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">wc</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="o">||</span> <span class="n">workQueue</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">()))</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">compareAndDecrementWorkerCount</span><span class="o">(</span><span class="n">c</span><span class="o">))</span>
+                <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+            <span class="k">continue</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="nc">Runnable</span> <span class="n">r</span> <span class="o">=</span> <span class="n">timed</span> <span class="o">?</span>
+                <span class="n">workQueue</span><span class="o">.</span><span class="na">poll</span><span class="o">(</span><span class="n">keepAliveTime</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">NANOSECONDS</span><span class="o">)</span> <span class="o">:</span>
+                <span class="n">workQueue</span><span class="o">.</span><span class="na">take</span><span class="o">();</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">r</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+                <span class="k">return</span> <span class="n">r</span><span class="o">;</span>
+            <span class="n">timedOut</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="n">retry</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">timedOut</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></table></code></div></div><h2 id="corepoolsizeworkqueue-和-maximumpoolsize-之间的关系"><code class="language-plaintext highlighter-rouge">corePoolSize</code>，<code class="language-plaintext highlighter-rouge">workQueue</code> 和 <code class="language-plaintext highlighter-rouge">maximumPoolSize</code> 之间的关系</h2><div class="language-java highlighter-rouge"><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-code"><pre><span class="kt">void</span> <span class="nc">ThreadPoolExecutor</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">command</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 如果线程数 &lt; corePoolSize，则新开一个线程执行任务</span>
+    <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">workerCountOf</span><span class="o">(</span><span class="n">c</span><span class="o">)</span> <span class="o">&lt;</span> <span class="n">corePoolSize</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">addWorker</span><span class="o">(</span><span class="n">command</span><span class="o">,</span> <span class="kc">true</span><span class="o">))</span>
+            <span class="k">return</span><span class="o">;</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="c1">// 否则放入 workQueue 等待执行</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">isRunning</span><span class="o">(</span><span class="n">c</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="n">workQueue</span><span class="o">.</span><span class="na">offer</span><span class="o">(</span><span class="n">command</span><span class="o">))</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">recheck</span> <span class="o">=</span> <span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(!</span> <span class="n">isRunning</span><span class="o">(</span><span class="n">recheck</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="n">remove</span><span class="o">(</span><span class="n">command</span><span class="o">))</span>
+            <span class="n">reject</span><span class="o">(</span><span class="n">command</span><span class="o">);</span>
+        <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">workerCountOf</span><span class="o">(</span><span class="n">recheck</span><span class="o">)</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span>
+            <span class="n">addWorker</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="c1">// 如果超过 workQueue 容量限制，则尝试新开一个线程执行任务</span>
+    <span class="c1">// 从下面的 addWorker 可以知道，如果新开线程的时候发现当前线程总数 &gt;= maximumPoolSize，那么任务提交失败</span>
+    <span class="k">else</span> <span class="nf">if</span> <span class="o">(!</span><span class="n">addWorker</span><span class="o">(</span><span class="n">command</span><span class="o">,</span> <span class="kc">false</span><span class="o">))</span>
+        <span class="n">reject</span><span class="o">(</span><span class="n">command</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kt">boolean</span> <span class="nc">ThreadPoolExecutor</span><span class="o">.</span><span class="na">addWorker</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">firstTask</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">core</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nl">retry:</span>
+    <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+        <span class="kt">int</span> <span class="n">rs</span> <span class="o">=</span> <span class="n">runStateOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+        <span class="c1">// Check if queue empty only if necessary.</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">rs</span> <span class="o">&gt;=</span> <span class="no">SHUTDOWN</span> <span class="o">&amp;&amp;</span>
+            <span class="o">!</span> <span class="o">(</span><span class="n">rs</span> <span class="o">==</span> <span class="no">SHUTDOWN</span> <span class="o">&amp;&amp;</span>
+               <span class="n">firstTask</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span>
+               <span class="o">!</span> <span class="n">workQueue</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">()))</span>
+            <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+            <span class="kt">int</span> <span class="n">wc</span> <span class="o">=</span> <span class="n">workerCountOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">wc</span> <span class="o">&gt;=</span> <span class="no">CAPACITY</span> <span class="o">||</span>
+                <span class="n">wc</span> <span class="o">&gt;=</span> <span class="o">(</span><span class="n">core</span> <span class="o">?</span> <span class="n">corePoolSize</span> <span class="o">:</span> <span class="n">maximumPoolSize</span><span class="o">))</span>
+                <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">compareAndIncrementWorkerCount</span><span class="o">(</span><span class="n">c</span><span class="o">))</span>
+                <span class="k">break</span> <span class="n">retry</span><span class="o">;</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>  <span class="c1">// Re-read ctl</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">runStateOf</span><span class="o">(</span><span class="n">c</span><span class="o">)</span> <span class="o">!=</span> <span class="n">rs</span><span class="o">)</span>
+                <span class="k">continue</span> <span class="n">retry</span><span class="o">;</span>
+            <span class="c1">// else CAS failed due to workerCount change; retry inner loop</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="kt">boolean</span> <span class="n">workerStarted</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="kt">boolean</span> <span class="n">workerAdded</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="nc">Worker</span> <span class="n">w</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Worker</span><span class="o">(</span><span class="n">firstTask</span><span class="o">);</span>
+        <span class="kd">final</span> <span class="nc">Thread</span> <span class="n">t</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="na">thread</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">t</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">mainLock</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">mainLock</span><span class="o">;</span>
+            <span class="n">mainLock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+            <span class="k">try</span> <span class="o">{</span>
+                <span class="c1">// Recheck while holding lock.</span>
+                <span class="c1">// Back out on ThreadFactory failure or if</span>
+                <span class="c1">// shut down before lock acquired.</span>
+                <span class="kt">int</span> <span class="n">rs</span> <span class="o">=</span> <span class="n">runStateOf</span><span class="o">(</span><span class="n">ctl</span><span class="o">.</span><span class="na">get</span><span class="o">());</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">rs</span> <span class="o">&lt;</span> <span class="no">SHUTDOWN</span> <span class="o">||</span>
+                    <span class="o">(</span><span class="n">rs</span> <span class="o">==</span> <span class="no">SHUTDOWN</span> <span class="o">&amp;&amp;</span> <span class="n">firstTask</span> <span class="o">==</span> <span class="kc">null</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="k">if</span> <span class="o">(</span><span class="n">t</span><span class="o">.</span><span class="na">isAlive</span><span class="o">())</span> <span class="c1">// precheck that t is startable</span>
+                        <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalThreadStateException</span><span class="o">();</span>
+                    <span class="n">workers</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">w</span><span class="o">);</span>
+                    <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="n">workers</span><span class="o">.</span><span class="na">size</span><span class="o">();</span>
+                    <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">&gt;</span> <span class="n">largestPoolSize</span><span class="o">)</span>
+                        <span class="n">largestPoolSize</span> <span class="o">=</span> <span class="n">s</span><span class="o">;</span>
+                    <span class="n">workerAdded</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+                <span class="o">}</span>
+            <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+                <span class="n">mainLock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+            <span class="o">}</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">workerAdded</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">t</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+                <span class="n">workerStarted</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(!</span> <span class="n">workerStarted</span><span class="o">)</span>
+            <span class="n">addWorkerFailed</span><span class="o">(</span><span class="n">w</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">workerStarted</span><span class="o">;</span>
+<span class="o">}</span>
+</pre></table></code></div></div><h2 id="定时任务scheduledexecutorservice">定时任务（<code class="language-plaintext highlighter-rouge">ScheduledExecutorService</code>）</h2><p>上文里的任务队列用的是 <code class="language-plaintext highlighter-rouge">BlockingQueue</code>，它是按照 FIFO 的优先级给任务排队的；要实现定时，就要按照执行时间点的优先级给任务排序，只有到达执行时间点的任务才能出队</p><h3 id="堆">堆</h3><p>要排序，每次取最小值（到达执行时间点的任务），而且会插入新元素，典型的数据结构是「小顶堆」；<code class="language-plaintext highlighter-rouge">DelayedWorkQueue</code> 就是用小顶堆实现的阻塞队列</p><p>堆有几个特性：</p><ul><li>堆在逻辑上是二叉树，存储为数组；节点从上到下，从左到右按顺序摊平在数组上<li>既然节点是按顺序排的，那么可以从索引计算出父/子节点：<ul><li><code class="language-plaintext highlighter-rouge">parent(i) = floor((i - 1)/2)</code><li><code class="language-plaintext highlighter-rouge">left(i) = 2i + 1</code><li><code class="language-plaintext highlighter-rouge">right(i) = 2i + 2</code></ul><li>父节点比子节点要小的是小顶堆，根节点最小；父节点比子节点大的是大顶堆，根节点最大；左右节点之间没有大小要求<li><code class="language-plaintext highlighter-rouge">shiftDown()</code>，出队最小/大值（也即根节点）后，将数组最后一个元素转移到根节点，然后从根节点开始递归地重排：如果一个节点比它的子节点小（最大堆）或者大（最小堆），那么需要将它向下移动，这样是这个节点在数组的位置下降<li><code class="language-plaintext highlighter-rouge">shiftUp()</code>，入队一个新元素到数组尾部，那么从这个元素开始从下往上重排：如果一个节点比它的父节点大（最大堆）或者小（最小堆），那么需要将它同父节点交换位置，这样是这个节点在数组的位置上升</ul><h3 id="delayedworkqueue-按执行时间优先级排序的阻塞队列"><code class="language-plaintext highlighter-rouge">DelayedWorkQueue</code> 按执行时间优先级排序的阻塞队列</h3><p>提交一个新任务到 <code class="language-plaintext highlighter-rouge">DelayedWorkQueue</code>，重排 workQueue</p><p>workQueue 是按执行时间点排序的，leader 是在队头任务上挂起的线程，leader 未唤醒时新来的出队请求将在 available 上挂起</p><p>队列为空时线程也在 available 上挂起</p><div class="language-java highlighter-rouge"><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-code"><pre><span class="nc">ScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="nc">ScheduledThreadPoolExecutor</span><span class="o">.</span><span class="na">schedule</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">command</span><span class="o">,</span> <span class="kt">long</span> <span class="n">delay</span><span class="o">,</span> <span class="nc">TimeUnit</span> <span class="n">unit</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">command</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">unit</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">NullPointerException</span><span class="o">();</span>
+    <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;</span><span class="nc">Void</span><span class="o">&gt;</span> <span class="n">t</span> <span class="o">=</span> <span class="n">decorateTask</span><span class="o">(</span><span class="n">command</span><span class="o">,</span>
+        <span class="k">new</span> <span class="nc">ScheduledFutureTask</span><span class="o">&lt;</span><span class="nc">Void</span><span class="o">&gt;(</span><span class="n">command</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="n">triggerTime</span><span class="o">(</span><span class="n">delay</span><span class="o">,</span> <span class="n">unit</span><span class="o">),</span> <span class="n">sequencer</span><span class="o">.</span><span class="na">getAndIncrement</span><span class="o">()));</span>
+    <span class="n">delayedExecute</span><span class="o">(</span><span class="n">t</span><span class="o">);</span>
+    <span class="k">return</span> <span class="n">t</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kt">void</span> <span class="nc">ScheduledThreadPoolExecutor</span><span class="o">.</span><span class="na">delayedExecute</span><span class="o">(</span><span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">task</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">isShutdown</span><span class="o">())</span>
+        <span class="n">reject</span><span class="o">(</span><span class="n">task</span><span class="o">);</span>
+    <span class="k">else</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">.</span><span class="na">getQueue</span><span class="o">().</span><span class="na">add</span><span class="o">(</span><span class="n">task</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">isShutdown</span><span class="o">()</span> <span class="o">&amp;&amp;</span>
+            <span class="o">!</span><span class="n">canRunInCurrentRunState</span><span class="o">(</span><span class="n">task</span><span class="o">.</span><span class="na">isPeriodic</span><span class="o">())</span> <span class="o">&amp;&amp;</span>
+            <span class="n">remove</span><span class="o">(</span><span class="n">task</span><span class="o">))</span>
+            <span class="n">task</span><span class="o">.</span><span class="na">cancel</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+        <span class="k">else</span>
+            <span class="nf">ensurePrestart</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kt">boolean</span> <span class="nc">DelayedWorkQueue</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="nf">offer</span><span class="o">(</span><span class="n">e</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="c1">// 插入小顶堆</span>
+<span class="kt">boolean</span> <span class="nc">DelayedWorkQueue</span><span class="o">.</span><span class="na">offer</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">x</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">NullPointerException</span><span class="o">();</span>
+    <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">e</span> <span class="o">=</span> <span class="o">(</span><span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;)</span><span class="n">x</span><span class="o">;</span>
+    <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">lock</span><span class="o">;</span>
+    <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="c1">// 小顶堆底层是数组，数组容量不足需要扩容（扩容 50%）</span>
+        <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">size</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">&gt;=</span> <span class="n">queue</span><span class="o">.</span><span class="na">length</span><span class="o">)</span>
+            <span class="n">grow</span><span class="o">();</span>
+        <span class="c1">// 小顶堆的插入操作 siftUp</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">queue</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+            <span class="n">setIndex</span><span class="o">(</span><span class="n">e</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="n">siftUp</span><span class="o">(</span><span class="n">i</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="c1">// 新加入的任务排在队头，它的执行时间点最近</span>
+        <span class="c1">// 此时 leader 是挂起在上一个队头上的，要置空（有更近的执行时间点进来了）并唤醒 available 上的线程来争抢新的队头任务</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">queue</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">==</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">leader</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+            <span class="n">available</span><span class="o">.</span><span class="na">signal</span><span class="o">();</span>
+        <span class="o">}</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+        <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="c1">// 堆是一个二叉树，广度优先、从左到右存储为数组</span>
+<span class="c1">// 新元素添加到数组尾部（相当于二叉树中的叶子节点），k 是它的索引，为了继续满足小顶堆的要求，需要重新排序</span>
+<span class="kt">void</span> <span class="nc">DelayedWorkQueue</span><span class="o">.</span><span class="na">siftUp</span><span class="o">(</span><span class="kt">int</span> <span class="n">k</span><span class="o">,</span> <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">key</span><span class="o">)</span> <span class="o">{</span>
+		<span class="c1">// 从下往上比较，如果它比父节点小，交换之</span>
+    <span class="k">while</span> <span class="o">(</span><span class="n">k</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">parent</span> <span class="o">=</span> <span class="o">(</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">e</span> <span class="o">=</span> <span class="n">queue</span><span class="o">[</span><span class="n">parent</span><span class="o">];</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">compareTo</span><span class="o">(</span><span class="n">e</span><span class="o">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">)</span>
+            <span class="k">break</span><span class="o">;</span>
+        <span class="n">queue</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+        <span class="n">setIndex</span><span class="o">(</span><span class="n">e</span><span class="o">,</span> <span class="n">k</span><span class="o">);</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">parent</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="c1">// 直到满足小于父节点的要求（小顶堆），那么这就是 key 的合适位置</span>
+    <span class="n">queue</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="n">key</span><span class="o">;</span>
+    <span class="n">setIndex</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">k</span><span class="o">);</span>
+<span class="o">}</span>
+</pre></table></code></div></div><p>上面说过 <code class="language-plaintext highlighter-rouge">worker</code> 是一个「生产者-消费者」模型，通过 <code class="language-plaintext highlighter-rouge">getTask</code> 不断地从 <code class="language-plaintext highlighter-rouge">workQueue</code> 获取任务</p><div class="language-java highlighter-rouge"><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-code"><pre><span class="c1">// 从 workQueue 获取任务（blocked &amp; timeouted）</span>
+<span class="nc">Runnable</span> <span class="nc">ThreadPoolExecutor</span><span class="o">.</span><span class="na">getTask</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kt">boolean</span> <span class="n">timedOut</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span> <span class="c1">// Did the last poll() time out?</span>
+    <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+        <span class="c1">// ...</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="nc">Runnable</span> <span class="n">r</span> <span class="o">=</span> <span class="n">timed</span> <span class="o">?</span>
+                <span class="n">workQueue</span><span class="o">.</span><span class="na">poll</span><span class="o">(</span><span class="n">keepAliveTime</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">NANOSECONDS</span><span class="o">)</span> <span class="o">:</span>
+                <span class="n">workQueue</span><span class="o">.</span><span class="na">take</span><span class="o">();</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">r</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+                <span class="k">return</span> <span class="n">r</span><span class="o">;</span>
+            <span class="n">timedOut</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="n">retry</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">timedOut</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// 任务出队（blocked）</span>
+<span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="nc">DelayedWorkQueue</span><span class="o">.</span><span class="na">take</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">InterruptedException</span> <span class="o">{</span>
+    <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">lock</span><span class="o">;</span>
+    <span class="n">lock</span><span class="o">.</span><span class="na">lockInterruptibly</span><span class="o">();</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+
+            <span class="c1">// 任务队列为空，在 available 挂起</span>
+            <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">first</span> <span class="o">=</span> <span class="n">queue</span><span class="o">[</span><span class="mi">0</span><span class="o">];</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">first</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+                <span class="n">available</span><span class="o">.</span><span class="na">await</span><span class="o">();</span>
+            <span class="k">else</span> <span class="o">{</span>
+
+                <span class="c1">// 到达执行时间点的才能出队</span>
+                <span class="kt">long</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="na">getDelay</span><span class="o">(</span><span class="no">NANOSECONDS</span><span class="o">);</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">delay</span> <span class="o">&lt;=</span> <span class="mi">0L</span><span class="o">)</span>
+                    <span class="k">return</span> <span class="nf">finishPoll</span><span class="o">(</span><span class="n">first</span><span class="o">);</span>
+
+                <span class="c1">// leader 是挂起在 first 上的线程，它将在 first 执行时间点上恢复</span>
+                <span class="c1">// 如果已有线程在 first 上挂起，则当前线程在 available 上挂起</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">leader</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+                    <span class="n">available</span><span class="o">.</span><span class="na">await</span><span class="o">();</span>
+                <span class="k">else</span> <span class="o">{</span>
+                    <span class="nc">Thread</span> <span class="n">thisThread</span> <span class="o">=</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">();</span>
+                    <span class="n">leader</span> <span class="o">=</span> <span class="n">thisThread</span><span class="o">;</span>
+                    <span class="k">try</span> <span class="o">{</span>
+                        <span class="n">available</span><span class="o">.</span><span class="na">awaitNanos</span><span class="o">(</span><span class="n">delay</span><span class="o">);</span>
+                    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+                        <span class="k">if</span> <span class="o">(</span><span class="n">leader</span> <span class="o">==</span> <span class="n">thisThread</span><span class="o">)</span>
+                            <span class="n">leader</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+                    <span class="o">}</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+        <span class="c1">// 出队后，唤醒在 available 上挂起的线程</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">leader</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">queue</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+            <span class="n">available</span><span class="o">.</span><span class="na">signal</span><span class="o">();</span>
+        <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// 将小顶堆的根 queue[0] 出队后，需要重排堆：</span>
+<span class="c1">// 1. 将最后一个数组元素转移到根节点</span>
+<span class="c1">// 2. 从上往下重排：比较父节点和子节点，如果父节点大于子节点则交换之</span>
+<span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="nc">DelayedWorkQueue</span><span class="o">.</span><span class="na">finishPoll</span><span class="o">(</span><span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">f</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="o">--</span><span class="n">size</span><span class="o">;</span>
+    <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">x</span> <span class="o">=</span> <span class="n">queue</span><span class="o">[</span><span class="n">s</span><span class="o">];</span>
+    <span class="n">queue</span><span class="o">[</span><span class="n">s</span><span class="o">]</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">)</span>
+        <span class="n">siftDown</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="n">x</span><span class="o">);</span>
+    <span class="n">setIndex</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">);</span>
+    <span class="k">return</span> <span class="n">f</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kt">void</span> <span class="nc">DelayedWorkQueue</span><span class="o">.</span><span class="na">siftDown</span><span class="o">(</span><span class="kt">int</span> <span class="n">k</span><span class="o">,</span> <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">key</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">half</span> <span class="o">=</span> <span class="n">size</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">1</span><span class="o">;</span>
+    <span class="k">while</span> <span class="o">(</span><span class="n">k</span> <span class="o">&lt;</span> <span class="n">half</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">child</span> <span class="o">=</span> <span class="o">(</span><span class="n">k</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="o">)</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">c</span> <span class="o">=</span> <span class="n">queue</span><span class="o">[</span><span class="n">child</span><span class="o">];</span>
+        <span class="kt">int</span> <span class="n">right</span> <span class="o">=</span> <span class="n">child</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">right</span> <span class="o">&lt;</span> <span class="n">size</span> <span class="o">&amp;&amp;</span> <span class="n">c</span><span class="o">.</span><span class="na">compareTo</span><span class="o">(</span><span class="n">queue</span><span class="o">[</span><span class="n">right</span><span class="o">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">queue</span><span class="o">[</span><span class="n">child</span> <span class="o">=</span> <span class="n">right</span><span class="o">];</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">compareTo</span><span class="o">(</span><span class="n">c</span><span class="o">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="o">)</span>
+            <span class="k">break</span><span class="o">;</span>
+        <span class="n">queue</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="n">c</span><span class="o">;</span>
+        <span class="n">setIndex</span><span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="n">k</span><span class="o">);</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">child</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">queue</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="n">key</span><span class="o">;</span>
+    <span class="n">setIndex</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">k</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="c1">// 任务出队（timeouted）</span>
+<span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="nc">DelayedWorkQueue</span><span class="o">.</span><span class="na">poll</span><span class="o">(</span><span class="kt">long</span> <span class="n">timeout</span><span class="o">,</span> <span class="nc">TimeUnit</span> <span class="n">unit</span><span class="o">)</span>
+    <span class="kd">throws</span> <span class="nc">InterruptedException</span> <span class="o">{</span>
+    <span class="kt">long</span> <span class="n">nanos</span> <span class="o">=</span> <span class="n">unit</span><span class="o">.</span><span class="na">toNanos</span><span class="o">(</span><span class="n">timeout</span><span class="o">);</span>
+    <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">lock</span><span class="o">;</span>
+    <span class="n">lock</span><span class="o">.</span><span class="na">lockInterruptibly</span><span class="o">();</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+
+            <span class="c1">// 队列为空，挂起 timeout 后继续</span>
+            <span class="nc">RunnableScheduledFuture</span><span class="o">&lt;?&gt;</span> <span class="n">first</span> <span class="o">=</span> <span class="n">queue</span><span class="o">[</span><span class="mi">0</span><span class="o">];</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">first</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">nanos</span> <span class="o">&lt;=</span> <span class="mi">0L</span><span class="o">)</span>
+                    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="k">else</span>
+                    <span class="n">nanos</span> <span class="o">=</span> <span class="n">available</span><span class="o">.</span><span class="na">awaitNanos</span><span class="o">(</span><span class="n">nanos</span><span class="o">);</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+
+                <span class="c1">// first 到达执行时间点，立刻返回</span>
+                <span class="kt">long</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="na">getDelay</span><span class="o">(</span><span class="no">NANOSECONDS</span><span class="o">);</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">delay</span> <span class="o">&lt;=</span> <span class="mi">0L</span><span class="o">)</span>
+                    <span class="k">return</span> <span class="nf">finishPoll</span><span class="o">(</span><span class="n">first</span><span class="o">);</span>
+								
+                <span class="c1">// 否则挂起</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">nanos</span> <span class="o">&lt;=</span> <span class="mi">0L</span><span class="o">)</span>
+                    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">// don't retain ref while waiting</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">nanos</span> <span class="o">&lt;</span> <span class="n">delay</span> <span class="o">||</span> <span class="n">leader</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+                    <span class="n">nanos</span> <span class="o">=</span> <span class="n">available</span><span class="o">.</span><span class="na">awaitNanos</span><span class="o">(</span><span class="n">nanos</span><span class="o">);</span>
+                <span class="k">else</span> <span class="o">{</span>
+                    <span class="nc">Thread</span> <span class="n">thisThread</span> <span class="o">=</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">();</span>
+                    <span class="n">leader</span> <span class="o">=</span> <span class="n">thisThread</span><span class="o">;</span>
+                    <span class="k">try</span> <span class="o">{</span>
+                        <span class="kt">long</span> <span class="n">timeLeft</span> <span class="o">=</span> <span class="n">available</span><span class="o">.</span><span class="na">awaitNanos</span><span class="o">(</span><span class="n">delay</span><span class="o">);</span>
+                        <span class="n">nanos</span> <span class="o">-=</span> <span class="n">delay</span> <span class="o">-</span> <span class="n">timeLeft</span><span class="o">;</span>
+                    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+                        <span class="k">if</span> <span class="o">(</span><span class="n">leader</span> <span class="o">==</span> <span class="n">thisThread</span><span class="o">)</span>
+                            <span class="n">leader</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+                    <span class="o">}</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">leader</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">queue</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+            <span class="n">available</span><span class="o">.</span><span class="na">signal</span><span class="o">();</span>
+        <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></table></code></div></div><h2 id="如果-worker-数量超过-maximumpoolsizetask-会被-reject">如果 worker 数量超过 maximumPoolSize，task 会被 reject</h2><p><code class="language-plaintext highlighter-rouge">ThreadPoolExecutor</code> 提供了 <code class="language-plaintext highlighter-rouge">RejectedExecutionHandler</code> 来处理这种情况，平常通过 <code class="language-plaintext highlighter-rouge">Executors</code> 创建的线程池使用默认的 <code class="language-plaintext highlighter-rouge">AbortPolicy</code>，它会抛出异常</p><div class="language-java highlighter-rouge"><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-code"><pre><span class="cm">/**
+ * A handler for rejected tasks that throws a
+ * {@code RejectedExecutionException}.
+ */</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">AbortPolicy</span> <span class="kd">implements</span> <span class="nc">RejectedExecutionHandler</span> <span class="o">{</span>
+    <span class="cm">/**
+     * Creates an {@code AbortPolicy}.
+     */</span>
+    <span class="kd">public</span> <span class="nf">AbortPolicy</span><span class="o">()</span> <span class="o">{</span> <span class="o">}</span>
+
+    <span class="cm">/**
+     * Always throws RejectedExecutionException.
+     *
+     * @param r the runnable task requested to be executed
+     * @param e the executor attempting to execute this task
+     * @throws RejectedExecutionException always
+     */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">rejectedExecution</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">r</span><span class="o">,</span> <span class="nc">ThreadPoolExecutor</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">RejectedExecutionException</span><span class="o">(</span><span class="s">"Task "</span> <span class="o">+</span> <span class="n">r</span><span class="o">.</span><span class="na">toString</span><span class="o">()</span> <span class="o">+</span>
+                                             <span class="s">" rejected from "</span> <span class="o">+</span>
+                                             <span class="n">e</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></table></code></div></div><p>其他的还有：</p><div class="language-java highlighter-rouge"><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-code"><pre><span class="c1">// 扔掉 task 不做任何处理</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">DiscardPolicy</span> <span class="kd">implements</span> <span class="nc">RejectedExecutionHandler</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">rejectedExecution</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">r</span><span class="o">,</span> <span class="nc">ThreadPoolExecutor</span> <span class="n">e</span><span class="o">)</span> <span class="o">{}</span>
+<span class="o">}</span>
+
+<span class="c1">// 既然 workQueue 满了那我就扔掉一个，然后把这个 task 入队</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">DiscardOldestPolicy</span> <span class="kd">implements</span> <span class="nc">RejectedExecutionHandler</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">rejectedExecution</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">r</span><span class="o">,</span> <span class="nc">ThreadPoolExecutor</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">e</span><span class="o">.</span><span class="na">isShutdown</span><span class="o">())</span> <span class="o">{</span>
+            <span class="n">e</span><span class="o">.</span><span class="na">getQueue</span><span class="o">().</span><span class="na">poll</span><span class="o">();</span>
+            <span class="n">e</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="n">r</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// 由提交 task 的线程负责执行 task</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">CallerRunsPolicy</span> <span class="kd">implements</span> <span class="nc">RejectedExecutionHandler</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">rejectedExecution</span><span class="o">(</span><span class="nc">Runnable</span> <span class="n">r</span><span class="o">,</span> <span class="nc">ThreadPoolExecutor</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">e</span><span class="o">.</span><span class="na">isShutdown</span><span class="o">())</span> <span class="o">{</span>
+            <span class="n">r</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>        
+</pre></table></code></div></div></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw mr-1"></i> <a href='/blog/categories/android/'>Android</a>, <a href='/blog/categories/art/'>Art</a></div><div class="post-tags"> <i class="fa fa-tags fa-fw mr-1"></i> <a href="/blog/tags/threadpool/" class="post-tag no-text-decoration" >threadpool</a></div><div class="post-tail-bottom d-flex justify-content-between align-items-center mt-3 pt-5 pb-2"><div class="license-wrapper"> This post is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> by the author.</div><div class="share-wrapper"> <span class="share-label text-muted mr-1">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=线程池 ThreadPool 的实现 - Cyrus&url=https://cyruslin.com/blog/blog/posts/threadpool/" data-toggle="tooltip" data-placement="top" title="Twitter" target="_blank" rel="noopener" aria-label="Twitter"> <i class="fa-fw fab fa-twitter"></i> </a> <a href="https://www.facebook.com/sharer/sharer.php?title=线程池 ThreadPool 的实现 - Cyrus&u=https://cyruslin.com/blog/blog/posts/threadpool/" data-toggle="tooltip" data-placement="top" title="Facebook" target="_blank" rel="noopener" aria-label="Facebook"> <i class="fa-fw fab fa-facebook-square"></i> </a> <a href="https://telegram.me/share?text=线程池 ThreadPool 的实现 - Cyrus&url=https://cyruslin.com/blog/blog/posts/threadpool/" data-toggle="tooltip" data-placement="top" title="Telegram" target="_blank" rel="noopener" aria-label="Telegram"> <i class="fa-fw fab fa-telegram"></i> </a> <i class="fa-fw fas fa-link small" onclick="copyLink()" data-toggle="tooltip" data-placement="top" title="Copy link"></i> </span></div></div></div></div></div><div id="panel-wrapper" class="col-xl-3 pl-2 text-muted topbar-down"><div class="access"><div id="access-lastmod" class="post"> <span>Recent Update</span><ul class="post-content pl-0 pb-1 ml-1 mt-2"><li><a href="/blog/posts/threadpool/">线程池 ThreadPool 的实现</a><li><a href="/blog/posts/juc-collection/">JUC 下一些线程安全的容器</a><li><a href="/blog/posts/reviews/">常见面试题备忘</a><li><a href="/blog/posts/https/">什么是 https ？</a><li><a href="/blog/posts/tcp-handshake-goodbye/">TCP 的三次握手和四次挥手</a></ul></div><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.js"></script><div id="toc-wrapper" class="pl-0 pr-4 mb-5"> <span class="pl-3 pt-2 mb-2">Contents</span><nav id="toc" data-toggle="toc"></nav></div></div></div><div class="row"><div class="col-12 col-lg-11 col-xl-8"><div id="post-extend-wrapper" class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><div id="related-posts" class="mt-5 mb-2 mb-sm-4"><h3 class="pt-2 mt-1 mb-4 ml-1" data-toc-skip>Further Reading</h3><div class="card-deck mb-4"><div class="card"> <a href="/blog/posts/synchronized-implementation/"><div class="card-body"> <span class="timeago small" > Feb 8 <i class="unloaded">2021-02-08T12:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Lock（四）synchronized 的语言实现</h3><div class="text-muted small"><p> monitor 指令 在 Lock（二）AQS 源码分析以及 Lock 的实现 这篇文章里介绍了基于 AQS 的 Lock，它是双向链表的排队队列和系统调用 futex 实现的 其实 java 语言规范里自带了 Lock 的实现：synchronized 关键字，下面看看 ART 是怎么实现它的 先写一个使用了 synchronized 的测试方法 package com.examp...</p></div></div></a></div><div class="card"> <a href="/blog/posts/wait-notify/"><div class="card-body"> <span class="timeago small" > Feb 11 <i class="unloaded">2021-02-11T12:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Lock（五）Condition 的语言实现：Object.wait 和 Object.notify</h3><div class="text-muted small"><p> 在 Lock（三）利用 Lock 实现 Condition 我们介绍了如何用 Lock 来实现 Condition，而 Condition 对标的是 Object.wait 和 Object.notify 我们来看看 ART 是怎么实现 wait/notify 的（最好先了解下 synchronized 的基础知识） ConditionVariable 对 futex/mutex 的封...</p></div></div></a></div><div class="card"> <a href="/blog/posts/aqs-basic/"><div class="card-body"> <span class="timeago small" > Jan 10 <i class="unloaded">2021-01-10T12:00:00+08:00</i> </span><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Lock（一）AQS 基础</h3><div class="text-muted small"><p> 自旋锁（Spin Lock） 获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码/逻辑，那就是自旋锁；比如下面的 lock() // 一个简单的自旋锁的实现 class SpinLock { private val cas = AtomicReference&lt;Thread&gt;() fun lock() { while...</p></div></div></a></div></div></div><div class="post-navigation d-flex justify-content-between"> <a href="/blog/posts/wait-notify/" class="btn btn-outline-primary" prompt="Older"><p>Lock（五）Condition 的语言实现：Object.wait 和 Object.notify</p></a> <a href="/blog/posts/how-application-being-created-and-init/" class="btn btn-outline-primary" prompt="Newer"><p>Application 是如何被创建和初始化的？</p></a></div></div></div></div></div></div>
