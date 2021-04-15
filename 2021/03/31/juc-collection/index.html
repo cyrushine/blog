@@ -1,0 +1,537 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>JUC 下一些线程安全的容器 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="JUC 下一些线程安全的容器">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-03-31 04:00" pubdate>
+        2021年3月31日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      3.1k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      48
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">JUC 下一些线程安全的容器</h1>
+            
+            <div class="markdown-body">
+              <h2 id="写时复制（Copy-On-Write）"><a href="#写时复制（Copy-On-Write）" class="headerlink" title="写时复制（Copy On Write）"></a>写时复制（Copy On Write）</h2><h3 id="CopyOnWriteArrayList"><a href="#CopyOnWriteArrayList" class="headerlink" title="CopyOnWriteArrayList"></a><code>CopyOnWriteArrayList</code></h3><p>使用 <strong>写时复制</strong> 实现的线程安全版 <code>ArrayList</code>，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">add</span><span class="hljs-params">(E e)</span> </span>&#123;<br>    <span class="hljs-keyword">synchronized</span> (lock) &#123;<br>        Object[] elements = getArray();<br>        <span class="hljs-keyword">int</span> len = elements.length;<br>        Object[] newElements = Arrays.copyOf(elements, len + <span class="hljs-number">1</span>);<br>        newElements[len] = e;<br>        setArray(newElements);<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>也就是说所有的修改操作都不会修改原数组，这样所有的读操作（get、iterate）都可以不加锁，从而实现高效的读（虽然有可能会读到旧数据）；因为它的写操作是很昂贵的（复制一份出来），但同时它的读操作和迭代很高效（不上锁），所以它适用于读操作远大于写操作的情况；<code>CopyOnWriteArraySet</code> 内部是通过 <code>CopyOnWriteArrayList</code> 实现的</p>
+<h2 id="分段加锁"><a href="#分段加锁" class="headerlink" title="分段加锁"></a>分段加锁</h2><h3 id="ConcurrentHashMap"><a href="#ConcurrentHashMap" class="headerlink" title="ConcurrentHashMap"></a><code>ConcurrentHashMap</code></h3><p>跟 <code>HashMap</code> 一样采用数组 + 链表的实现，链表又叫做桶 or 箱子（bin）</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ConcurrentHashMap</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractMap</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt;</span><br><span class="hljs-class">    <span class="hljs-keyword">implements</span> <span class="hljs-title">ConcurrentMap</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt;, <span class="hljs-title">Serializable</span> </span>&#123;<br>    <span class="hljs-keyword">transient</span> <span class="hljs-keyword">volatile</span> Node&lt;K,V&gt;[] table;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>写时采用 <strong>分段加锁</strong>，不对整个写操作 or <code>table</code> 加锁，而只对所在的桶加锁，其他线程依然可以进行读操作 or 对其他桶进行写操作</p>
+<p>整个 <code>ConcurrentHashMap</code> 都没有使用 <code>Lock</code> 进行阻塞，而是尽可能采用自旋 + CAS（乐观锁，是实现无锁操作的重要函数），最后才用 <code>synchronized</code>（参考文章，它的锁膨胀过程中掺杂自旋和阻塞）对桶上锁</p>
+<p><code>tabAt</code>、<code>setTabAt</code> 和 <code>casTabAt</code> 使对 <code>table</code> 的操作具有可见性和原子性，避免了对 <code>table</code> 上锁</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">final</span> V <span class="hljs-title">putVal</span><span class="hljs-params">(K key, V value, <span class="hljs-keyword">boolean</span> onlyIfAbsent)</span> </span>&#123;<br>    <span class="hljs-comment">// 没有对整个写操作加锁，也没有对 table 加锁</span><br>    <span class="hljs-keyword">if</span> (key == <span class="hljs-keyword">null</span> || value == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException();<br>    <span class="hljs-keyword">int</span> hash = spread(key.hashCode());<br>    <span class="hljs-keyword">int</span> binCount = <span class="hljs-number">0</span>;<br><br>    <span class="hljs-comment">// CAS 失败会自旋，是乐观锁</span><br>    <span class="hljs-keyword">for</span> (Node&lt;K,V&gt;[] tab = table;;) &#123;<br>        Node&lt;K,V&gt; f; <span class="hljs-keyword">int</span> n, i, fh;<br><br>        <span class="hljs-comment">// 如果 table == null，则进行初始化；初始化后每个桶是 null</span><br>        <span class="hljs-keyword">if</span> (tab == <span class="hljs-keyword">null</span> || (n = tab.length) == <span class="hljs-number">0</span>)<br>            tab = initTable();<br>        <br>        <span class="hljs-comment">// 所在的桶为 null，不加锁直接用 CAS 操作添加新桶头，失败的话自旋</span><br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((f = tabAt(tab, i = (n - <span class="hljs-number">1</span>) &amp; hash)) == <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">if</span> (casTabAt(tab, i, <span class="hljs-keyword">null</span>,<br>                         <span class="hljs-keyword">new</span> Node&lt;K,V&gt;(hash, key, value, <span class="hljs-keyword">null</span>)))<br>                <span class="hljs-keyword">break</span>;                   <span class="hljs-comment">// no lock when adding to empty bin</span><br>        &#125;<br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((fh = f.hash) == MOVED)<br>            tab = helpTransfer(tab, f);<br>        <span class="hljs-keyword">else</span> &#123;<br><br>            <span class="hljs-comment">// 找到所在的不为 null 的桶，对单个桶上锁</span><br>            V oldVal = <span class="hljs-keyword">null</span>;<br>            <span class="hljs-keyword">synchronized</span> (f) &#123;<br>                <span class="hljs-keyword">if</span> (tabAt(tab, i) == f) &#123;<br><br>                    <span class="hljs-comment">// 沿着链表从头开始走，如果找到 key 值相等的节点则覆盖旧的 value</span><br>                    <span class="hljs-comment">// 否则作为新节点添加到链表尾部</span><br>                    <span class="hljs-keyword">if</span> (fh &gt;= <span class="hljs-number">0</span>) &#123;<br>                        binCount = <span class="hljs-number">1</span>;<br>                        <span class="hljs-keyword">for</span> (Node&lt;K,V&gt; e = f;; ++binCount) &#123;<br>                            K ek;<br>                            <span class="hljs-keyword">if</span> (e.hash == hash &amp;&amp;<br>                                ((ek = e.key) == key ||<br>                                 (ek != <span class="hljs-keyword">null</span> &amp;&amp; key.equals(ek)))) &#123;<br>                                oldVal = e.val;<br>                                <span class="hljs-keyword">if</span> (!onlyIfAbsent)<br>                                    e.val = value;<br>                                <span class="hljs-keyword">break</span>;<br>                            &#125;<br>                            Node&lt;K,V&gt; pred = e;<br>                            <span class="hljs-keyword">if</span> ((e = e.next) == <span class="hljs-keyword">null</span>) &#123;<br>                                pred.next = <span class="hljs-keyword">new</span> Node&lt;K,V&gt;(hash, key,<br>                                                          value, <span class="hljs-keyword">null</span>);<br>                                <span class="hljs-keyword">break</span>;<br>                            &#125;<br>                        &#125;<br>                    &#125;<br>                    <span class="hljs-comment">// ... 链表被树化为红黑树的情况参考 HashMap 的文章</span><br>                &#125;<br>            &#125;<br>            <span class="hljs-comment">// ...</span><br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 初始化 table，自旋 + CAS</span><br><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] initTable() &#123;<br>    Node&lt;K,V&gt;[] tab; <span class="hljs-keyword">int</span> sc;<br>    <span class="hljs-keyword">while</span> ((tab = table) == <span class="hljs-keyword">null</span> || tab.length == <span class="hljs-number">0</span>) &#123;<br>        <span class="hljs-keyword">if</span> ((sc = sizeCtl) &lt; <span class="hljs-number">0</span>)<br>            Thread.yield(); <span class="hljs-comment">// lost initialization race; just spin</span><br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (U.compareAndSwapInt(<span class="hljs-keyword">this</span>, SIZECTL, sc, -<span class="hljs-number">1</span>)) &#123;<br>            <span class="hljs-keyword">try</span> &#123;<br>                <span class="hljs-keyword">if</span> ((tab = table) == <span class="hljs-keyword">null</span> || tab.length == <span class="hljs-number">0</span>) &#123;<br>                    <span class="hljs-keyword">int</span> n = (sc &gt; <span class="hljs-number">0</span>) ? sc : DEFAULT_CAPACITY;<br>                    <span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span><br>                    Node&lt;K,V&gt;[] nt = (Node&lt;K,V&gt;[])<span class="hljs-keyword">new</span> Node&lt;?,?&gt;[n];<br>                    table = tab = nt;<br>                    sc = n - (n &gt;&gt;&gt; <span class="hljs-number">2</span>);<br>                &#125;<br>            &#125; <span class="hljs-keyword">finally</span> &#123;<br>                sizeCtl = sc;<br>            &#125;<br>            <span class="hljs-keyword">break</span>;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> tab;<br>&#125;<br><br><span class="hljs-comment">// 使数组的读/写操作像 volatile 成员变量一样具有线程可见性</span><br><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-function">Node&lt;K,V&gt; <span class="hljs-title">tabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> i)</span> </span>&#123;<br>    <span class="hljs-keyword">return</span> (Node&lt;K,V&gt;)U.getObjectVolatile(tab, ((<span class="hljs-keyword">long</span>)i &lt;&lt; ASHIFT) + ABASE);<br>&#125;<br><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">setTabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> i, Node&lt;K,V&gt; v)</span> </span>&#123;<br>    U.putObjectVolatile(tab, ((<span class="hljs-keyword">long</span>)i &lt;&lt; ASHIFT) + ABASE, v);<br>&#125;<br><br><span class="hljs-comment">// 在数组上实现 CAS 操作</span><br><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">casTabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> i,</span></span><br><span class="hljs-function"><span class="hljs-params">                                    Node&lt;K,V&gt; c, Node&lt;K,V&gt; v)</span> </span>&#123;<br>    <span class="hljs-keyword">return</span> U.compareAndSwapObject(tab, ((<span class="hljs-keyword">long</span>)i &lt;&lt; ASHIFT) + ABASE, c, v);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>虽然都是线程安全的 map，但 <code>ConcurrentHashMap</code> 的分段加锁对比 <code>HashTable</code> 的整个方法加锁优势就体现出来了，高并发下优势会愈加明显</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// HashTable 对整个写操作加锁</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> V <span class="hljs-title">put</span><span class="hljs-params">(K key, V value)</span> </span>&#123;<br>    <span class="hljs-comment">// Make sure the value is not null</span><br>    <span class="hljs-keyword">if</span> (value == <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException();<br>    &#125;<br><br>    <span class="hljs-comment">// Makes sure the key is not already in the hashtable.</span><br>    HashtableEntry&lt;?,?&gt; tab[] = table;<br>    <span class="hljs-keyword">int</span> hash = key.hashCode();<br>    <span class="hljs-keyword">int</span> index = (hash &amp; <span class="hljs-number">0x7FFFFFFF</span>) % tab.length;<br>    <span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span><br>    HashtableEntry&lt;K,V&gt; entry = (HashtableEntry&lt;K,V&gt;)tab[index];<br>    <span class="hljs-keyword">for</span>(; entry != <span class="hljs-keyword">null</span> ; entry = entry.next) &#123;<br>        <span class="hljs-keyword">if</span> ((entry.hash == hash) &amp;&amp; entry.key.equals(key)) &#123;<br>            V old = entry.value;<br>            entry.value = value;<br>            <span class="hljs-keyword">return</span> old;<br>        &#125;<br>    &#125;<br><br>    addEntry(hash, key, value, index);<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>读操作完全不加锁，但是 <code>Node.val</code> 和 <code>Node.next</code> 是 <code>volatile</code> 修饰的，所以 <code>Node</code> 的线程可见性是有保证的</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> V <span class="hljs-title">get</span><span class="hljs-params">(Object key)</span> </span>&#123;<br>    Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; e, p; <span class="hljs-keyword">int</span> n, eh; K ek;<br>    <span class="hljs-keyword">int</span> h = spread(key.hashCode());<br>    <span class="hljs-keyword">if</span> ((tab = table) != <span class="hljs-keyword">null</span> &amp;&amp; (n = tab.length) &gt; <span class="hljs-number">0</span> &amp;&amp;<br>        (e = tabAt(tab, (n - <span class="hljs-number">1</span>) &amp; h)) != <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">if</span> ((eh = e.hash) == h) &#123;<br>            <span class="hljs-keyword">if</span> ((ek = e.key) == key || (ek != <span class="hljs-keyword">null</span> &amp;&amp; key.equals(ek)))<br>                <span class="hljs-keyword">return</span> e.val;<br>        &#125;<br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (eh &lt; <span class="hljs-number">0</span>)<br>            <span class="hljs-keyword">return</span> (p = e.find(h, key)) != <span class="hljs-keyword">null</span> ? p.val : <span class="hljs-keyword">null</span>;<br>        <span class="hljs-keyword">while</span> ((e = e.next) != <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">if</span> (e.hash == h &amp;&amp;<br>                ((ek = e.key) == key || (ek != <span class="hljs-keyword">null</span> &amp;&amp; key.equals(ek))))<br>                <span class="hljs-keyword">return</span> e.val;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;<br>&#125;<br><br><span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Node</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; <span class="hljs-keyword">implements</span> <span class="hljs-title">Map</span>.<span class="hljs-title">Entry</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; </span>&#123;<br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> hash;<br>    <span class="hljs-keyword">final</span> K key;<br>    <span class="hljs-keyword">volatile</span> V val;<br>    <span class="hljs-keyword">volatile</span> Node&lt;K,V&gt; next;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="BlockingQueue"><a href="#BlockingQueue" class="headerlink" title="BlockingQueue"></a><code>BlockingQueue</code></h2><p>它提供的阻塞操作包括：</p>
+<p>|————————————|————————-|<br>| <code>put(e)</code>                           | 入队                     |<br>| <code>offer(e, timeout, unit)</code>          | 设置超时的入队             |<br>| <code>take()</code>                           | 出队                     |<br>| <code>poll(timeout, unit)</code>              | 设置超时的出队             |<br>| <code>drainTo(collection, maxElements)</code> | 批量出队并添加到另一个集合中 |</p>
+<h3 id="ArrayBlockingQueue"><a href="#ArrayBlockingQueue" class="headerlink" title="ArrayBlockingQueue"></a><code>ArrayBlockingQueue</code></h3><p>基于数组、容量有限的阻塞队列，通过构造函数指定队列的容量</p>
+<p>用两个指针 <code>takeIndex</code>(队头，指向下一次出队的位置) 和 <code>putIndex</code>（队尾，指向下一次入队的位置） 模拟队列，它们初始为 0（最左边），随着元素的入队 <code>putIndex</code> 往右移动，随着元素的出队 <code>takeIndex</code> 也往右移动，当它们越过数组最后边时会重置到最左边，<code>count</code> 确保 <code>takeIndex</code> 不会违规越过 <code>putIndex</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ArrayBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;<br><br>    <span class="hljs-comment">/** The queued items */</span><br>    <span class="hljs-keyword">final</span> Object[] items;<br><br>    <span class="hljs-comment">/** items index for next take, poll, peek or remove */</span><br>    <span class="hljs-keyword">int</span> takeIndex;<br><br>    <span class="hljs-comment">/** items index for next put, offer, or add */</span><br>    <span class="hljs-keyword">int</span> putIndex;<br><br>    <span class="hljs-comment">/** Number of elements in the queue */</span><br>    <span class="hljs-keyword">int</span> count;<br><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>出队/入队时用了 <code>Lock</code> 和 <code>Condition</code> 实现阻塞和唤醒，出队时如果为空则阻塞在 <code>notEmpty</code> 上，入队时如果满了则阻塞在 <code>notFull</code>，入队后唤醒阻塞在 <code>notEmpty</code> 上的线程，出队后唤醒阻塞在 <code>notFull</code> 上的线程</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ArrayBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;<br><br>    <span class="hljs-comment">/** Main lock guarding all access */</span><br>    <span class="hljs-keyword">final</span> ReentrantLock lock;<br><br>    <span class="hljs-comment">/** Condition for waiting takes */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Condition notEmpty;<br><br>    <span class="hljs-comment">/** Condition for waiting puts */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Condition notFull;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Inserts element at current put position, advances, and signals.</span><br><span class="hljs-comment">     * Call only when holding lock.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">enqueue</span><span class="hljs-params">(E x)</span> </span>&#123;<br>        <span class="hljs-comment">// assert lock.getHoldCount() == 1;</span><br>        <span class="hljs-comment">// assert items[putIndex] == null;</span><br>        <span class="hljs-keyword">final</span> Object[] items = <span class="hljs-keyword">this</span>.items;<br>        items[putIndex] = x;<br>        <span class="hljs-keyword">if</span> (++putIndex == items.length) putIndex = <span class="hljs-number">0</span>;<br>        count++;<br>        notEmpty.signal();<br>    &#125;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Extracts element at current take position, advances, and signals.</span><br><span class="hljs-comment">     * Call only when holding lock.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">private</span> E <span class="hljs-title">dequeue</span><span class="hljs-params">()</span> </span>&#123;<br>        <span class="hljs-comment">// assert lock.getHoldCount() == 1;</span><br>        <span class="hljs-comment">// assert items[takeIndex] != null;</span><br>        <span class="hljs-keyword">final</span> Object[] items = <span class="hljs-keyword">this</span>.items;<br>        <span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span><br>        E x = (E) items[takeIndex];<br>        items[takeIndex] = <span class="hljs-keyword">null</span>;<br>        <span class="hljs-keyword">if</span> (++takeIndex == items.length) takeIndex = <span class="hljs-number">0</span>;<br>        count--;<br>        <span class="hljs-keyword">if</span> (itrs != <span class="hljs-keyword">null</span>)<br>            itrs.elementDequeued();<br>        notFull.signal();<br>        <span class="hljs-keyword">return</span> x;<br>    &#125;  <br><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="LinkedBlockingQueue"><a href="#LinkedBlockingQueue" class="headerlink" title="LinkedBlockingQueue"></a><code>LinkedBlockingQueue</code></h3><p>基于链表、无限容量（当然也可以通过构造函数设置最大容量）的阻塞队列，链表是单向的，<code>head</code> 指向队头也就是出队的位置，<code>last</code> 指向队尾也就是出队的位置</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LinkedBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Linked list node class.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Node</span>&lt;<span class="hljs-title">E</span>&gt; </span>&#123;<br>        E item;<br><br>        <span class="hljs-comment">/**</span><br><span class="hljs-comment">         * One of:</span><br><span class="hljs-comment">         * - the real successor Node</span><br><span class="hljs-comment">         * - this Node, meaning the successor is head.next</span><br><span class="hljs-comment">         * - null, meaning there is no successor (this is the last node)</span><br><span class="hljs-comment">         */</span><br>        Node&lt;E&gt; next;<br><br>        Node(E x) &#123; item = x; &#125;<br>    &#125;<br><br>    <span class="hljs-comment">/** The capacity bound, or Integer.MAX_VALUE if none */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> capacity;<br><br>    <span class="hljs-comment">/** Current number of elements */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> AtomicInteger count = <span class="hljs-keyword">new</span> AtomicInteger();<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Head of linked list.</span><br><span class="hljs-comment">     * Invariant: head.item == null</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">transient</span> Node&lt;E&gt; head;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Tail of linked list.</span><br><span class="hljs-comment">     * Invariant: last.next == null</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Node&lt;E&gt; last;<br><br>    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">enqueue</span><span class="hljs-params">(Node&lt;E&gt; node)</span> </span>&#123;<br>        <span class="hljs-comment">// assert putLock.isHeldByCurrentThread();</span><br>        <span class="hljs-comment">// assert last.next == null;</span><br>        last = last.next = node;<br>    &#125;<br><br>    <span class="hljs-function"><span class="hljs-keyword">private</span> E <span class="hljs-title">dequeue</span><span class="hljs-params">()</span> </span>&#123;<br>        <span class="hljs-comment">// assert takeLock.isHeldByCurrentThread();</span><br>        <span class="hljs-comment">// assert head.item == null;</span><br>        Node&lt;E&gt; h = head;<br>        Node&lt;E&gt; first = h.next;<br>        h.next = h; <span class="hljs-comment">// help GC</span><br>        head = first;<br>        E x = first.item;<br>        first.item = <span class="hljs-keyword">null</span>;<br>        <span class="hljs-keyword">return</span> x;<br>    &#125;<br><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>跟 <code>ArrayBlockingQueue</code> 一样用了两个条件变量：<code>notEmpty</code> 和 <code>notFull</code> 来阻塞/唤醒生产者和消费者；为啥会有 <code>notFull</code> 的情况呢，不是无限容量吗？因为它可以设置一个最大容量</p>
+<p>不同的是 <code>LinkedBlockingQueue</code> 用了两个锁，<code>takeLock</code> 给出队加锁，<code>putLock</code> 给入队加锁，出队和入队之所以可以并行是有 <code>count</code> 在确保数量正确</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LinkedBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;<br><br>    <span class="hljs-comment">/** The capacity bound, or Integer.MAX_VALUE if none */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> capacity;<br><br>    <span class="hljs-comment">/** Current number of elements */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> AtomicInteger count = <span class="hljs-keyword">new</span> AtomicInteger();<br><br>    <span class="hljs-comment">/** Lock held by take, poll, etc */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ReentrantLock takeLock = <span class="hljs-keyword">new</span> ReentrantLock();<br><br>    <span class="hljs-comment">/** Wait queue for waiting takes */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Condition notEmpty = takeLock.newCondition();<br><br>    <span class="hljs-comment">/** Lock held by put, offer, etc */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ReentrantLock putLock = <span class="hljs-keyword">new</span> ReentrantLock();<br><br>    <span class="hljs-comment">/** Wait queue for waiting puts */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Condition notFull = putLock.newCondition();<br><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="PriorityBlockingQueue"><a href="#PriorityBlockingQueue" class="headerlink" title="PriorityBlockingQueue"></a><code>PriorityBlockingQueue</code></h3><p>上面两个阻塞队列是 <code>FIFO</code> 排序的，而这个可以用 <code>Comparator</code> 和 <code>Comparable</code> 自定义优先级</p>
+<p>底层用 <strong>小顶堆</strong> 实现的优先队列，小顶堆是用数组实现的二叉树（左右节点要大于父节点）；入队元素添加到叶子那层的最左边，然后自下往上跟父节点比较，如果小则交换，这个操作叫 <code>siftUp</code>；出队元素固定是树的根节点，出队后把最后一个节点作为根节点，从上往下跟左右节点比较，如果大则交换，这个操作叫 <code>siftDown</code>（参考 <a href="../../../../2021/02/19/threadpool/">这篇文章</a> 里堆的介绍）</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PriorityBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span><br><span class="hljs-class">    <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Priority queue represented as a balanced binary heap: the two</span><br><span class="hljs-comment">     * children of queue[n] are queue[2*n+1] and queue[2*(n+1)].  The</span><br><span class="hljs-comment">     * priority queue is ordered by comparator, or by the elements&#x27;</span><br><span class="hljs-comment">     * natural ordering, if comparator is null: For each node n in the</span><br><span class="hljs-comment">     * heap and each descendant d of n, n &lt;= d.  The element with the</span><br><span class="hljs-comment">     * lowest value is in queue[0], assuming the queue is nonempty.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Object[] queue;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">siftUpUsingComparator</span><span class="hljs-params">(<span class="hljs-keyword">int</span> k, T x, Object[] array,</span></span><br><span class="hljs-function"><span class="hljs-params">                                       Comparator&lt;? <span class="hljs-keyword">super</span> T&gt; cmp)</span> </span>&#123;<br>        <span class="hljs-keyword">while</span> (k &gt; <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-keyword">int</span> parent = (k - <span class="hljs-number">1</span>) &gt;&gt;&gt; <span class="hljs-number">1</span>;<br>            Object e = array[parent];<br>            <span class="hljs-keyword">if</span> (cmp.compare(x, (T) e) &gt;= <span class="hljs-number">0</span>)<br>                <span class="hljs-keyword">break</span>;<br>            array[k] = e;<br>            k = parent;<br>        &#125;<br>        array[k] = x;<br>    &#125;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">siftDownUsingComparator</span><span class="hljs-params">(<span class="hljs-keyword">int</span> k, T x, Object[] array,</span></span><br><span class="hljs-function"><span class="hljs-params">                                                    <span class="hljs-keyword">int</span> n,</span></span><br><span class="hljs-function"><span class="hljs-params">                                                    Comparator&lt;? <span class="hljs-keyword">super</span> T&gt; cmp)</span> </span>&#123;<br>        <span class="hljs-keyword">if</span> (n &gt; <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-keyword">int</span> half = n &gt;&gt;&gt; <span class="hljs-number">1</span>;<br>            <span class="hljs-keyword">while</span> (k &lt; half) &#123;<br>                <span class="hljs-keyword">int</span> child = (k &lt;&lt; <span class="hljs-number">1</span>) + <span class="hljs-number">1</span>;<br>                Object c = array[child];<br>                <span class="hljs-keyword">int</span> right = child + <span class="hljs-number">1</span>;<br>                <span class="hljs-keyword">if</span> (right &lt; n &amp;&amp; cmp.compare((T) c, (T) array[right]) &gt; <span class="hljs-number">0</span>)<br>                    c = array[child = right];<br>                <span class="hljs-keyword">if</span> (cmp.compare(x, (T) c) &lt;= <span class="hljs-number">0</span>)<br>                    <span class="hljs-keyword">break</span>;<br>                array[k] = c;<br>                k = child;<br>            &#125;<br>            array[k] = x;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>虽然底层是数组但可以扩容，也即无限容量；扩容操作也很细致地分为两步：</p>
+<ul>
+<li>分配一块新内存，用 int 和 CAS 操作实现自旋（也许是认为分配新内存很快，所以用乐观锁？）</li>
+<li>复制数组用 <code>Lock</code></li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">tryGrow</span><span class="hljs-params">(Object[] array, <span class="hljs-keyword">int</span> oldCap)</span> </span>&#123;<br>    <span class="hljs-comment">// 分配内存，自旋</span><br>    lock.unlock(); <span class="hljs-comment">// must release and then re-acquire main lock</span><br>    Object[] newArray = <span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">if</span> (allocationSpinLock == <span class="hljs-number">0</span> &amp;&amp;<br>        U.compareAndSwapInt(<span class="hljs-keyword">this</span>, ALLOCATIONSPINLOCK, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>)) &#123;<br>        <span class="hljs-keyword">try</span> &#123;<br>            <span class="hljs-keyword">int</span> newCap = oldCap + ((oldCap &lt; <span class="hljs-number">64</span>) ?<br>                                   (oldCap + <span class="hljs-number">2</span>) : <span class="hljs-comment">// grow faster if small</span><br>                                   (oldCap &gt;&gt; <span class="hljs-number">1</span>));<br>            <span class="hljs-keyword">if</span> (newCap - MAX_ARRAY_SIZE &gt; <span class="hljs-number">0</span>) &#123;    <span class="hljs-comment">// possible overflow</span><br>                <span class="hljs-keyword">int</span> minCap = oldCap + <span class="hljs-number">1</span>;<br>                <span class="hljs-keyword">if</span> (minCap &lt; <span class="hljs-number">0</span> || minCap &gt; MAX_ARRAY_SIZE)<br>                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> OutOfMemoryError();<br>                newCap = MAX_ARRAY_SIZE;<br>            &#125;<br>            <span class="hljs-keyword">if</span> (newCap &gt; oldCap &amp;&amp; queue == array)<br>                newArray = <span class="hljs-keyword">new</span> Object[newCap];<br>        &#125; <span class="hljs-keyword">finally</span> &#123;<br>            allocationSpinLock = <span class="hljs-number">0</span>;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">if</span> (newArray == <span class="hljs-keyword">null</span>) <span class="hljs-comment">// back off if another thread is allocating</span><br>        Thread.yield();<br><br>    <span class="hljs-comment">// 复制数组才上悲观锁</span><br>    lock.lock();<br>    <span class="hljs-keyword">if</span> (newArray != <span class="hljs-keyword">null</span> &amp;&amp; queue == array) &#123;<br>        queue = newArray;<br>        System.arraycopy(array, <span class="hljs-number">0</span>, newArray, <span class="hljs-number">0</span>, oldCap);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>跟 <code>ArrayBlockingQueue</code> 一样，入队/出队用同一把锁，因为无容量限制所以只需一个条件变量 <code>notEmpty</code>（<code>notFull</code> 的情况不会出现）</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PriorityBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span><br><span class="hljs-class">    <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Lock used for all public operations.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ReentrantLock lock;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * Condition for blocking when empty.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Condition notEmpty;<br><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="总结比较"><a href="#总结比较" class="headerlink" title="总结比较"></a>总结比较</h3><ul>
+<li>需要自定义优先级用 <code>PriorityBlockingQueue</code>，需要无限容量用 <code>LinkedBlockingQueue</code></li>
+<li><code>LinkedBlockingQueue</code> 入队出队分别使用两把锁，也就是说入队出队可以并行，在高并发下会比使用同一把锁的 <code>ArrayBlockingQueue</code> 性能要好</li>
+<li><code>ArrayBlockingQueue</code> 在内存利用率上会比 <code>LinkedBlockingQueue</code> 要好（<code>Node</code> 需要额外的空间），而且底层数组在构造函数时就已预先分配内存，使用时无需动态申请内存，内存波动较小；而动态申请内存的 <code>LinkedBlockingQueue</code> 可能会增加 JVM GC 的负担</li>
+</ul>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/JDK/">JDK</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/JDK/JUC/">JUC</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/JUC/">JUC</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8/">线程安全</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2021/04/05/hashmap/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">HashMap 的一些知识点</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2021/03/30/https/">
+                        <span class="hidden-mobile">什么是 https ？</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

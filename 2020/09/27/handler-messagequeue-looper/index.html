@@ -1,0 +1,522 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>面试官家常之Handler、MessageQueue 和 Looper - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="面试官家常之Handler、MessageQueue 和 Looper">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-09-27 04:00" pubdate>
+        2020年9月27日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      782 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      11
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">面试官家常之Handler、MessageQueue 和 Looper</h1>
+            
+            <div class="markdown-body">
+              <p><code>MessageQueue</code> 是个单向链表，按 <code>Message.when</code> 自然序排</p>
+<p>它有类似于「生产者 - 消费者」模型的阻塞队列：没有 <code>Message</code> 时，阻塞直到新 <code>Message</code> 入队；否则阻塞到下一个 <code>Message.when</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 这里会阻塞</span><br>nativePollOnce(ptr, nextPollTimeoutMillis);<br><br><span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;<br>    <span class="hljs-comment">// ... ...</span><br>    <span class="hljs-keyword">if</span> (msg != <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">if</span> (now &lt; msg.when) &#123;<br>            <span class="hljs-comment">// Next message is not ready.  Set a timeout to wake up when it is ready.</span><br>            <span class="hljs-comment">// 阻塞一段时间，直到时间到达下一个 message.when</span><br>            nextPollTimeoutMillis = (<span class="hljs-keyword">int</span>) Math.min(msg.when - now, Integer.MAX_VALUE);<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-comment">// Got a message.</span><br>            mBlocked = <span class="hljs-keyword">false</span>;<br>            <span class="hljs-keyword">if</span> (prevMsg != <span class="hljs-keyword">null</span>) &#123;<br>                prevMsg.next = msg.next;<br>            &#125; <span class="hljs-keyword">else</span> &#123;<br>                mMessages = msg.next;<br>            &#125;<br>            msg.next = <span class="hljs-keyword">null</span>;<br>            <span class="hljs-keyword">if</span> (DEBUG) Log.v(TAG, <span class="hljs-string">&quot;Returning message: &quot;</span> + msg);<br>            msg.markInUse();<br>            <span class="hljs-keyword">return</span> msg;<br>        &#125;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// No more messages.</span><br>        <span class="hljs-comment">// 没有 Message，阻塞直到 enqueueMessage 时被唤醒</span><br>        nextPollTimeoutMillis = -<span class="hljs-number">1</span>;<br>    &#125;<br>    <span class="hljs-comment">// ... ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 查看 c 层源码，可以看到 nativePollOnce 是通过 epoll 实现的</span><br><br><span class="hljs-comment">// 阻塞</span><br>MessageQueue.nativePollOnce -&gt;<br>android_os_MessageQueue_nativePollOnce -&gt;<br>NativeMessageQueue::pollOnce -&gt;<br>Looper::pollOnce -&gt;<br>Looper::pollInner -&gt;<br><span class="hljs-built_in">epoll_wait</span>(mEpollFd.<span class="hljs-built_in">get</span>(), eventItems, EPOLL_MAX_EVENTS, timeoutMillis);<br><br><span class="hljs-comment">// 唤醒</span><br>MessageQueue.enqueueMessage -&gt;<br>MessageQueue.nativeWake -&gt;<br>android_os_MessageQueue_nativeWake -&gt;<br>NativeMessageQueue::wake -&gt;<br>Looper::wake -&gt;<br><span class="hljs-built_in">write</span>(mWakeEventFd.<span class="hljs-built_in">get</span>(), &amp;inc, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">uint64_t</span>));<br></code></pre></div></td></tr></table></figure>
+
+<p>与 <code>NativeMessageQueue</code>、<code>NativeLooper</code> 的关系</p>
+<ol>
+<li>每个 <code>MessageQueue</code> 持有一个 <code>NativeMessageQueue</code>，而 <code>NativeMessageQueue</code> 又持有当前线程的 <code>NativeLooper</code></li>
+<li>关键的阻塞和唤醒函数都是由 <code>NativeLooper</code> 实现的，也就是 <code>epoll</code> 实现的阻塞和唤醒；只不过这个线程在 <code>native</code> 层进行 loop poll 操作<ul>
+<li><code>MessageQueue.nativePollOnce</code> → <code>NativeMessageQueue.pollOnce</code> → <code>NativeLooper.pollOnce</code></li>
+<li><code>MessageQueue.nativeWake</code> → <code>NativeMessageQueue.wake</code> → <code>NativeLooper.wake</code></li>
+</ul>
+</li>
+</ol>
+<p>同步栅栏（<code>SyncBarrier</code>）</p>
+<p>开启同步栅栏后，“栅栏”将会把 sync message 过滤掉，仅处理 async message，是一种提高 <code>Message</code> 优先级的方法</p>
+<p><code>postSyncBarrier</code> 开启同步栅栏，<code>removeSyncBarrier</code> 关闭同步栅栏，“栅栏”就是一个 target == null 的 <code>Message</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">Message msg = mMessages;    <span class="hljs-comment">// head of linked list</span><br><span class="hljs-keyword">if</span> (msg != <span class="hljs-keyword">null</span> &amp;&amp; msg.target == <span class="hljs-keyword">null</span>) &#123;    <span class="hljs-comment">// it is a barrier</span><br>    <span class="hljs-comment">// Stalled by a barrier.  Find the next asynchronous message in the queue.</span><br>    <span class="hljs-keyword">do</span> &#123;<br>        prevMsg = msg;<br>        msg = msg.next;<br>    &#125; <span class="hljs-keyword">while</span> (msg != <span class="hljs-keyword">null</span> &amp;&amp; !msg.isAsynchronous());<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>主线程 <code>Looper</code> 与子线程 <code>Looper</code> 有什么不同？</p>
+<p>主要区别在于 main looper <code>queue.mQuitAllowed == false</code>，即不允许 <code>looper.quit</code> 退出</p>
+<p><code>Looper.quit()</code> 和 <code>Looper.quitSafely()</code> 有什么区别？</p>
+<p><code>quit</code> 直接回收所有 message；而 <code>quitSafely</code> 则只回收 future message（还未到执行时间），继续执行完所有已到时间的 message 才结束</p>
+<p>既然可以存在多个 <code>Handler</code> 往 <code>MessageQueue</code> 中添加数据（发消息时各个 <code>Handler</code> 可能处于不同线程），那它内部是如何确保线程安全的？</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 加了锁</span><br><span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">enqueueMessage</span><span class="hljs-params">(Message msg, <span class="hljs-keyword">long</span> when)</span> </span>&#123;<br>    <span class="hljs-comment">// ... ...</span><br>    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;<br>        <span class="hljs-comment">// ... ...</span><br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>Looper.loop()</code> 为什么不会导致死循环？</p>
+<p>queue 是个阻塞队列，（当前时间点）没有 message 时，会阻塞 thread 而不消耗 cpu；当有新 message 入队时，会唤醒 thread；参考上面阻塞和唤醒的代码片段</p>
+<p><code>Handler </code>造成泄露的原因</p>
+<p>非静态内部类会持有一个外部类的隐式引用，比如下述写法：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">Handler handler = <span class="hljs-keyword">new</span> Handler() &#123;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleMessage</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> Message msg)</span> </span>&#123;&#125;<br>&#125;;<br><br>handler.post(<span class="hljs-keyword">new</span> Runnable() &#123;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;&#125;<br>&#125;);<br></code></pre></div></td></tr></table></figure>
+
+<p>那么我们可以追溯出一条完整的 gc root path：</p>
+<p>activity → handler/runnable → message(target/callback) → queue → looper → class looper(static field sThreadLocal) → thread</p>
+<p>解决办法：使用 <code>WeakReference</code></p>
+<p>tip:</p>
+<p>可以在 <a target="_blank" rel="noopener" href="https://cs.android.com/android">https://cs.android.com/android</a> 用类名、方法名等 symbol 搜索 aosp 代码，简单方便；各种 symbol 之间还有关联，可以点击跳转</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Framework/">Framework</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/Handler/">Handler</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/Looper/">Looper</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2020/10/04/dispatchtouchevent/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">一文搞懂事件分发，手势冲突和滑动冲突</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/09/15/git-log/">
+                        <span class="hidden-mobile">git log命令全解析，打log还能这么随心所欲！</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

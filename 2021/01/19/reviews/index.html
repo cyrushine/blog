@@ -1,0 +1,578 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>常见面试题备忘 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="常见面试题备忘">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-01-19 04:00" pubdate>
+        2021年1月19日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.9k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      38
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">常见面试题备忘</h1>
+            
+            <div class="markdown-body">
+              <h2 id="设计模式"><a href="#设计模式" class="headerlink" title="设计模式"></a>设计模式</h2><ul>
+<li>观察者（Observer），<code>LiveData</code></li>
+<li>单例（Singleton），double check</li>
+<li>适配器（Adapter），<code>RecyclerView.Adapter</code></li>
+<li>装饰器（Decorator），<code>ContextWrapper</code></li>
+<li>代理模式（Proxy），例如 VPN、Retrofit</li>
+<li>责任链（Chain of Responsibility），<code>OkHttp</code> 大体上就是个责任链模式</li>
+<li>建造者（Builder）</li>
+<li>工厂（Factory）</li>
+</ul>
+<p>代理模式强调不能直接访问一个对象，只能通过代理间接访问，不能直接访问的原因比如：权限校验、操作日志、RPC</p>
+<p>装饰器模式强调增强对象的功能：把一个对象的功能拆分为几部分，在运行时按需组装</p>
+<h2 id="实现-LRU"><a href="#实现-LRU" class="headerlink" title="实现 LRU"></a>实现 LRU</h2><p><code>map</code> + 双端链表，链尾是最近使用过的，链头是最久未使用的</p>
+<ul>
+<li><code>get(key)</code>，通过 <code>map</code> 可以在 O(1) 时间内找到 <code>value</code>，然后把 <code>value</code> 从双端链表中断开并移到链尾，双端链表的特性使得「断开」操作很容易实现</li>
+<li><code>put(key, value)</code>，把 <code>value</code> 添加到链尾，当超过容量限制时，从链头逐个移除 <code>value</code> 直到满足容量限制</li>
+</ul>
+<h2 id="几个重要的排序算法"><a href="#几个重要的排序算法" class="headerlink" title="几个重要的排序算法"></a>几个重要的排序算法</h2><ul>
+<li><p>归并排序 O(nlogn)<br><code>step</code> 从 1 逐步递增，合并两个长度为 <code>step</code> 的已排序区间，当 <code>step</code> &gt; length/2 时，已排序区间就等于整个数组<br>合并两个有序区间很简单，用「双指针法」即可</p>
+</li>
+<li><p>快速排序 O(nlogn)<br>双指针，一个在头一个在尾，取第一个元素为「基准」（挖出一个坑），从尾部找一个比「基准」小的填入坑，然后又从头部找一个比「基准」大的填入尾部的坑，循环往复直到双指针碰头，那么这个位置就是「基准」的位置<br>每一轮都可以找出一个元素的排序后的位置，从整体看，这个元素和它左右两块是已排序的<br>然后递归操作左右两块区间直到区间长度为 1</p>
+</li>
+<li><p>堆排序 O(nlogn)<br>利用「堆」这个特殊的数据结构来排序（大顶堆、小顶堆）<br>恰好堆也是用数组实现的，初始已排序区间的长度为 1，逐步扩大长度相当于逐个添加一个新元素到堆<br>添加一个新元素到堆，相当于添加到数组尾部，逻辑上看就是添加到二叉树叶子那层最左边，为了让堆继续满足性质，需要把新元素逐层地跟它的父节点比较：新节点大于父节点则交换（大顶堆，小顶堆则相反）<br>当已排序区间 == 数组时，整个数组就排好序了</p>
+</li>
+</ul>
+<h2 id="五层网络"><a href="#五层网络" class="headerlink" title="五层网络"></a>五层网络</h2><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>应用层</td>
+<td>HTTP</td>
+</tr>
+<tr>
+<td>传输层</td>
+<td>TCP、UDP</td>
+</tr>
+<tr>
+<td>网络层</td>
+<td>IP 地址（替代 MAC 地址，形成网络），ARP（通过 IP 地址查询得到 MAC 地址）</td>
+</tr>
+<tr>
+<td>链接层</td>
+<td>以太网协议（Ethernet），帧（Frame），MAC 地址，广播（同一网络的所有计算机都会受到消息，它们比较帧的 MAC 地址和自己的 MAC 地址是否相同来决定是否接收）</td>
+</tr>
+<tr>
+<td>物理层（实体层）</td>
+<td></td>
+</tr>
+</tbody></table>
+<h2 id="抽象类和接口的区别"><a href="#抽象类和接口的区别" class="headerlink" title="抽象类和接口的区别"></a>抽象类和接口的区别</h2><p>抽象类是对实体的抽象，而接口是对特征的抽象；所以 Java 类最多只能继承自一个抽象类，但却可是实现多个特征</p>
+<h2 id="多线程同步的方法"><a href="#多线程同步的方法" class="headerlink" title="多线程同步的方法"></a>多线程同步的方法</h2><ul>
+<li><code>synchronized</code></li>
+<li><code>volatile</code></li>
+<li><code>Lock</code> &amp; <code>Condition</code> &amp; <code>Atoimc</code></li>
+</ul>
+<h2 id="HashMap-和-HashTable-的区别"><a href="#HashMap-和-HashTable-的区别" class="headerlink" title="HashMap 和 HashTable 的区别"></a><code>HashMap</code> 和 <code>HashTable</code> 的区别</h2><ul>
+<li>都是数组 + 链表的实现（链表是为了解决 hash 冲突）</li>
+<li><code>HashTable</code> 是线程安全的（大多数方法都加了 <code>synchronized</code>），而 <code>HashMap</code> 不是</li>
+<li><code>HashMap</code> 允许为 <code>null</code> 的 key 和 value，而 <code>HashTable</code> 则不允许</li>
+<li><code>HashMap</code> 重算了 hash code：<code>(h = key.hashCode()) ^ (h &gt;&gt;&gt; 16)</code>，而 <code>HashTable</code> 直接使用 <code>hashCode()</code></li>
+</ul>
+<h2 id="怎么解决-ANR-问题"><a href="#怎么解决-ANR-问题" class="headerlink" title="怎么解决 ANR 问题"></a>怎么解决 ANR 问题</h2><p>先把 <code>/data/anr/trace.txt</code> 拉下来，搜索包名定位到 app 进程那一段，找到 <code>main</code> 线程，看看主线程是不是出于异常状态（比如 <code>Blocked</code>、<code>Sleeping</code>）<br>如果主线程状态异常，那么查看主线程的调用堆栈，看看是哪段代码导致主线程进入异常状态<br>像 <code>Blocked</code> 有可能是锁导致的，能看到主线程被哪个锁阻塞，那个锁被哪个线程持有<br>有时候主线程没发现异常，看调用堆栈发现主线程正在执行 binder 相关操作，此时有可能是阻塞在这里（等待 binder 对面那端的响应）</p>
+<p>还找不到问题，就在 logcat 里搜索 anr 找到 anr 相关日志，它会有一个 CPU 负载统计，如果 io 占比很大说明卡在 io 上了，继续往上找找看当时正在做什么文件操作，或者在 trace 文件里找找</p>
+<h2 id="Double-Check-会有什么问题？"><a href="#Double-Check-会有什么问题？" class="headerlink" title="Double Check 会有什么问题？"></a>Double Check 会有什么问题？</h2><p><code>mSingleton = new Object();</code> 这行语句实际上会分解为多条 CPU 指令：</p>
+<ol>
+<li>为 <code>Object</code> 分配一块内存</li>
+<li>初始化 <code>Object</code> 实例</li>
+<li>把 <code>mSingleton</code> 指向这块内存</li>
+</ol>
+<p>但是「指令重排」可能导致第三部与第二部交换位置，也就是说把 <code>mSingleton</code> 指向了一块尚未初始化的内存区域；此时线程 B 在执行 <code>if (mSingleton == null)</code> 时就会发现 <code>mSingleton</code> 的确不为 null 并返回 <code>mSingleton</code>，从而导致程序异常（因为 <code>mSingleton</code> 指向的内存还没有初始化）</p>
+<p>使用 <code>volatile</code> 修饰 <code>mSingleton</code> 即可，<code>volatile</code> 可以防止相关指令的重排</p>
+<h2 id="IdleHandler-是怎么实现的？"><a href="#IdleHandler-是怎么实现的？" class="headerlink" title="IdleHandler 是怎么实现的？"></a><code>IdleHandler</code> 是怎么实现的？</h2><p>在 <code>MessageQueue.next</code> 里，当队列为空，或者还不到第一个消息的执行时间时（<code>Message</code> 是按照执行时间排序的），在 <code>MessageQueue.mIdleHandlers</code> 里的 <code>IdleHandler</code> 会被执行</p>
+<h2 id="Retrofit-是怎么接口的？"><a href="#Retrofit-是怎么接口的？" class="headerlink" title="Retrofit 是怎么接口的？"></a>Retrofit 是怎么接口的？</h2><p>使用动态代理 <code>Proxy.newProxyInstance</code>，其核心是方法拦截</p>
+<p>在运行时创建一个实现了所选接口的类，这个类的构造函数需要一个 <code>InvocationHandler</code>，接口所有的方法调用都会代理至 <code>InvocationHandler</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> &lt;T&gt; T Retrofit.create(<span class="hljs-keyword">final</span> Class&lt;T&gt; service) &#123;<br>  Utils.validateServiceInterface(service);<br>  <span class="hljs-keyword">if</span> (validateEagerly) &#123;<br>    eagerlyValidateMethods(service);<br>  &#125;<br>  <span class="hljs-keyword">return</span> (T) Proxy.newProxyInstance(service.getClassLoader(), <span class="hljs-keyword">new</span> Class&lt;?&gt;[] &#123; service &#125;,<br>      <span class="hljs-keyword">new</span> InvocationHandler() &#123;<br>        <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Platform platform = Platform.get();<br>        <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Object[] emptyArgs = <span class="hljs-keyword">new</span> Object[<span class="hljs-number">0</span>];<br>        <span class="hljs-meta">@Override</span> <span class="hljs-function"><span class="hljs-keyword">public</span> Object <span class="hljs-title">invoke</span><span class="hljs-params">(Object proxy, Method method, <span class="hljs-meta">@Nullable</span> Object[] args)</span></span><br><span class="hljs-function">            <span class="hljs-keyword">throws</span> Throwable </span>&#123;<br>          <span class="hljs-comment">// If the method is a method from Object then defer to normal invocation.</span><br>          <span class="hljs-keyword">if</span> (method.getDeclaringClass() == Object.class) &#123;<br>            <span class="hljs-keyword">return</span> method.invoke(<span class="hljs-keyword">this</span>, args);<br>          &#125;<br>          <span class="hljs-keyword">if</span> (platform.isDefaultMethod(method)) &#123;<br>            <span class="hljs-keyword">return</span> platform.invokeDefaultMethod(method, service, proxy, args);<br>          &#125;<br>          <span class="hljs-keyword">return</span> loadServiceMethod(method).invoke(args != <span class="hljs-keyword">null</span> ? args : emptyArgs);<br>        &#125;<br>      &#125;);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="Activity-重建的过程"><a href="#Activity-重建的过程" class="headerlink" title="Activity 重建的过程"></a><code>Activity</code> 重建的过程</h2><p>旧的 <code>Activity</code> 走向死亡（<code>onPause</code> -&gt; <code>onStop</code> -&gt; <code>onDestroy</code>），新的 <code>Activity</code> 进入（<code>onCreate</code> -&gt; <code>onStart</code> -&gt; <code>onResume</code>）</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleRelaunchActivity(...)<br><br><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleRelaunchActivityInner</span><span class="hljs-params">(ActivityClientRecord r, <span class="hljs-keyword">int</span> configChanges,</span></span><br><span class="hljs-function"><span class="hljs-params">        List&lt;ResultInfo&gt; pendingResults, List&lt;ReferrerIntent&gt; pendingIntents,</span></span><br><span class="hljs-function"><span class="hljs-params">        PendingTransactionActions pendingActions, <span class="hljs-keyword">boolean</span> startsNotResumed,</span></span><br><span class="hljs-function"><span class="hljs-params">        Configuration overrideConfig, String reason)</span> </span>&#123;<br>    <span class="hljs-comment">// Preserve last used intent, it may be set from Activity#setIntent().</span><br>    <span class="hljs-keyword">final</span> Intent customIntent = r.activity.mIntent;<br><br>    <span class="hljs-comment">// 旧的 Activity 走向死亡（销毁）</span><br>    <span class="hljs-comment">// Need to ensure state is saved.</span><br>    <span class="hljs-keyword">if</span> (!r.paused) &#123;<br>        performPauseActivity(r, <span class="hljs-keyword">false</span>, reason, <span class="hljs-keyword">null</span> <span class="hljs-comment">/* pendingActions */</span>);<br>    &#125;<br>    <span class="hljs-keyword">if</span> (!r.stopped) &#123;<br>        callActivityOnStop(r, <span class="hljs-keyword">true</span> <span class="hljs-comment">/* saveState */</span>, reason);<br>    <br>    handleDestroyActivity(r.token, <span class="hljs-keyword">false</span>, configChanges, <span class="hljs-keyword">true</span>, reason)<br>    r.activity = <span class="hljs-keyword">null</span>;<br>    r.window = <span class="hljs-keyword">null</span>;<br>    r.hideForNow = <span class="hljs-keyword">false</span>;<br>    r.nextIdle = <span class="hljs-keyword">null</span>;<br>    <span class="hljs-comment">// Merge any pending results and pending intents; don&#x27;t just replace them</span><br>    <span class="hljs-keyword">if</span> (pendingResults != <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">if</span> (r.pendingResults == <span class="hljs-keyword">null</span>) &#123;<br>            r.pendingResults = pendingResults;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            r.pendingResults.addAll(pendingResults);<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">if</span> (pendingIntents != <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">if</span> (r.pendingIntents == <span class="hljs-keyword">null</span>) &#123;<br>            r.pendingIntents = pendingIntents;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            r.pendingIntents.addAll(pendingIntents);<br>        &#125;<br>    &#125;<br>    r.startsNotResumed = startsNotResumed;<br>    r.overrideConfig = overrideConfig<br>    <span class="hljs-comment">// 走创建新 Activity 的流程</span><br>    handleLaunchActivity(r, pendingActions, customIntent);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="ViewModel-和-Fragment-会随之重建吗"><a href="#ViewModel-和-Fragment-会随之重建吗" class="headerlink" title="ViewModel 和 Fragment 会随之重建吗?"></a><code>ViewModel</code> 和 <code>Fragment</code> 会随之重建吗?</h3><p>不会，在 <code>Activity.onStop</code> 之后 <code>Activity.onDestory</code> 之前，<code>FragmentActivity</code> 将 <code>Fragment</code> 和 <code>ViewModelStore</code> 借由方法 <code>onRetainNonConfigurationInstance</code> 传递给 <code>ActivityClientRecord</code> 保存<br>并在 <code>Activity.attach</code> 被重新赋值给新的 <code>Activity</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object FragmentActivity.onRetainNonConfigurationInstance() &#123;<br>    Object custom = onRetainCustomNonConfigurationInstance()<br>    FragmentManagerNonConfig fragments = mFragments.retainNestedNonConfig()<br>    <span class="hljs-keyword">if</span> (fragments == <span class="hljs-keyword">null</span> &amp;&amp; mViewModelStore == <span class="hljs-keyword">null</span> &amp;&amp; custom == <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;<br>    <br>    <span class="hljs-comment">// 在旧的 Activity 销毁前，保存 ViewModel 和 Fragment</span><br>    NonConfigurationInstances nci = <span class="hljs-keyword">new</span> NonConfigurationInstances();<br>    nci.custom = custom;<br>    nci.viewModelStore = mViewModelStore;<br>    nci.fragments = fragments;<br>    <span class="hljs-keyword">return</span> nci;<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onCreate</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> Bundle savedInstanceState)</span> </span>&#123;<br>    mFragments.attachHost(<span class="hljs-keyword">null</span> <span class="hljs-comment">/*parent*/</span>);<br>    <span class="hljs-keyword">super</span>.onCreate(savedInstanceState);<br>    NonConfigurationInstances nc =<br>            (NonConfigurationInstances) getLastNonConfigurationInstance();<br>    <span class="hljs-comment">// 恢复 ViewModel</span><br>    <span class="hljs-keyword">if</span> (nc != <span class="hljs-keyword">null</span> &amp;&amp; nc.viewModelStore != <span class="hljs-keyword">null</span> &amp;&amp; mViewModelStore == <span class="hljs-keyword">null</span>) &#123;<br>        mViewModelStore = nc.viewModelStore;<br>    &#125;<br>    <span class="hljs-keyword">if</span> (savedInstanceState != <span class="hljs-keyword">null</span>) &#123;<br>        Parcelable p = savedInstanceState.getParcelable(FRAGMENTS_TAG);<br>        <span class="hljs-comment">// 恢复 Fragment</span><br>        mFragments.restoreAllState(p, nc != <span class="hljs-keyword">null</span> ? nc.fragments : <span class="hljs-keyword">null</span>);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 旧的 Activity 实例会被销毁，但其对应的 ActivityClientRecord 不会被销毁</span><br><span class="hljs-comment">// 那么 NonConfigurationInstances 就由 ActivityClientRecord 暂时保管</span><br><span class="hljs-function">ActivityClientRecord <span class="hljs-title">performDestroyActivity</span><span class="hljs-params">(IBinder token, <span class="hljs-keyword">boolean</span> finishing,</span></span><br><span class="hljs-function"><span class="hljs-params">        <span class="hljs-keyword">int</span> configChanges, <span class="hljs-keyword">boolean</span> getNonConfigInstance, String reason)</span> </span>&#123;<br>    ActivityClientRecord r = mActivities.get(token);<br>    Class&lt;? extends Activity&gt; activityClass = <span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">if</span> (localLOGV) Slog.v(TAG, <span class="hljs-string">&quot;Performing finish of &quot;</span> + r);<br>    <span class="hljs-keyword">if</span> (r != <span class="hljs-keyword">null</span>) &#123;<br>        activityClass = r.activity.getClass();<br>        r.activity.mConfigChangeFlags |= configChanges;<br>        <span class="hljs-keyword">if</span> (finishing) &#123;<br>            r.activity.mFinished = <span class="hljs-keyword">true</span>;<br>        &#125;<br>        performPauseActivityIfNeeded(r, <span class="hljs-string">&quot;destroy&quot;</span>);<br>        <span class="hljs-keyword">if</span> (!r.stopped) &#123;<br>            callActivityOnStop(r, <span class="hljs-keyword">false</span> <span class="hljs-comment">/* saveState */</span>, <span class="hljs-string">&quot;destroy&quot;</span>);<br>        &#125;<br>        <span class="hljs-keyword">if</span> (getNonConfigInstance) &#123;<br>            <span class="hljs-keyword">try</span> &#123;<br>                r.lastNonConfigurationInstances<br>                        = r.activity.retainNonConfigurationInstances();<br>            &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;<br>                <span class="hljs-keyword">if</span> (!mInstrumentation.onException(r.activity, e)) &#123;<br>                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<br>                            <span class="hljs-string">&quot;Unable to retain activity &quot;</span><br>                            + r.intent.getComponent().toShortString()<br>                            + <span class="hljs-string">&quot;: &quot;</span> + e.toString(), e);<br>                &#125;<br>            &#125;<br>        &#125;<br>        <span class="hljs-comment">// call destory</span><br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 然后在 launch activity 时重新把 NonConfigurationInstances 赋给新建的 Activity 实例</span><br><span class="hljs-function"><span class="hljs-keyword">private</span> Activity <span class="hljs-title">performLaunchActivity</span><span class="hljs-params">(ActivityClientRecord r, Intent customIntent)</span> </span>&#123;<br>    <span class="hljs-comment">// ...</span><br>    activity.attach(appContext, <span class="hljs-keyword">this</span>, getInstrumentation(), r.token,<br>            r.ident, app, r.intent, r.activityInfo, title, r.parent,<br>            r.embeddedID, r.lastNonConfigurationInstances, config,<br>            r.referrer, r.voiceInteractor, window, r.configCallback,<br>            r.assistToken);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">attach</span><span class="hljs-params">(...)</span> </span>&#123;<br>    <span class="hljs-comment">// ...</span><br>    mLastNonConfigurationInstances = lastNonConfigurationInstances;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="CountDownLatch-和-CyclicBarrier-的区别"><a href="#CountDownLatch-和-CyclicBarrier-的区别" class="headerlink" title="CountDownLatch 和 CyclicBarrier 的区别"></a><code>CountDownLatch</code> 和 <code>CyclicBarrier</code> 的区别</h2><p>开始多个线程通过 <code>CountDownLatch.await()</code> 被它阻塞，然后其他线程执行完一个任务就通过 <code>countDown()</code> 把里面的计算器 <code>count</code> 减一，直到计数器归零阻塞的线程才被唤醒；它是 oneshot 不能重复使用，内部通过 <code>AQS</code> 实现</p>
+<p>N 个并行线程执行任务，执行完就阻塞在 <code>CyclicBarrier.await()</code> 上面，直到 N 个线程都执行完任务，最后一个调用 <code>await()</code> 的线程执行完 <code>barrierCommand</code> 后，其他线程被唤醒，而 <code>CyclicBarrier</code> 被重置为初始状态；不同于 <code>CountDownLatch</code> 的一次性，<code>CyclicBarrier</code> 可以重复使用</p>
+<h2 id="如何让-N-个线程串行执行？"><a href="#如何让-N-个线程串行执行？" class="headerlink" title="如何让 N 个线程串行执行？"></a>如何让 N 个线程串行执行？</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JoinThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;<br>    <span class="hljs-keyword">private</span> Runnable task;<br>    <span class="hljs-keyword">private</span> Thread prev;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">JoinThread</span><span class="hljs-params">(Runnable task, Thread prev)</span> </span>&#123;<br>        <span class="hljs-keyword">this</span>.task = task;<br>        <span class="hljs-keyword">this</span>.prev = prev;<br>    &#125;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 使用 Thread.join()，调用后当前线程被阻塞直到 prev 执行完毕才恢复</span><br><span class="hljs-comment">     * join 可以使并行的线程串行执行</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>        prev.join();<br>        task.run();<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="5-个线程，前-4-个执行完后才执行第-5-个"><a href="#5-个线程，前-4-个执行完后才执行第-5-个" class="headerlink" title="5 个线程，前 4 个执行完后才执行第 5 个"></a>5 个线程，前 4 个执行完后才执行第 5 个</h2><p>用 <code>CountDownLatch</code>，计算器设为 4，第 5 个线程通过 <code>await()</code> 阻塞在计数器上面，前 4 个执行到最后一步时使计数器减一，当计数器为零时第 5 个线程被唤醒</p>
+<h2 id="两个线程交替输出-1-100"><a href="#两个线程交替输出-1-100" class="headerlink" title="两个线程交替输出 1 - 100"></a>两个线程交替输出 1 - 100</h2><h3 id="自旋-volatile"><a href="#自旋-volatile" class="headerlink" title="自旋 + volatile"></a>自旋 + <code>volatile</code></h3><p>既然是交替输出，那必然一个输出奇数一个输出偶数，输出日志这一操作是很快的，所以可以考虑乐观锁：自旋</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;<br><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">int</span> count;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;<br>        <span class="hljs-keyword">new</span> OddThread().start();<br>        <span class="hljs-keyword">new</span> EvenThread().start();<br>    &#125;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">print</span><span class="hljs-params">(<span class="hljs-keyword">int</span> i)</span> </span>&#123;<br>        System.out.printf(<span class="hljs-string">&quot;%s - %d%n&quot;</span>, Thread.currentThread().getName(), i);<br>    &#125;<br><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">OddThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;<br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">OddThread</span><span class="hljs-params">()</span> </span>&#123; <span class="hljs-keyword">super</span>(<span class="hljs-string">&quot;Odd&quot;</span>); &#125;<br><br>        <span class="hljs-meta">@Override</span><br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>            <span class="hljs-keyword">for</span> (;;) &#123;<br>                <span class="hljs-keyword">int</span> c = count;<br>                <span class="hljs-keyword">if</span> (c &gt;= <span class="hljs-number">100</span>) <span class="hljs-keyword">break</span>;<br><br>                <span class="hljs-keyword">if</span> (++c % <span class="hljs-number">2</span> == <span class="hljs-number">1</span>) &#123;<br>                    print(c);<br>                    count = c;<br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EvenThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;<br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">EvenThread</span><span class="hljs-params">()</span> </span>&#123; <span class="hljs-keyword">super</span>(<span class="hljs-string">&quot;Even&quot;</span>); &#125;<br><br>        <span class="hljs-meta">@Override</span><br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>            <span class="hljs-keyword">for</span> (;;) &#123;<br>                <span class="hljs-keyword">int</span> c = count;<br>                <span class="hljs-keyword">if</span> (c &gt;= <span class="hljs-number">100</span>) <span class="hljs-keyword">break</span>;<br><br>                <span class="hljs-keyword">if</span> (++c % <span class="hljs-number">2</span> == <span class="hljs-number">0</span>) &#123;<br>                    print(c);<br>                    count = c;<br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="基于条件变量-Condition"><a href="#基于条件变量-Condition" class="headerlink" title="基于条件变量 Condition"></a>基于条件变量 <code>Condition</code></h3><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;<br><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">int</span> count;<br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ReentrantLock lock = <span class="hljs-keyword">new</span> ReentrantLock();<br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> Condition cond = lock.newCondition();<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;<br>        Runnable run = <span class="hljs-keyword">new</span> Runnable() &#123;<br>            <span class="hljs-meta">@Override</span><br>            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>                <span class="hljs-keyword">for</span> (;;) &#123;<br>                    lock.lock();<br>                    cond.signalAll();<br>                    <span class="hljs-keyword">try</span> &#123;<br>                        <span class="hljs-keyword">if</span> (count &gt;= <span class="hljs-number">100</span>) <span class="hljs-keyword">break</span>;<br>                        count++;<br>                        print(count);<br>                        cond.await();<br>                    &#125; <span class="hljs-keyword">catch</span> (InterruptedException ignored) &#123;<br>                    &#125; <span class="hljs-keyword">finally</span> &#123;<br>                        lock.unlock();<br>                    &#125;<br>                &#125;<br>            &#125;<br>        &#125;;<br><br>        <span class="hljs-keyword">new</span> Thread(run, <span class="hljs-string">&quot;A&quot;</span>).start();<br>        <span class="hljs-keyword">new</span> Thread(run, <span class="hljs-string">&quot;B&quot;</span>).start();<br>    &#125;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">print</span><span class="hljs-params">(<span class="hljs-keyword">int</span> i)</span> </span>&#123;<br>        System.out.printf(<span class="hljs-string">&quot;%s - %d%n&quot;</span>, Thread.currentThread().getName(), i);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="思考：N-个线程按顺序输出-1-100-？"><a href="#思考：N-个线程按顺序输出-1-100-？" class="headerlink" title="思考：N 个线程按顺序输出 1 - 100 ？"></a>思考：N 个线程按顺序输出 1 - 100 ？</h3><p>不使用锁的情况下，把判断奇偶的逻辑改一下，通过 <code>(count % N) == i</code> 判断该数字是否应该由当前线程打印</p>
+<p>用条件变量的情况下，每个线程都在自己的条件变量上阻塞，前面的线程持有下一个线程的条件变量（形成一个环），打印完后唤醒下一个线程；开始时主线程主动唤醒第一个线程</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/%E9%9D%A2%E8%AF%95/">面试</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/%E9%9D%A2%E8%AF%95/">面试</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2021/01/24/condition-by-lock/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Lock（三）利用 Lock 实现 Condition</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2021/01/13/aqs-lock-implementation/">
+                        <span class="hidden-mobile">Lock（二）AQS 源码分析以及 Lock 的实现</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

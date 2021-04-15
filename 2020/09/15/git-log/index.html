@@ -1,0 +1,687 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>git log命令全解析，打log还能这么随心所欲！ - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="git log命令全解析，打log还能这么随心所欲！">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-09-15 04:00" pubdate>
+        2020年9月15日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.9k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      37
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">git log命令全解析，打log还能这么随心所欲！</h1>
+            
+            <div class="markdown-body">
+              <p><code>git log</code> 命令非常强大而好用，在复杂系统的版本管理中扮演着重要的角色，但默认的 <code>git log</code> 命令显示出的东西实在太丑，不好好打扮一下根本没法见人，打扮好了用 <code>alias</code> 命令拍个照片，就正式出道了！</p>
+<p>下面先详细而系统地介绍 <code>git log</code> 的所有配置知识（用我一向简洁清晰的表述方式），熟悉了这些东西，你就可以自由配置自己美丽的 <code>git log</code> 了～<br>最后上个干货，直接给一个我打扮好的 <code>alias</code> 配置，懒人直接跳到最后吧 ！</p>
+<p><code>git log</code> 用于查询版本的历史，命令形式如下：<code>git log [&lt;options&gt;] [&lt;since&gt;..&lt;until&gt;] [[--] &lt;path&gt;...]</code></p>
+<h2 id="不带参数"><a href="#不带参数" class="headerlink" title="不带参数"></a>不带参数</h2><ul>
+<li>如果不带任何参数，它会列出所有历史记录，最近的排在最上方，显示提交对象的哈希值，作者、提交日期、和提交说明</li>
+<li>如果记录过多，则按Page Up、Page Down、↓、↑来控制显示</li>
+<li>按q退出历史记录列表</li>
+</ul>
+<h2 id="显示参数"><a href="#显示参数" class="headerlink" title="显示参数"></a>显示参数</h2><ul>
+<li><code>p</code>：按补丁显示每个更新间的差异，比下一条 <code>-stat</code> 命令信息更全</li>
+<li><code>-stat</code>：显示每次更新的修改文件的统计信息，每个提交都列出了修改过的文件，以及其中添加和移除的行数，并在最后列出所有增减行数小计</li>
+<li><code>-shortstat</code>：只显示 <code>-stat</code> 中最后的行数添加修改删除统计</li>
+<li><code>-name-only</code>：尽在已修改的提交信息后显示文件清单</li>
+<li><code>-name-status</code>：显示新增、修改和删除的文件清单</li>
+<li><code>-abbrev-commit</code>：仅显示SHA-1的前几个字符，而非所有的40个字符</li>
+<li><code>-relative-date</code>：使用较短的相对时间显示（例如：”two weeks ago”）</li>
+<li><code>-graph</code>：显示 ASCII 图形表示的分支合并历史</li>
+<li><code>-pretty＝</code>：使用其他格式显示历史提交信息，可选项有：<code>oneline</code>, <code>short</code>, <code>medium</code>, <code>full</code>, <code>fuller</code>, <code>email</code>, <code>raw</code> 以及 <code>format</code>，默认为 <code>medium</code>，如：<ul>
+<li><code>-pretty=oneline</code>：一行显示，只显示哈希值和提交说明（<code>--online</code> 本身也可以作为单独的属性）</li>
+<li><code>-pretty=format:</code>：控制显示的记录格式，如：<ul>
+<li><code>%H</code> 提交对象（commit）的完整哈希字串</li>
+<li><code>%h</code> 提交对象的简短哈希字串</li>
+<li><code>%T</code> 树对象（tree）的完整哈希字串</li>
+<li><code>%t</code> 树对象的简短哈希字串</li>
+<li><code>%P</code> 父对象（parent）的完整哈希字串</li>
+<li><code>%p</code> 父对象的简短哈希字串</li>
+<li><code>%an</code> 作者（author）的名字</li>
+<li><code>%ae</code> 作者的电子邮件地址</li>
+<li><code>%ad</code> 作者修订日期（可以用 -date= 选项定制格式）</li>
+<li><code>%ar</code> 作者修订日期，按多久以前的方式显示</li>
+<li><code>%cn</code> 提交者(committer)的名字<ul>
+<li>作者和提交者的区别不知道是啥？</li>
+<li>作者与提交者的关系：作者是程序的修改者，提交者是代码提交人（自己的修改不提交是怎么能让别人拉下来再提交的？）</li>
+<li>其实作者指的是实际作出修改的人，提交者指的是最后将此工作成果提交到仓库的人。所以，当你为某个项目发布补丁，然后某个核心成员将你的补丁并入项目时，你就是作者，而那个核心成员就是提交者（soga）</li>
+</ul>
+</li>
+<li><code>%ce</code> 提交者的电子邮件地址</li>
+<li><code>%cd</code> 提交日期（可以用 <code>-date=</code> 选项定制格式）</li>
+<li><code>%cr</code> 提交日期，按多久以前的方式显示</li>
+<li><code>%s</code> 提交说明</li>
+</ul>
+</li>
+<li>带颜色的 <code>--pretty=format:</code>，这个另外写出来分析；以这句为例：<code>%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;</code>，它的效果是 <img src="../../../../image/2020-09-15-git-log/1.png" srcset="/blog/image/loading.gif" lazyload alt="1.png">；先断句：[<code>%Cred%h</code>]，[<code>%Creset -</code>]，[<code>%C(yellow)%d</code>]，[<code>%Cblue%s</code>]，[<code>%Cgreen(%cd)</code>]，[<code>%C(bold blue)&lt;%an&gt;</code>]；然后就是很明显能得到的规律了：一个颜色＋一个内容，颜色以 <code>％C</code> 开头，后边接几种颜色，还可以设置字体，如果要设置字体的话，要一块加个括号，能设置的颜色值包括：<code>reset</code>（默认的灰色），<code>normal</code>, <code>black</code>, <code>red</code>, <code>green</code>, <code>yellow</code>, <code>blue</code>, <code>magenta</code>, <code>cyan</code>, <code>white</code>。字体属性则有 <code>bold</code>, <code>dim</code>, <code>ul</code>, <code>blink</code>, <code>reverse</code>；内容可以是占位元字符，也可以是直接显示的普通字符。</li>
+</ul>
+</li>
+<li><code>-date=(relative|local|default|iso|rfc|short|raw)</code>：定制后边如果出现 <code>%ad</code> 或 <code>%cd</code> 时的日期格式<ul>
+<li>有几个默认选项<ol>
+<li><code>-date=relative</code>：shows dates relative to the current time, e.g. “2 hours ago”.</li>
+<li><code>-date=local</code>：shows timestamps in user’s local timezone.</li>
+<li><code>-date=iso</code> (or <code>--date=iso8601</code>)：shows timestamps in ISO 8601 format.</li>
+<li><code>-date=rfc</code> (or <code>--date=rfc2822</code>)：shows timestamps in RFC 2822 format,often found in E-mail messages.</li>
+<li><code>-date=short</code>：shows only date but not time, in YYYY-MM-DD format.这个挺好用</li>
+<li><code>-date=raw</code>：shows the date in the internal raw git format %s %z format.</li>
+<li><code>-date=default</code>：shows timestamps in the original timezone (either committer’s or author’s).</li>
+</ol>
+</li>
+<li>也可以自定义格式（需要git版本2.6.0以上），比如 <code>--date=format:&#39;%Y-%m-%d %H:%M:%S&#39;</code> 会格式化成：2016-01-13 11:32:13，其他的格式化占位符如下：<ol>
+<li><code>%a</code>：Abbreviated weekday name</li>
+<li><code>%A</code>：Full weekday name</li>
+<li><code>%b</code>：Abbreviated month name</li>
+<li><code>%B</code>：Full month name</li>
+<li><code>%c</code>：Date and time representation appropriate for locale</li>
+<li><code>%d</code>：Day of month as decimal number (01 – 31)</li>
+<li><code>%H</code>： Hour in 24-hour format (00 – 23)</li>
+<li><code>%I</code>：Hour in 12-hour format (01 – 12)</li>
+<li><code>%j</code>：Day of year as decimal number (001 – 366)</li>
+<li><code>%m</code>：Month as decimal number (01 – 12)</li>
+<li><code>%M</code>：Minute as decimal number (00 – 59)</li>
+<li><code>%p</code>：Current locale’s A.M./P.M. indicator for 12-hour clock</li>
+<li><code>%S</code>：Second as decimal number (00 – 59)</li>
+<li><code>%U</code>：Week of year as decimal number, with Sunday as first day of week (00 – 53)</li>
+<li><code>%w</code>：Weekday as decimal number (0 – 6; Sunday is 0)</li>
+<li><code>%W</code>：Week of year as decimal number, with Monday as first day of week (00 – 53)</li>
+<li><code>%x</code>：Date representation for current locale</li>
+<li><code>%X</code>：Time representation for current locale</li>
+<li><code>%y</code>：Year without century, as decimal number (00 – 99)</li>
+<li><code>%Y</code>：Year with century, as decimal number</li>
+<li><code>%z</code>, <code>%Z</code>：Either the time-zone name or time zone abbreviation, depending on registry settings; no characters if time zone is unknown</li>
+<li><code>%%</code>：Percent sign</li>
+</ol>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="筛选参数"><a href="#筛选参数" class="headerlink" title="筛选参数"></a>筛选参数</h2><ol>
+<li>按数量<ol>
+<li>n：显示前n条log</li>
+</ol>
+</li>
+<li>按日期<ol>
+<li><code>-after=</code><ol>
+<li>比如 <code>git log --after=&quot;2014-7-1”</code>，显示2014年7月1号之后的commit(包含7月1号)</li>
+<li>后边的日期还可以用相对时间表示，比如”1 week ago”和”yesterday”，比如 <code>git log --after=&quot;yesterday&quot;</code></li>
+<li>这里的格式可以是什么？</li>
+</ol>
+</li>
+<li><code>-before=</code><ol>
+<li>同上</li>
+<li>另外这两条命令可以同时使用表示时间段，比如 <code>git log --after=&quot;2014-7-1&quot; --before=&quot;2014-7-4&quot;</code></li>
+<li>另外 <code>--since</code> <code>--until</code> 和 <code>--after`` --before</code> 是一个意思，都可以用</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按作者<ol>
+<li><code>-author=</code><ol>
+<li>比如 <code>git log --author=“John&quot;</code>，显示John贡献的commit</li>
+<li>注意：作者名不需要精确匹配，只需要包含就行了</li>
+<li>而且：可以使用正则表达式，比如 <code>git log --author=&quot;John\|Mary”</code>，搜索Marry和John贡献的commit</li>
+<li>而且：这个 <code>--author</code> 不仅包含名还包含email, 所以你可以用这个搜索email</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按commit描述<ol>
+<li><code>-grep=</code><ol>
+<li>比如：<code>git log --grep=&quot;JRA-224&quot;</code></li>
+<li>而且：可以传入-i用来忽略大小写</li>
+<li>注意：如果想同时使用 <code>--grep</code> 和 <code>--author</code>，必须在附加一个 <code>--all-match</code> 参数</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按文件<ol>
+<li>（空格）或［没有］<ol>
+<li>有时你可能只对某个文件的修改感兴趣, 你只想查看跟某个文件相关的历史信息, 你只需要插入你感兴趣文件的路径［对，是路径，所以经常是不太好用］就可以了</li>
+<li>比如：<code>git log -- foo.py bar.py</code>，只返回和 foo.py 或 bar.py 相关的 commit</li>
+<li>这里的–是告诉 Git 后面的参数是文件路径而不是 branch name. 如果后面的文件路径不会和某个 branch 产生混淆, 你可以省略 <code>--</code>，比如 <code>git log foo.py</code></li>
+<li>另外，后边的路径还支持正则，比如：<code>git log *install.md</code> 是，指定项目路径下的所有以 install.md 结尾的文件的提交历史</li>
+<li>另外，文件名应该放到参数的最后位置，通常在前面加上 <code>--</code> 并用空格隔开表示是文件</li>
+<li>另外，<code>git log file/</code> 查看 file 文件夹下所有文件的提交记录</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按分支<ol>
+<li><ol>
+<li><code>-branchName</code> branchName为任意一个分支名字，查看某个分支上的提交记录</li>
+<li>需要放到参数中的最后位置处</li>
+<li>如果分支名与文件名相同，系统会提示错 误，可通过–选项来指定给定的参数是分支名还是文件名<ol>
+<li>比如：在当前分支中有一个名为v1的文件，同时还存在一个名为v1的分支</li>
+<li><code>git log v1 --</code> 此时的v1代表的是分支名字（－－后边是空的）</li>
+<li><code>git log -- v1</code> 此时的v1代表的是名为v1的文件</li>
+<li><code>git log v1 －－ v1</code> 代表v1分支下的v1文件</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按内容<ol>
+<li><code>-S&quot;&lt;&gt;&quot;</code>、<code>-G&quot;&lt;&gt;&quot;</code><ol>
+<li>有时你想搜索和新增或删除某行代码相关的commit. 可以使用这条命令</li>
+<li>假设你想知道Hello, World!这句话是什么时候加入到项目里去的，可以用：<code>git log -S&quot;Hello,World!&quot;</code></li>
+<li>另外：如果你想使用正则表达式去匹配而不是字符串, 那么你可以使用-G代替-S.</li>
+<li>这是一个非常有用的debug工具, 使用他你可以定位所有跟某行代码相关的commit. 甚至可以查看某行是什么时候被copy的, 什么时候移到另外一个文件中去的</li>
+<li>注：-S后没有”=”，与查询内容之间也没有空格符</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按范围<ol>
+<li><code>git log &lt;since&gt;..&lt;until&gt;</code><ol>
+<li>这个命令可以查看某个范围的commit</li>
+<li>这个命令非常有用当你使用branch做为range参数的时候. 能很方便的显示2个branch之间的不同</li>
+<li>比如：<code>git log master..feature</code>，<code>master..feature</code> 这个range包含了在feature有而在master没有的所有commit，同样，如果是feature..master包含所有master有但是feature没有的commit</li>
+<li>另外，如果是三个点，表示或的意思：<code>git log master...test</code> 查询master或test分支中的提交记录</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>过滤掉 merge commit<ol>
+<li><code>-no-merges</code><ol>
+<li>默认情况下 <code>git log</code> 会输出 merge commit. 你可以通过 <code>--no-merges</code> 标记来过滤掉 merge commit，<code>git log --no-merges</code></li>
+<li>另外，如果你只对 merge commit 感兴趣可以使用 <code>—merges</code>，<code>git log --merges</code></li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按标签tag<ol>
+<li><code>git log v1.0</code><ol>
+<li>直接这样是查询标签之前的commit</li>
+<li>加两个点 <code>git log v1.0..</code> 查询从v1.0以后的提交历史记录(不包含v1.0)</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>按commit<ol>
+<li><code>git log commit</code> ：查询commit之前的记录，包含commit</li>
+<li><code>git log commit1 commit2</code>：查询commit1与commit2之间的记录，包括commit1和commit2</li>
+<li><code>git log commit1..commit2</code>：同上，但是不包括commit1<ol>
+<li>其中，commit可以是提交哈希值的简写模式，也可以使用HEAD代替<ol>
+<li>HEAD代表最后一次提交，HEAD^为最后一个提交的父提交，等同于HEAD～1</li>
+<li>HEAD～2代表倒数第二次提交</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+<h2 id="最后干货，你会喜欢的"><a href="#最后干货，你会喜欢的" class="headerlink" title="最后干货，你会喜欢的~"></a>最后干货，你会喜欢的~</h2><p>下面第一条的效果是这样：<br><img src="../../../../image/2020-09-15-git-log/2.png" srcset="/blog/image/loading.gif" lazyload alt="2.png"></p>
+<figure class="highlight bash"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs bash">git config --global alias.lm  <span class="hljs-string">&quot;log --no-merges --color --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --author=&#x27;你的名字！自己修改！&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br>git config --global alias.lms  <span class="hljs-string">&quot;log --no-merges --color --stat --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --author=&#x27;你的名字！自己修改！&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br>git config --global [alias.ls](http://alias.ls/) <span class="hljs-string">&quot;log --no-merges --color --graph --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br>git config --global alias.lss <span class="hljs-string">&quot;log --no-merges --color --stat --graph --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br></code></pre></div></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/bellkosmos/p/5923439.html">git log命令全解析，打log还能这么随心所欲！</a></li>
+</ol>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Git/">Git</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/git/">git</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2020/09/27/handler-messagequeue-looper/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">面试官家常之Handler、MessageQueue 和 Looper</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/09/05/merge-rebase-squash/">
+                        <span class="hidden-mobile">git 的 merge, rebase 和 squash</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

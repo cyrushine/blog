@@ -1,0 +1,557 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>Android 图形栈（一）vsync - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="Android 图形栈（一）vsync">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-12-02 04:00" pubdate>
+        2020年12月2日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      3.5k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      47
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Android 图形栈（一）vsync</h1>
+            
+            <div class="markdown-body">
+              <p>android 的垂直同步模型（vsync）是隐藏在 view 系统后面的很重要的一块，它控制着 view 渲染的节奏；而且 vsync 还是比较复杂的，我们从下到上，先从最熟悉的 <code>View.invalidate</code> 讲起，看看简单的一个 <code>invalidate</code> 后面隐藏着多么复杂的工作</p>
+<h2 id="从-View-invalidate-说起"><a href="#从-View-invalidate-说起" class="headerlink" title="从 View.invalidate() 说起"></a>从 <code>View.invalidate()</code> 说起</h2><p><img src="../../../../image/2020-12-02-vsync/invalidate.jpg" srcset="/blog/image/loading.gif" lazyload alt="invalidate.jpg"></p>
+<p>看上图，<code>View.invalidate()</code> 主要做了两件事：</p>
+<ol>
+<li>将 <code>ViewRootImpl.doTraversal()</code> 加入到 <code>Choreographer</code> 的任务列表里，等待下一次 vsync 信号到来时执行；<code>doTraversal()</code>主要执行 view tree 的三个重要方法：measure、layout 和 draw；<code>Choreographer</code>则是在一次 vsync 信号到来时，依次执行 <code>INPUT</code>，<code>ANIMATION</code> 和 <code>TRAVERSAL</code> 这三个类别的任务；也就是说 view tree 的渲染和 input 的处理都是从 vsync 到来时开始的，而且此时会开启同步栅栏，屏蔽非 ui 任务（用户任务），集中力量在下一次的 vsync 到来前完成一帧的渲染</li>
+<li>唤醒 <code>EventThread</code> 去看看有没 vsync 信号的到来；<code>EventThread</code> 看名字就知道是一个线程，看它的 loop 流程，是将 <code>mPendingEvents</code> 分发给 consumer，那么我们可以猜想下，event 也许包含了 vsync，而 consumer 很有可能最终走到 <code>Choreographer.doFrame</code>里触发 view tree 的绘制</li>
+</ol>
+<p>按照从下到上追踪法，下一步就是看看是谁在什么时候把 event 放到 <code>mPendingEvents</code> 里，但这里我选择掉转方向盘，先从 surfaceflinger 讲起</p>
+<p>继续之前，我们得先了解几个跟硬件有关的概念</p>
+<h2 id="HAL，Hardware-Abstract-Layer，硬件抽象层"><a href="#HAL，Hardware-Abstract-Layer，硬件抽象层" class="headerlink" title="HAL，Hardware Abstract Layer，硬件抽象层"></a>HAL，Hardware Abstract Layer，硬件抽象层</h2><p>看名字就知道这是跟硬件、设备相关的东西，应该是最贴近硬件的那一层软件，我没有做过相关的开发，但是结合 google 和这两篇文章：<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/944d2fb9cead">Android图形系统系统篇之HWC</a>，<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_19923217/article/details/88398660">Android HIDL HAL 接口定义语言详解</a>，我大概了解了它是干什么的，我说说我的理解：</p>
+<ul>
+<li>它用接口的方式定义协议，而协议则定义了组件间的沟通规范；Android app 开发其实也就这个概念，就是各个业务、基础能力的 interface；我做过 java web 开发，所以对这个概念比较熟悉；整个 java web 是由很多协议构成的：Servlet、JSP、JDBC 等，sun 给出包含这些协议 interface 的 jar 包出来（它自己也可能会给出一个默认实现比如 glassfish），各个厂商给出自己对协议的实现如：Tomcat、Jboss、Resin 等；而 web app 开发者只需根据协议 jar 包开发业务，部署时根据条件可以放在各种厂商的容器上</li>
+<li>HAL 也是这个道理，android HWC HAL 定义了各种 interface（在 <code>hardware/interfaces/graphics/composer/2.1/</code> 目录下），各个厂商需要实现这些接口并给出 so 文件；打包 android image 的时候，根据硬件设备挑选合适的 HAL 实现，把 so 文件放到镜像里；而 android framework 开发者只需根据 HAL 接口进行业务开发即可，无需关心实现细节</li>
+</ul>
+<h2 id="HIDL，HAL-Interface-Definition-Language，HAL-接口定义语言"><a href="#HIDL，HAL-Interface-Definition-Language，HAL-接口定义语言" class="headerlink" title="HIDL，HAL Interface Definition Language，HAL 接口定义语言"></a>HIDL，HAL Interface Definition Language，HAL 接口定义语言</h2><p>看名字好像跟 AIDL 有点渊源啊，对的，它是 HAL 的代码生成器；具体怎么用我们了解下即可：<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/944d2fb9cead">Android图形系统系统篇之HWC</a>，<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_19923217/article/details/88398660">Android HIDL HAL 接口定义语言详解</a>，<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_19923217/article/details/89173162">Android HIDL 之 hal 进程启动及服务注册过程</a></p>
+<p>总结下关键点：</p>
+<ul>
+<li>各个 HAL 是独立进程的（看看 <code>hardware/interfaces/graphics/composer/2.1/default/</code> 是怎么启动 HWC 进程并加载厂商 so 库的），surfaceflinger 进程通过 binder 与 HWC 进程通讯（也就是 C/S 架构，HWC 是 server，surfaceflinger 是 client）</li>
+<li>HWC 将服务注册到 <code>hwservicemanager</code>，surfaceflinger 从 <code>hwservicemanager</code> 获取 composer 服务</li>
+<li>所以用从下到上的方法找调用栈的时候会发现，onVsync 方法找不到调用的地方，那是因为发送 vsync 信号的代码是厂商代码（framework 提供 callback interface），不在 aosp 里面</li>
+</ul>
+<h2 id="HWC，硬件图层合成器"><a href="#HWC，硬件图层合成器" class="headerlink" title="HWC，硬件图层合成器"></a>HWC，硬件图层合成器</h2><p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/944d2fb9cead">Android图形系统系统篇之HWC</a> 这里也介绍了，它是一个合成多个图层的组件（原来状态栏、导航栏、壁纸、app 等不是一起渲染，而是独自渲染最后合成为屏幕内容的），这里只关心它会发出 vsync 信号</p>
+<p><img src="../../../../image/2020-12-02-vsync/vsync_flow.jpg" srcset="/blog/image/loading.gif" lazyload alt="vsync_flow.jpg"></p>
+<p>我们先理解这张图，屏幕（硬件）发出 vsync 信号（就是上图的 HW_VSYNC），经过软件的一系列的调整生成 SW_VSYNC，然后输出到两路：</p>
+<ol>
+<li><code>SF_VSYNC</code>，输出到 surfaceflinger</li>
+<li><code>APP_VSYNC</code>，输出到 app</li>
+</ol>
+<h2 id="HW-VSYNC-硬件垂直同步信号"><a href="#HW-VSYNC-硬件垂直同步信号" class="headerlink" title="HW_VSYNC - 硬件垂直同步信号"></a>HW_VSYNC - 硬件垂直同步信号</h2><p><img src="../../../../image/2020-12-02-vsync/hw_vsync.jpg" srcset="/blog/image/loading.gif" lazyload alt="hw_vsync.jpg"></p>
+<p>surfaceflinger 是一个很重要的服务进程，它跟图像和显示有关，源码在 <code>/frameworks/native/services/surfaceflinger</code>；目录下有个编译配置文件 <code>Android.bp</code> ，看下它的内容，它输出了可执行文件 surfaceflinger、共享库 libsurfaceflinger.so 和 libSurfaceFlingerProp.so；然后有个 <code>surfaceflinger.rc</code>，它是一个启动配置文件，意味着 surfaceflinger 会在系统启动后被 init 进程启动为服务进程，看下里面的内容，可执行文件是 <code>/system/bin/surfaceflinger</code>，<code>main</code> 函数入口在 main_surfaceflinger.cpp</p>
+<p>从上图可以看到 surfaceflinger 进程启动后，会查找 HWC server 并注册 callback，当设备发出 hw_vsync 时，<code>SurfaceFlinger.onVsyncReceived</code> 被执行，看上面那张图，hw_vsync 不是直接被使用，而是被调整转换为 sw_vsync，也就是 <code>DispSync.addResyncSample</code></p>
+<h2 id="SW-VSYNC-软件垂直同步信号"><a href="#SW-VSYNC-软件垂直同步信号" class="headerlink" title="SW_VSYNC - 软件垂直同步信号"></a>SW_VSYNC - 软件垂直同步信号</h2><p><code>DispSyncThread</code> 和 <code>DispSync</code> 收集 HW_VSYNC，计算并输出 SW_VSYNC；主循环是 <code>DispSyncThread.threadLoop()</code>，但在分析 main loop 之前，我们需要先了解 <code>DispSync</code> 几个重要的属性（参考<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/d3e4b1805c92">「Android SurfaceFlinger SW Vsync模型」</a>）</p>
+<p><code>mResyncSamples</code> 数组 - 通过上面的分析我们知道 <code>addResyncSample</code> 把 HW_VSYNC 加入 <code>DispSync</code>，但 <code>mResyncSamples</code> 只会保留最新的 32 个以供后续计算；它是个首尾相连、环状的循环列表，容量为 32</p>
+<p><code>mPeriod</code> - 两个 HW_VSYNC 之间的时间间隔，相当于刷新率，我们看下它是怎么计算的</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;<br>    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] updateModelLocked %zu&quot;</span>, mName, mNumResyncSamples);<br>    <span class="hljs-comment">// 只有收集到足够多（≥ 6）的 HW_VSYNC 才去计算刷新率（以及其他参数）</span><br>    <span class="hljs-keyword">if</span> (mNumResyncSamples &gt;= MIN_RESYNC_SAMPLES_FOR_UPDATE) &#123;<br>        <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] Computing...&quot;</span>, mName);<br>        <span class="hljs-keyword">nsecs_t</span> durationSum = <span class="hljs-number">0</span>;<br>        <span class="hljs-keyword">nsecs_t</span> minDuration = INT64_MAX;<br>        <span class="hljs-keyword">nsecs_t</span> maxDuration = <span class="hljs-number">0</span>;<br>        <span class="hljs-comment">// We skip the first 2 samples because the first vsync duration on some</span><br>        <span class="hljs-comment">// devices may be much more inaccurate than on other devices, e.g. due</span><br>        <span class="hljs-comment">// to delays in ramping up from a power collapse. By doing so this</span><br>        <span class="hljs-comment">// actually increases the accuracy of the DispSync model even though</span><br>        <span class="hljs-comment">// we&#x27;re effectively relying on fewer sample points.</span><br><br>        <span class="hljs-comment">// 把收集到的 HW_VSYNC 时间间隔去掉前两个，去掉最大值和最小值，剩下的求平均值</span><br>        <span class="hljs-comment">// 这就算出了硬件的刷新率，它是计算出来的一个平均值，因为 HW_VSYNC 速率极可能是会变动的</span><br>        <span class="hljs-keyword">static</span> <span class="hljs-keyword">constexpr</span> <span class="hljs-keyword">size_t</span> numSamplesSkipped = <span class="hljs-number">2</span>;<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">size_t</span> i = numSamplesSkipped; i &lt; mNumResyncSamples; i++) &#123;<br>            <span class="hljs-keyword">size_t</span> idx = (mFirstResyncSample + i) % MAX_RESYNC_SAMPLES;<br>            <span class="hljs-keyword">size_t</span> prev = (idx + MAX_RESYNC_SAMPLES - <span class="hljs-number">1</span>) % MAX_RESYNC_SAMPLES;<br>            <span class="hljs-keyword">nsecs_t</span> duration = mResyncSamples[idx] - mResyncSamples[prev];<br>            durationSum += duration;<br>            minDuration = <span class="hljs-built_in">min</span>(minDuration, duration);<br>            maxDuration = <span class="hljs-built_in">max</span>(maxDuration, duration);<br>        &#125;<br><br>        <span class="hljs-comment">// Exclude the min and max from the average</span><br>        durationSum -= minDuration + maxDuration;<br>        mPeriod = durationSum / (mNumResyncSamples - numSamplesSkipped - <span class="hljs-number">2</span>);<br>        <span class="hljs-comment">// ...</span><br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>mPhase</code> - <code>mPeriod</code> 的偏差值；我们知道 <code>mPeriod</code> 是一个计算出来的平均值，而且还去除了一些噪音（极大值、极小值等），那么它与真实的 HW_VSYNC 之间必定会有偏差，<code>mPhase</code> 就是这个平均偏差（要从数学理论上去理解）；这里不深入细节了</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;<br>    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] updateModelLocked %zu&quot;</span>, mName, mNumResyncSamples);<br>    <span class="hljs-keyword">if</span> (mNumResyncSamples &gt;= MIN_RESYNC_SAMPLES_FOR_UPDATE) &#123;<br>        <span class="hljs-comment">// ...</span><br>        <span class="hljs-keyword">double</span> sampleAvgX = <span class="hljs-number">0</span>;<br>        <span class="hljs-keyword">double</span> sampleAvgY = <span class="hljs-number">0</span>;<br>        <span class="hljs-keyword">double</span> scale = <span class="hljs-number">2.0</span> * M_PI / <span class="hljs-built_in"><span class="hljs-keyword">double</span></span>(mPeriod);<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">size_t</span> i = numSamplesSkipped; i &lt; mNumResyncSamples; i++) &#123;<br>            <span class="hljs-keyword">size_t</span> idx = (mFirstResyncSample + i) % MAX_RESYNC_SAMPLES;<br>            <span class="hljs-keyword">nsecs_t</span> sample = mResyncSamples[idx] - mReferenceTime;<br>            <span class="hljs-keyword">double</span> samplePhase = <span class="hljs-built_in"><span class="hljs-keyword">double</span></span>(sample % mPeriod) * scale;<br>            sampleAvgX += <span class="hljs-built_in">cos</span>(samplePhase);<br>            sampleAvgY += <span class="hljs-built_in">sin</span>(samplePhase);<br>        &#125;<br><br>        sampleAvgX /= <span class="hljs-built_in"><span class="hljs-keyword">double</span></span>(mNumResyncSamples - numSamplesSkipped);<br>        sampleAvgY /= <span class="hljs-built_in"><span class="hljs-keyword">double</span></span>(mNumResyncSamples - numSamplesSkipped);<br><br>        mPhase = <span class="hljs-built_in">nsecs_t</span>(<span class="hljs-built_in">atan2</span>(sampleAvgY, sampleAvgX) / scale);<br><br>        <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] mPhase = %&quot;</span> PRId64, mName, <span class="hljs-built_in">ns2us</span>(mPhase));<br><br>        <span class="hljs-keyword">if</span> (mPhase &lt; -(mPeriod / <span class="hljs-number">2</span>)) &#123;<br>            mPhase += mPeriod;<br>            <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] Adjusting mPhase -&gt; %&quot;</span> PRId64, mName, <span class="hljs-built_in">ns2us</span>(mPhase));<br>        &#125;<br><br>        <span class="hljs-comment">// Artificially inflate the period if requested.</span><br>        mPeriod += mPeriod * mRefreshSkipCount;<br>        <span class="hljs-comment">// ...</span><br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>mReferenceTime</code>，这个最新那个 HW_VSYNC 的时间，每次计算下一个 SW_VSYNC 时都是以该时间作为基准，这样可以减少误差。如果每一个 SW_VSYNC 都以上一个 SW_VSYNC 作为基准，那误差就会不停的累加；而如果以第一个 HW_VSYNC 作基准，那每次 SW_VSYNC 误差是不会累加的</p>
+<p>现在我们看下 main loop</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">threadLoop</span><span class="hljs-params">()</span> </span>&#123;<br>    <span class="hljs-keyword">status_t</span> err;<br>    <span class="hljs-keyword">nsecs_t</span> now = <span class="hljs-built_in">systemTime</span>(SYSTEM_TIME_MONOTONIC);<br>    <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;<br>        std::vector&lt;CallbackInvocation&gt; callbackInvocations;<br>        <span class="hljs-keyword">nsecs_t</span> targetTime = <span class="hljs-number">0</span>;<br>        &#123; <span class="hljs-comment">// Scope for lock</span><br>            <span class="hljs-function">Mutex::Autolock <span class="hljs-title">lock</span><span class="hljs-params">(mMutex)</span></span>;<br>            <span class="hljs-keyword">if</span> (mTraceDetailedInfo) &#123;<br>                <span class="hljs-built_in">ATRACE_INT64</span>(<span class="hljs-string">&quot;DispSync:Frame&quot;</span>, mFrameNumber);<br>            &#125;<br>            <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] Frame %&quot;</span> PRId64, mName, mFrameNumber);<br>            ++mFrameNumber;<br>            <span class="hljs-keyword">if</span> (mStop) &#123;<br>                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>            &#125;<br><br>            <span class="hljs-comment">// 收集到足够多的 HW_VSYNC 算出刷新率后，才计算 SW_VSYNC，否则 wait</span><br>            <span class="hljs-keyword">if</span> (mPeriod == <span class="hljs-number">0</span>) &#123;<br>                err = mCond.<span class="hljs-built_in">wait</span>(mMutex);<br>                <span class="hljs-keyword">if</span> (err != NO_ERROR) &#123;<br>                    <span class="hljs-built_in">ALOGE</span>(<span class="hljs-string">&quot;error waiting for new events: %s (%d)&quot;</span>, <span class="hljs-built_in">strerror</span>(-err), err);<br>                    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>                &#125;<br>                <span class="hljs-keyword">continue</span>;<br>            &#125;<br><br>            <span class="hljs-comment">// computeNextEventTimeLocked 这个方法很重要，我们知道随着 HW_VSYNC 样本的不断更新，</span><br>            <span class="hljs-comment">// mPeriod、mPhase 和 mReferenceTime 也跟着轻微变动，上一次的 SW_VSYNC 是根据上一次的参数算出来的</span><br>            <span class="hljs-comment">// 下一次的 SW_VSYNC 则在上次时间戳的基础上重新计算</span><br>            targetTime = <span class="hljs-built_in">computeNextEventTimeLocked</span>(now);<br><br>            <span class="hljs-comment">// 没到时间则 wait</span><br>            <span class="hljs-keyword">bool</span> isWakeup = <span class="hljs-literal">false</span>;<br>            <span class="hljs-keyword">if</span> (now &lt; targetTime) &#123;<br>                <span class="hljs-keyword">if</span> (mTraceDetailedInfo) <span class="hljs-built_in">ATRACE_NAME</span>(<span class="hljs-string">&quot;DispSync waiting&quot;</span>);<br>                <span class="hljs-keyword">if</span> (targetTime == INT64_MAX) &#123;<br>                    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] Waiting forever&quot;</span>, mName);<br>                    err = mCond.<span class="hljs-built_in">wait</span>(mMutex);<br>                &#125; <span class="hljs-keyword">else</span> &#123;<br>                    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] Waiting until %&quot;</span> PRId64, mName, <span class="hljs-built_in">ns2us</span>(targetTime));<br>                    err = mCond.<span class="hljs-built_in">waitRelative</span>(mMutex, targetTime - now);<br>                &#125;<br>                <span class="hljs-keyword">if</span> (err == TIMED_OUT) &#123;<br>                    isWakeup = <span class="hljs-literal">true</span>;<br>                &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (err != NO_ERROR) &#123;<br>                    <span class="hljs-built_in">ALOGE</span>(<span class="hljs-string">&quot;error waiting for next event: %s (%d)&quot;</span>, <span class="hljs-built_in">strerror</span>(-err), err);<br>                    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>                &#125;<br>            &#125;<br>            now = <span class="hljs-built_in">systemTime</span>(SYSTEM_TIME_MONOTONIC);<br>            <span class="hljs-comment">// Don&#x27;t correct by more than 1.5 ms</span><br>            <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">nsecs_t</span> kMaxWakeupLatency = <span class="hljs-built_in">us2ns</span>(<span class="hljs-number">1500</span>);<br>            <span class="hljs-keyword">if</span> (isWakeup) &#123;<br>                mWakeupLatency = ((mWakeupLatency * <span class="hljs-number">63</span>) + (now - targetTime)) / <span class="hljs-number">64</span>;<br>                mWakeupLatency = <span class="hljs-built_in">min</span>(mWakeupLatency, kMaxWakeupLatency);<br>                <span class="hljs-keyword">if</span> (mTraceDetailedInfo) &#123;<br>                    <span class="hljs-built_in">ATRACE_INT64</span>(<span class="hljs-string">&quot;DispSync:WakeupLat&quot;</span>, now - targetTime);<br>                    <span class="hljs-built_in">ATRACE_INT64</span>(<span class="hljs-string">&quot;DispSync:AvgWakeupLat&quot;</span>, mWakeupLatency);<br>                &#125;<br>            &#125;<br><br>            <span class="hljs-comment">// 发送时，再次计算发送时间，只有此时到达发送时间的才发送（时间算得很精确）</span><br>            callbackInvocations = <span class="hljs-built_in">gatherCallbackInvocationsLocked</span>(now);<br>        &#125;<br>        <span class="hljs-keyword">if</span> (callbackInvocations.<span class="hljs-built_in">size</span>() &gt; <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-built_in">fireCallbackInvocations</span>(callbackInvocations);<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>总的来说，SW_VSYNC 它去除了噪音，而且用过去 32 个 HW_VSYNC 样本的平均值作刷新率，对比 HW_VSYNC 显得平滑了很多</p>
+<p>那谁接收 SW_VSYNC？</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;<br>    <span class="hljs-comment">// ... 一个是 app，叫做 APP_VSYNC 吧</span><br>    mAppConnectionHandle =<br>            mScheduler-&gt;<span class="hljs-built_in">createConnection</span>(<span class="hljs-string">&quot;app&quot;</span>, mVsyncModulator.<span class="hljs-built_in">getOffsets</span>().app,<br>                                         mPhaseOffsets-&gt;<span class="hljs-built_in">getOffsetThresholdForNextVsync</span>(),<br>                                         impl::EventThread::<span class="hljs-built_in">InterceptVSyncsCallback</span>());<br>    <span class="hljs-comment">// ... 一个是 sf，叫做 SF_VSYNC 吧</span><br>    mSfConnectionHandle =<br>            mScheduler-&gt;<span class="hljs-built_in">createConnection</span>(<span class="hljs-string">&quot;sf&quot;</span>, mVsyncModulator.<span class="hljs-built_in">getOffsets</span>().sf,<br>                                         mPhaseOffsets-&gt;<span class="hljs-built_in">getOffsetThresholdForNextVsync</span>(),<br>                                         [<span class="hljs-keyword">this</span>](<span class="hljs-keyword">nsecs_t</span> timestamp) &#123;<br>                                             mInterceptor-&gt;<span class="hljs-built_in">saveVSyncEvent</span>(timestamp);<br>                                         &#125;);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="APP-VSYNC-发送给-app-的垂直同步信号"><a href="#APP-VSYNC-发送给-app-的垂直同步信号" class="headerlink" title="APP_VSYNC - 发送给 app 的垂直同步信号"></a>APP_VSYNC - 发送给 app 的垂直同步信号</h2><p>还记得文章开头那张 <code>View.invalidate()</code> 时序图吗？最后面它唤醒了 <code>EventThread</code>，现在我们来看看 <code>EventThread</code> 的主循环都做了些什么</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">EventThread::threadMain</span><span class="hljs-params">(std::unique_lock&lt;std::mutex&gt;&amp; lock)</span> </span>&#123;<br>    DisplayEventConsumers consumers;<br><br>    <span class="hljs-keyword">while</span> (mState != State::Quit) &#123;<br>        std::optional&lt;DisplayEventReceiver::Event&gt; event;<br><br>        <span class="hljs-comment">// 在文章的开头，我们就猜测 mPendingEvents 里放的是同步信号</span><br>        <span class="hljs-comment">// 现在我们知道了里面包含 SW_VSYNC，那是谁放进去的呢？</span><br>        <span class="hljs-keyword">if</span> (!mPendingEvents.<span class="hljs-built_in">empty</span>()) &#123;<br>            event = mPendingEvents.<span class="hljs-built_in">front</span>();<br>            mPendingEvents.<span class="hljs-built_in">pop_front</span>();<br>						...<br>        &#125;<br><br>        <span class="hljs-keyword">bool</span> vsyncRequested = <span class="hljs-literal">false</span>;<br><br>        <span class="hljs-comment">// Find connections that should consume this event.</span><br>        <span class="hljs-keyword">auto</span> it = mDisplayEventConnections.<span class="hljs-built_in">begin</span>();<br>        <span class="hljs-keyword">while</span> (it != mDisplayEventConnections.<span class="hljs-built_in">end</span>()) &#123;<br>            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">const</span> <span class="hljs-keyword">auto</span> connection = it-&gt;<span class="hljs-built_in">promote</span>()) &#123;<br>                vsyncRequested |= connection-&gt;vsyncRequest != VSyncRequest::None;<br><br>                <span class="hljs-keyword">if</span> (event &amp;&amp; <span class="hljs-built_in">shouldConsumeEvent</span>(*event, connection)) &#123;<br>                    consumers.<span class="hljs-built_in">push_back</span>(connection);<br>                &#125;<br><br>                ++it;<br>            &#125; <span class="hljs-keyword">else</span> &#123;<br>                it = mDisplayEventConnections.<span class="hljs-built_in">erase</span>(it);<br>            &#125;<br>        &#125;<br><br>        <span class="hljs-comment">// 分发给消费者，怎么回调给 Choreographer？</span><br>        <span class="hljs-keyword">if</span> (!consumers.<span class="hljs-built_in">empty</span>()) &#123;<br>            <span class="hljs-built_in">dispatchEvent</span>(*event, consumers);<br>            consumers.<span class="hljs-built_in">clear</span>();<br>        &#125;<br>        <span class="hljs-comment">// ...</span><br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>DispSyncThread</code> 把 SW_VSYNC 压入 <code>EventThread.mPendingEvents</code></p>
+<p><img src="../../../../image/2020-12-02-vsync/on_vsync.jpg" srcset="/blog/image/loading.gif" lazyload alt="on_vsync.jpg"></p>
+<p>分发 SW_VSYNC 的流程</p>
+<ul>
+<li><code>ViewRootImpl</code> 里拿到的是接收 APP_VSYNC 的 <code>Choreographer</code></li>
+<li><code>Choreographer</code> 在构造函数里通过 <code>SurfaceFlinger</code> 与 <code>EventThread</code> 建立连接；这个连接其实是个 <code>Parcelable</code>，一块可以 io 的内存，<code>EventThread</code> 往里面写入 SW_VSYNC，<code>DisplayEventReceiver</code> 则通过 <code>Looper.addFd</code> 监听（这是 app main looper）</li>
+<li>当收到 SW_VSYNC 时<code>FrameDisplayEventReceiver</code> 把 <code>Choreographer.doFrame</code> 放入 message queue，这样 input、animate 和 view 绘制即将执行</li>
+</ul>
+<p><img src="../../../../image/2020-12-02-vsync/consumer.jpg" srcset="/blog/image/loading.gif" lazyload alt="consumer.jpg"></p>
+<h2 id="SF-VSYNC"><a href="#SF-VSYNC" class="headerlink" title="SF_VSYNC"></a>SF_VSYNC</h2><p>上面我们在分析是谁接收 SW_VSYNC 时，除了 APP_VSYNC 外，还有一路 SF_VSYNC</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;<br>    <span class="hljs-comment">// ... 一个是 sf，叫做 SF_VSYNC 吧</span><br>    mSfConnectionHandle =<br>    mScheduler-&gt;<span class="hljs-built_in">createConnection</span>(<span class="hljs-string">&quot;sf&quot;</span>, mVsyncModulator.<span class="hljs-built_in">getOffsets</span>().sf,<br>                                 mPhaseOffsets-&gt;<span class="hljs-built_in">getOffsetThresholdForNextVsync</span>(),<br>                                 [<span class="hljs-keyword">this</span>](<span class="hljs-keyword">nsecs_t</span> timestamp) &#123;<br>                                     mInterceptor-&gt;<span class="hljs-built_in">saveVSyncEvent</span>(timestamp);<br>                                 &#125;);<br>    <span class="hljs-comment">// 看看 mEventQueue-&gt;setEventConnection 做了什么</span><br>    mEventQueue-&gt;<span class="hljs-built_in">setEventConnection</span>(mScheduler-&gt;<span class="hljs-built_in">getEventConnection</span>(mSfConnectionHandle));<br>    <span class="hljs-comment">// ...</span><br>&#125; <br><br><span class="hljs-comment">// 上面有分析过，vsync event 是写入到一块内存里，通过 fd 可以监听到，而回调是 MessageQueue::cb_eventReceiver</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">MessageQueue::setEventConnection</span><span class="hljs-params">(<span class="hljs-keyword">const</span> sp&lt;EventThreadConnection&gt;&amp; connection)</span> </span>&#123;<br>    <span class="hljs-keyword">if</span> (mEventTube.<span class="hljs-built_in">getFd</span>() &gt;= <span class="hljs-number">0</span>) &#123;<br>        mLooper-&gt;<span class="hljs-built_in">removeFd</span>(mEventTube.<span class="hljs-built_in">getFd</span>());<br>    &#125;<br>    mEvents = connection;<br>    mEvents-&gt;<span class="hljs-built_in">stealReceiveChannel</span>(&amp;mEventTube);<br>    mLooper-&gt;<span class="hljs-built_in">addFd</span>(mEventTube.<span class="hljs-built_in">getFd</span>(), <span class="hljs-number">0</span>, Looper::EVENT_INPUT, MessageQueue::cb_eventReceiver, <span class="hljs-keyword">this</span>);<br>&#125;<br><br><span class="hljs-comment">// 继续看 eventReceiver 方法</span><br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">MessageQueue::cb_eventReceiver</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> events, <span class="hljs-keyword">void</span>* data)</span> </span>&#123;<br>    MessageQueue* queue = <span class="hljs-keyword">reinterpret_cast</span>&lt;MessageQueue*&gt;(data);<br>    <span class="hljs-keyword">return</span> queue-&gt;<span class="hljs-built_in">eventReceiver</span>(fd, events);<br>&#125;<br><br><span class="hljs-comment">// 把 events 解包成 DisplayEventReceiver::Event，当有 vsync 时执行 dispatchInvalidate</span><br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">MessageQueue::eventReceiver</span><span class="hljs-params">(<span class="hljs-keyword">int</span> <span class="hljs-comment">/*fd*/</span>, <span class="hljs-keyword">int</span> <span class="hljs-comment">/*events*/</span>)</span> </span>&#123;<br>    <span class="hljs-keyword">ssize_t</span> n;<br>    DisplayEventReceiver::Event buffer[<span class="hljs-number">8</span>];<br>    <span class="hljs-keyword">while</span> ((n = DisplayEventReceiver::<span class="hljs-built_in">getEvents</span>(&amp;mEventTube, buffer, <span class="hljs-number">8</span>)) &gt; <span class="hljs-number">0</span>) &#123;<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; n; i++) &#123;<br>            <span class="hljs-keyword">if</span> (buffer[i].header.type == DisplayEventReceiver::DISPLAY_EVENT_VSYNC) &#123;<br>                mHandler-&gt;<span class="hljs-built_in">dispatchInvalidate</span>();<br>                <span class="hljs-keyword">break</span>;<br>            &#125;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;<br>&#125;<br><br><span class="hljs-comment">// 看来得找出 Handler.handleMessage，看看里面怎么处理 MessageQueue::INVALIDATE</span><br><span class="hljs-keyword">void</span> MessageQueue::Handler::<span class="hljs-built_in">dispatchInvalidate</span>() &#123;<br>    <span class="hljs-keyword">if</span> ((<span class="hljs-built_in">android_atomic_or</span>(eventMaskInvalidate, &amp;mEventMask) &amp; eventMaskInvalidate) == <span class="hljs-number">0</span>) &#123;<br>        mQueue.mLooper-&gt;<span class="hljs-built_in">sendMessage</span>(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">Message</span>(MessageQueue::INVALIDATE));<br>    &#125;<br>&#125;<br><br><span class="hljs-comment">// 最终发现是走到了 SurfaceFlinger::onMessageReceived</span><br><span class="hljs-keyword">void</span> MessageQueue::Handler::<span class="hljs-built_in">handleMessage</span>(<span class="hljs-keyword">const</span> Message&amp; message) &#123;<br>    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (message.what) &#123;<br>        <span class="hljs-keyword">case</span> INVALIDATE:<br>            <span class="hljs-built_in">android_atomic_and</span>(~eventMaskInvalidate, &amp;mEventMask);<br>            mQueue.mFlinger-&gt;<span class="hljs-built_in">onMessageReceived</span>(message.what);<br>            <span class="hljs-keyword">break</span>;<br>        <span class="hljs-keyword">case</span> REFRESH:<br>            <span class="hljs-built_in">android_atomic_and</span>(~eventMaskRefresh, &amp;mEventMask);<br>            mQueue.mFlinger-&gt;<span class="hljs-built_in">onMessageReceived</span>(message.what);<br>            <span class="hljs-keyword">break</span>;<br>    &#125;<br>&#125;<br><br><span class="hljs-comment">// 代码比较长，这就不贴出来了，总结下：</span><br><span class="hljs-comment">// SF_VSYNC 最终会调用 onMessageReceived(MessageQueue::INVALIDATE)，然后又会调用 onMessageReceived(MessageQueue::REFRESH)</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::onMessageReceived</span><span class="hljs-params">(<span class="hljs-keyword">int32_t</span> what)</span> </span>&#123;&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="结合-systrace"><a href="#结合-systrace" class="headerlink" title="结合 systrace"></a>结合 systrace</h2><p>为什么会有 APP_VSYNC 和 SF_VSYNC 呢？这就不得不从屏幕上的内容讲起</p>
+<p>实际上，我们在屏幕上看到的内容是由多个 layer 组合而成的：前台 app（多窗口模式下会有多个 app 显示）、桌面、壁纸、systemui 等，每个 app ui thread 负责绘制自己的内容，然后由 SurfaceFlinger 将它们合成在一起并显示在屏幕上</p>
+<p>也就是说 APP_VSYNC 触发各个 app 的绘制，而最终屏幕内容的改变是由 SF_VSYNC 触发的；是不是这样呢？我们来看下 systrace </p>
+<p><img src="../../../../image/2020-12-02-vsync/45517.png" srcset="/blog/image/loading.gif" lazyload alt="45517.png"></p>
+<p><img src="../../../../image/2020-12-02-vsync/45545.png" srcset="/blog/image/loading.gif" lazyload alt="45545.png"></p>
+<p><img src="../../../../image/2020-12-02-vsync/45553.png" srcset="/blog/image/loading.gif" lazyload alt="45553.png"></p>
+<p><img src="../../../../image/2020-12-02-vsync/45532.png" srcset="/blog/image/loading.gif" lazyload alt="45532.png"></p>
+<p><img src="../../../../image/2020-12-02-vsync/45628.png" srcset="/blog/image/loading.gif" lazyload alt="45628.png"></p>
+<p><img src="../../../../image/2020-12-02-vsync/45643.png" srcset="/blog/image/loading.gif" lazyload alt="45643.png"></p>
+<p>可以看到 ui thread doFrame 的确跟随着 APP_VSYNC（render thread 是执行 opengl 的线程，在 ui thread 计算完后获取结果并输出至 gpu），surfaceflinger onMessageReceived 也是跟随着 SF_VSYNC 的；但有没发现，它们俩似乎是同时执行的？surfaceflinger 不是应该等待 app 渲染完它那一层再合成吗？</p>
+<p>我们重新回顾 initScheduler，有没发现这两路 vsync 都有一个 offset 参数？没错，就是这个参数控制着收到 vsync 后到执行工作的这一段延迟时间；实际上图 surfaceflinger 的延迟差不多是一个 vsync 的周期时间那么大，每个 surfaceflinger 合成的内容却是上一个周期里 app 渲染的内容；而且在合成工作完成后，当前周期的 app 渲染工作（render thread）才开始，避免了 layer 的内容被覆盖；这几个线程就这样有节奏地工作在一起。</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Framework/">Framework</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/vsync/">vsync</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/invalidate/">invalidate</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2020/12/13/ui-thread-in-vsync/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Android 图形栈（二）ui thread</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/11/19/scoped-storage/">
+                        <span class="hidden-mobile">Scoped Storage（沙盒）</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

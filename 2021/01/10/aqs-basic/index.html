@@ -1,0 +1,519 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>Lock（一）AQS 基础 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="Lock（一）AQS 基础">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-01-10 04:00" pubdate>
+        2021年1月10日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      784 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      9
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Lock（一）AQS 基础</h1>
+            
+            <div class="markdown-body">
+              <h2 id="自旋锁（Spin-Lock）"><a href="#自旋锁（Spin-Lock）" class="headerlink" title="自旋锁（Spin Lock）"></a>自旋锁（Spin Lock）</h2><p>获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码/逻辑，那就是自旋锁；比如下面的 <code>lock()</code></p>
+<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 一个简单的自旋锁的实现</span><br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SpinLock</span> </span>&#123;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> cas = AtomicReference&lt;Thread&gt;()<br><br>    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span></span> &#123;<br>        <span class="hljs-keyword">while</span> (!cas.compareAndSet(<span class="hljs-literal">null</span>, Thread.currentThread())) &#123;&#125;<br>    &#125;<br><br>    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">unlock</span><span class="hljs-params">()</span></span> &#123;<br>        cas.compareAndSet(Thread.currentThread(), <span class="hljs-literal">null</span>)<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="MCS-锁"><a href="#MCS-锁" class="headerlink" title="MCS 锁"></a>MCS 锁</h2><p>上面的自旋锁容易出现「饥饿」问题，因为所有线程同时争抢一个锁，如果一直有线程加入到争抢的过程中来，那么可能会出现某一个或多个线程总是抢不到锁的情况</p>
+<p>而 MCS 在自旋的基础上，引入了「排队」的概念（基于链表）</p>
+<ul>
+<li><code>acquire_lock</code>，<code>L</code> 是链尾节点，<code>I</code> 是当前线程所使用的节点，<code>fetch_and_store</code> 相当于原子性地把 I 添加到链尾，并对 <code>I→locked</code> 进行自旋</li>
+<li><code>release_lock</code>，将 <code>I→next→locked</code> 置为 <code>false</code>，从而使下一个线程获得锁（跳出自旋）</li>
+</ul>
+<p>那么所有未获得锁的线程都会按顺序排成一队（通过 <code>I→next</code> 形成的单向链表），并对 <code>I→locked</code> 自旋，这就是排队自旋锁</p>
+<p>获得锁的线程负责将锁传递给下一个未获得锁的线程（<code>I→next→locked := false</code>）</p>
+<p><img src="../../../../image/2021-01-10-aqs-basic/2020090217384261.png" srcset="/blog/image/loading.gif" lazyload alt="2020090217384261.png"></p>
+<h2 id="CLH-锁"><a href="#CLH-锁" class="headerlink" title="CLH 锁"></a>CLH 锁</h2><p>它减少释放锁时的自旋开销：</p>
+<ul>
+<li>MCS 锁的持有进程在让渡锁的所有权时，由于需要关心自己的后继结点是否存在以及是否会被突然添加，所以多了一些负担</li>
+<li>MCS 锁在持有进程在让渡锁的所有权时，由于已经知道后继结点肯定只能监控自己在入队时就设置好的结点，所以无需关心是否存在后继结点，只需要修改自己预留给后继结点监控的队列结点状态即可。</li>
+</ul>
+<p>MCS 实现了基于 FIFO 的优先级，而 CLH 可以实现自定义的优先级</p>
+<p>CLH 锁的排队队列是个双向链表，<code>Lock.head</code> 和 <code>Lock.tail</code> 分别是表头和表尾</p>
+<p><code>Process.watch</code> 是当前线程用来自旋的，<code>Process.myreq</code> 留给下一个线程进行自旋；比如线程 P2 在 <code>P2.watch</code> 上自旋，同时 <code>P2.watch</code> 又是 <code>P1.myreq</code>；而 <code>P2.myreq</code> 则是 <code>P3.watch</code>，P3 在 <code>P3.watch</code> 上自旋</p>
+<p><code>Request.watcher</code> 表示那个线程在对它自旋，<code>Request.myproc</code> 表示自旋线程的上一个线程</p>
+<p>从表头开始遍历线程：<code>Lock.head.watcher</code> → <code>Process.myreq.watcher</code> → <code>Process.myreq.watcher</code>→ …</p>
+<p>从表尾开始遍历线程：<code>Lock.tail.myproc</code> → <code>Process.watch.myproc</code> → <code>Process.watch.myproc</code> → …</p>
+<p><code>request_lock</code>（获得锁），将 <code>P.myreq</code> 添加到队尾，并在 <code>P.watch</code>（既是上一个队尾，也是上一个线程的 <code>Process.myreq</code>） 上自旋</p>
+<p><code>grant_lock</code>（释放锁），从头开始遍历排队的线程，找到优先级最高的线程（<code>Process.pri</code>，不仅仅是 FIFO），将它的 <code>Process.watch.state := GRANTED</code> 从而使它跳出自旋（将锁的所有权转移给它）</p>
+<p><img src="../../../../image/2021-01-10-aqs-basic/2020090322512651.png" srcset="/blog/image/loading.gif" lazyload alt="2020090322512651.png"></p>
+<p><img src="../../../../image/2021-01-10-aqs-basic/20200903154644711.png" srcset="/blog/image/loading.gif" lazyload alt="20200903154644711.png"></p>
+<p><img src="../../../../image/2021-01-10-aqs-basic/20200903162049551.png" srcset="/blog/image/loading.gif" lazyload alt="20200903162049551.png"></p>
+<p><img src="../../../../image/2021-01-10-aqs-basic/20200903222817656.png" srcset="/blog/image/loading.gif" lazyload alt="20200903222817656.png"></p>
+<p><img src="../../../../image/2021-01-10-aqs-basic/20200903223128890.png" srcset="/blog/image/loading.gif" lazyload alt="20200903223128890.png"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/lengxiao1993/article/details/108227584">AQS与CLH相关论文学习系列（一）- 排队式自旋锁思想启蒙</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/lengxiao1993/article/details/108448199">AQS与CLH相关论文学习系列（二）- MCS 锁</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/lengxiao1993/article/details/108449111">AQS与CLH相关论文学习系列（三）- CLH 锁</a></li>
+</ul>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Art/">Art</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/Lock/">Lock</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/AQS/">AQS</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2021/01/13/aqs-lock-implementation/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Lock（二）AQS 源码分析以及 Lock 的实现</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/12/27/render-thread/">
+                        <span class="hidden-mobile">Android 图形栈（三）render thread</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

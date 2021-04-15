@@ -1,0 +1,542 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>解析 Tinker 是如何实现热修复的 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="解析 Tinker 是如何实现热修复的">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-03-12 04:00" pubdate>
+        2021年3月12日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      3.4k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      59
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">解析 Tinker 是如何实现热修复的</h1>
+            
+            <div class="markdown-body">
+              <h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>Tinker 是微信团队开源的一款 android 热修复框架，它的使用流程大体是：</p>
+<ul>
+<li>client 安装 V1.apk</li>
+<li>提交了一些 hotfix，打包出 V2.apk</li>
+<li>利用 Tinker 提供的差分工具，在 server 计算出补丁包 patch1.apk，并下发给 client</li>
+<li>client 收到补丁包后，在后台给 V1.apk 打上 patch1.apk 得到 V2.apk（V1.apk + patch1.apk = V2.apk）</li>
+<li>app 在下次启动时，将加载 V2.apk</li>
+</ul>
+<p>它的工作目录大概是这样的：</p>
+<figure class="highlight xml"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs xml">- /data/user/0/tinker.sample.android/tinker<br>    - info.lock<br>    - patch.info<br>    - patch-d1ec6aa9<br>        - patch-d1ec6aa9.apk<br>        - dex<br>            - tinker_classN.apk<br>            - oat<br>                - tinker_classN.apk.cur.prof<br>                - x86<br>                    - tinker_classN.vdex<br>                    - tinker_classN.odex<br>        - res<br>            - resources.apk<br>        - lib<br>            - lib<br>                - armeabi<br>                    - libmmkv.so<br>                - ...<br>        - odex<br></code></pre></div></td></tr></table></figure>
+
+<p>注入代码和资源的时序图如下</p>
+<p><img src="../../../../image/2021-03-12-how-tinker-work/inject.jpg" srcset="/blog/image/loading.gif" lazyload alt="inject.jpg"></p>
+<h2 id="代码的热更新"><a href="#代码的热更新" class="headerlink" title="代码的热更新"></a>代码的热更新</h2><h3 id="使用-TinkerClassLoader"><a href="#使用-TinkerClassLoader" class="headerlink" title="使用 TinkerClassLoader"></a>使用 <code>TinkerClassLoader</code></h3><p>Tinker 代码热更新的原理是用 <code>TinkerClassLoader</code> 替代原有的 <code>ClassLoader</code>，这样 V2 版本的类就会被优先加载，从而实现「覆盖」旧代码的功能</p>
+<p><code>TinkerClassLoader</code> 打破了传统的双亲委派模式，其内部相当于有两个 <code>ClassLoader</code></p>
+<ul>
+<li><code>TinkerClassLoader</code>，包含 V2 版本的代码</li>
+<li><code>mOriginAppClassLoader</code>，android app 的类加载器，包含 V1 版本的代码</li>
+</ul>
+<p>加载类的时候，首先从自身加载（也就是优先加载 V2 版本的代码），然后再从 app 的类加载器中加载（V1 版本的代码就会被 V2 所覆盖）</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TinkerClassLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">PathClassLoader</span> </span>&#123;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ClassLoader mOriginAppClassLoader;<br><br>    TinkerClassLoader(String dexPath, File optimizedDir, String libraryPath, ClassLoader originAppClassLoader) &#123;<br>        <span class="hljs-keyword">super</span>(<span class="hljs-string">&quot;&quot;</span>, libraryPath, ClassLoader.getSystemClassLoader());<br>        mOriginAppClassLoader = originAppClassLoader;<br>        injectDexPath(<span class="hljs-keyword">this</span>, dexPath, optimizedDir);<br>    &#125;<br><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-keyword">protected</span> Class&lt;?&gt; findClass(String name) <span class="hljs-keyword">throws</span> ClassNotFoundException &#123;<br>        Class&lt;?&gt; cl = <span class="hljs-keyword">null</span>;<br>        <span class="hljs-keyword">try</span> &#123;<br>            cl = <span class="hljs-keyword">super</span>.findClass(name);<br>        &#125; <span class="hljs-keyword">catch</span> (ClassNotFoundException ignored) &#123;<br>            cl = <span class="hljs-keyword">null</span>;<br>        &#125;<br>        <span class="hljs-keyword">if</span> (cl != <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">return</span> cl;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-keyword">return</span> mOriginAppClassLoader.loadClass(name);<br>        &#125;<br>    &#125;<br><br>    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">injectDexPath</span><span class="hljs-params">(ClassLoader cl, String dexPath, File optimizedDir)</span> </span>&#123;<br>        <span class="hljs-keyword">try</span> &#123;<br>            <span class="hljs-keyword">final</span> List&lt;File&gt; dexFiles = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;(<span class="hljs-number">16</span>);<br>            <span class="hljs-keyword">for</span> (String oneDexPath : dexPath.split(<span class="hljs-string">&quot;:&quot;</span>)) &#123;<br>                <span class="hljs-keyword">if</span> (oneDexPath.isEmpty()) &#123;<br>                    <span class="hljs-keyword">continue</span>;<br>                &#125;<br>                dexFiles.add(<span class="hljs-keyword">new</span> File(oneDexPath));<br>            &#125;<br>            <span class="hljs-keyword">if</span> (!dexFiles.isEmpty()) &#123;<br>                SystemClassLoaderAdder.injectDexesInternal(cl, dexFiles, optimizedDir);<br>            &#125;<br>        &#125; <span class="hljs-keyword">catch</span> (Throwable thr) &#123;<br>            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> TinkerRuntimeException(<span class="hljs-string">&quot;Fail to create TinkerClassLoader.&quot;</span>, thr);<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>创建 <code>TinkerClassLoader</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ClassLoader NewClassLoaderInjector.inject(Application app, ClassLoader oldClassLoader, <br>		 File dexOptDir, <span class="hljs-keyword">boolean</span> useDLC, List&lt;File&gt; patchedDexes) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    <span class="hljs-keyword">final</span> String[] patchedDexPaths = <span class="hljs-keyword">new</span> String[patchedDexes.size()];<br>    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; patchedDexPaths.length; ++i) &#123;<br>        patchedDexPaths[i] = patchedDexes.get(i).getAbsolutePath();<br>    &#125;<br>    <span class="hljs-keyword">final</span> ClassLoader newClassLoader = createNewClassLoader(oldClassLoader, dexOptDir, useDLC, patchedDexPaths);<br>    doInject(app, newClassLoader);<br>    <span class="hljs-keyword">return</span> newClassLoader;<br>&#125;<br><br>ClassLoader NewClassLoaderInjector.createNewClassLoader(ClassLoader oldClassLoader, File dexOptDir, <br>		<span class="hljs-keyword">boolean</span> useDLC, String... patchDexPaths) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    <span class="hljs-keyword">final</span> Field pathListField = findField(Class.forName(<span class="hljs-string">&quot;dalvik.system.BaseDexClassLoader&quot;</span>, <span class="hljs-keyword">false</span>, oldClassLoader), <span class="hljs-string">&quot;pathList&quot;</span>);<br>    <span class="hljs-keyword">final</span> Object oldPathList = pathListField.get(oldClassLoader);<br><br>    <span class="hljs-comment">// V2 版本的 dex 列表（apk 包），组合为字符串</span><br>    <span class="hljs-keyword">final</span> StringBuilder dexPathBuilder = <span class="hljs-keyword">new</span> StringBuilder();<br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> hasPatchDexPaths = patchDexPaths != <span class="hljs-keyword">null</span> &amp;&amp; patchDexPaths.length &gt; <span class="hljs-number">0</span>;<br>    <span class="hljs-keyword">if</span> (hasPatchDexPaths) &#123;<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; patchDexPaths.length; ++i) &#123;<br>            <span class="hljs-keyword">if</span> (i &gt; <span class="hljs-number">0</span>) &#123;<br>                dexPathBuilder.append(File.pathSeparator);<br>            &#125;<br>            dexPathBuilder.append(patchDexPaths[i]);<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">final</span> String combinedDexPath = dexPathBuilder.toString();<br><br>    <span class="hljs-comment">// 把 V1 版本的 so 文件目录组合为字符串</span><br>    <span class="hljs-comment">// so 文件目录其实一直是固定的，比如上面提到的 /data/app/tinker.sample.android-WQAlCXU0G15OGs7jKsCrcw==/lib/x86</span><br>    <span class="hljs-comment">// 这是因为 V2 版本的 so 文件被释放到这个目录，把 V1 版本的文件给覆盖掉了（在合成新版本的章节会介绍）</span><br>    <span class="hljs-keyword">final</span> Field nativeLibraryDirectoriesField = findField(oldPathList.getClass(), <span class="hljs-string">&quot;nativeLibraryDirectories&quot;</span>);<br>    List&lt;File&gt; oldNativeLibraryDirectories = <span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">if</span> (nativeLibraryDirectoriesField.getType().isArray()) &#123;<br>        oldNativeLibraryDirectories = Arrays.asList((File[]) nativeLibraryDirectoriesField.get(oldPathList));<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        oldNativeLibraryDirectories = (List&lt;File&gt;) nativeLibraryDirectoriesField.get(oldPathList);<br>    &#125;<br>    <span class="hljs-keyword">final</span> StringBuilder libraryPathBuilder = <span class="hljs-keyword">new</span> StringBuilder();<br>    <span class="hljs-keyword">boolean</span> isFirstItem = <span class="hljs-keyword">true</span>;<br>    <span class="hljs-keyword">for</span> (File libDir : oldNativeLibraryDirectories) &#123;<br>        <span class="hljs-keyword">if</span> (libDir == <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">continue</span>;<br>        &#125;<br>        <span class="hljs-keyword">if</span> (isFirstItem) &#123;<br>            isFirstItem = <span class="hljs-keyword">false</span>;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            libraryPathBuilder.append(File.pathSeparator);<br>        &#125;<br>        libraryPathBuilder.append(libDir.getAbsolutePath());<br>    &#125;<br>    <span class="hljs-keyword">final</span> String combinedLibraryPath = libraryPathBuilder.toString();<br><br>    <span class="hljs-comment">// 构造 TinkerClassLoader</span><br>    ClassLoader result = <span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">if</span> (useDLC &amp;&amp; Build.VERSION.SDK_INT &gt;= <span class="hljs-number">27</span>) &#123;<br>        result = <span class="hljs-keyword">new</span> DelegateLastClassLoader(combinedDexPath, combinedLibraryPath, ClassLoader.getSystemClassLoader());<br>        <span class="hljs-keyword">final</span> Field parentField = ClassLoader.class.getDeclaredField(<span class="hljs-string">&quot;parent&quot;</span>);<br>        parentField.setAccessible(<span class="hljs-keyword">true</span>);<br>        parentField.set(result, oldClassLoader);<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        result = <span class="hljs-keyword">new</span> TinkerClassLoader(combinedDexPath, dexOptDir, combinedLibraryPath, oldClassLoader);<br>    &#125;<br>    <span class="hljs-comment">// &#x27;EnsureSameClassLoader&#x27; mechanism which is first introduced in Android O</span><br>    <span class="hljs-comment">// may cause exception if we replace definingContext of old classloader.</span><br>    <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &lt; <span class="hljs-number">26</span>) &#123;<br>        findField(oldPathList.getClass(), <span class="hljs-string">&quot;definingContext&quot;</span>).set(oldPathList, result);<br>    &#125;<br>    <span class="hljs-keyword">return</span> result;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="替代-PathClassLoader"><a href="#替代-PathClassLoader" class="headerlink" title="替代 PathClassLoader"></a>替代 <code>PathClassLoader</code></h3><p><code>PathClassLoader</code> 结构如下，因为没有公开方法设置 <code>optimizeDir</code>（odex 文件目录，后续会讲到 Tinker 触发 dex 优化时把文件输出目录设置在 patch dir 内），需要通过反射重新构造 <code>dexElements</code></p>
+<figure class="highlight html"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs html">- dalvik.system.PathClassLoader（继承自 BaseDexClassLoader）<br>    - pathList: DexPathList<br>        - nativeLibraryDirectories: File[]<br>            - 0<br>                - /data/app/tinker.sample.android-WQAlCXU0G15OGs7jKsCrcw==/lib/x86<br>        - dexElements: Element[]<br>            - 0<br>                - path: File = /data/app/tinker.sample.android-WQAlCXU0G15OGs7jKsCrcw==/base.apk<br>                - dexFile: DexFile = /data/app/tinker.sample.android-WQAlCXU0G15OGs7jKsCrcw==/base.apk<br>                - initialized: Boolean = false<br>                - urlHandler: ClassPathURLStreamHandler = null<br></code></pre></div></td></tr></table></figure>
+
+<p>不同 android 版本里 app class loader 的实现和结构可能是不同的，需要分开处理；Tinker 整理出了 V23、V19、V14 和 V4 四个版本</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> SystemClassLoaderAdder.injectDexesInternal(ClassLoader cl, List&lt;File&gt; dexFiles, File optimizeDir) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= <span class="hljs-number">23</span>) &#123;<br>        V23.install(cl, dexFiles, optimizeDir);<br>    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= <span class="hljs-number">19</span>) &#123;<br>        V19.install(cl, dexFiles, optimizeDir);<br>    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= <span class="hljs-number">14</span>) &#123;<br>        V14.install(cl, dexFiles, optimizeDir);<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        V4.install(cl, dexFiles, optimizeDir);<br>    &#125;<br>&#125;<br><br><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">V23</span> </span>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">install</span><span class="hljs-params">(ClassLoader loader, List&lt;File&gt; additionalClassPathEntries, File optimizedDirectory)</span></span><br><span class="hljs-function">        <span class="hljs-keyword">throws</span> IllegalArgumentException, IllegalAccessException,</span><br><span class="hljs-function">        NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IOException </span>&#123;<br>        <span class="hljs-comment">/* The patched class loader is expected to be a descendant of</span><br><span class="hljs-comment">         * dalvik.system.BaseDexClassLoader. We modify its</span><br><span class="hljs-comment">         * dalvik.system.DexPathList pathList field to append additional DEX</span><br><span class="hljs-comment">         * file entries.</span><br><span class="hljs-comment">         */</span><br>        Field pathListField = ShareReflectUtil.findField(loader, <span class="hljs-string">&quot;pathList&quot;</span>);<br>        Object dexPathList = pathListField.get(loader);<br>        ArrayList&lt;IOException&gt; suppressedExceptions = <span class="hljs-keyword">new</span> ArrayList&lt;IOException&gt;();<br>        ShareReflectUtil.expandFieldArray(dexPathList, <span class="hljs-string">&quot;dexElements&quot;</span>, makePathElements(dexPathList,<br>            <span class="hljs-keyword">new</span> ArrayList&lt;File&gt;(additionalClassPathEntries), optimizedDirectory,<br>            suppressedExceptions));<br>        <span class="hljs-keyword">if</span> (suppressedExceptions.size() &gt; <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-keyword">for</span> (IOException e : suppressedExceptions) &#123;<br>                ShareTinkerLog.w(TAG, <span class="hljs-string">&quot;Exception in makePathElement&quot;</span>, e);<br>                <span class="hljs-keyword">throw</span> e;<br>            &#125;<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * A wrapper around</span><br><span class="hljs-comment">     * &#123;<span class="hljs-doctag">@code</span> private static final dalvik.system.DexPathList#makePathElements&#125;.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> Object[] makePathElements(<br>        Object dexPathList, ArrayList&lt;File&gt; files, File optimizedDirectory,<br>        ArrayList&lt;IOException&gt; suppressedExceptions)<br>        <span class="hljs-keyword">throws</span> IllegalAccessException, InvocationTargetException, NoSuchMethodException &#123;<br>        Method makePathElements;<br>        <span class="hljs-keyword">try</span> &#123;<br>            makePathElements = ShareReflectUtil.findMethod(dexPathList, <span class="hljs-string">&quot;makePathElements&quot;</span>, List.class, File.class, List.class);<br>        &#125; <span class="hljs-keyword">catch</span> (NoSuchMethodException e) &#123;<br>            ShareTinkerLog.e(TAG, <span class="hljs-string">&quot;NoSuchMethodException: makePathElements(List,File,List) failure&quot;</span>);<br>            <span class="hljs-keyword">try</span> &#123;<br>                makePathElements = ShareReflectUtil.findMethod(dexPathList, <span class="hljs-string">&quot;makePathElements&quot;</span>, ArrayList.class, File.class, ArrayList.class);<br>            &#125; <span class="hljs-keyword">catch</span> (NoSuchMethodException e1) &#123;<br>                ShareTinkerLog.e(TAG, <span class="hljs-string">&quot;NoSuchMethodException: makeDexElements(ArrayList,File,ArrayList) failure&quot;</span>);<br>                <span class="hljs-keyword">try</span> &#123;<br>                    ShareTinkerLog.e(TAG, <span class="hljs-string">&quot;NoSuchMethodException: try use v19 instead&quot;</span>);<br>                    <span class="hljs-keyword">return</span> V19.makeDexElements(dexPathList, files, optimizedDirectory, suppressedExceptions);<br>                &#125; <span class="hljs-keyword">catch</span> (NoSuchMethodException e2) &#123;<br>                    ShareTinkerLog.e(TAG, <span class="hljs-string">&quot;NoSuchMethodException: makeDexElements(List,File,List) failure&quot;</span>);<br>                    <span class="hljs-keyword">throw</span> e2;<br>                &#125;<br>            &#125;<br>        &#125;<br>        <span class="hljs-keyword">return</span> (Object[]) makePathElements.invoke(dexPathList, files, optimizedDirectory, suppressedExceptions);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="注入-TinkerClassLoader"><a href="#注入-TinkerClassLoader" class="headerlink" title="注入 TinkerClassLoader"></a>注入 <code>TinkerClassLoader</code></h3><p>注入 <code>TinkerClassLoader</code>，有这么几个地方：</p>
+<ul>
+<li><code>Thread.getContextClassLoader()</code></li>
+<li><code>Application.mBase(ContextImpl).mClassLoader</code></li>
+<li><code>Application.mBase(ContextImpl).mPackageInfo(LoadedApk).mClassLoader</code></li>
+<li><code>Resources.mClassLoader</code></li>
+<li><code>Resources.mDrawableInflater(DrawableInflater).mClassLoader</code></li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> NewClassLoaderInjector.doInject(Application app, ClassLoader classLoader) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    Thread.currentThread().setContextClassLoader(classLoader);<br>    <span class="hljs-keyword">final</span> Context baseContext = (Context) findField(app.getClass(), <span class="hljs-string">&quot;mBase&quot;</span>).get(app);<br>    <span class="hljs-keyword">try</span> &#123;<br>        findField(baseContext.getClass(), <span class="hljs-string">&quot;mClassLoader&quot;</span>).set(baseContext, classLoader);<br>    &#125; <span class="hljs-keyword">catch</span> (Throwable ignored) &#123;<br>        <span class="hljs-comment">// There&#x27;s no mClassLoader field in ContextImpl before Android O.</span><br>        <span class="hljs-comment">// However we should try our best to replace this field in case some</span><br>        <span class="hljs-comment">// customized system has one.</span><br>    &#125;<br>    <span class="hljs-keyword">final</span> Object basePackageInfo = findField(baseContext.getClass(), <span class="hljs-string">&quot;mPackageInfo&quot;</span>).get(baseContext);<br>    findField(basePackageInfo.getClass(), <span class="hljs-string">&quot;mClassLoader&quot;</span>).set(basePackageInfo, classLoader);<br>    <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &lt; <span class="hljs-number">27</span>) &#123;<br>        <span class="hljs-keyword">final</span> Resources res = app.getResources();<br>        <span class="hljs-keyword">try</span> &#123;<br>            findField(res.getClass(), <span class="hljs-string">&quot;mClassLoader&quot;</span>).set(res, classLoader);<br>            <span class="hljs-keyword">final</span> Object drawableInflater = findField(res.getClass(), <span class="hljs-string">&quot;mDrawableInflater&quot;</span>).get(res);<br>            <span class="hljs-keyword">if</span> (drawableInflater != <span class="hljs-keyword">null</span>) &#123;<br>                findField(drawableInflater.getClass(), <span class="hljs-string">&quot;mClassLoader&quot;</span>).set(drawableInflater, classLoader);<br>            &#125;<br>        &#125; <span class="hljs-keyword">catch</span> (Throwable ignored) &#123;<br>            <span class="hljs-comment">// Ignored.</span><br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>上面列出的几个 <code>ClassLoader</code>，其中有两个是比较重要的</p>
+<p><code>Application.mBase(ContextImpl).mClassLoader</code> 是在实例化 <code>ApplicationLike</code> 时用到；为了能够加载到 V2 版本的代码，app application 必须设置为 <code>TinkerApplication</code>（它是 Tinker 库的类，只要不更新 Tinker 版本，业务的迭代更新一般不会改动到它，所以它是比较稳定不变的）；在注入 <code>TinkerClassLoader</code> 后，通过反射调用业务方的 <code>ApplicationLike</code>（业务代码较常变动）</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> TinkerApplication.attachBaseContext(Context base)<br><br><span class="hljs-keyword">void</span> TinkerApplication.onBaseContextAttached(Context base, <span class="hljs-keyword">long</span> applicationStartElapsedTime, <span class="hljs-keyword">long</span> applicationStartMillisTime) &#123;<br>    loadTinker();  <span class="hljs-comment">// 先注入 TinkerClassLoader</span><br>    mCurrentClassLoader = base.getClassLoader();  <span class="hljs-comment">// Application.mBase(ContextImpl).mClassLoader</span><br>    mInlineFence = createInlineFence(<span class="hljs-keyword">this</span>, tinkerFlags, delegateClassName, tinkerLoadVerifyFlag, <br>        applicationStartElapsedTime, applicationStartMillisTime, tinkerResultIntent);<br>&#125;<br><br>Handler TinkerApplication.createInlineFence(Application app, <span class="hljs-keyword">int</span> tinkerFlags, String delegateClassName, <span class="hljs-keyword">boolean</span> tinkerLoadVerifyFlag, <br>    <span class="hljs-keyword">long</span> applicationStartElapsedTime, <span class="hljs-keyword">long</span> applicationStartMillisTime, Intent resultIntent) &#123;<br>    <span class="hljs-comment">// delegateClassName 比如 tinker.sample.android.app.SampleApplicationLike</span><br>    <span class="hljs-comment">// 此时 mCurrentClassLoader 是 TinkerClassLoader</span><br>    <span class="hljs-keyword">final</span> Class&lt;?&gt; delegateClass = Class.forName(delegateClassName, <span class="hljs-keyword">false</span>, mCurrentClassLoader);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>Application.mBase(ContextImpl).mPackageInfo(LoadedApk).mClassLoader</code> 在实例化 <code>Activity</code> 时会用到，在<a href="../../../../2020/11/03/launch-activity-sequence/">这篇文章</a>里可以找到入口点：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleLaunchActivity(ActivityClientRecord r, PendingTransactionActions pendingActions, Intent customIntent)=<br><br>ActivityThread.performLaunchActivity(ActivityClientRecord r, Intent customIntent) &#123;<br>    <span class="hljs-comment">// ...</span><br>    ContextImpl appContext = createBaseContextForActivity(r);<br>    Activity activity = <span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">try</span> &#123;<br>        <span class="hljs-comment">// 用这个 cl 加载目标 Activity 类；而这个 cl 是上面 ContextImpl 的</span><br>        java.lang.ClassLoader cl = appContext.getClassLoader();<br>        activity = mInstrumentation.newActivity(cl, component.getClassName(), r.intent);<br>        <span class="hljs-comment">// ...</span><br>&#125;<br><br>Instrumentation.newActivity(ClassLoader cl, String className, Intent intent) <br>    <span class="hljs-keyword">throws</span> InstantiationException, IllegalAccessException, ClassNotFoundException &#123;<br>    String pkg = intent != <span class="hljs-keyword">null</span> &amp;&amp; intent.getComponent() != <span class="hljs-keyword">null</span> ? intent.getComponent().getPackageName() : <span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">return</span> getFactory(pkg).instantiateActivity(cl, className, intent);<br>&#125;<br><br>AppComponentFactory.instantiateActivity(ClassLoader cl, String className, Intent intent)<br>    <span class="hljs-keyword">throws</span> InstantiationException, IllegalAccessException, ClassNotFoundException &#123;<br>    <span class="hljs-keyword">return</span> (Activity) cl.loadClass(className).newInstance();<br>&#125;<br><br>ActivityThread.createBaseContextForActivity(ActivityClientRecord r) &#123;<br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> displayId;<br>    <span class="hljs-keyword">try</span> &#123;<br>        displayId = ActivityTaskManager.getService().getDisplayId(r.token);<br>    &#125; <span class="hljs-keyword">catch</span> (RemoteException e) &#123;<br>        <span class="hljs-keyword">throw</span> e.rethrowFromSystemServer();<br>    &#125;<br>    ContextImpl appContext = ContextImpl.createActivityContext(<span class="hljs-keyword">this</span>, r.packageInfo, r.activityInfo, r.token, displayId, r.overrideConfig);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br>ContextImpl.createActivityContext(ActivityThread mainThread, LoadedApk packageInfo, ActivityInfo activityInfo, <br>    IBinder activityToken, <span class="hljs-keyword">int</span> displayId, Configuration overrideConfiguration) &#123;<br>    <span class="hljs-keyword">if</span> (packageInfo == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalArgumentException(<span class="hljs-string">&quot;packageInfo&quot;</span>);<br>    String[] splitDirs = packageInfo.getSplitResDirs();<br>    ClassLoader classLoader = packageInfo.getClassLoader();  <span class="hljs-comment">// ContextImpl.getClassLoader() 来自于 LoadedApk.mClassLoader</span><br>    <span class="hljs-comment">// ...</span><br>    ContextImpl context = <span class="hljs-keyword">new</span> ContextImpl(<span class="hljs-keyword">null</span>, mainThread, packageInfo, <span class="hljs-keyword">null</span>, activityInfo.splitName, activityToken, <span class="hljs-keyword">null</span>, <span class="hljs-number">0</span>, classLoader, <span class="hljs-keyword">null</span>);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="资源的热更新"><a href="#资源的热更新" class="headerlink" title="资源的热更新"></a>资源的热更新</h2><h3 id="app-resources"><a href="#app-resources" class="headerlink" title="app resources"></a>app resources</h3><p>对于资源的热更新 Tinker 做了两块</p>
+<p>一块是针对 app context 的，Tinker 用新的资源包（比如上面说到的 <code>/data/user/0/tinker.sample.android/tinker/patch-d1ec6aa9/res/resources.apk</code>）构造出一个新的 <code>AssetManager</code>，替换掉 <code>Resources</code> 里旧的 <code>Resource.mResourcesImpl(ResourcesImpl).mAssets</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">TinkerResourceLoader.loadTinkerResources(TinkerApplication application, String directory, Intent intentResult)<br><br><span class="hljs-comment">// 资源热更新的逻辑在这里</span><br>TinkerResourcePatcher.monkeyPatchExistingResources(Context context, String externalResourceFile) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    <span class="hljs-comment">// ... 创建一个新的 AssetManager，它指向新的资源包</span><br>    <span class="hljs-keyword">if</span> (((Integer) addAssetPathMethod.invoke(newAssetManager, externalResourceFile)) == <span class="hljs-number">0</span>) &#123;<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalStateException(<span class="hljs-string">&quot;Could not create new AssetManager&quot;</span>);<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">for</span> (WeakReference&lt;Resources&gt; wr : references) &#123;<br>        <span class="hljs-keyword">final</span> Resources resources = wr.get();<br>        <span class="hljs-keyword">if</span> (resources == <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">continue</span>;<br>        &#125;<br>        <span class="hljs-comment">// 替换 Resources 里的 AssetManager</span><br>        <span class="hljs-keyword">try</span> &#123;<br>            <span class="hljs-comment">//pre-N</span><br>            assetsFiled.set(resources, newAssetManager);<br>        &#125; <span class="hljs-keyword">catch</span> (Throwable ignore) &#123;<br>            <span class="hljs-comment">// N</span><br>            <span class="hljs-keyword">final</span> Object resourceImpl = resourcesImplFiled.get(resources);<br>            <span class="hljs-comment">// for Huawei HwResourcesImpl</span><br>            <span class="hljs-keyword">final</span> Field implAssets = findField(resourceImpl, <span class="hljs-string">&quot;mAssets&quot;</span>);<br>            implAssets.set(resourceImpl, newAssetManager);<br>        &#125;<br>        <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>app context 里的 <code>Resources</code> 是在构造 app context 的同时通过 <code>ResourcesManager.getResources</code> 创建的，而且 <code>ResourcesManager.mResourceReferences</code> 会持有一个它的弱引用</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleBindApplication(AppBindData data) &#123;<br>    <span class="hljs-comment">// ... 实例化 ContextImpl 和 Application</span><br>    app = data.info.makeApplication(data.restrictedBackupMode, <span class="hljs-keyword">null</span>);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 构造 app context（ContextImpl）和 Application</span><br>Application LoadedApk.makeApplication(<span class="hljs-keyword">boolean</span> forceDefaultAppClass, Instrumentation instrumentation) &#123;<br>    <span class="hljs-comment">// ...</span><br>    ContextImpl appContext = ContextImpl.createAppContext(mActivityThread, <span class="hljs-keyword">this</span>);<br>    app = mActivityThread.mInstrumentation.newApplication(cl, appClass, appContext);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 在构造 ContextImpl 时候会创建 Resources</span><br>ContextImpl LoadedApk.createAppContext(ActivityThread mainThread, LoadedApk packageInfo) &#123;<br>    <span class="hljs-keyword">return</span> createAppContext(mainThread, packageInfo, <span class="hljs-keyword">null</span>);<br>&#125;<br>ContextImpl LoadedApk.createAppContext(ActivityThread mainThread, LoadedApk packageInfo, String opPackageName) &#123;<br>    <span class="hljs-keyword">if</span> (packageInfo == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalArgumentException(<span class="hljs-string">&quot;packageInfo&quot;</span>);<br>    ContextImpl context = <span class="hljs-keyword">new</span> ContextImpl(<span class="hljs-keyword">null</span>, mainThread, packageInfo, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, <span class="hljs-number">0</span>, <span class="hljs-keyword">null</span>, opPackageName);<br>    context.setResources(packageInfo.getResources());<br>    context.mIsSystemOrSystemUiContext = isSystemOrSystemUI(context);<br>    <span class="hljs-keyword">return</span> context;<br>&#125;<br><br><span class="hljs-comment">// 通过 ResourcesManager.getResources() 创建 Resources 实例时，ResourcesManager.mResourceReferences 会持有一个它的弱引用</span><br>Resources LoadedApk.getResources() &#123;<br>    <span class="hljs-keyword">if</span> (mResources == <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">final</span> String[] splitPaths;<br>        <span class="hljs-keyword">try</span> &#123;<br>            splitPaths = getSplitPaths(<span class="hljs-keyword">null</span>);<br>        &#125; <span class="hljs-keyword">catch</span> (NameNotFoundException e) &#123;<br>            <span class="hljs-comment">// This should never fail.</span><br>            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> AssertionError(<span class="hljs-string">&quot;null split not found&quot;</span>);<br>        &#125;<br>        mResources = ResourcesManager.getInstance().getResources(<span class="hljs-keyword">null</span>, mResDir,<br>                splitPaths, mOverlayDirs, mApplicationInfo.sharedLibraryFiles,<br>                Display.DEFAULT_DISPLAY, <span class="hljs-keyword">null</span>, getCompatibilityInfo(),<br>                getClassLoader(), <span class="hljs-keyword">null</span>);<br>    &#125;<br>    <span class="hljs-keyword">return</span> mResources;<br>&#125;<br>ResourcesManager.getResources(...) &#123;<br>    Trace.traceBegin(Trace.TRACE_TAG_RESOURCES, <span class="hljs-string">&quot;ResourcesManager#getResources&quot;</span>);<br>    <span class="hljs-keyword">final</span> ResourcesKey key = <span class="hljs-keyword">new</span> ResourcesKey(...);<br>    classLoader = classLoader != <span class="hljs-keyword">null</span> ? classLoader : ClassLoader.getSystemClassLoader();<br>    <span class="hljs-keyword">if</span> (activityToken != <span class="hljs-keyword">null</span>) &#123;<br>        rebaseKeyForActivity(activityToken, key);<br>    &#125;<br>    <span class="hljs-comment">// Preload the ApkAssets required by the key to prevent performing heavy I/O while the</span><br>    <span class="hljs-comment">// ResourcesManager lock is held.</span><br>    <span class="hljs-keyword">final</span> ApkAssetsSupplier assetsSupplier = createApkAssetsSupplierNotLocked(key);<br>    <span class="hljs-keyword">return</span> createResources(activityToken, key, classLoader, assetsSupplier);    <br>&#125;<br>ResourcesManager.createResources(...) &#123;<br>    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;<br>        ResourcesImpl resourcesImpl = findOrCreateResourcesImplForKeyLocked(key, apkSupplier);<br>        <span class="hljs-keyword">if</span> (resourcesImpl == <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;<br>        &#125;<br>        <span class="hljs-keyword">if</span> (activityToken != <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">return</span> createResourcesForActivityLocked(activityToken, classLoader, resourcesImpl, key.mCompatInfo);<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-keyword">return</span> createResourcesLocked(classLoader, resourcesImpl, key.mCompatInfo);<br>        &#125;<br>    &#125;<br>&#125;<br>ResourcesManager.createResourcesLocked(...) &#123;<br>    cleanupReferences(mResourceReferences, mResourcesReferencesQueue);<br>    Resources resources = compatInfo.needsCompatResources() ? <span class="hljs-keyword">new</span> CompatResources(classLoader) : <span class="hljs-keyword">new</span> Resources(classLoader);<br>    resources.setImpl(impl);<br>    resources.setCallbacks(mUpdateCallbacks);<br>    mResourceReferences.add(<span class="hljs-keyword">new</span> WeakReference&lt;&gt;(resources, mResourcesReferencesQueue));<br>    <span class="hljs-keyword">return</span> resources;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>Application</code> 创建后会调用 <code>Application.attach</code>，后续会触发 <code>TinkerResourcePatcher.isResourceCanPatch</code> 和 <code>TinkerResourcePatcher.monkeyPatchExistingResources</code>，从而把 <code>ResourcesManager.mResourceReferences</code> 里的 <code>Resources</code> 都修改掉</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">Instrumentation.newApplication(ClassLoader cl, String className, Context context) <br>		<span class="hljs-keyword">throws</span> InstantiationException, IllegalAccessException, ClassNotFoundException &#123;<br>    Application app = getFactory(context.getPackageName()).instantiateApplication(cl, className);<br>    app.attach(context);<br>    <span class="hljs-keyword">return</span> app;<br>&#125;<br><br>Application.attach(Context context) &#123;<br>    attachBaseContext(context);<br>    mLoadedApk = ContextImpl.getImpl(context).mPackageInfo;<br>&#125;<br><br>TinkerLoader.tryLoadPatchFilesInternal(TinkerApplication app, Intent resultIntent)<br><br>TinkerResourceLoader.checkComplete(Context context, String directory, ShareSecurityCheck securityCheck, Intent intentResult)<br><br><span class="hljs-comment">// 通过反射拿到 ResourcesManager.mResourceReferences</span><br>TinkerResourceLoader.isResourceCanPatch(Context context) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-comment">// Iterate over all known Resources objects</span><br>    <span class="hljs-keyword">if</span> (SDK_INT &gt;= KITKAT) &#123;<br>        <span class="hljs-comment">//pre-N</span><br>        <span class="hljs-comment">// Find the singleton instance of ResourcesManager</span><br>        <span class="hljs-keyword">final</span> Class&lt;?&gt; resourcesManagerClass = Class.forName(<span class="hljs-string">&quot;android.app.ResourcesManager&quot;</span>);<br>        <span class="hljs-keyword">final</span> Method mGetInstance = findMethod(resourcesManagerClass, <span class="hljs-string">&quot;getInstance&quot;</span>);<br>        <span class="hljs-keyword">final</span> Object resourcesManager = mGetInstance.invoke(<span class="hljs-keyword">null</span>);<br>        <span class="hljs-keyword">try</span> &#123;<br>            Field fMActiveResources = findField(resourcesManagerClass, <span class="hljs-string">&quot;mActiveResources&quot;</span>);<br>            <span class="hljs-keyword">final</span> ArrayMap&lt;?, WeakReference&lt;Resources&gt;&gt; activeResources19 =<br>                    (ArrayMap&lt;?, WeakReference&lt;Resources&gt;&gt;) fMActiveResources.get(resourcesManager);<br>            references = activeResources19.values();<br>        &#125; <span class="hljs-keyword">catch</span> (NoSuchFieldException ignore) &#123;<br>            <span class="hljs-comment">// N moved the resources to mResourceReferences</span><br>            <span class="hljs-keyword">final</span> Field mResourceReferences = findField(resourcesManagerClass, <span class="hljs-string">&quot;mResourceReferences&quot;</span>);<br>            references = (Collection&lt;WeakReference&lt;Resources&gt;&gt;) mResourceReferences.get(resourcesManager);<br>        &#125;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-keyword">final</span> Field fMActiveResources = findField(activityThread, <span class="hljs-string">&quot;mActiveResources&quot;</span>);<br>        <span class="hljs-keyword">final</span> HashMap&lt;?, WeakReference&lt;Resources&gt;&gt; activeResources7 =<br>                (HashMap&lt;?, WeakReference&lt;Resources&gt;&gt;) fMActiveResources.get(currentActivityThread);<br>        references = activeResources7.values();<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="local-resources"><a href="#local-resources" class="headerlink" title="local resources"></a>local resources</h3><p>另一块是针对局部 <code>Context</code> 的，比如 <code>Activity</code>，从<a href="../../../../2020/11/03/launch-activity-sequence/">Activity 启动流程时序图</a>可以找到创建 <code>Activity</code> 的入口点</p>
+<p>创建 <code>Activity</code> 的时候会创建并使用它自己的 <code>Context</code>，而且把 <code>Context.getResources</code> 指向从 <code>ActivityThread.mPackages</code> 里找到的资源目录，所以 Tinker 会在 <code>monkeyPatchExistingResources</code> 修改 <code>ActivityThread.mPackages</code> 指向新资源包</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 创建 Activity</span><br>ActivityThread.handleLaunchActivity ...<br><br>ActivityThread.performLaunchActivity(ActivityClientRecord r, Intent customIntent) &#123;<br>        ActivityInfo aInfo = r.activityInfo;<br>    <span class="hljs-keyword">if</span> (r.packageInfo == <span class="hljs-keyword">null</span>) &#123;<br>        r.packageInfo = getPackageInfo(aInfo.applicationInfo, r.compatInfo, Context.CONTEXT_INCLUDE_CODE);<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>    ContextImpl appContext = createBaseContextForActivity(r);<br>    <span class="hljs-comment">// ...</span><br>    activity = mInstrumentation.newActivity(cl, component.getClassName(), r.intent);<br>    <span class="hljs-comment">// ...</span><br>    activity.attach(appContext, <span class="hljs-keyword">this</span>, getInstrumentation(), r.token,<br>            r.ident, app, r.intent, r.activityInfo, title, r.parent,<br>            r.embeddedID, r.lastNonConfigurationInstances, config,<br>            r.referrer, r.voiceInteractor, window, r.configCallback,<br>            r.assistToken);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 创建 Activity ContextImpl，可以看到它的 Resources 是指向 ActivityClientRecord.packageInfo.getResDir() 的</span><br><span class="hljs-comment">// 而 ActivityClientRecord.packageInfo 在上面被赋值了</span><br>ContextImpl.createBaseContextForActivity(ActivityClientRecord r) <br>ContextImpl.createActivityContext(ActivityThread mainThread,<br>        LoadedApk packageInfo, ActivityInfo activityInfo, IBinder activityToken, <span class="hljs-keyword">int</span> displayId,<br>        Configuration overrideConfiguration) &#123;<br>    <span class="hljs-comment">// ...</span><br>    ContextImpl context = <span class="hljs-keyword">new</span> ContextImpl(<span class="hljs-keyword">null</span>, mainThread, packageInfo, <span class="hljs-keyword">null</span>,<br>            activityInfo.splitName, activityToken, <span class="hljs-keyword">null</span>, <span class="hljs-number">0</span>, classLoader, <span class="hljs-keyword">null</span>);<br>    <span class="hljs-comment">// ...</span><br>    context.setResources(resourcesManager.createBaseTokenResources(activityToken,<br>            packageInfo.getResDir(),<br>            splitDirs,<br>            packageInfo.getOverlayDirs(),<br>            packageInfo.getApplicationInfo().sharedLibraryFiles,<br>            displayId,<br>            overrideConfiguration,<br>            compatInfo,<br>            classLoader,<br>            packageInfo.getApplication() == <span class="hljs-keyword">null</span> ? <span class="hljs-keyword">null</span> : packageInfo.getApplication().getResources().getLoaders()));<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// ActivityClientRecord.packageInfo 是从 ActivityThread.mPackages 里取的</span><br>ActivityThread.getPackageInfo(String packageName, CompatibilityInfo compatInfo, <span class="hljs-keyword">int</span> flags, <span class="hljs-keyword">int</span> userId) &#123;<br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> differentUser = (UserHandle.myUserId() != userId);<br>    ApplicationInfo ai = PackageManager.getApplicationInfoAsUserCached(<br>            packageName,<br>            PackageManager.GET_SHARED_LIBRARY_FILES<br>            | PackageManager.MATCH_DEBUG_TRIAGED_MISSING,<br>            (userId &lt; <span class="hljs-number">0</span>) ? UserHandle.myUserId() : userId);<br>    <span class="hljs-keyword">synchronized</span> (mResourcesManager) &#123;<br>        WeakReference&lt;LoadedApk&gt; ref;<br>        <span class="hljs-keyword">if</span> (differentUser) &#123;<br>            <span class="hljs-comment">// Caching not supported across users</span><br>            ref = <span class="hljs-keyword">null</span>;<br>        &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((flags &amp; Context.CONTEXT_INCLUDE_CODE) != <span class="hljs-number">0</span>) &#123;<br>            ref = mPackages.get(packageName);<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            ref = mResourcePackages.get(packageName);<br>        &#125;<br>        LoadedApk packageInfo = ref != <span class="hljs-keyword">null</span> ? ref.get() : <span class="hljs-keyword">null</span>;<br>        <span class="hljs-keyword">if</span> (ai != <span class="hljs-keyword">null</span> &amp;&amp; packageInfo != <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">if</span> (!isLoadedApkResourceDirsUpToDate(packageInfo, ai)) &#123;<br>                List&lt;String&gt; oldPaths = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();<br>                LoadedApk.makePaths(<span class="hljs-keyword">this</span>, ai, oldPaths);<br>                packageInfo.updateApplicationInfo(ai, oldPaths);<br>            &#125;<br>            <span class="hljs-keyword">if</span> (packageInfo.isSecurityViolation() &amp;&amp; (flags&amp;Context.CONTEXT_IGNORE_SECURITY) == <span class="hljs-number">0</span>) &#123;<br>                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> SecurityException(<br>                        <span class="hljs-string">&quot;Requesting code from &quot;</span> + packageName<br>                        + <span class="hljs-string">&quot; to be run in process &quot;</span><br>                        + mBoundApplication.processName<br>                        + <span class="hljs-string">&quot;/&quot;</span> + mBoundApplication.appInfo.uid);<br>            &#125;<br>            <span class="hljs-keyword">return</span> packageInfo;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">if</span> (ai != <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">return</span> getPackageInfo(ai, compatInfo, flags);<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;<br>&#125;<br><br><span class="hljs-comment">// Tinker 将 ActivityThread.mPackages 里的 LoadedApk.mResDir 改为新的资源包</span><br>TinkerResourcePatcher.isResourceCanPatch(Context context) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    Class&lt;?&gt; activityThread = Class.forName(<span class="hljs-string">&quot;android.app.ActivityThread&quot;</span>);<br>    <span class="hljs-comment">// ...</span><br>    packagesFiled = findField(activityThread, <span class="hljs-string">&quot;mPackages&quot;</span>);<br>    <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &lt; <span class="hljs-number">27</span>) &#123;<br>        resourcePackagesFiled = findField(activityThread, <span class="hljs-string">&quot;mResourcePackages&quot;</span>);<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br>TinkerResourcePatcher.monkeyPatchExistingResources(Context context, String externalResourceFile) <span class="hljs-keyword">throws</span> Throwable &#123;<br>    <span class="hljs-keyword">if</span> (externalResourceFile == <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    <span class="hljs-keyword">final</span> ApplicationInfo appInfo = context.getApplicationInfo();<br>    <span class="hljs-keyword">final</span> Field[] packagesFields;<br>    <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &lt; <span class="hljs-number">27</span>) &#123;<br>        packagesFields = <span class="hljs-keyword">new</span> Field[]&#123;packagesFiled, resourcePackagesFiled&#125;;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        packagesFields = <span class="hljs-keyword">new</span> Field[]&#123;packagesFiled&#125;;<br>    &#125;<br>    <span class="hljs-keyword">for</span> (Field field : packagesFields) &#123;<br>        <span class="hljs-keyword">final</span> Object value = field.get(currentActivityThread);<br>        <span class="hljs-keyword">for</span> (Map.Entry&lt;String, WeakReference&lt;?&gt;&gt; entry : ((Map&lt;String, WeakReference&lt;?&gt;&gt;) value).entrySet()) &#123;<br>            <span class="hljs-keyword">final</span> Object loadedApk = entry.getValue().get();<br>            <span class="hljs-keyword">if</span> (loadedApk == <span class="hljs-keyword">null</span>) &#123;<br>                <span class="hljs-keyword">continue</span>;<br>            &#125;<br>            <span class="hljs-keyword">final</span> String resDirPath = (String) resDir.get(loadedApk);<br>            <span class="hljs-keyword">if</span> (appInfo.sourceDir.equals(resDirPath)) &#123;<br>                resDir.set(loadedApk, externalResourceFile);<br>            &#125;<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Library/">Library</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/hotfix/">hotfix</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2021/03/13/tcp-handshake-goodbye/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">TCP 的三次握手和四次挥手</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2021/03/02/how-application-being-created-and-init/">
+                        <span class="hidden-mobile">Application 是如何被创建和初始化的？</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

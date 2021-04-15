@@ -1,0 +1,551 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>图解 Glide - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="图解 Glide">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-10-31 04:00" pubdate>
+        2020年10月31日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      1.5k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      17
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">图解 Glide</h1>
+            
+            <div class="markdown-body">
+              <p>网上讲解 <code>Glide</code> 的文章一搜一大把，但几乎都是以文字的形式来讲解；我自己也写过不少 <code>Glide</code> 的笔记，也是文字为主；但是时间长了经常忘了其中的细节，加上 <code>Glide</code> 的源码不太易懂，所以决定用时序图来分析和记录研究 <code>Glide</code> 的过程</p>
+<h2 id="时序图"><a href="#时序图" class="headerlink" title="时序图"></a>时序图</h2><p>下面两张图是一次图片加载的大体流程，有读过源码的同学基本上通过这两种图就能回忆起其中的细节；没读过源码的同学也可以先了解下 <code>Glide</code> 里各个类的作用</p>
+<p><img src="../../../../image/2020-10-31-how-glide-work/glide_1.jpg" srcset="/blog/image/loading.gif" lazyload alt="glide_1.jpg"></p>
+<p><img src="../../../../image/2020-10-31-how-glide-work/glide_task.jpg" srcset="/blog/image/loading.gif" lazyload alt="glide_task.jpg"></p>
+<h2 id="RequestManager-请求管理器"><a href="#RequestManager-请求管理器" class="headerlink" title="RequestManager - 请求管理器"></a><code>RequestManager</code> - 请求管理器</h2><p>往 <code>Activity</code>/<code>Fragment</code> 添加一个 <code>RequestManagerFragment</code>（没有 <code>View</code>） 用以监听宿主的生命周期，从而实现请求的管理和绑定</p>
+<p><img src="../../../../image/2020-10-31-how-glide-work/1.jpg" srcset="/blog/image/loading.gif" lazyload alt="1.jpg"></p>
+<h2 id="内存缓存"><a href="#内存缓存" class="headerlink" title="内存缓存"></a>内存缓存</h2><p>内存缓存有 <code>ActiveResources</code> 和 <code>LruResourceCache</code>（<code>MemoryCache</code>），如下图，它们关系是：</p>
+<ul>
+<li>从 source/data 解码的 resource 将被加入 <code>ActiveResources</code></li>
+<li>当 <code>onStop</code>/<code>onDestory</code>/<code>onTrimMemory</code> 时 resource 被释放，从 <code>ActiveResources</code> 移除并放入 <code>MemoryCache</code></li>
+<li>加载时如果命中缓存，则从 <code>MemoryCache</code> 移除并加入 <code>ActiveResources</code></li>
+</ul>
+<p>它们的不同之处：</p>
+<ul>
+<li>它们对应 resource 的不同生命周期：使用中 - <code>ActiveResources</code>，释放后 - <code>MemoryCache</code></li>
+<li><code>ActiveResources</code> 是对所有使用中 resource 的弱引用，相当于对所有使用中 resource 的收集和统计，没有大小限制</li>
+<li><code>MemoryCache</code> 引用释放的资源，有大小限制，实现是 <code>LruResourceCache</code></li>
+</ul>
+<p><img src="../../../../image/2020-10-31-how-glide-work/glide_memory_cache.jpg" srcset="/blog/image/loading.gif" lazyload alt="glide_memory_cache.jpg"></p>
+<h2 id="磁盘缓存"><a href="#磁盘缓存" class="headerlink" title="磁盘缓存"></a>磁盘缓存</h2><p>磁盘缓存有两层：data cache 和 resource cache，它们的关系在于：</p>
+<ul>
+<li>都是磁盘缓存，都以文件的形式存在于 disk cache dir，只是 key 不同</li>
+<li>从网络抓取 → 保存为 data cache → 解码为 resource → 保存为 resource cache（optional）→ 返回 resource</li>
+<li>下次加载时，先尝试加载 resource cache 再尝试加载 data cache</li>
+</ul>
+<p>它们的区别在于：</p>
+<ul>
+<li>data cache 缓存的是原始数据（也就是从 source 直接抓取到的数据流），resource cache 缓存的是解码后（比如 <code>Bitmap</code>）的数据</li>
+<li>resource cache 能够加速解码的速度；比如 source 是网络上的图片，一般是 jpg or png，则从 data cache 加载需要解码为 Bitmap，而 resource cache 直接缓存 bitmap bytes，省了解码这步</li>
+<li>resource cache 会增大磁盘缓存起码一倍；比如上述的 bitmap bytes 比压缩格式的 jpg 要大</li>
+<li>是否有 resource cache 受几个条件的影响</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">DiskCacheStrategy<br>	NONE      - 没有磁盘缓存<br>	DATA      - 只缓存 data cache<br>	RESOURCE  - 只缓存 resource cache<br>	ALL       - 都缓存<br>	AUTOMATIC - 自动<br><br><span class="hljs-comment">// 看下 AUTOMATIC 的情况</span><br><span class="hljs-comment">// data cache，只缓存网络资源，不缓存 asset file，local disk file 等本地资源</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isDataCacheable</span><span class="hljs-params">(DataSource dataSource)</span> </span>&#123;<br>    <span class="hljs-keyword">return</span> dataSource == DataSource.REMOTE;<br>&#125;<br><br><span class="hljs-comment">// resource cache 只缓存 asset file，local disk file 等本地资源</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isResourceCacheable</span><span class="hljs-params">(</span></span><br><span class="hljs-function"><span class="hljs-params">        <span class="hljs-keyword">boolean</span> isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy)</span> </span>&#123;<br>    <span class="hljs-keyword">return</span> ((isFromAlternateCacheKey &amp;&amp; dataSource == DataSource.DATA_DISK_CACHE)<br>            || dataSource == DataSource.LOCAL)<br>            &amp;&amp; encodeStrategy == EncodeStrategy.TRANSFORMED;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><img src="../../../../image/2020-10-31-how-glide-work/glide_disk_cache.jpg" srcset="/blog/image/loading.gif" lazyload alt="glide_disk_cache.jpg"></p>
+<h2 id="池化"><a href="#池化" class="headerlink" title="池化"></a>池化</h2><p>使用池化技术（<code>ArrayPool</code> 和 <code>BitmapPool</code>）降低内存抖动</p>
+<p><code>Glide</code> 在很多地方都需要临时用到一小块的内存，使用 byte array pool 可以平缓内存使用，避免频繁的内存申请</p>
+<ul>
+<li>io 时需要一个内存缓冲区来读写</li>
+<li>从文件解码图片时 <code>BitmapFactory.Options.inTempStorage</code></li>
+<li><code>downsample</code> 时需要先加载 image exif 信息</li>
+</ul>
+<p><code>BitmapPool</code> 则在 <code>Transformation.transform</code> 做 <code>Bitmap</code> 转换时用得比较多</p>
+<h2 id="线程调度"><a href="#线程调度" class="headerlink" title="线程调度"></a>线程调度</h2><ul>
+<li>load memory cache 阶段是 ui 线程</li>
+<li>decode cache 阶段是一个 decode 线程；此阶段会将 data 解码至 memory resource，采用单个线程排队解码，可以防止多个线程同时解码申请大内存造成内存抖动甚至 OOM</li>
+<li>fetch source 阶段是线程池</li>
+</ul>
+<h2 id="加载路径"><a href="#加载路径" class="headerlink" title="加载路径"></a>加载路径</h2><p>加载路径把 model - dataClass - resourceClass - transcodeClass 串联起来</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// url string 是 model，类型是 String；transcodeClass 是 Drawable.class，最终的目标类型；此时的 resourceClass 是 Object.class</span><br>GlideApp.with(<span class="hljs-keyword">this</span>).as(Drawable.class).load(url).into(photoView);<br></code></pre></div></td></tr></table></figure>
+
+<ol>
+<li>通过 <code>ModelLoaderRegistry</code> 知道 model 能使用哪些 <code>ModelLoader</code>，能加载到 jvm 里成为哪些 dataClass；string url 的话，适用于 <code>StringLoader</code>，能加载为 <code>InputStream</code> 和 <code>ParcelFileDescriptor</code>；如果有多个 loader 可以用，则使用 <code>MultiModelLoader</code>，它专门用来包裹多个 loader，因为对于一个 model 可能会有多个 loader 可以处理它；对于 <code>MultiXXX</code>，内部都有个属性 <code>currentIndex</code> 指定使用哪个实例（一般情况下就是第 0 个了，除非有代码设置过 <code>currentIndex</code>）；loader 在注册表中的位置可以通过 append、prepend 调整</li>
+<li>通过 <code>ResourceDecoderRegistry</code> 知道上述 dataClass 列表能够 decode 为哪些 resourceClass；<code>InputStream</code> 能够 decode 为 <code>Bitmap</code>，<code>GifDrawable</code> 和 <code>BitmapDrawable</code>；<code>ParcelFileDescriptor</code> 能够 decode 为 <code>Bitmap</code> 和 <code>BitmapDrawable</code></li>
+<li>如果上述的 resourceClass 等于 transcodeClass 或它的子类，则把 resourceClass 加入到目标类型列表里；否则通过 <code>TranscoderRegistry</code> 判断能否使用注册的 <code>ResourceTranscoder</code> 将 resourceClass 转换为 transcodeClass 或它的子类，可以的话也将其加入目标类型列表里面；比如 <code>Bitmap</code> 可以用 <code>BitmapDrawableTranscoder</code> 转换为 <code>Drawable</code></li>
+<li>最终得到一个目标类型列表，里面的类型等于 transcodeClass 或它的子类；它表明可以从 model 加载得到 <code>Drawable</code>；这个列表有：<code>Bitmap</code>，<code>BitmapDrawable</code>，<code>GifDrawable</code></li>
+<li>按顺序（也即是注册表里的顺序），使用对应的 decoder 把 <code>InputStream</code> 解码；这里说下，因为 url 所在的是一张图片，所以 <code>StreamGifDecoder.handles</code> 发现不是 gif 会返回 false，于是不能转为 <code>GifDrawable</code>，跳到下一个；假设下一个是 <code>Bitmap</code>，可以正常 decode 为 <code>Drawable</code>，于是就略过了 <code>BitmapDrawable</code> 这个目标类型</li>
+</ol>
+<p><code>Glide</code> 有三层主要的 component：<code>ModelLoader</code>，<code>ResourceDecoder</code> 和 <code>ResourceTranscoder</code>；每层都注册了大量的实现，所以对于某个加载请求，会有多个路径；而到底使用哪条加载路径，取决于 component 在 <code>Register</code> 里的位置，靠前的 component 会被优先选择，如果这条路径走得通，那么后续的路径就被忽略了</p>
+<ol>
+<li>string url -&gt; <code>InputStream</code> -&gt; <code>Bitmap</code> -&gt; <code>Drawable</code>（用了 transcode，<code>Bitmap</code> 可以转换成 <code>BitmapDrawable</code>）</li>
+<li>string url -&gt; <code>InputStream</code> -&gt; <code>BitmapDrawable</code></li>
+<li>string url -&gt; <code>ByteBuffer</code> -&gt; <code>Bitmap</code> -&gt; <code>Drawable</code></li>
+<li>…</li>
+</ol>
+<h2 id="问答"><a href="#问答" class="headerlink" title="问答"></a>问答</h2><ol>
+<li>同一个 <code>ImageView</code>，加载多个图片，为什么不会错乱呢？</li>
+</ol>
+<p>将 <code>Request</code> 放入 <code>View.setTag</code>，旧的 <code>Resquest</code> 将被新的 <code>Request</code> 取消，防止同一个 <code>ImageView</code> 的多个请求错乱</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Library/">Library</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/Glide/">Glide</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2020/11/03/launch-activity-sequence/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Activity 启动流程时序图</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/10/20/anr/">
+                        <span class="hidden-mobile">阅读源码系列：ANR 是怎么产生的</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

@@ -1,0 +1,548 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>阅读源码系列：ANR 是怎么产生的 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="阅读源码系列：ANR 是怎么产生的">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-10-20 04:00" pubdate>
+        2020年10月20日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      1.6k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      22
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">阅读源码系列：ANR 是怎么产生的</h1>
+            
+            <div class="markdown-body">
+              <p>根据日常的经验我们大概知道，如果 app 没有及时消费 <code>MotionEvent</code>，超过 5s 就会弹出 ANR 对话框；那么 ANR 的逻辑肯定是在事件分发过程中产生的，我们从事件的源头找起，看看 input 事件是怎么产生的</p>
+<h2 id="input-的分发"><a href="#input-的分发" class="headerlink" title="input 的分发"></a>input 的分发</h2><p><img src="../../../../image/2020-10-20-anr/sequence.png" srcset="/blog/image/loading.gif" lazyload alt="sequence.png"></p>
+<p>事件分发是从线程 <code>InputReaderThread</code> 开始的，它的主要工作是：</p>
+<ol>
+<li>从目录 <code>/dev/input</code> 获取 input event<ul>
+<li>看来 android 的输入设备是挂载在 <code>/dev/input</code> 下的，当然会有多个输入设备：屏幕触摸、键盘、手柄等，使用 <code>epoll</code> 监听多个 <code>fd</code></li>
+<li><code>EventHub.getEvents()</code> 从 <code>fd</code> 读取 <code>input_event</code> 并转换为 <code>RawEvent</code>（看来输入设备的驱动都需要构造 <code>input_event</code> 给系统）</li>
+</ul>
+</li>
+<li>经过识别分类（按键、手势、手柄、滚轮等）、过滤等一系列操作后，添加到 <code>mInboundQueue</code>（等待 <code>InputDispatcher</code> 分发）<ul>
+<li><code>InputDevice</code> 将 <code>RawEvent</code> 交由各种 <code>InputMapper</code> 处理，例如：<code>KeyboardInputMapper</code> 将 <code>RawEvent</code> 包装为 <code>NotifyKeyArgs</code>，<code>TouchInputMapper</code> 将 <code>RawEvent</code> 包装为 <code>NotifyMotionArgs</code></li>
+<li><code>InputDispatcher.notifyXXX</code> 将各种 <code>NotifyXXXArgs</code> 包装为 <code>XXXEntry</code> 放入 <code>mInboundQueue</code></li>
+</ul>
+</li>
+</ol>
+<p>这里需要补充下 Native Looper 不同于 Java Looper 的地方：提供了监听文件描述符的机制</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * @param fd       需要监听的文件描述符</span><br><span class="hljs-comment"> * @param ident    表示为当前发生事件的标识符，必须 &gt;= 0，或者为 POLL_CALLBACK(-2) 如果指定了 callback</span><br><span class="hljs-comment"> * @param events   表示为要监听的文件类型，默认是 EVENT_INPUT</span><br><span class="hljs-comment"> * @param callback 当有事件发生时，会回调该 callback 函数</span><br><span class="hljs-comment"> * @param data</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * 主要做了两件事：</span><br><span class="hljs-comment"> * 1，把输入参数构造成 Request，添加到 mRequests</span><br><span class="hljs-comment"> * 2，将 fd 添加到 epoll</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">addFd</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> ident, <span class="hljs-keyword">int</span> events, Looper_callbackFunc callback, <span class="hljs-keyword">void</span>* data)</span></span>;<br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">addFd</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> ident, <span class="hljs-keyword">int</span> events, <span class="hljs-keyword">const</span> sp&lt;LooperCallback&gt;&amp; callback, <span class="hljs-keyword">void</span>* data)</span></span>;<br></code></pre></div></td></tr></table></figure>
+
+<p>它有两种使用方式：</p>
+<ul>
+<li>指定 callback 来处理事件 : 当该文件描述符上有事件到来时，该 callback 会被执行；调用 <code>Looper.wake()</code> 也会触发 callback 执行</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce() -&gt; pollInner()</span><br><br><span class="hljs-keyword">int</span> eventCount = <span class="hljs-built_in">epoll_wait</span>(mEpollFd.<span class="hljs-built_in">get</span>(), eventItems, EPOLL_MAX_EVENTS, timeoutMillis)<br><span class="hljs-comment">// ...</span><br><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; eventCount; i++) &#123;<br>    <span class="hljs-keyword">int</span> fd = eventItems[i].data.fd;<br>    <span class="hljs-keyword">uint32_t</span> epollEvents = eventItems[i].events;<br>    <span class="hljs-keyword">if</span> (fd == mWakeEventFd.<span class="hljs-built_in">get</span>()) &#123;<br>        <span class="hljs-comment">// ...</span><br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-keyword">ssize_t</span> requestIndex = mRequests.<span class="hljs-built_in">indexOfKey</span>(fd);<br>        <span class="hljs-keyword">if</span> (requestIndex &gt;= <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-comment">// ...</span><br>            <span class="hljs-built_in">pushResponse</span>(events, mRequests.<span class="hljs-built_in">valueAt</span>(requestIndex));<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-comment">// ...</span><br>        &#125;<br>    &#125;<br>&#125;<br><span class="hljs-comment">// ...</span><br><span class="hljs-keyword">for</span> (<span class="hljs-keyword">size_t</span> i = <span class="hljs-number">0</span>; i &lt; mResponses.<span class="hljs-built_in">size</span>(); i++) &#123;<br>    Response&amp; response = mResponses.<span class="hljs-built_in">editItemAt</span>(i);<br>    <span class="hljs-keyword">if</span> (response.request.ident == POLL_CALLBACK) &#123;<br>        <span class="hljs-keyword">int</span> fd = response.request.fd;<br>        <span class="hljs-keyword">int</span> events = response.events;<br>        <span class="hljs-keyword">void</span>* data = response.request.data;<br>        <span class="hljs-keyword">int</span> callbackResult = response.request.callback-&gt;<span class="hljs-built_in">handleEvent</span>(fd, events, data);<br>        <span class="hljs-keyword">if</span> (callbackResult == <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-built_in">removeFd</span>(fd, response.request.seq);<br>        &#125;<br>        <span class="hljs-comment">// Clear the callback reference in the response structure promptly because we</span><br>        <span class="hljs-comment">// will not clear the response vector itself until the next poll.</span><br>        response.request.callback.<span class="hljs-built_in">clear</span>();<br>        result = POLL_CALLBACK;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<ul>
+<li>通过指定的 ident 来处理事件：当该文件描述符有数据到来时，<code>pollOnce()</code> 会返回一个 ident，调用者会判断该 ident 是否等于自己需要处理的事件 ident，如果是的话，则开始处理事件</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce()</span><br><br><span class="hljs-keyword">for</span> (;;) &#123;<br>    <span class="hljs-keyword">while</span> (mResponseIndex &lt; mResponses.<span class="hljs-built_in">size</span>()) &#123;<br>        <span class="hljs-keyword">const</span> Response&amp; response = mResponses.<span class="hljs-built_in">itemAt</span>(mResponseIndex++);<br>        <span class="hljs-keyword">int</span> ident = response.request.ident;<br>        <span class="hljs-keyword">if</span> (ident &gt;= <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-keyword">int</span> fd = response.request.fd;<br>            <span class="hljs-keyword">int</span> events = response.events;<br>            <span class="hljs-keyword">void</span>* data = response.request.data;<br>            <span class="hljs-keyword">if</span> (outFd != <span class="hljs-literal">nullptr</span>) *outFd = fd;<br>            <span class="hljs-keyword">if</span> (outEvents != <span class="hljs-literal">nullptr</span>) *outEvents = events;<br>            <span class="hljs-keyword">if</span> (outData != <span class="hljs-literal">nullptr</span>) *outData = data;<br>            <span class="hljs-keyword">return</span> ident;<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="ui-如何接收和处理-input"><a href="#ui-如何接收和处理-input" class="headerlink" title="ui 如何接收和处理 input"></a>ui 如何接收和处理 input</h2><p>在分析事件分发的逻辑之前，我们先看看 ui 线程是怎么接收 input 事件的</p>
+<p><img src="../../../../image/2020-10-20-anr/input_channel.png" srcset="/blog/image/loading.gif" lazyload alt="input_channel.png"></p>
+<p>可以看到在 native 层打开了一对 socket，server socket fd 给 <code>InputDispatcher</code> 线程，client socket fd 给 ui 线程（<code>ViewRootImpl.mInputChannel</code>），也就是说它们之间通过 socket 双向通讯</p>
+<p><img src="../../../../image/2020-10-20-anr/ui_thread.png" srcset="/blog/image/loading.gif" lazyload alt="ui_thread.png"></p>
+<ol>
+<li>接收：在 native 层用 Native Looper 监听 client socket fd（epoll），封装成 <code>InputMessage</code> 传递给 java 层处理</li>
+<li>经过一个 <code>InputStage</code> 责任链的处理，最终到达我们最熟悉的 <code>View.dispatchTouchEvent</code></li>
+<li>响应：ui 线程在消费完 input event 后，通过双向的 socket 告知 dispatcher 线程；如果此时 client socket 不可写，则将响应保存起来，等待下次 client socket 可写时</li>
+<li>dispatcher - ui 这一段分发过程实际上是异步的，那么整个事件分发的过程也就是异步的，这是 ANR 产生的前提</li>
+</ol>
+<h2 id="input-的生命周期"><a href="#input-的生命周期" class="headerlink" title="input 的生命周期"></a>input 的生命周期</h2><p><img src="../../../../image/2020-10-20-anr/input_dispatcher.png" srcset="/blog/image/loading.gif" lazyload alt="input_dispatcher.png"></p>
+<p>一个 input event 的生命流程大概是这样的：</p>
+<ul>
+<li><code>InputReader</code> 放入 <code>InputDispatcher.mInboundQueue</code> 等待分发</li>
+<li><code>InputDispatcher</code> 将其移入 window 对应的 <code>Connection→outboundQueue</code> 等待发送</li>
+<li>发送成功后，移入 <code>Connection→waitQueue</code> 等待 ui 线程的确认应答</li>
+<li>收到确认应答，将 input event 移出 <code>Connection→waitQueue</code></li>
+</ul>
+<p>产生 ANR 的逻辑就在 <code>dispatchKeyLocked</code>（分发一个 input event 的过程）</p>
+<p><img src="../../../../image/2020-10-20-anr/anr.jpg" srcset="/blog/image/loading.gif" lazyload alt="anr.jpg"></p>
+<p>1，<code>findFocusedWindowTargetsLocked</code> 找到 input event 的分发 window 对象，然后 <code>checkWindowReadyForMoreInputLocked</code> 检查 widnow 是否可以接收 input event，这里截取一段检查逻辑：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// outboundQueue 不为空说明此 window 仍有 input event 未发送，waitQueue 不为空说明有 input event 在消费中（未收到消费完成的响应）</span><br><span class="hljs-comment">// 也就是说 input event 必须是按顺序分发和消费的，不能乱序</span><br><span class="hljs-keyword">if</span> (eventEntry-&gt;type == EventEntry::TYPE_KEY) &#123;<br>    <span class="hljs-keyword">if</span> (!connection-&gt;outboundQueue.<span class="hljs-built_in">isEmpty</span>() || !connection-&gt;waitQueue.<span class="hljs-built_in">isEmpty</span>()) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-built_in">StringPrintf</span>(<span class="hljs-string">&quot;Waiting to send key event because the %s window has not &quot;</span><br>                            <span class="hljs-string">&quot;finished processing all of the input events that were previously &quot;</span><br>                            <span class="hljs-string">&quot;delivered to it.  Outbound queue length: %d.  Wait queue length: &quot;</span><br>                            <span class="hljs-string">&quot;%d.&quot;</span>,<br>                            targetType, connection-&gt;outboundQueue.<span class="hljs-built_in">count</span>(),<br>                            connection-&gt;waitQueue.<span class="hljs-built_in">count</span>());<br>    &#125;<br>&#125; <span class="hljs-keyword">else</span> &#123;<br>    <span class="hljs-keyword">if</span> (!connection-&gt;waitQueue.<span class="hljs-built_in">isEmpty</span>() &amp;&amp;<br>        currentTime &gt;= connection-&gt;waitQueue.head-&gt;deliveryTime + STREAM_AHEAD_EVENT_TIMEOUT) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-built_in">StringPrintf</span>(<span class="hljs-string">&quot;Waiting to send non-key event because the %s window has not &quot;</span><br>                            <span class="hljs-string">&quot;finished processing certain input events that were delivered to &quot;</span><br>                            <span class="hljs-string">&quot;it over &quot;</span><br>                            <span class="hljs-string">&quot;%0.1fms ago.  Wait queue length: %d.  Wait queue head age: &quot;</span><br>                            <span class="hljs-string">&quot;%0.1fms.&quot;</span>,<br>                            targetType, STREAM_AHEAD_EVENT_TIMEOUT * <span class="hljs-number">0.000001f</span>,<br>                            connection-&gt;waitQueue.<span class="hljs-built_in">count</span>(),<br>                            (currentTime - connection-&gt;waitQueue.head-&gt;deliveryTime) *<br>                                    <span class="hljs-number">0.000001f</span>);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>2，最后走到 <code>AppErrors.handleShowAnrUi</code> 里就是弹出 ANR dialog 的地方</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ol>
+<li>三个线程，<code>InputReader</code> 负责监听 input fd，<code>InputDispatcher</code> 负责分发给 ui，ui 消费并反馈给 <code>InputDispatcher</code></li>
+<li><code>InputReader</code> 和 <code>InputDispatcher</code> 在同一进程，<code>mInboundQueue</code> 加锁使用即可；<code>InputDispatcher</code> 和 ui 在不同的进程，通过 socket 通讯</li>
+<li>事件分发是一个异步的过程，所以它会在 <code>mInboundQueue</code>（待分发）、<code>outboundQueue</code>（待发送） 和 <code>waitQueue</code>（待响应） 之间流转</li>
+<li>input event 必须按顺序分发和消费，一个 input event 在分发前必须等待上一个 input event 的响应，如果等待时间超过 5s 则发生 ANR</li>
+<li>ANR dialog 是在 AMS 进程弹出的</li>
+</ol>
+<p>还学到了什么</p>
+<p><code>epoll</code>（或者说 IO 多路复用）ui 线程是通过 socket 与 <code>InputDispatcher</code> 线程交互的，它既要等待 input event（不能阻塞）又要处理 ui 相关工作，靠的就是 epoll；具体来说是 native Looper，因为 epoll 可以同时监听多个 fd；用一个 wakeUpFd + messageQueue，当 enqueueMessage 时往 wakeUpFd 写入，从而唤醒线程处理 message；添加 socket fd，当 socket 可读时，唤醒线程处理 socket 过来的消息，而且还可以同时处理 message 和 socket</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
+<li><a target="_blank" rel="noopener" href="http://gityuan.com/2017/01/01/input-anr/">Input系统-ANR原理分析</a></li>
+<li><a target="_blank" rel="noopener" href="http://gityuan.com/2019/04/06/android-anr/">彻底理解安卓应用无响应机制</a></li>
+</ol>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Framework/">Framework</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/ANR/">ANR</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2020/10/31/how-glide-work/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">图解 Glide</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/10/04/dispatchtouchevent/">
+                        <span class="hidden-mobile">一文搞懂事件分发，手势冲突和滑动冲突</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

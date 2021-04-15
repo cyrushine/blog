@@ -1,0 +1,547 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>一文搞懂事件分发，手势冲突和滑动冲突 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="一文搞懂事件分发，手势冲突和滑动冲突">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-10-04 04:00" pubdate>
+        2020年10月4日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.4k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      31
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">一文搞懂事件分发，手势冲突和滑动冲突</h1>
+            
+            <div class="markdown-body">
+              <p>手势冲突是 android 开发中经常遇到的一类问题了，网上讲解此问题的文章也很多，但是大都浅显地过一遍事件分发的调用栈，然后给出一个调用栈流程图；要不就是使用日志大法，用日志来验证自己的想法，完全没有参考价值；这里根据事件分发相关源码，记录下我的理解。</p>
+<p><code>MotionEvent</code> 里定义的 <code>ACTION_XXX</code> 还不少有 10 多个，看起来情况很复杂的样子，实际上只需要关注三个：<code>ACTION_DOWN</code>，<code>ACTION_MOVE</code> 和 <code>ACTION_UP</code>，而且在一个手势里它们的顺序是：<code>ACTION_DOWN</code> → <code>ACTION_MOVE</code> → <code>ACTION_MOVE</code> → … → <code>ACTION_UP</code>。</p>
+<h2 id="跟踪源码的调用栈"><a href="#跟踪源码的调用栈" class="headerlink" title="跟踪源码的调用栈"></a>跟踪源码的调用栈</h2><ul>
+<li><code>Window.Callback.dispatchTouchEvent</code>（<code>Activity.dispatchTouchEvent</code> 实现了它，在 <code>Activity.attach</code> 里通过 <code>Window.setCallback</code> 设置进去）</li>
+<li><code>Window.superDispatchTouchEvent</code>（实现在 <code>PhoneWindow.superDispatchTouchEvent</code>）</li>
+<li><code>DecorView.superDispatchTouchEvent</code></li>
+<li><code>ViewGroup.dispatchTouchEvent</code></li>
+<li><code>ViewGroup.onInterceptTouchEvent</code></li>
+<li><code>View.dispatchTouchEvent</code></li>
+<li><code>View.onTouchEvent</code></li>
+<li><code>ViewGroup.onTouchEvent</code></li>
+<li><code>Activity.onTouchEvent</code></li>
+</ul>
+<p>网上大部分文章到此就结束了，实际上重点应该在 <code>ViewGroup.dispatchTouchEvent</code>，里面是事件分发的核心逻辑，我把它切分为三个阶段：</p>
+<h3 id="拦截"><a href="#拦截" class="headerlink" title="拦截"></a>拦截</h3><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// DOWN 会被拦截，后续的 MOVE 和 UP 如果有 touch target 也会被拦截</span><br><span class="hljs-comment">// Check for interception.</span><br><span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> intercepted;<br><span class="hljs-keyword">if</span> (actionMasked == MotionEvent.ACTION_DOWN || mFirstTouchTarget != <span class="hljs-keyword">null</span>) &#123;<br>    <span class="hljs-comment">// 可以通过 requestDisallowInterceptTouchEvent 跳过此阶段，</span><br>    <span class="hljs-comment">// 一般是 child 调用 parent.requestDisallowInterceptTouchEvent 来阻止 parent 拦截 touch event</span><br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> disallowIntercept = (mGroupFlags &amp; FLAG_DISALLOW_INTERCEPT) != <span class="hljs-number">0</span>;<br>    <span class="hljs-keyword">if</span> (!disallowIntercept) &#123;<br>        intercepted = onInterceptTouchEvent(ev);<br>        ev.setAction(action); <span class="hljs-comment">// restore action in case it was changed</span><br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        intercepted = <span class="hljs-keyword">false</span>;<br>    &#125;<br>&#125; <span class="hljs-keyword">else</span> &#123;<br>    <span class="hljs-comment">// 后续的 MOVE 和 UP 没有 touch target 则直接走向 onTouchEvent 也就不需要拦截了</span><br>    <span class="hljs-comment">// There are no touch targets and this action is not an initial down</span><br>    <span class="hljs-comment">// so this view group continues to intercept touches.</span><br>    intercepted = <span class="hljs-keyword">true</span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="分发"><a href="#分发" class="headerlink" title="分发"></a>分发</h3><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 收到 CANCEL 或者 onInterceptTouchEvent 返回 true，则不分发 DOWN 给 children</span><br><span class="hljs-comment">// 导致 children 收不到 DOWN 以及没有 touch target</span><br><span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> canceled = resetCancelNextUpFlag(<span class="hljs-keyword">this</span>) || actionMasked == MotionEvent.ACTION_CANCEL;<br><span class="hljs-comment">// ...</span><br><span class="hljs-keyword">if</span> (!canceled &amp;&amp; !intercepted) &#123;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">if</span> (actionMasked == MotionEvent.ACTION_DOWN<br>        || (split &amp;&amp; actionMasked == MotionEvent.ACTION_POINTER_DOWN)<br>        || actionMasked == MotionEvent.ACTION_HOVER_MOVE) &#123;<br>        <span class="hljs-comment">// ... 按顺序分发 ACTION_DOWN，child index(in children array) 越大优先级越高，child z value 越大优先级越高</span><br>        <span class="hljs-keyword">final</span> ArrayList&lt;View&gt; preorderedList = buildTouchDispatchChildList();<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = childrenCount - <span class="hljs-number">1</span>; i &gt;= <span class="hljs-number">0</span>; i--) &#123;<br>            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> childIndex = getAndVerifyPreorderedIndex(childrenCount, i, customOrder);<br>            <span class="hljs-keyword">final</span> View child = getAndVerifyPreorderedView(preorderedList, children, childIndex);<br>            <span class="hljs-comment">// ... touch 是否落在 child 的矩形区域内</span><br>            <span class="hljs-keyword">if</span> (!child.canReceivePointerEvents()<br>                || !isTransformedTouchPointInView(x, y, child, <span class="hljs-keyword">null</span>)) &#123;<br>                ev.setTargetAccessibilityFocus(<span class="hljs-keyword">false</span>);<br>                <span class="hljs-keyword">continue</span>;<br>            &#125;<br>            <span class="hljs-comment">// ... 将 touch event 坐标转换为 child 区域坐标，分发给 child；当有第一个 child 消费时，记录起来并中断剩下的分发过程</span><br>            <span class="hljs-keyword">if</span> (dispatchTransformedTouchEvent(ev, <span class="hljs-keyword">false</span>, child, idBitsToAssign)) &#123;<br>                <span class="hljs-comment">// ...</span><br>                newTouchTarget = addTouchTarget(child, idBitsToAssign);<br>                alreadyDispatchedToNewTouchTarget = <span class="hljs-keyword">true</span>;<br>                <span class="hljs-keyword">break</span>;<br>            &#125;<br>        <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="处理"><a href="#处理" class="headerlink" title="处理"></a>处理</h3><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 如果没有 touch target，则走自己的 View.dispatchTouchEvent 流程（相当于流向 onTouchEvent）</span><br><span class="hljs-comment">// Dispatch to touch targets.</span><br><span class="hljs-keyword">if</span> (mFirstTouchTarget == <span class="hljs-keyword">null</span>) &#123;<br>    <span class="hljs-comment">// No touch targets so treat this as an ordinary view.</span><br>    handled = dispatchTransformedTouchEvent(ev, canceled, <span class="hljs-keyword">null</span>, TouchTarget.ALL_POINTER_IDS);<br>&#125; <span class="hljs-keyword">else</span> &#123;<br>    <span class="hljs-comment">// 分发给 touch target</span><br>    <span class="hljs-comment">// 但如果 onInterceptTouchEvent 返回 true，则发送 CANCEL 给 touch target，后续将不再流向 touch target，而是直接流向 onTouchEvent</span><br>    <span class="hljs-comment">// onInterceptTouchEvent 拦截的那个 touch 不会流向 onTouchEvent</span><br>    TouchTarget predecessor = <span class="hljs-keyword">null</span>;<br>    TouchTarget target = mFirstTouchTarget;<br>    <span class="hljs-keyword">while</span> (target != <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">final</span> TouchTarget next = target.next;<br>        <span class="hljs-keyword">if</span> (alreadyDispatchedToNewTouchTarget &amp;&amp; target == newTouchTarget) &#123;<br>            handled = <span class="hljs-keyword">true</span>;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> cancelChild = resetCancelNextUpFlag(target.child)<br>                    || intercepted;<br>            <span class="hljs-keyword">if</span> (dispatchTransformedTouchEvent(ev, cancelChild,<br>                    target.child, target.pointerIdBits)) &#123;<br>                handled = <span class="hljs-keyword">true</span>;<br>            &#125;<br>            <span class="hljs-keyword">if</span> (cancelChild) &#123;<br>                <span class="hljs-keyword">if</span> (predecessor == <span class="hljs-keyword">null</span>) &#123;<br>                    mFirstTouchTarget = next;<br>                &#125; <span class="hljs-keyword">else</span> &#123;<br>                    predecessor.next = next;<br>                &#125;<br>                target.recycle();<br>                target = next;<br>                <span class="hljs-keyword">continue</span>;<br>            &#125;<br>        &#125;<br>        predecessor = target;<br>        target = next;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="总结-dispatchTouchEvent"><a href="#总结-dispatchTouchEvent" class="headerlink" title="总结 dispatchTouchEvent"></a>总结 <code>dispatchTouchEvent</code></h2><ul>
+<li><code>onInterceptTouchEvent</code> 总是会收到 DOWN，但不一定会收到后续的 MOVE 和 UP（没有 touch target 的话，就不需要拦截了，直接走到 <code>onTouchEvent</code> 去了）</li>
+<li>只有在第一个 DOWN 时，才会分发给所有的 children，找到第一个消费的 child（就是 touch target，后续的 MOVE 和 UP 只分发给它）</li>
+<li><code>onInterceptTouchEvent</code> 返回 true 会导致 touch target 置空（并收到 CANCEL），这样后续的 MOVE 和 UP 因为没有 touch target 而直接走向 <code>onTouchEvent</code></li>
+<li>child 通过 <code>requestDisallowInterceptTouchEvent</code> 告知 parent 不要拦截事件流，交由 child 处理</li>
+</ul>
+<h2 id="常见滑动效果的实现"><a href="#常见滑动效果的实现" class="headerlink" title="常见滑动效果的实现"></a>常见滑动效果的实现</h2><p>了解 <code>dispatchTouchEvent</code> 后，我们看看常用的具有滑动效果的 widget 是怎么处理 touch event 的，参考 <code>ViewPager</code> 和 <code>RecyclerView</code>，代码比较多，这里就不贴了，总结下其套路：</p>
+<ul>
+<li>在 <code>onInterceptTouchEvent</code> 和 <code>onTouchEvent</code> 这两个方法里介入</li>
+<li><code>onInterceptTouchEvent</code> 只监听不拦截 DOWN；拦截 DOWN 会导致 children 接收不到 DOWN，那么它们的 OnClick 和 OnLongClick 就无法触发；更复杂的情况是 children 里也包含具有滑动效果的 widget</li>
+<li><code>onTouchEvent</code> 返回 true 做一个兜底方案；万一没有 child 消费 touch（一般情况是没有 <code>OnClickListener</code>），而自己也不消费 touch 的话，就会没有 touch target，后续的 touch event 会直接流向 parent.<code>onTouchEvent</code>，我们想拦截也拦截不了</li>
+<li>在 <code>onInterceptTouchEvent</code> 里监听和拦截（满足情况下）MOVE，<code>onTouchEvent</code> 里也要消费 MOVE（没有 child 消费 touch 的话，后续的 touch 就直接流向 <code>onTouchEvent</code> 了）</li>
+<li><code>ACTION_MOVE</code> 不会直接触发滑动，而是与 <code>ACTION_DOWN</code> 的点有了一定长度的距离后才触发，这个距离叫 touch slop（<code>ViewConfiguration#getScaledTouchSlop</code>），用以消除抖动，使滑动效果更加顺滑</li>
+</ul>
+<p>记住上面的关键点，基本上就可以解决大部分手势冲突，并能够开发稳健的具有手势的 <code>ViewGroup</code> 了；但实际开发中，有一个问题是更加常见的：滑动冲突。在引入嵌套滑动之前，说说为什么 <code>dispatchTouchEvent</code> 很难解决滑动冲突。滑动一般是由 MOVE &gt; touch slop 触发，这样 parent 总是会优先触发而 child 总是会被屏蔽，而且只能由 child 发起 <code>requestDisallowInterceptTouchEvent</code> 告知 parent 不要拦截，从 parent 的视角看，没有其他办法主动得知 child 的需求，而大多数滑动冲突是需要在 parent 里解决的（脑补淘宝、京东这类 app 的首页）。</p>
+<h2 id="引入-NestedScrollingChild-和-NestedScrollingParent-解决滑动冲突"><a href="#引入-NestedScrollingChild-和-NestedScrollingParent-解决滑动冲突" class="headerlink" title="引入 NestedScrollingChild 和 NestedScrollingParent 解决滑动冲突"></a>引入 <code>NestedScrollingChild</code> 和 <code>NestedScrollingParent</code> 解决滑动冲突</h2><p>上面我们在分析 <code>ViewPager</code> 和 <code>RecyclerView</code> 的与滚动相关的代码时了解到，<code>ACTION_MOVE</code> 会产生 scroll 和 fling 的动量 dy（垂直方向），全部由自己消费掉（View.scrollBy）就会产生滑动的效果；而嵌套滑动引入了协商机制，对于动量 dy：</p>
+<ol>
+<li>先给 parent 消费，parent 可以根据自身情况，选择不消费、消费一部分或者消费全部，此时 dy = dy - consumed</li>
+<li>child 根据滋生情况，消费剩下的 dy（全部 or 部分），此时 dy = dy - consumed</li>
+<li>如果还有 dy 剩余（dy &gt; 0），则把剩余的 dy 的处置权交由 parent</li>
+</ol>
+<p>对于上述流程，android 提供了实现：NestedScrollingChildHelper，我们在实现 NestedScrollingChild 时，只需把方法代理至 helper 即可实现通用的 child 逻辑</p>
+<p>具体 api 调用流如下图：</p>
+<p><img src="../../../../image/2020-10-04-dispatchtouchevent/01.jpg" srcset="/blog/image/loading.gif" lazyload alt="01.jpg"></p>
+<h2 id="实战"><a href="#实战" class="headerlink" title="实战"></a>实战</h2><h3 id="三段式布局"><a href="#三段式布局" class="headerlink" title="三段式布局"></a>三段式布局</h3><p><img src="../../../../image/2020-10-04-dispatchtouchevent/02.jpeg" srcset="/blog/image/loading.gif" lazyload alt="02.jpeg"></p>
+<p>这里以常见的三段式布局为例子看下嵌套滑动怎么用；上图是淘宝首页，由 head、bar 和 list 三个部分组成，bar 在滑动时会粘连在顶部</p>
+<ol>
+<li>当 touch 落在 list 上时，由 list 产生动量 dy，在 list 消费 dy 前，先给 parent 消费，parent 完全消费 dy，scroll 三个 child 直到 head 不可见</li>
+<li>list 因为 dy 被 parent 消费掉而不产生滑动，直到 head 不可见才有剩下的 dy 用以消费，产生滑动</li>
+<li>当 touch 落在 head 和 bar 上时，由 parent 产生动量 dy；此时 parent 才是 child，而 list 是 parent（明确谁是 child，谁是 parent，view tree 结构上的父子关系不一定是嵌套滑动里的父子关系，动量产生者才是 child，child 主动分发动量）</li>
+<li>parent 先消费 dy 直到 head 不可见，然后分发给 list</li>
+<li>fling 同理</li>
+</ol>
+<h3 id="更复杂的布局"><a href="#更复杂的布局" class="headerlink" title="更复杂的布局"></a>更复杂的布局</h3><p><img src="../../../../image/2020-10-04-dispatchtouchevent/03.jpg" srcset="/blog/image/loading.gif" lazyload alt="03.jpg"></p>
+<p>结合上述的所有办法，解决更加复杂的页面；上图是糖纸的首页，最外层是 <code>ViewPager</code>，然后是 refresh layout 加上三段式的布局，head 里又有可以左右滑动的 banner 和卡片列表，还有可以上下滑动的滚动资讯条，我们一个个解决：</p>
+<ul>
+<li>banner 是可以左右滑动的，会与 <code>ViewPager</code> 冲突；我的期望是当 touch 落在 banner 上时，左右滑动完全交由 banner 处理，所以给 <code>ViewPager</code> 添加一个 freeze 方法（当 ViewPager is freeze 时不拦截 touch，此时不能使用 <code>requestDisallowInterceptTouchEvent</code> 否则上下滑动被屏蔽）；而上下滑动距离又会引起 refresh 和三段布局的滑动，需在 banner 触发左右滑动时，调用 <code>requestDisallowInterceptTouchEvent</code> 让 parents 不在拦截 touch</li>
+<li>上下滚动的咨询条，同 banner 的处理方式，只不过它只需解决 refresh 和三段布局的上下滑动冲突即可：它自己完全消费动量 dy</li>
+<li>左右滑动的卡片列表同 banner</li>
+<li><code>SwipeRefreshLayout</code> 看下述源码可以看到是由 touch event 和 nested scroll 两种方式触发，touch event 不够灵活屏蔽掉，选用 nested scroll；<code>dispatchNestedPreScroll</code>、<code>dispatchNestedScroll</code>、<code>dispatchNestedPreFling</code> 和 <code>dispatchNestedFling</code> 正常触发，<code>startNestedScroll</code> 则在 scrollY == 0 时触发，这样就只在滚动到顶的时候才触发 refresh。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 显示 loading</span><br><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">startDragging</span><span class="hljs-params">(<span class="hljs-keyword">float</span> y)</span> </span>&#123;<br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> yDiff = y - mInitialDownY;<br>    <span class="hljs-keyword">if</span> (yDiff &gt; mTouchSlop &amp;&amp; !mIsBeingDragged) &#123;<br>        mInitialMotionY = mInitialDownY + mTouchSlop;<br>        mIsBeingDragged = <span class="hljs-keyword">true</span>;<br>        mProgress.setAlpha(STARTING_PROGRESS_ALPHA);<br>    &#125;<br>&#125;<br><br><span class="hljs-comment">// 由 touch event 触发 loading</span><br><span class="hljs-keyword">case</span> MotionEvent.ACTION_MOVE: &#123;<br>    pointerIndex = ev.findPointerIndex(mActivePointerId);<br>    <span class="hljs-keyword">if</span> (pointerIndex &lt; <span class="hljs-number">0</span>) &#123;<br>        Log.e(LOG_TAG, <span class="hljs-string">&quot;Got ACTION_MOVE event but have an invalid active pointer id.&quot;</span>);<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;<br>    &#125;<br><br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> y = ev.getY(pointerIndex);<br>    startDragging(y);<br><br>    <span class="hljs-keyword">if</span> (mIsBeingDragged) &#123;<br>        <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> overscrollTop = (y - mInitialMotionY) * DRAG_RATE;<br>        <span class="hljs-keyword">if</span> (overscrollTop &gt; <span class="hljs-number">0</span>) &#123;<br>            moveSpinner(overscrollTop);<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">break</span>;<br>&#125;<br><br><span class="hljs-comment">// 由 nested scroll 触发 loading</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNestedScroll</span><span class="hljs-params">(<span class="hljs-keyword">final</span> View target, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dxConsumed, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dyConsumed,</span></span><br><span class="hljs-function"><span class="hljs-params">                           <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dxUnconsumed, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dyUnconsumed)</span> </span>&#123;<br>    <span class="hljs-comment">// Dispatch up to the nested parent first</span><br>    dispatchNestedScroll(dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed,<br>            mParentOffsetInWindow);<br><br>    <span class="hljs-comment">// This is a bit of a hack. Nested scrolling works from the bottom up, and as we are</span><br>    <span class="hljs-comment">// sometimes between two nested scrolling views, we need a way to be able to know when any</span><br>    <span class="hljs-comment">// nested scrolling parent has stopped handling events. We do that by using the</span><br>    <span class="hljs-comment">// &#x27;offset in window &#x27;functionality to see if we have been moved from the event.</span><br>    <span class="hljs-comment">// This is a decent indication of whether we should take over the event stream or not.</span><br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dy = dyUnconsumed + mParentOffsetInWindow[<span class="hljs-number">1</span>];<br>    <span class="hljs-keyword">if</span> (dy &lt; <span class="hljs-number">0</span> &amp;&amp; !canChildScrollUp()) &#123;<br>        mTotalUnconsumed += Math.abs(dy);<br>        moveSpinner(mTotalUnconsumed);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Framework/">Framework</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/TouchEvent/">TouchEvent</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/Motion/">Motion</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/NestedScrolling/">NestedScrolling</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2020/10/20/anr/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">阅读源码系列：ANR 是怎么产生的</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/09/27/handler-messagequeue-looper/">
+                        <span class="hidden-mobile">面试官家常之Handler、MessageQueue 和 Looper</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

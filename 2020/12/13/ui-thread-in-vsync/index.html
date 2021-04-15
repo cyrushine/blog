@@ -1,0 +1,549 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>Android 图形栈（二）ui thread - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="Android 图形栈（二）ui thread">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-12-13 04:00" pubdate>
+        2020年12月13日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.3k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      35
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Android 图形栈（二）ui thread</h1>
+            
+            <div class="markdown-body">
+              <h2 id="从一段-systrace-开始"><a href="#从一段-systrace-开始" class="headerlink" title="从一段 systrace 开始"></a>从一段 systrace 开始</h2><p><img src="../../../../image/2020-12-13-ui-thread-in-vsync/114050.png" srcset="/blog/image/loading.gif" lazyload alt="114050.png"></p>
+<p>这是一段 systrace 记录，看得出来页面是比较流畅的，ui thread 全都在一个 VSYNC_app 内完成绘制，surfaceflinger 也在一个 VSYNC_sf 内完成各个层的合成；但有没发现在 ui thread 完成 <code>doFrame</code> 后，总是会有一个 <code>ReaderThread</code> 跟在后面，看名字像是跟渲染相关的线程，它跟 ui 绘制有关系吗？平时我们常说的，只要 ui thread 在一个刷新周期 16ms 内完成 view 的绘制，即可保证页面流畅，真的是这样吗？</p>
+<h2 id="ViewRootImpl"><a href="#ViewRootImpl" class="headerlink" title="ViewRootImpl"></a>ViewRootImpl</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 从 ViewRootImpl 开始</span><br>ViewRootImpl.doTraversal()<br>ViewRootImpl.performTraversals()<br>ViewRootImpl.performDraw()<br>ViewRootImpl.draw(<span class="hljs-keyword">boolean</span> fullRedrawNeeded)<br><br><span class="hljs-comment">// 进入 ThreadedRenderer</span><br>ThreadedRenderer.draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks) &#123;<br>    <span class="hljs-comment">// ...</span><br>    updateRootDisplayList(view, callbacks);<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">int</span> syncResult = syncAndDrawFrame(choreographer.mFrameInfo);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>这里出现了两个很重要的函数：<code>updateRootDisplayList</code> 和 <code>syncAndDrawFrame</code>，我们一个个看</p>
+<h2 id="updateRootDisplayList"><a href="#updateRootDisplayList" class="headerlink" title="updateRootDisplayList"></a>updateRootDisplayList</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ThreadedRenderer.updateRootDisplayList(View view, DrawCallbacks callbacks) &#123;<br>    <span class="hljs-comment">// ...</span><br>    updateViewTreeDisplayList(view);<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">if</span> (mRootNodeNeedsUpdate || !mRootNode.hasDisplayList()) &#123;<br>        RecordingCanvas canvas = mRootNode.beginRecording(mSurfaceWidth, mSurfaceHeight);<br>        <span class="hljs-keyword">try</span> &#123;<br>            <span class="hljs-comment">// ...</span><br>            canvas.drawRenderNode(view.updateDisplayListIfDirty());<br>            <span class="hljs-comment">// ...</span><br>        &#125; <span class="hljs-keyword">finally</span> &#123;<br>            mRootNode.endRecording();<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>两段逻辑：</p>
+<ol>
+<li><code>updateViewTreeDisplayList(view)</code>，其中 view 是 root view 也就是 <code>DecorView</code></li>
+<li><code>Canvas.drawRenderNode</code>，<code>RenderNode</code> 是 View 返回的</li>
+</ol>
+<h2 id="updateViewTreeDisplayList"><a href="#updateViewTreeDisplayList" class="headerlink" title="updateViewTreeDisplayList"></a>updateViewTreeDisplayList</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ThreadedRenderer.updateViewTreeDisplayList(View view)<br>RenderNode View.updateDisplayListIfDirty() &#123;<br>    <span class="hljs-keyword">final</span> RenderNode renderNode = mRenderNode;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">final</span> RecordingCanvas canvas = renderNode.beginRecording(width, height);<br>    <span class="hljs-keyword">try</span> &#123;<br>        <span class="hljs-comment">// ...</span><br>        draw(canvas);<br>        <span class="hljs-comment">// ...</span><br>    &#125; <span class="hljs-keyword">finally</span> &#123;<br>        renderNode.endRecording();<br>        setDisplayListProperties(renderNode);<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">return</span> renderNode;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>最终在这里调用了 <code>View.draw</code>，里面就是常规的画布绘制操作，我们继续看看 <code>RecordingCanvas</code> 这个类</p>
+<h2 id="RecordingCanvas"><a href="#RecordingCanvas" class="headerlink" title="RecordingCanvas"></a>RecordingCanvas</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RecordingCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">DisplayListCanvas</span></span><br><span class="hljs-class"><span class="hljs-title">public</span> <span class="hljs-title">abstract</span> <span class="hljs-title">class</span> <span class="hljs-title">DisplayListCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">BaseRecordingCanvas</span></span><br><span class="hljs-class"><span class="hljs-title">public</span> <span class="hljs-title">class</span> <span class="hljs-title">BaseRecordingCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Canvas</span> </span>&#123;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">drawArc</span><span class="hljs-params">(<span class="hljs-keyword">float</span> left, <span class="hljs-keyword">float</span> top, <span class="hljs-keyword">float</span> right, <span class="hljs-keyword">float</span> bottom, <span class="hljs-keyword">float</span> startAngle,</span></span><br><span class="hljs-function"><span class="hljs-params">            <span class="hljs-keyword">float</span> sweepAngle, <span class="hljs-keyword">boolean</span> useCenter, <span class="hljs-meta">@NonNull</span> Paint paint)</span> </span>&#123;<br>        nDrawArc(mNativeCanvasWrapper, left, top, right, bottom, startAngle, sweepAngle,<br>                useCenter, paint.getNativeInstance());<br>    &#125;<br><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">drawBitmap</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> Bitmap bitmap, <span class="hljs-keyword">float</span> left, <span class="hljs-keyword">float</span> top,</span></span><br><span class="hljs-function"><span class="hljs-params">            <span class="hljs-meta">@Nullable</span> Paint paint)</span> </span>&#123;<br>        throwIfCannotDraw(bitmap);<br>        nDrawBitmap(mNativeCanvasWrapper, bitmap.getNativeInstance(), left, top,<br>                paint != <span class="hljs-keyword">null</span> ? paint.getNativeInstance() : <span class="hljs-number">0</span>, mDensity, mScreenDensity,<br>                bitmap.mDensity);<br>    &#125;<br><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">drawRect</span><span class="hljs-params">(<span class="hljs-keyword">float</span> left, <span class="hljs-keyword">float</span> top, <span class="hljs-keyword">float</span> right, <span class="hljs-keyword">float</span> bottom,</span></span><br><span class="hljs-function"><span class="hljs-params">            <span class="hljs-meta">@NonNull</span> Paint paint)</span> </span>&#123;<br>        nDrawRect(mNativeCanvasWrapper, left, top, right, bottom, paint.getNativeInstance());<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>RecordingCanvas</code> 继承自 <code>DisplayListCanvas</code>，<code>DisplayListCanvas</code> 继承自 <code>BaseRecordingCanvas</code></p>
+<p>在 <code>BaseRecordingCanvas</code> 里，<code>View.draw(Canvas)</code> 所用到的 <code>drawBitmap</code>、<code>drawText</code>、<code>drawRect</code> 等绘图方法都被重定向到 <code>BaseCanvas.mNativeCanvasWrapper</code>，继续看看它指向谁</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 从构造开始</span><br>RecordingCanvas RenderNode.beginRecording(<span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height) &#123;<br>    <span class="hljs-comment">// ...</span><br>    mCurrentRecordingCanvas = RecordingCanvas.obtain(<span class="hljs-keyword">this</span>, width, height);<br>    <span class="hljs-keyword">return</span> mCurrentRecordingCanvas;<br>&#125;<br>RecordingCanvas RecordingCanvas.obtain(RenderNode node, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height) &#123;<br>    <span class="hljs-keyword">if</span> (node == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalArgumentException(<span class="hljs-string">&quot;node cannot be null&quot;</span>);<br>    RecordingCanvas canvas = sPool.acquire();<br>    <span class="hljs-keyword">if</span> (canvas == <span class="hljs-keyword">null</span>) &#123;<br>        canvas = <span class="hljs-keyword">new</span> RecordingCanvas(node, width, height);<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        nResetDisplayListCanvas(canvas.mNativeCanvasWrapper, node.mNativeRenderNode, width, height);<br>    &#125;<br>    canvas.mNode = node;<br>    canvas.mWidth = width;<br>    canvas.mHeight = height;<br>    <span class="hljs-keyword">return</span> canvas;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>RecordingCanvas</code> 会被频繁地创建和销毁，所以用了池化，池子大小是 25，从池子里拿出的对象用 <code>nResetDisplayListCanvas</code> 重置；我们走创建新实例这条路继续看下去</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-title">RecordingCanvas</span><span class="hljs-params">(RenderNode node, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span> </span>&#123;<br>    <span class="hljs-keyword">super</span>(nCreateDisplayListCanvas(node.mNativeRenderNode, width, height));<br>&#125;<br><br><span class="hljs-comment">// /frameworks/base/core/jni/android_view_DisplayListCanvas.cpp</span><br><span class="hljs-function"><span class="hljs-keyword">static</span> jlong <span class="hljs-title">android_view_DisplayListCanvas_createDisplayListCanvas</span><span class="hljs-params">(jlong renderNodePtr, jint width, jint height)</span> </span>&#123;<br>    RenderNode* renderNode = reinterpret_cast&lt;RenderNode*&gt;(renderNodePtr);<br>    <span class="hljs-keyword">return</span> reinterpret_cast&lt;jlong&gt;(Canvas::create_recording_canvas(width, height, renderNode));<br>&#125;<br><br>Canvas* Canvas::create_recording_canvas(<span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height, uirenderer::RenderNode* renderNode) &#123;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> uirenderer::skiapipeline::SkiaRecordingCanvas(renderNode, width, height);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>可以看到 <code>RecordingCanvas.mNativeCanvasWrapper</code> 是 native <code>SkiaRecordingCanvas</code></p>
+<p><code>SkiaRecordingCanvas</code> 继承自 <code>SkiaCanvas</code>，大部分 2D 绘图方法都是由 <code>SkiaCanvas</code> 实现的，而 <code>SkiaCanvas</code> 又把绘图操作交由 <code>SkiaCanvas.mCanvas</code> 执行，我们看下它指向谁</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">explicit</span> <span class="hljs-title">SkiaRecordingCanvas</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span> </span>&#123;<br>    <span class="hljs-built_in">initDisplayList</span>(renderNode, width, height);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaRecordingCanvas::initDisplayList</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span> </span>&#123;<br>    mCurrentBarrier = <span class="hljs-literal">nullptr</span>;<br>    <span class="hljs-built_in">SkASSERT</span>(mDisplayList.<span class="hljs-built_in">get</span>() == <span class="hljs-literal">nullptr</span>);<br><br>    <span class="hljs-keyword">if</span> (renderNode) &#123;<br>        mDisplayList = renderNode-&gt;<span class="hljs-built_in">detachAvailableList</span>();<br>    &#125;<br>    <span class="hljs-keyword">if</span> (!mDisplayList) &#123;<br>        mDisplayList.<span class="hljs-built_in">reset</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">SkiaDisplayList</span>());<br>    &#125;<br><br>    mDisplayList-&gt;<span class="hljs-built_in">attachRecorder</span>(&amp;mRecorder, SkIRect::<span class="hljs-built_in">MakeWH</span>(width, height));<br>    SkiaCanvas::<span class="hljs-built_in">reset</span>(&amp;mRecorder);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaCanvas::reset</span><span class="hljs-params">(SkCanvas* skiaCanvas)</span> </span>&#123;<br>    <span class="hljs-keyword">if</span> (mCanvas != skiaCanvas) &#123;<br>        mCanvas = skiaCanvas;<br>        mCanvasOwned.<span class="hljs-built_in">reset</span>();<br>    &#125;<br>    mSaveStack.<span class="hljs-built_in">reset</span>(<span class="hljs-literal">nullptr</span>);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>SkiaRecordingCanvas.mRecorder</code> 被赋值给了 <code>SkiaCanvas.mCanvas</code>，它是 <code>RecordingCanvaas</code>，而它又把 draw 交由 <code>RecordingCanvas.fDL</code> 执行</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DisplayListData::drawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; rect, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span> </span>&#123;<br>    <span class="hljs-keyword">this</span>-&gt;push&lt;DrawRect&gt;(<span class="hljs-number">0</span>, rect, paint);<br>&#125;<br><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">DrawRect</span> <span class="hljs-keyword">final</span> :</span> Op &#123;<br>    <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">auto</span> kType = Type::DrawRect;<br>    <span class="hljs-built_in">DrawRect</span>(<span class="hljs-keyword">const</span> SkRect&amp; rect, <span class="hljs-keyword">const</span> SkPaint&amp; paint) : <span class="hljs-built_in">rect</span>(rect), <span class="hljs-built_in">paint</span>(paint) &#123;&#125;<br>    SkRect rect;<br>    SkPaint paint;<br>    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">draw</span><span class="hljs-params">(SkCanvas* c, <span class="hljs-keyword">const</span> SkMatrix&amp;)</span> <span class="hljs-keyword">const</span> </span>&#123; c-&gt;<span class="hljs-built_in">drawRect</span>(rect, paint); &#125;<br>&#125;;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DisplayListData::drawImage</span><span class="hljs-params">(sk_sp&lt;<span class="hljs-keyword">const</span> SkImage&gt; image, SkScalar x, SkScalar y, onst SkPaint* paint, BitmapPalette palette)</span> </span>&#123;<br>    <span class="hljs-keyword">this</span>-&gt;push&lt;DrawImage&gt;(<span class="hljs-number">0</span>, std::<span class="hljs-built_in">move</span>(image), x, y, paint, palette);<br>&#125;<br><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">DrawImage</span> <span class="hljs-keyword">final</span> :</span> Op &#123;<br>    <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">auto</span> kType = Type::DrawImage;<br>    <span class="hljs-built_in">DrawImage</span>(sk_sp&lt;<span class="hljs-keyword">const</span> SkImage&gt;&amp;&amp; image, SkScalar x, SkScalar y, <span class="hljs-keyword">const</span> SkPaint* paint, BitmapPalette palette)<br>            : <span class="hljs-built_in">image</span>(std::<span class="hljs-built_in">move</span>(image)), <span class="hljs-built_in">x</span>(x), <span class="hljs-built_in">y</span>(y), <span class="hljs-built_in">palette</span>(palette) &#123;<br>        <span class="hljs-keyword">if</span> (paint) &#123;<br>            <span class="hljs-keyword">this</span>-&gt;paint = *paint;<br>        &#125;<br>    &#125;<br>    sk_sp&lt;<span class="hljs-keyword">const</span> SkImage&gt; image;<br>    SkScalar x, y;<br>    SkPaint paint;<br>    BitmapPalette palette;<br>    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">draw</span><span class="hljs-params">(SkCanvas* c, <span class="hljs-keyword">const</span> SkMatrix&amp;)</span> <span class="hljs-keyword">const</span> </span>&#123; c-&gt;<span class="hljs-built_in">drawImage</span>(image.<span class="hljs-built_in">get</span>(), x, y, &amp;paint); &#125;<br>&#125;;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>RecordingCanvas.fDL</code> 是个 <code>DisplayListData</code>，它把绘图操作的所有参数记录为一个结构体 Op 并记录起来</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaRecordingCanvas::initDisplayList</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span></span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaDisplayList::attachRecorder</span><span class="hljs-params">(RecordingCanvas* recorder, <span class="hljs-keyword">const</span> SkIRect&amp; bounds)</span></span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RecordingCanvas::reset</span><span class="hljs-params">(DisplayListData* dl, <span class="hljs-keyword">const</span> SkIRect&amp; bounds)</span> </span>&#123;<br>    <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">resetCanvas</span>(bounds.<span class="hljs-built_in">right</span>(), bounds.<span class="hljs-built_in">bottom</span>());<br>    fDL = dl;<br>    mClipMayBeComplex = <span class="hljs-literal">false</span>;<br>    mSaveCount = mComplexSaveCount = <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>总结下：java <code>RecordingCanvas.mNativeCanvasWrapper</code> 持有 native <code>SkiaRecordingCanvas</code>，<code>SkiaRecordingCanvas→mDisplayList→mDisplayList</code> 里记录所有的绘图操作</p>
+<h2 id="endRecording"><a href="#endRecording" class="headerlink" title="endRecording"></a>endRecording</h2><figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp">RenderNode View.<span class="hljs-built_in">updateDisplayListIfDirty</span>() &#123;<br>    <span class="hljs-keyword">final</span> RenderNode renderNode = mRenderNode;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">final</span> RecordingCanvas canvas = renderNode.<span class="hljs-built_in">beginRecording</span>(width, height);<br>    <span class="hljs-keyword">try</span> &#123;<br>        <span class="hljs-comment">// ...</span><br>        <span class="hljs-built_in">draw</span>(canvas);<br>        <span class="hljs-comment">// ...</span><br>    &#125; finally &#123;<br>        renderNode.<span class="hljs-built_in">endRecording</span>();<br>        <span class="hljs-comment">// ...</span><br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">return</span> renderNode;<br>&#125;<br><br>RecordingCanvas.<span class="hljs-built_in">endRecording</span>() &#123;<br>    <span class="hljs-comment">// ...</span><br>    RecordingCanvas canvas = mCurrentRecordingCanvas;<br>    mCurrentRecordingCanvas = null;<br>    <span class="hljs-keyword">long</span> displayList = canvas.<span class="hljs-built_in">finishRecording</span>();<br>    <span class="hljs-built_in">nSetDisplayList</span>(mNativeRenderNode, displayList);<br>    canvas.<span class="hljs-built_in">recycle</span>();<br>&#125;<br><br><span class="hljs-function">uirenderer::DisplayList* <span class="hljs-title">SkiaRecordingCanvas::finishRecording</span><span class="hljs-params">()</span> </span>&#123;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">return</span> mDisplayList.<span class="hljs-built_in">release</span>();<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::setStagingDisplayList</span><span class="hljs-params">(DisplayList* displayList)</span> </span>&#123;<br>    mValid = (displayList != <span class="hljs-literal">nullptr</span>);<br>    mNeedsDisplayListSync = <span class="hljs-literal">true</span>;<br>    <span class="hljs-keyword">delete</span> mStagingDisplayList;<br>    mStagingDisplayList = displayList;<br>&#125;<br><br>RecordingCanvas.<span class="hljs-built_in">recycle</span>() &#123;<br>    mNode = null;<br>    sPool.<span class="hljs-built_in">release</span>(<span class="hljs-keyword">this</span>);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>最终，<code>RecordingCanvas</code> 被回收到池里，保存了绘制 Op 的 <code>SkiaDisplayList</code> 被转移到 native <code>RenderNode.mStagingDisplayList</code></p>
+<h2 id="drawRenderNode"><a href="#drawRenderNode" class="headerlink" title="drawRenderNode"></a>drawRenderNode</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ThreadedRenderer.updateRootDisplayList(View view, DrawCallbacks callbacks) &#123;<br>    <span class="hljs-comment">// ...</span><br>    updateViewTreeDisplayList(view);<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">if</span> (mRootNodeNeedsUpdate || !mRootNode.hasDisplayList()) &#123;<br>        RecordingCanvas canvas = mRootNode.beginRecording(mSurfaceWidth, mSurfaceHeight);<br>        <span class="hljs-keyword">try</span> &#123;<br>            <span class="hljs-comment">// ...</span><br>            canvas.drawRenderNode(view.updateDisplayListIfDirty());<br>            <span class="hljs-comment">// ...</span><br>        &#125; <span class="hljs-keyword">finally</span> &#123;<br>            mRootNode.endRecording();<br>        &#125;<br>    &#125;<br>&#125;<br><br><span class="hljs-keyword">void</span> SkiaRecordingCanvas::drawRenderNode(uirenderer::RenderNode* renderNode) &#123;<br>    <span class="hljs-comment">// Record the child node. Drawable dtor will be invoked when mChildNodes deque is cleared.</span><br>    mDisplayList-&gt;mChildNodes.emplace_back(renderNode, asSkCanvas(), <span class="hljs-keyword">true</span>, mCurrentBarrier);<br>    auto&amp; renderNodeDrawable = mDisplayList-&gt;mChildNodes.back();<br>    <span class="hljs-keyword">if</span> (Properties::getRenderPipelineType() == RenderPipelineType::SkiaVulkan) &#123;<br>        <span class="hljs-comment">// Put Vulkan WebViews with non-rectangular clips in a HW layer</span><br>        renderNode-&gt;mutateStagingProperties().setClipMayBeComplex(mRecorder.isClipMayBeComplex());<br>    &#125;<br>    drawDrawable(&amp;renderNodeDrawable);<br><br>    <span class="hljs-comment">// use staging property, since recording on UI thread</span><br>    <span class="hljs-keyword">if</span> (renderNode-&gt;stagingProperties().isProjectionReceiver()) &#123;<br>        mDisplayList-&gt;mProjectionReceiver = &amp;renderNodeDrawable;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>在上面，<code>DecorView</code> 的 DisplayList 已经被更新过了，所以 <code>view.updateDisplayListIfDirty()</code> 直接返回它的 <code>RenderNode</code></p>
+<p>beginRecording → draw → endRecording 三步走跟上面的是一样的，<code>HardwareRenderer.mRootNode</code> 对应的是 native <code>RootRenderNode</code>；它的 <code>mStagingDisplayList</code> 只有一个 <code>RenderNodeDrawable</code></p>
+<h2 id="syncAndDrawFrame"><a href="#syncAndDrawFrame" class="headerlink" title="syncAndDrawFrame"></a>syncAndDrawFrame</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 现在从新回到开头的地方</span><br><span class="hljs-keyword">void</span> ThreadedRenderer.draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks) &#123;<br>    <span class="hljs-comment">// ... 这里会调用 View.draw(Canvas)，并把绘制 op 保存起来</span><br>    updateRootDisplayList(view, callbacks);<br>    <span class="hljs-comment">// ... 这个方法看起来会执行真正的绘制操作，进去看下</span><br>    <span class="hljs-keyword">int</span> syncResult = syncAndDrawFrame(choreographer.mFrameInfo);<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 进入 native</span><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> HardwareRenderer.syncAndDrawFrame(<span class="hljs-meta">@NonNull</span> FrameInfo frameInfo) &#123;<br>    <span class="hljs-keyword">return</span> nSyncAndDrawFrame(mNativeProxy, frameInfo.frameInfo, frameInfo.frameInfo.length);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// frameworks/base/core/jni/android_view_ThreadedRenderer.cpp</span><br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> <span class="hljs-title">android_view_ThreadedRenderer_syncAndDrawFrame</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span><br><span class="hljs-function"><span class="hljs-params">        jlong proxyPtr, jlongArray frameInfo, jint frameInfoSize)</span> </span>&#123;<br>    <span class="hljs-comment">// ...</span><br>    RenderProxy* proxy = <span class="hljs-keyword">reinterpret_cast</span>&lt;RenderProxy*&gt;(proxyPtr);<br>    env-&gt;<span class="hljs-built_in">GetLongArrayRegion</span>(frameInfo, <span class="hljs-number">0</span>, frameInfoSize, proxy-&gt;<span class="hljs-built_in">frameInfo</span>());<br>    <span class="hljs-keyword">return</span> proxy-&gt;<span class="hljs-built_in">syncAndDrawFrame</span>();<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">RenderProxy::syncAndDrawFrame</span><span class="hljs-params">()</span> </span>&#123;<br>    <span class="hljs-keyword">return</span> mDrawFrameTask.<span class="hljs-built_in">drawFrame</span>();<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">DrawFrameTask::drawFrame</span><span class="hljs-params">()</span></span><br><span class="hljs-function"><span class="hljs-comment">// 到此都还是在 ui thread</span></span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DrawFrameTask::postAndWait</span><span class="hljs-params">()</span> </span>&#123;<br>    AutoMutex _lock(mLock);<br>    <span class="hljs-comment">// RenderThread 继承自 Thread，DrawFrameTask::run 被提交至 RenderThread 的 WorkQueue 等待执行</span><br>    mRenderThread-&gt;<span class="hljs-built_in">queue</span>().<span class="hljs-built_in">post</span>([<span class="hljs-keyword">this</span>]() &#123; <span class="hljs-built_in">run</span>(); &#125;);<br>    <span class="hljs-comment">// 这里会导致 ui thread 阻塞，直到 DrawFrameTask::run() 里把相关数据同步过来后才恢复 ui thread</span><br>    mSignal.<span class="hljs-built_in">wait</span>(mLock);<br>&#125;<br><br><span class="hljs-comment">// 记住此时已经是在 RenderThread 而不是 ui thread，ui thread 此时被阻塞了</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DrawFrameTask::run</span><span class="hljs-params">()</span> </span>&#123;<br>    <span class="hljs-built_in">ATRACE_NAME</span>(<span class="hljs-string">&quot;DrawFrame&quot;</span>);<br><br>    <span class="hljs-keyword">bool</span> canUnblockUiThread;<br>    <span class="hljs-keyword">bool</span> canDrawThisFrame;<br>    &#123;<br>        <span class="hljs-function">TreeInfo <span class="hljs-title">info</span><span class="hljs-params">(TreeInfo::MODE_FULL, *mContext)</span></span>;<br>        canUnblockUiThread = <span class="hljs-built_in">syncFrameState</span>(info);<br>        canDrawThisFrame = info.out.canDrawThisFrame;<br><br>        <span class="hljs-keyword">if</span> (mFrameCompleteCallback) &#123;<br>            mContext-&gt;<span class="hljs-built_in">addFrameCompleteListener</span>(std::<span class="hljs-built_in">move</span>(mFrameCompleteCallback));<br>            mFrameCompleteCallback = <span class="hljs-literal">nullptr</span>;<br>        &#125;<br>    &#125;<br><br>    <span class="hljs-comment">// Grab a copy of everything we need</span><br>    CanvasContext* context = mContext;<br>    std::function&lt;<span class="hljs-built_in"><span class="hljs-keyword">void</span></span>(<span class="hljs-keyword">int64_t</span>)&gt; callback = std::<span class="hljs-built_in">move</span>(mFrameCallback);<br>    mFrameCallback = <span class="hljs-literal">nullptr</span>;<br><br>    <span class="hljs-comment">// From this point on anything in &quot;this&quot; is *UNSAFE TO ACCESS*</span><br>    <span class="hljs-keyword">if</span> (canUnblockUiThread) &#123;<br>        <span class="hljs-built_in">unblockUiThread</span>();<br>    &#125;<br><br>    <span class="hljs-comment">// Even if we aren&#x27;t drawing this vsync pulse the next frame number will still be accurate</span><br>    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">CC_UNLIKELY</span>(callback)) &#123;<br>        context-&gt;<span class="hljs-built_in">enqueueFrameWork</span>(<br>                [callback, frameNr = context-&gt;<span class="hljs-built_in">getFrameNumber</span>()]() &#123; <span class="hljs-built_in">callback</span>(frameNr); &#125;);<br>    &#125;<br><br>    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">CC_LIKELY</span>(canDrawThisFrame)) &#123;<br>        context-&gt;<span class="hljs-built_in">draw</span>();<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// wait on fences so tasks don&#x27;t overlap next frame</span><br>        context-&gt;<span class="hljs-built_in">waitOnFences</span>();<br>    &#125;<br><br>    <span class="hljs-keyword">if</span> (!canUnblockUiThread) &#123;<br>        <span class="hljs-built_in">unblockUiThread</span>();<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>这里有两个函数是需要关注的：<code>syncFrameState(info)</code> 和 <code>context-&gt;draw()</code>，但不打算深入下去，因为后续涉及到很多状态判断和方法调用，而且会进入 skia 引擎的相关方法，不是代码跟踪就可以理解的（凡是跟 opengl 相关的代码，经过层层封装都不太好理解）</p>
+<p>搜索 <code>DrawFrameTask</code> 或者 <code>DisplayList</code> 等关键字可以找到如何把 <code>DisplayList</code> 处理为 <code>egl</code> 相关指令的文章，这里根据<a target="_blank" rel="noopener" href="https://blog.csdn.net/jinzhuojun/article/details/54234354">《Android N中UI硬件渲染（hwui）的HWUI_NEW_OPS(基于Android 7.1)》</a> 的描述总结下此阶段的工作：</p>
+<ol>
+<li><code>syncFrameState(info)</code> 上传纹理</li>
+<li><code>unblockUiThread()</code> 然后恢复 ui thread</li>
+<li><code>context-&gt;draw()</code> 输出 egl 指令</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><img src="../../../../image/2020-12-13-ui-thread-in-vsync/52054.png" srcset="/blog/image/loading.gif" lazyload alt="52054.png"></p>
+<p>这是一个 sync_app 信号内的 systrace，结合这张图片，尝试解答开头提出的问题</p>
+<ol>
+<li>app 内的 ui 渲染至少包含两个线程：ui thread（执行 <code>View.draw()</code>）和 render thread（执行 egl 指令）</li>
+<li>ui thread 和 render thread 有一段重合的地方，也就是在 ui thread 完成「Record <code>View#draw()</code>」后，ui thread 被阻塞了；而 render thread 开始执行 <code>syncFrameState</code>，完成后恢复 ui thread，此时 ui thread 的任务已完成，后续的都是 render thread 的任务了</li>
+<li>从时长看，ui thread 执行 <code>Choreographer#doFrame</code> 用时 4ms，render thread 执行 <code>DrawFrame</code> 用时 8ms；render thread 的存在大大地释放了 ui thread 的压力</li>
+<li>要在 16ms 内完成一帧的绘制，不能都让 ui thread 给消耗掉了，还得留出一段时间给 render thread，也就是说 ui thread 在一帧内的任务 <code>Choreographer#doFrame</code> 耗时要小于 16ms 才行；而且从上图看 render thread 的耗时远大于 ui thread，留给 ui thread 的时间应该是远小于 16ms 的</li>
+</ol>
+<h2 id="一些概念"><a href="#一些概念" class="headerlink" title="一些概念"></a>一些概念</h2><ol>
+<li><code>DisplayList</code>：对 <code>Canvas</code> 的所有绘制操作并不会立刻执行，而是保存为 <code>DisplayList</code>；这一过程称为“录制”，后续可以“回放”进行渲染</li>
+<li><code>View</code> 是表，是 framework 暴露出来的 ui api，就像 DOM 是浏览器暴露出来的 ui api；<code>RenderNode</code> 是里</li>
+</ol>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/">Android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/Android/Framework/">Framework</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/vsync/">vsync</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/ui-thread/">ui thread</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blog/2020/12/27/render-thread/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Android 图形栈（三）render thread</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2020/12/02/vsync/">
+                        <span class="hidden-mobile">Android 图形栈（一）vsync</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/debouncer.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>
