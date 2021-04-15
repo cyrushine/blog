@@ -12,3 +12,9 @@ vendor
 # npm dependencies
 node_modules
 package-lock.json
+
+# hexo
+public
+db.json
+
+

@@ -1,175 +1,105 @@
-# The Site Configuration
+# Hexo Configuration
+## Docs: https://hexo.io/docs/configuration.html
+## Source: https://github.com/hexojs/hexo/
 
-# Import the theme
-theme: jekyll-theme-chirpy
+# Site
+title: Hexo
+subtitle: ''
+description: ''
+keywords:
+author: John Doe
+language: zh-CN
+timezone: ''
 
-# Only if your site type is GitHub Project sites and doesn't have a custom domain,
-# change below value to '/projectname'.
-baseurl: '/blog'
+# URL
+## Set your site url here. For example, if you usef GitHub Page, set url as 'https://username.github.io/project'
+url: http://example.com
+permalink: :year/:month/:day/:title/
+permalink_defaults:
+pretty_urls:
+  trailing_index: true # Set to false to remove trailing 'index.html' from permalinks
+  trailing_html: true # Set to false to remove trailing '.html' from permalinks
 
-# the HTML language tag › https://www.w3.org/International/questions/qa-choosing-language-tags
-lang: zh-CN
+# Directory
+source_dir: source
+public_dir: public
+tag_dir: tags
+archive_dir: archives
+category_dir: categories
+code_dir: downloads/code
+i18n_dir: :lang
+skip_render:
 
-# Change to your timezone › http://www.timezoneconverter.com/cgi-bin/findzone/findzone
-timezone: Asia/Shanghai
+# Writing
+new_post_name: :year-:month-:day-:title.md # File name of new posts
+default_layout: post
+titlecase: false # Transform title into titlecase
+external_link:
+  enable: true # Open external links in new tab
+  field: site # Apply to the whole site
+  exclude: ''
+filename_case: 0
+render_drafts: false
+post_asset_folder: true
+relative_link: false
+future: true
+highlight:
+  enable: true
+  line_number: true
+  auto_detect: false
+  tab_replace: ''
+  wrap: true
+  hljs: false
+prismjs:
+  enable: false
+  preprocess: true
+  line_number: true
+  tab_replace: ''
 
-# jekyll-seo-tag settings › https://github.com/jekyll/jekyll-seo-tag/blob/master/docs/usage.md
-# --------------------------
-title: Cyrus                          # the main title
+# Home page setting
+# path: Root path for your blogs index page. (default = '')
+# per_page: Posts displayed per page. (0 = disable pagination)
+# order_by: Posts order. (Order by date descending by default)
+index_generator:
+  path: ''
+  per_page: 10
+  order_by: -date
 
-tagline: 好记性不如烂笔头   # it will display as the sub-title
+# Category & Tag
+default_category: uncategorized
+category_map:
+tag_map:
 
-description: >-                        # used by seo meta and the atom feed
-  A minimal, portfolio, sidebar,
-  bootstrap Jekyll theme with responsive web design
-  and focuses on text presentation.
+# Metadata elements
+## https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta
+meta_generator: true
 
-# fill in the protocol & hostname for your site, e.g., 'https://username.github.io'
-url: 'https://cyruslin.com/blog'
+# Date / Time format
+## Hexo uses Moment.js to parse and display date
+## You can customize the date format as defined in
+## http://momentjs.com/docs/#/displaying/format/
+date_format: YYYY-MM-DD
+time_format: HH:mm:ss
+## updated_option supports 'mtime', 'date', 'empty'
+updated_option: 'mtime'
 
-author: Cyrus                  # change to your full name
+# Pagination
+## Set per_page to 0 to disable pagination
+per_page: 10
+pagination_dir: page
 
-github:
-  username: cyrus-lin             # change to your github username
-
-twitter:
-  username: magicboy_linw            # change to your twitter username
-
-social:
-  name: Cyrus                  # it will shows as the copyright owner in Footer
-  email: cyrus.lin@foxmail.com             # change to your email address
-  links:
-    # The first element serves as the copyright owner's link
-    - https://twitter.com/magicboy_linw      # change to your twitter homepage
-    - https://github.com/cyrus-lin       # change to your github homepage
-    # Uncomment below to add more social links
-    # - https://www.facebook.com/username
-    # - https://www.linkedin.com/in/username
-
-google_site_verification: google_meta_tag_verification # change to your verification string
-# --------------------------
-
-google_analytics:
-  id: ''          # Fill with your Google Analytics ID
-  pv:
-    # The Google Analytics pageviews switch.
-    # DO NOT enable it unless you know how to deploy the Google Analytics superProxy.
-    enabled: false
-    # the next options only valid when `google_analytics.pv` is enabled.
-    proxy_url: ''
-    proxy_endpoint: ''
-    cache: false  # pv data local cache, good for the users from GFW area.
-
-# Prefer color scheme setting.
-#
-# Note: Keep empty will follow the system prefer color by default,
-# and there will be a toggle to switch the theme between dark and light
-# on the bottom left of the sidebar.
-#
-# Available options:
-#
-#     light  - Use the light color scheme
-#     dark   - Use the dark color scheme
-#
-theme_mode:  dark # [light|dark]
-
-# The CDN endpoint for images.
-# Notice that once it is assigned, the CDN url
-# will be added to all image (site avatar & posts' images) paths starting with '/'
-#
-# e.g. 'https://cdn.com'
-img_cdn: ''
-
-# the avatar on sidebar, support local or CORS resources
-avatar: /assets/avatar.png
-
-# boolean type, the global switch for ToC in posts.
-toc: true
-
-disqus:
-  comments: false  # boolean type, the global switch for posts comments.
-  shortname: ''    # Fill with your Disqus shortname. › https://help.disqus.com/en/articles/1717111-what-s-a-shortname
-
-paginate: 10
-
-# ------------ The following options are not recommended to be modified ------------------
-
-kramdown:
-  syntax_highlighter: rouge
-  syntax_highlighter_opts:   # Rouge Options › https://github.com/jneen/rouge#full-options
-    css_class: highlight
-    # default_lang: console
-    span:
-      line_numbers: false
-    block:
-      line_numbers: true
-      start_line: 1
-
-# DO NOT change this unless you're a Pro user on Jekyll and Web development,
-# Or you think you're smart enough to change other relevant URLs within this template.
-permalink: /posts/:title/
-
-collections:
-  tabs:
-    output: true
-    sort_by: order
-
-
-defaults:
-  -
-    scope:
-      path: ''          # An empty string here means all files in the project
-      type: posts
-    values:
-      layout: post
-      comments: true    # Enable comments in posts.
-      toc: true         # Display TOC column in posts.
-  -
-    scope:
-      path: _drafts
-    values:
-      comments: false
-  -
-    scope:
-      path: ''
-      type: tabs             # see `site.collections`
-    values:
-      layout: page
-      permalink: /:title/
-      dynamic_title: true    # Hide title in mobile screens.
-
-sass:
-  style: compressed
-
-compress_html:
-  clippings: all
-  comments: all
-  endings: all
-  profile: false
-  blanklines: false
-  ignore:
-    envs: [development]
-
+# Include / Exclude file(s)
+## include:/exclude: options only apply to the 'source/' folder
+include:
 exclude:
-  - vendor
-  - Gemfile
-  - Gemfile.lock
-  - '*.gem'
-  - '*.gemspec'
-  - tools
-  - docs
-  - README.md
-  - LICENSE
-  - gulpfile.js
-  - node_modules
-  - package.json
-  - package-lock.json
+ignore:
 
-jekyll-archives:
-  enabled: [categories, tags]
-  layouts:
-    category: category
-    tag: tag
-  permalinks:
-    tag: /tags/:name/
-    category: /categories/:name/
+# Extensions
+## Plugins: https://hexo.io/plugins/
+## Themes: https://hexo.io/themes/
+theme: fluid
+
+# Deployment
+## Docs: https://hexo.io/docs/one-command-deployment
+deploy:
+  type: ''
