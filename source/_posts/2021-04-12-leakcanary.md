@@ -1,15 +1,13 @@
 ---
-title: 浅析 LeakCanary
+title: LeakCanary（一）检测泄漏对象
 date: 2021-04-12 12:00:00 +0800
-categories: [内存优化]
-tags: [LeakCanary, 内存]
+categories: [android, 内存]
+tags: [LeakCanary, 内存优化，OOM]
 ---
 
-## 检测泄漏对象
+## 四种引用类型
 
-### 四种引用类型
-
-| 引用类型                  | 什么时候会被 GC                                              |
+| 引用类型                  | GC 时机                                                     |
 |--------------------------|------------------------------------------------------------|
 | 强引用                    | 平时写代码最常用的引用类型，对象只要被强引用就不会被 GC             |
 | 软引用 `SoftReference`    | 只有当内存不足时才会被 GC                                      |
@@ -33,11 +31,151 @@ public abstract class Reference<T> {
 }
 ```
 
-### 检测 `Activity` 泄漏
+## 如何检测泄漏对象
+
+`ObjectWatcher` 实现了 `LeakCanary` 的泄漏检测机制：监控 - 等待 - 检查
+
+用 `WeakReference` + `ReferenceQueue` 监控对象的 GC 状态，并用 `watchedObjects` 持有它的弱引用，key 是 UUID
+
+```kotlin
+class ObjectWatcher constructor(
+  private val clock: Clock,
+  private val checkRetainedExecutor: Executor,
+  private val isEnabled: () -> Boolean = { true }
+) : ReachabilityWatcher {
+
+  // 持有被监控对象的弱引用，以便后续的检查
+  private val watchedObjects = mutableMapOf<String, KeyedWeakReference>()
+
+  // 引用队列，被 GC 的对象的引用会进入此队列
+  private val queue = ReferenceQueue<Any>()
+}
+```
+
+将指定对象交由 `ObjectWatcher` 进行监控
+
+```kotlin
+// 监控检测对象
+@Synchronized override fun expectWeaklyReachable(
+  watchedObject: Any,
+  description: String
+) {
+  if (!isEnabled()) {
+    return
+  }
+  removeWeaklyReachableObjects()  // 从 watchedObjects 移除已被 GC 的对象
+
+  // 弱引用监控对象并放入 watchedObjects
+  val key = UUID.randomUUID().toString()
+  val watchUptimeMillis = clock.uptimeMillis()
+  val reference = KeyedWeakReference(watchedObject, key, description, watchUptimeMillis, queue)
+  SharkLog.d {
+    "Watching " +
+      (if (watchedObject is Class<*>) watchedObject.toString() else "instance of ${watchedObject.javaClass.name}") +
+      (if (description.isNotEmpty()) " ($description)" else "") +
+      " with key $key"
+  }
+  watchedObjects[key] = reference
+
+  // 选机检查（默认 5s 后执行检查函数 moveToRetained）
+  checkRetainedExecutor.execute {
+    moveToRetained(key)
+  }
+}
+
+// 出现在 queue 里的对象已被成功 GC 就不需要监控了
+private fun removeWeaklyReachableObjects() {
+  // WeakReferences are enqueued as soon as the object to which they point to becomes weakly
+  // reachable. This is before finalization or garbage collection has actually happened.
+  var ref: KeyedWeakReference?
+  do {
+    ref = queue.poll() as KeyedWeakReference?
+    if (ref != null) {
+      watchedObjects.remove(ref.key)
+    }
+  } while (ref != null)
+}
+```
+
+检查是否发生泄漏，默认情况是等待 5s，让 GC 线程有足够的机会去发现并回收这个对象，如果 5s 后仍然没有被 GC（没有出现在引用队列里），那么可以证明这个对象发生了内存泄漏，被强引用导致存活超过它的生命周期
+
+```kotlin
+// 上面说过检查操作将提交给 checkRetainedExecutor 执行
+@Synchronized override fun expectWeaklyReachable(
+  watchedObject: Any,
+  description: String
+) {
+  // ...
+  checkRetainedExecutor.execute {
+    moveToRetained(key)
+  }
+}
+
+// 而 checkRetainedExecutor 是通过构造函数传入的
+class ObjectWatcher constructor(
+  private val clock: Clock,
+  private val checkRetainedExecutor: Executor,
+  private val isEnabled: () -> Boolean = { true }
+)
+
+// 默认是等待 5s 并在主线程执行检查操作
+object AppWatcher {
+  private const val RETAINED_DELAY_NOT_SET = -1L
+  @Volatile private var retainedDelayMillis = RETAINED_DELAY_NOT_SET
+
+  val objectWatcher = ObjectWatcher(
+    clock = { SystemClock.uptimeMillis() },
+    checkRetainedExecutor = {
+      check(isInstalled) {
+        "AppWatcher not installed"
+      }
+      mainHandler.postDelayed(it, retainedDelayMillis)  // 在主线程执行检查
+    },
+    isEnabled = { true }
+  )
+
+  fun manualInstall(
+    application: Application,
+    retainedDelayMillis: Long = TimeUnit.SECONDS.toMillis(5),   // 默认等待 5s
+    watchersToInstall: List<InstallableWatcher> = appDefaultWatchers(application)
+  ) {
+    checkMainThread()
+    if (isInstalled) {
+      throw IllegalStateException(
+        "AppWatcher already installed, see exception cause for prior install call", installCause
+      )
+    }
+    check(retainedDelayMillis >= 0) {
+      "retainedDelayMillis $retainedDelayMillis must be at least 0 ms"
+    }
+    installCause = RuntimeException("manualInstall() first called here")
+    this.retainedDelayMillis = retainedDelayMillis
+    if (application.isDebuggableBuild) {
+      LogcatSharkLog.install()
+    }
+    // Requires AppWatcher.objectWatcher to be set
+    LeakCanaryDelegate.loadLeakCanary(application)
+
+    watchersToInstall.forEach {
+      it.install()
+    }
+  }
+}
+
+// 如果没有出现在引用队列里，说明此对象已发生泄漏，发出通知
+@Synchronized private fun moveToRetained(key: String) {
+  removeWeaklyReachableObjects()    // 出现在引用队列里说明对象已被 GC，可以从 watchedObjects 移除
+  val retainedRef = watchedObjects[key]
+  if (retainedRef != null) {
+    retainedRef.retainedUptimeMillis = clock.uptimeMillis()
+    onObjectRetainedListeners.forEach { it.onObjectRetained() }
+  }
+}
+```
+
+## 检测 `Activity` 泄漏
 
 通过 `ActivityLifecycleCallbacks.onActivityDestroyed` 可以收集到 destoryed `Activity`，这些 `Activity` 已走完它的生命周期，应该被后续的 GC 回收掉
-
-用 `WeakReference` + `ReferenceQueue` 监控它，并用 `watchedObjects = mutableMapOf<String, KeyedWeakReference>()` 把它记录起来，key 是 UUID，value 是对这个 `Activity` 的弱引用；等待 5s，让 GC 线程有足够的机会去发现并回收这个 `Activity` 对象，如果 5s 后 `Activity` 仍然没有被 GC（没有出现在引用队列里），那么可以证明这个对象发生了内存泄漏，被强引用导致存活超过它的生命周期
 
 ```kotlin
 // 收集 destroyed Activity
@@ -55,47 +193,9 @@ class ActivityWatcher(
       }
     }
 }
-
-// 弱引用这个 Activity 并设置在 5s 后检查此对象有没被 GC
-@Synchronized override fun expectWeaklyReachable(
-  watchedObject: Any,
-  description: String
-) {
-  if (!isEnabled()) {
-    return
-  }
-  removeWeaklyReachableObjects()
-  val key = UUID.randomUUID()
-    .toString()
-  val watchUptimeMillis = clock.uptimeMillis()
-  val reference =
-    KeyedWeakReference(watchedObject, key, description, watchUptimeMillis, queue)
-  SharkLog.d {
-    "Watching " +
-      (if (watchedObject is Class<*>) watchedObject.toString() else "instance of ${watchedObject.javaClass.name}") +
-      (if (description.isNotEmpty()) " ($description)" else "") +
-      " with key $key"
-  }
-  watchedObjects[key] = reference
-  checkRetainedExecutor.execute {
-    moveToRetained(key)
-  }
-}
-
-// 如果没有出现在引用队列里，说明此对象已发生泄漏，发出通知
-@Synchronized private fun moveToRetained(key: String) {
-  removeWeaklyReachableObjects()    // 出现在引用队列里说明对象已被 GC，可以从 watchedObjects 移除
-  val retainedRef = watchedObjects[key]
-  if (retainedRef != null) {
-    retainedRef.retainedUptimeMillis = clock.uptimeMillis()
-    onObjectRetainedListeners.forEach { it.onObjectRetained() }
-  }
-}
 ```
 
-拓展一下，上面检测 `Activity` 泄漏的机制：监控 - 等待 - 检查，其实可以应用到任何对象，包括 `Fragment`、`View` 等，于是抽象出一个通用的对象泄漏检测工具：`ObjectWatcher`，上面的 `expectWeaklyReachable` 和 `moveToRetained` 都是在 `ObjectWatcher` 里实现的
-
-### 检测 `Fragment` 和 `View` 的泄漏
+## 检测 `Fragment` 和 `View` 的泄漏
 
 利用 `FragmentLifecycleCallbacks` 发现被 destroyed `Fragment` 和 `View`，然后用 `ObjectWatcher` 监控是否发生泄漏
 
@@ -133,7 +233,7 @@ internal class AndroidXFragmentDestroyWatcher(
 }
 ```
 
-### 检测 `ViewModel` 泄漏
+## 检测 `ViewModel` 泄漏
 
 `Fragment` 里的 `ViewModel` 则是在 `FragmentLifecycleCallbacks.onFragmentCreated` 时，注入一个 `ViewModel`，通过反射拿到 `ViewModelStore.mMap`，这里有所有的 `ViewModel`，在 `ViewModel.onCleared` 时把它们加入 `ObjectWatcher` 进行泄漏检查
 
@@ -183,7 +283,7 @@ internal class ViewModelClearedWatcher(
 }
 ```
 
-### 检测更多类型的泄漏
+## 检测更多类型的泄漏
 
 对 `Service` 的检查就比较 hack 了，通过反射替换 `ActivityThread.mH.mCallback`，通过 `Message.waht == H.STOP_SERVICE` 定位到 `ActivityThread.handleStopService` 的调用时机，然后把这个被 stop 的 `Service` 记录下来；用动态代理实现 `IActivityManager` 并替换掉 `ActivityManager.IActivityManagerSinglteon.mInstance`，从而拦截方法 `serviceDoneExecuting`，此方法的调用表示 `Service` 生命周期已完结，可以把它交由 `ObjectWatcher` 进行监控
 
@@ -191,9 +291,7 @@ internal class ViewModelClearedWatcher(
 
 ```kotlin
 class MyService : Service {
-
   // ...
-
   override fun onDestroy() {
     super.onDestroy()
     AppWatcher.objectWatcher.watch(
@@ -203,18 +301,6 @@ class MyService : Service {
   }
 }
 ```
-
-## 堆转储
-
-利用 `Debug#dumpHprofData(fileName)`（但是生成的 hprof 文件很大）
-
-## 解析堆转储文件
-
-利用 [Shark](https://square.github.io/leakcanary/shark/)（性能是个问题）
-
-## 组织并输出泄漏问题
-
-通过 [Shark](https://square.github.io/leakcanary/shark/) 找到泄漏对象到 GC Root 的路径
 
 ## 思考
 

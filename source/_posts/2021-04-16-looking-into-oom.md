@@ -1,7 +1,7 @@
 ---
 title: 深入 OOM
 date: 2021-04-16 12:00:00 +0800
-categories: [Android, 性能]
+categories: [Android, 内存]
 tags: [OOM]
 ---
 
