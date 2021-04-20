@@ -184,6 +184,72 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/blog/2021/04/16/looking-into-oom/">深入 OOM</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/blog/2021/04/16/looking-into-oom/">
+          
+          
+            
+          
+          堆内存分配失败导致的 OOM度量采用下述 API 来度量 APP 或系统的内存使用情况
+
+
+
+类别
+API
+说明
+
+
+
+APP
+Runtime.maxMemory()
+JVM 可以从系统那申请到的内存的最大值，ActivityManager.getMemoryClass() 和 ActivityManager.getLargeMemoryClass() 其中之一，超过此阈值会发生 OOM
+
+
+
+R
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-04-16 04:00" pubdate>
+              2021-04-16
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/blog/categories/Android/">Android</a>
+            
+              <a href="/blog/categories/Android/%E6%80%A7%E8%83%BD/">性能</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/blog/tags/OOM/">OOM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/blog/2021/04/15/tailrec/">尾递归及尾递归优化</a>
       </h1>
 
@@ -688,60 +754,6 @@ k
             <i class="iconfont icon-tags"></i>
             
               <a href="/blog/tags/threadpool/">threadpool</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/blog/2021/02/11/wait-notify/">Lock（五）Condition 的语言实现：Object.wait 和 Object.notify</a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/blog/2021/02/11/wait-notify/">
-          
-          
-            
-          
-          在 Lock（三）利用 Lock 实现 Condition 我们介绍了如何用 Lock 来实现 Condition，而 Condition 对标的是 Object.wait 和 Object.notify
-我们来看看 ART 是怎么实现 wait/notify 的（最好先了解下 synchronized 的基础知识）
-ConditionVariable对 futex/mutex 的封装，宏 ART
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-02-11 04:00" pubdate>
-              2021-02-11
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/blog/categories/Android/">Android</a>
-            
-              <a href="/blog/categories/Android/Art/">Art</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/blog/tags/wait/">wait</a>
-            
-              <a href="/blog/tags/notify/">notify</a>
             
           </div>
         
