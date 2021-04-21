@@ -1,11 +1,13 @@
 ---
-title: LeakCanary（一）检测泄漏对象
+title: LeakCanary 浅析
 date: 2021-04-12 12:00:00 +0800
 categories: [android, 内存]
 tags: [LeakCanary, 内存优化，OOM]
 ---
 
-## 四种引用类型
+## 检测内存泄漏
+
+### 四种引用类型
 
 | 引用类型                  | GC 时机                                                     |
 |--------------------------|------------------------------------------------------------|
@@ -31,7 +33,7 @@ public abstract class Reference<T> {
 }
 ```
 
-## 如何检测泄漏对象
+### 如何检测泄漏对象
 
 `ObjectWatcher` 实现了 `LeakCanary` 的泄漏检测机制：监控 - 等待 - 检查
 
@@ -173,7 +175,7 @@ object AppWatcher {
 }
 ```
 
-## 检测 `Activity` 泄漏
+### 检测 `Activity` 泄漏
 
 通过 `ActivityLifecycleCallbacks.onActivityDestroyed` 可以收集到 destoryed `Activity`，这些 `Activity` 已走完它的生命周期，应该被后续的 GC 回收掉
 
@@ -195,7 +197,7 @@ class ActivityWatcher(
 }
 ```
 
-## 检测 `Fragment` 和 `View` 的泄漏
+### 检测 `Fragment` 和 `View` 的泄漏
 
 利用 `FragmentLifecycleCallbacks` 发现被 destroyed `Fragment` 和 `View`，然后用 `ObjectWatcher` 监控是否发生泄漏
 
@@ -233,7 +235,7 @@ internal class AndroidXFragmentDestroyWatcher(
 }
 ```
 
-## 检测 `ViewModel` 泄漏
+### 检测 `ViewModel` 泄漏
 
 `Fragment` 里的 `ViewModel` 则是在 `FragmentLifecycleCallbacks.onFragmentCreated` 时，注入一个 `ViewModel`，通过反射拿到 `ViewModelStore.mMap`，这里有所有的 `ViewModel`，在 `ViewModel.onCleared` 时把它们加入 `ObjectWatcher` 进行泄漏检查
 
@@ -283,7 +285,7 @@ internal class ViewModelClearedWatcher(
 }
 ```
 
-## 检测更多类型的泄漏
+### 检测更多类型的泄漏
 
 对 `Service` 的检查就比较 hack 了，通过反射替换 `ActivityThread.mH.mCallback`，通过 `Message.waht == H.STOP_SERVICE` 定位到 `ActivityThread.handleStopService` 的调用时机，然后把这个被 stop 的 `Service` 记录下来；用动态代理实现 `IActivityManager` 并替换掉 `ActivityManager.IActivityManagerSinglteon.mInstance`，从而拦截方法 `serviceDoneExecuting`，此方法的调用表示 `Service` 生命周期已完结，可以把它交由 `ObjectWatcher` 进行监控
 
@@ -298,6 +300,490 @@ class MyService : Service {
       watchedObject = this,
       description = "MyService received Service#onDestroy() callback"
     )
+  }
+}
+```
+
+## Heap Dump
+
+发现对象泄漏后触发 `OnObjectRetainedListener.onObjectRetained()`，最终调用 `Debug.dumpHprofData` 生成 hprof 文件
+
+```kotlin
+internal object InternalLeakCanary : (Application) -> Unit, OnObjectRetainedListener {
+
+  override fun onObjectRetained() = scheduleRetainedObjectCheck()
+
+  fun scheduleRetainedObjectCheck() {
+    if (this::heapDumpTrigger.isInitialized) {
+      heapDumpTrigger.scheduleRetainedObjectCheck()
+    }
+  }  
+}
+
+internal class HeapDumpTrigger {
+  fun scheduleRetainedObjectCheck(
+    delayMillis: Long = 0L
+  ) {
+    val checkCurrentlyScheduledAt = checkScheduledAt
+    if (checkCurrentlyScheduledAt > 0) {
+      return
+    }
+    checkScheduledAt = SystemClock.uptimeMillis() + delayMillis
+    backgroundHandler.postDelayed({
+      checkScheduledAt = 0
+      checkRetainedObjects()
+    }, delayMillis)
+  }
+
+  private fun checkRetainedObjects() {
+    // ...
+    dumpHeap(
+      retainedReferenceCount = retainedReferenceCount,
+      retry = true,
+      reason = "$retainedReferenceCount retained objects, app is $visibility"
+    )
+  }
+
+  private fun dumpHeap(
+    retainedReferenceCount: Int,
+    retry: Boolean,
+    reason: String
+  ) {
+    saveResourceIdNamesToMemory()
+    val heapDumpUptimeMillis = SystemClock.uptimeMillis()
+    KeyedWeakReference.heapDumpUptimeMillis = heapDumpUptimeMillis
+    when (val heapDumpResult = heapDumper.dumpHeap()) {
+      // ...
+    }
+  }    
+}
+
+internal class AndroidHeapDumper {
+  override fun dumpHeap(): DumpHeapResult {
+    // ...
+    val durationMillis = measureDurationMillis {
+      Debug.dumpHprofData(heapDumpFile.absolutePath)
+    }
+    // ...  
+  }
+}
+```
+
+## 解析 hprof 文件
+
+### hprof 文件格式 
+
+![Java Hprof 格式](../../../../image/2021-04-12-leakcanary/java_hprof.png)
+
+![Android Hprof 格式](../../../../image/2021-04-12-leakcanary/android_hprof.png)
+
+hprof 是结构紧凑的二进制文件，整体上分为 `Header` 和 `Record` 数组两大部分
+
+`Header` 总共 18 + 4 + 4 + 4 = 32 字节，包括：
+
+1. 格式名和版本号：JAVA PROFILE 1.0.3（18 字节）
+2. 标识符大小（4 字节）
+3. 高位时间戳（4 字节）
+4. 地位时间戳（4 字节）
+
+![Hprof Header 结构](../../../../image/2021-04-12-leakcanary/hprof_header.png)
+
+`Record` 数组记录了内存中的各种数据
+
+1. TAG，`Record` 的类型（1 字节）
+2. TIME，时间戳（4 字节）
+3. LENGTH，`Record` BODY 的长度（4 字节）
+4. BODY，不同的 `Record` 类型有不同的 BODY
+
+![Hprof Record 结构](../../../../image/2021-04-12-leakcanary/hprof_record.png)
+
+支持的 `TAG` 类型主要有：
+
+* STRING_IN_UTF8             = 0x01
+* LOAD_CLASS                 = 0x02
+* STACK_FRAME                = 0x04
+* STACK_TRACE                = 0x05
+* **HEAP_DUMP**              = 0x0c
+* **HEAP_DUMP_SEGMENT**      = 0x1c
+  * ROOT_UNKNOWN             = 0xff
+  * ROOT_JNI_GLOBAL          = 0x01
+  * ROOT_JNI_LOCAL           = 0x02
+  * ROOT_JAVA_FRAME          = 0x03
+  * **CLASS_DUMP**           = 0x20
+  * **INSTANCE_DUMP**        = 0x21
+  * **OBJECT_ARRAY_DUMP**    = 0x22
+  * **PRIMITIVE_ARRAY_DUMP** = 0x23
+* HEAP_DUMP_END              = 0x2c
+
+`CLASS_DUMP`、`INSTANCE_DUMP` 等重要结构可以看 [HPROF Agent](http://hg.openjdk.java.net/jdk8/jdk8/jdk/raw-file/tip/src/share/demo/jvmti/hprof/manual.html)
+
+
+### 解析 Header
+
+拿到 hprof 文件后，从 `HeapAnalyzerService.runAnalysis` 开始解析流程
+
+`LeakCanary` 使用 `Shark` 解析 hprof 文件，首先解析出头部 `HprofHeader`
+
+```kotlin
+HeapAnalyzerService.runAnalysis
+HeapAnalyzerService.onHandleIntentInForeground
+HeapAnalyzerService.analyzeHeap
+HeapAnalyzer.analyze
+
+fun DualSourceProvider.openHeapGraph(
+  proguardMapping: ProguardMapping? = null,
+  indexedGcRootTypes: Set<HprofRecordTag> = HprofIndex.defaultIndexedGcRootTags()
+): CloseableHeapGraph {
+  val header = openStreamingSource().use { HprofHeader.parseHeaderOf(it) }
+  // ...
+}
+
+// 解析出 HprofHeader
+fun parseHeaderOf(source: BufferedSource): HprofHeader {
+  require(!source.exhausted()) {
+    throw IllegalArgumentException("Source has no available bytes")
+  }
+
+  // 开头是版本号 JAVA PROFILE 1.0.3，以 0 结尾
+  val endOfVersionString = source.indexOf(0)
+  val versionName = source.readUtf8(endOfVersionString)
+  val version = supportedVersions[versionName]
+  checkNotNull(version) {
+    "Unsupported Hprof version [$versionName] not in supported list ${supportedVersions.keys}"
+  }
+  // Skip the 0 at the end of the version string.
+  source.skip(1)
+
+  // 然后是 ID 的长度
+  val identifierByteSize = source.readInt()
+
+  // 时间戳
+  val heapDumpTimestamp = source.readLong()
+  return HprofHeader(heapDumpTimestamp, version, identifierByteSize)
+}
+```
+
+### 构造索引 `HprofIndex`
+
+从 `openHeapGraph` 里构造完 `HprofHeader` 后，开始解析 `HprofIndex`
+
+```kotlin
+fun DualSourceProvider.openHeapGraph(
+  proguardMapping: ProguardMapping? = null,
+  indexedGcRootTypes: Set<HprofRecordTag> = HprofIndex.defaultIndexedGcRootTags()
+): CloseableHeapGraph {
+  val header = openStreamingSource().use { HprofHeader.parseHeaderOf(it) }
+  val index = HprofIndex.indexRecordsOf(this, header, proguardMapping, indexedGcRootTypes)
+  return index.openHeapGraph()
+}
+
+/**
+ * Creates an in memory index of an hprof source provided by [hprofSourceProvider].
+ */
+fun indexRecordsOf(
+  hprofSourceProvider: DualSourceProvider,
+  hprofHeader: HprofHeader,
+  proguardMapping: ProguardMapping? = null,
+  indexedGcRootTags: Set<HprofRecordTag> = defaultIndexedGcRootTags()
+): HprofIndex {
+  val reader = StreamingHprofReader.readerFor(hprofSourceProvider, hprofHeader)
+  val index = HprofInMemoryIndex.indexHprof(
+    reader = reader,
+    hprofHeader = hprofHeader,
+    proguardMapping = proguardMapping,
+    indexedGcRootTags = indexedGcRootTags
+  )
+  return HprofIndex(hprofSourceProvider, hprofHeader, index)
+}
+```
+
+对象之所以会泄漏，是因为它被 GC ROOT 持有超过它的生命周期，所以分析 hprof 文件的首要目标是找出泄漏对象的 GC ROOT PATH；虽然 hprof 包含方方面面的信息，我们只关注需要的那几部分：`CLASS_DUMP`、`INSTANCE_DUMP`、`OBJECT_ARRAY_DUMP`、`PRIMITIVE_ARRAY_DUMP`，其他的都不需要；而且 hprof 包含的数据非常多，全部加载到内存很容易发生 OOM
+
+这个阶段的 `HprofInMemoryIndex` 主要包含以下信息
+
+* `hprofStringCache` 字符串池，string id -> String，对应 TAG `STRING_IN_UTF8`，用来查找类名
+* `classNames` 类名称池，class id -> string id，对应 TAG `LOAD_CLASS`，通过类名 `leakcanary.KeyedWeakReference` 找到泄漏对象
+* `gcRoots` GC ROOT 对象 id 数组
+
+```kotlin
+internal class HprofInMemoryIndex private constructor(
+  private val positionSize: Int,
+  private val hprofStringCache: LongObjectScatterMap<String>,
+  private val classNames: LongLongScatterMap,
+  private val classIndex: SortedBytesMap,
+  private val instanceIndex: SortedBytesMap,
+  private val objectArrayIndex: SortedBytesMap,
+  private val primitiveArrayIndex: SortedBytesMap,
+  private val gcRoots: List<GcRoot>,
+  private val proguardMapping: ProguardMapping?,
+  private val bytesForClassSize: Int,
+  private val bytesForInstanceSize: Int,
+  private val bytesForObjectArraySize: Int,
+  private val bytesForPrimitiveArraySize: Int,
+  private val useForwardSlashClassPackageSeparator: Boolean,
+  val classFieldsReader: ClassFieldsReader,
+  private val classFieldsIndexSize: Int
+)
+```
+
+参照 `Record` 的结构读取需要的内容
+
+```kotlin
+fun indexHprof(
+  reader: StreamingHprofReader,
+  hprofHeader: HprofHeader,
+  proguardMapping: ProguardMapping?,
+  indexedGcRootTags: Set<HprofRecordTag>
+): HprofInMemoryIndex {
+
+  // 首先过一遍 hprof，计算出 class，instance，object array 和 primitive array 的数量
+  // First pass to count and correctly size arrays once and for all.
+  var maxClassSize = 0L
+  var maxInstanceSize = 0L
+  var maxObjectArraySize = 0L
+  var maxPrimitiveArraySize = 0L
+  var classCount = 0
+  var instanceCount = 0
+  var objectArrayCount = 0
+  var primitiveArrayCount = 0
+  var classFieldsTotalBytes = 0
+  val bytesRead = reader.readRecords(
+    EnumSet.of(CLASS_DUMP, INSTANCE_DUMP, OBJECT_ARRAY_DUMP, PRIMITIVE_ARRAY_DUMP),
+    OnHprofRecordTagListener { tag, _, reader ->
+      val bytesReadStart = reader.bytesRead
+      when (tag) {
+        CLASS_DUMP -> {
+          classCount++
+          reader.skipClassDumpHeader()
+          val bytesReadStaticFieldStart = reader.bytesRead
+          reader.skipClassDumpStaticFields()
+          reader.skipClassDumpFields()
+          maxClassSize = max(maxClassSize, reader.bytesRead - bytesReadStart)
+          classFieldsTotalBytes += (reader.bytesRead - bytesReadStaticFieldStart).toInt()
+        }
+        INSTANCE_DUMP -> {
+          instanceCount++
+          reader.skipInstanceDumpRecord()
+          maxInstanceSize = max(maxInstanceSize, reader.bytesRead - bytesReadStart)
+        }
+        OBJECT_ARRAY_DUMP -> {
+          objectArrayCount++
+          reader.skipObjectArrayDumpRecord()
+          maxObjectArraySize = max(maxObjectArraySize, reader.bytesRead - bytesReadStart)
+        }
+        PRIMITIVE_ARRAY_DUMP -> {
+          primitiveArrayCount++
+          reader.skipPrimitiveArrayDumpRecord()
+          maxPrimitiveArraySize = max(maxPrimitiveArraySize, reader.bytesRead - bytesReadStart)
+        }
+      }
+    })
+
+  // 第二次才读取 string、class、instance 等结构信息  
+  val bytesForClassSize = byteSizeForUnsigned(maxClassSize)
+  val bytesForInstanceSize = byteSizeForUnsigned(maxInstanceSize)
+  val bytesForObjectArraySize = byteSizeForUnsigned(maxObjectArraySize)
+  val bytesForPrimitiveArraySize = byteSizeForUnsigned(maxPrimitiveArraySize)
+  val indexBuilderListener = Builder(
+    longIdentifiers = hprofHeader.identifierByteSize == 8,
+    maxPosition = bytesRead,
+    classCount = classCount,
+    instanceCount = instanceCount,
+    objectArrayCount = objectArrayCount,
+    primitiveArrayCount = primitiveArrayCount,
+    bytesForClassSize = bytesForClassSize,
+    bytesForInstanceSize = bytesForInstanceSize,
+    bytesForObjectArraySize = bytesForObjectArraySize,
+    bytesForPrimitiveArraySize = bytesForPrimitiveArraySize,
+    classFieldsTotalBytes = classFieldsTotalBytes
+  )
+  val recordTypes = EnumSet.of(
+    STRING_IN_UTF8,
+    LOAD_CLASS,
+    CLASS_DUMP,
+    INSTANCE_DUMP,
+    OBJECT_ARRAY_DUMP,
+    PRIMITIVE_ARRAY_DUMP
+  ) + HprofRecordTag.rootTags.intersect(indexedGcRootTags)
+  reader.readRecords(recordTypes, indexBuilderListener)
+  return indexBuilderListener.buildIndex(proguardMapping, hprofHeader)
+}
+
+// 类似 SAX 地流式读取各个 Record 结构，然后回调给 listener 处理
+fun readRecords(
+  recordTags: Set<HprofRecordTag>,
+  listener: OnHprofRecordTagListener
+): Long {
+  return sourceProvider.openStreamingSource().use { source ->
+    val reader = HprofRecordReader(header, source)
+    reader.skip(header.recordsPosition)
+    // Local ref optimizations
+    val intByteSize = INT.byteSize
+    val identifierByteSize = reader.sizeOf(REFERENCE_HPROF_TYPE)
+    while (!source.exhausted()) {
+      // type of the record
+      val tag = reader.readUnsignedByte()
+      // number of microseconds since the time stamp in the header
+      reader.skip(intByteSize)
+      // number of bytes that follow and belong to this record
+      val length = reader.readUnsignedInt()
+      when (tag) {
+        STRING_IN_UTF8.tag -> {
+          if (STRING_IN_UTF8 in recordTags) {
+            listener.onHprofRecord(STRING_IN_UTF8, length, reader)
+          } else {
+            reader.skip(length)
+          }
+        }
+        LOAD_CLASS.tag -> {
+          if (LOAD_CLASS in recordTags) {
+            listener.onHprofRecord(LOAD_CLASS, length, reader)
+          } else {
+            reader.skip(length)
+          }
+        }
+        STACK_FRAME.tag -> {
+          if (STACK_FRAME in recordTags) {
+            listener.onHprofRecord(STACK_FRAME, length, reader)
+          } else {
+            reader.skip(length)
+          }
+        }
+        STACK_TRACE.tag -> {
+          if (STACK_TRACE in recordTags) {
+            listener.onHprofRecord(STACK_TRACE, length, reader)
+          } else {
+            reader.skip(length)
+          }
+        }
+        HEAP_DUMP.tag, HEAP_DUMP_SEGMENT.tag -> {
+          val heapDumpStart = reader.bytesRead
+          var previousTag = 0
+          var previousTagPosition = 0L
+          while (reader.bytesRead - heapDumpStart < length) {
+            val heapDumpTagPosition = reader.bytesRead
+            val heapDumpTag = reader.readUnsignedByte()
+            when (heapDumpTag) {
+              ROOT_UNKNOWN.tag -> {
+                if (ROOT_UNKNOWN in recordTags) {
+                  listener.onHprofRecord(ROOT_UNKNOWN, -1, reader)
+                } else {
+                  reader.skip(identifierByteSize)
+                }
+              }
+              ROOT_JNI_GLOBAL.tag -> {
+                if (ROOT_JNI_GLOBAL in recordTags) {
+                  listener.onHprofRecord(ROOT_JNI_GLOBAL, -1, reader)
+                } else {
+                  reader.skip(identifierByteSize + identifierByteSize)
+                }
+              }
+              ROOT_JNI_LOCAL.tag -> {
+                if (ROOT_JNI_LOCAL in recordTags) {
+                  listener.onHprofRecord(ROOT_JNI_LOCAL, -1, reader)
+                } else {
+                  reader.skip(identifierByteSize + intByteSize + intByteSize)
+                }
+              }
+              ROOT_JAVA_FRAME.tag -> {
+                if (ROOT_JAVA_FRAME in recordTags) {
+                  listener.onHprofRecord(ROOT_JAVA_FRAME, -1, reader)
+                } else {
+                  reader.skip(identifierByteSize + intByteSize + intByteSize)
+                }
+              }
+              // ...
+            }
+            previousTag = heapDumpTag
+            previousTagPosition = heapDumpTagPosition
+          }
+        }
+        HEAP_DUMP_END.tag -> {
+          if (HEAP_DUMP_END in recordTags) {
+            listener.onHprofRecord(HEAP_DUMP_END, length, reader)
+          }
+        }
+        else -> {
+          reader.skip(length)
+        }
+      }
+    }
+    reader.bytesRead
+  }
+}
+```
+
+### 查找泄漏对象
+
+
+
+```kotlin
+fun HeapAnalyzer.analyze(...): HeapAnalysis {
+  // ...
+  val sourceProvider = ConstantMemoryMetricsDualSourceProvider(FileSourceProvider(heapDumpFile))
+  sourceProvider.openHeapGraph(proguardMapping).use { graph ->
+    val helpers =
+      FindLeakInput(graph, referenceMatchers, computeRetainedHeapSize, objectInspectors)
+    val result = helpers.analyzeGraph(
+      metadataExtractor, leakingObjectFinder, heapDumpFile, analysisStartNanoTime
+    )
+    val lruCacheStats = (graph as HprofHeapGraph).lruCacheStats()
+    val randomAccessStats =
+      "RandomAccess[" +
+        "bytes=${sourceProvider.randomAccessByteReads}," +
+        "reads=${sourceProvider.randomAccessReadCount}," +
+        "travel=${sourceProvider.randomAccessByteTravel}," +
+        "range=${sourceProvider.byteTravelRange}," +
+        "size=${heapDumpFile.length()}" +
+        "]"
+    val stats = "$lruCacheStats $randomAccessStats"
+    result.copy(metadata = result.metadata + ("Stats" to stats))
+  }
+  // ...
+}
+
+private fun FindLeakInput.analyzeGraph(
+  metadataExtractor: MetadataExtractor,
+  leakingObjectFinder: LeakingObjectFinder,
+  heapDumpFile: File,
+  analysisStartNanoTime: Long
+): HeapAnalysisSuccess {
+  // ...
+  val leakingObjectIds = leakingObjectFinder.findLeakingObjectIds(graph)
+  // ...
+}
+
+object KeyedWeakReferenceFinder : LeakingObjectFinder {
+
+  override fun findLeakingObjectIds(graph: HeapGraph): Set<Long> =
+    findKeyedWeakReferences(graph)
+      .filter { it.hasReferent && it.isRetained }
+      .map { it.referent.value }
+      .toSet()
+
+  internal fun findKeyedWeakReferences(graph: HeapGraph): List<KeyedWeakReferenceMirror> {
+    return graph.context.getOrPut(KEYED_WEAK_REFERENCE.name) {
+      val keyedWeakReferenceClass = graph.findClassByName("leakcanary.KeyedWeakReference")
+
+      val keyedWeakReferenceClassId = keyedWeakReferenceClass?.objectId ?: 0
+      val legacyKeyedWeakReferenceClassId =
+        graph.findClassByName("com.squareup.leakcanary.KeyedWeakReference")?.objectId ?: 0
+
+      val heapDumpUptimeMillis = heapDumpUptimeMillis(graph)
+
+      val addedToContext: List<KeyedWeakReferenceMirror> = graph.instances
+        .filter { instance ->
+          instance.instanceClassId == keyedWeakReferenceClassId || instance.instanceClassId == legacyKeyedWeakReferenceClassId
+        }
+        .map {
+          KeyedWeakReferenceMirror.fromInstance(
+            it, heapDumpUptimeMillis
+          )
+        }
+        .toList()
+      graph.context[KEYED_WEAK_REFERENCE.name] = addedToContext
+      addedToContext
+    }
   }
 }
 ```
@@ -405,3 +891,8 @@ private void ContentProvider.attachInfo(Context context, ProviderInfo info, bool
 2. hprof 文件往往达到 400M / 500M 这个量级，客户端存储是个问题
 3. hprof 文件要回传给服务器分析，但是文件太大网络消耗也有很大问题
 4. 如果是在客户端分析 hprof 文件，由于文件太大导致分析进程在很多情况下自己也 OOM 了
+
+## 参考
+
+1. [Hprof文件解析](https://leo-wxy.github.io/2020/12/14/Hprof%E6%96%87%E4%BB%B6%E8%A7%A3%E6%9E%90/)
+2. [HPROF Agent](http://hg.openjdk.java.net/jdk8/jdk8/jdk/raw-file/tip/src/share/demo/jvmti/hprof/manual.html)
