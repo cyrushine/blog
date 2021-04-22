@@ -497,7 +497,7 @@ fun indexRecordsOf(
 }
 ```
 
-对象之所以会泄漏，是因为它被 GC ROOT 持有超过它的生命周期，所以分析 hprof 文件的首要目标是找出泄漏对象的 GC ROOT PATH；虽然 hprof 包含方方面面的信息，我们只关注需要的那几部分：`CLASS_DUMP`、`INSTANCE_DUMP`、`OBJECT_ARRAY_DUMP`、`PRIMITIVE_ARRAY_DUMP`，其他的都不需要；而且 hprof 包含的数据非常多，全部加载到内存很容易发生 OOM
+对象之所以会泄漏，是因为它被 GC ROOT 持有超过它的生命周期，所以分析 hprof 文件的首要目标是找出泄漏对象的 GC ROOT PATH；虽然 hprof 包含方方面面的信息，我们只关注需要的那几部分：`STRING_IN_UTF8`、`CLASS_DUMP`、`INSTANCE_DUMP`、`GC ROOT` 等等，其他的都不需要；而且 hprof 包含的数据非常多，全部加载到内存很容易发生 OOM
 
 这个阶段的 `HprofInMemoryIndex` 主要包含以下信息
 
@@ -715,7 +715,7 @@ fun readRecords(
 
 ### 查找泄漏对象
 
-
+泄漏对象被 `KeyedWeakReference` 弱引用并保存在 `ObjectWatcher.watchedObjects`，那么通过全限定类名 `leakcanary.KeyedWeakReference"`/ `com.squareup.leakcanary.KeyedWeakReference` 找到 class id，通过 class id 找到 instance Record，在 instance Record 里找到名为 `referent` 的成员变量值，这个值就是泄漏对象的 instance id，最终会产生一个泄漏对象 instance id 数组 `leakingObjectIds`
 
 ```kotlin
 fun HeapAnalyzer.analyze(...): HeapAnalysis {
@@ -727,19 +727,8 @@ fun HeapAnalyzer.analyze(...): HeapAnalysis {
     val result = helpers.analyzeGraph(
       metadataExtractor, leakingObjectFinder, heapDumpFile, analysisStartNanoTime
     )
-    val lruCacheStats = (graph as HprofHeapGraph).lruCacheStats()
-    val randomAccessStats =
-      "RandomAccess[" +
-        "bytes=${sourceProvider.randomAccessByteReads}," +
-        "reads=${sourceProvider.randomAccessReadCount}," +
-        "travel=${sourceProvider.randomAccessByteTravel}," +
-        "range=${sourceProvider.byteTravelRange}," +
-        "size=${heapDumpFile.length()}" +
-        "]"
-    val stats = "$lruCacheStats $randomAccessStats"
-    result.copy(metadata = result.metadata + ("Stats" to stats))
+    // ...
   }
-  // ...
 }
 
 private fun FindLeakInput.analyzeGraph(
@@ -750,6 +739,7 @@ private fun FindLeakInput.analyzeGraph(
 ): HeapAnalysisSuccess {
   // ...
   val leakingObjectIds = leakingObjectFinder.findLeakingObjectIds(graph)
+  val (applicationLeaks, libraryLeaks, unreachableObjects) = findLeaks(leakingObjectIds)
   // ...
 }
 
@@ -785,6 +775,224 @@ object KeyedWeakReferenceFinder : LeakingObjectFinder {
       addedToContext
     }
   }
+}
+```
+
+从逻辑上看引用关系是个图，图中的节点有个指向父节点的指针 `Node.parent`，而 GC ROOT 就是图中的根节点，它们没有 `parent`，GC ROOT 包括以下几类：
+
+1. `ROOT UNKNOWN`
+2. `ROOT JNI GLOBAL`
+3. `ROOT JNI LOCAL`
+4. `ROOT JAVA FRAME`
+5. `ROOT NATIVE STACK`
+6. `ROOT STICKY CLASS`
+7. `ROOT THREAD BLOCK`
+8. `ROOT MONITOR USED`
+9. `ROOT THREAD OBJECT`
+
+GC ROOT 的成员变量作为子节点，`parent` 指向 GC ROOT，成员变量还有成员变量作为子节点，这样就形成了一个很大的图
+
+我们使用 `Stack` 来遍历图里的节点，首先把 GC ROOT 都入栈，然后依次出栈执行：找到非空的成员变量并加入栈中，如果 instance id == leakingObjectId 则记录起来，直到栈空或者已找完所有的泄漏对象；这样就可以沿着 `Node.parent` 一直往上走到 GC ROOT，这样泄漏对象的 GC ROOT PATH 就出来了
+
+```kotlin
+private fun FindLeakInput.findLeaks(leakingObjectIds: Set<Long>): LeaksAndUnreachableObjects {
+  val pathFinder = PathFinder(graph, listener, referenceMatchers)
+  val pathFindingResults =
+    pathFinder.findPathsFromGcRoots(leakingObjectIds, computeRetainedHeapSize)
+  // ...
+}
+
+fun findPathsFromGcRoots(
+  leakingObjectIds: Set<Long>,
+  computeRetainedHeapSize: Boolean
+): PathFindingResults {
+  // ...
+  val state = State(
+    leakingObjectIds = leakingObjectIds.toLongScatterSet(),
+    sizeOfObjectInstances = sizeOfObjectInstances,
+    computeRetainedHeapSize = computeRetainedHeapSize,
+    javaLangObjectId = javaLangObjectId,
+    estimatedVisitedObjects = estimatedVisitedObjects
+  )
+  return state.findPathsFromGcRoots()
+}
+
+private fun State.findPathsFromGcRoots(): PathFindingResults {
+  // 首先将 GC ROOT 入队
+  enqueueGcRoots()
+
+  val shortestPathsToLeakingObjects = mutableListOf<ReferencePathNode>()
+  visitingQueue@ while (queuesNotEmpty) {
+    val node = poll()
+    if (leakingObjectIds.contains(node.objectId)) {
+      shortestPathsToLeakingObjects.add(node)
+      // Found all refs, stop searching (unless computing retained size)
+      if (shortestPathsToLeakingObjects.size == leakingObjectIds.size()) {
+        if (computeRetainedHeapSize) {
+          listener.onAnalysisProgress(FINDING_DOMINATORS)
+        } else {
+          break@visitingQueue
+        }
+      }
+    }
+
+    // 找到子节点（类的静态成员变量、实例的成员变量等等）
+    when (val heapObject = graph.findObjectById(node.objectId)) {
+      is HeapClass -> visitClassRecord(heapObject, node)
+      is HeapInstance -> visitInstance(heapObject, node)
+      is HeapObjectArray -> visitObjectArray(heapObject, node)
+    }
+  }
+  return PathFindingResults(
+    shortestPathsToLeakingObjects,
+    if (visitTracker is Dominated) visitTracker.dominatorTree else null
+  )
+}
+```
+
+上面找到了所有泄漏对象的 GC ROOT PATH，但可能出现重复，这里利用前缀树删除重复路径；前缀树节点 `Node` 用 `Map<Long, Node>` 表示它引用了某个对象，叶子节点就是泄漏对象，最后广度优先遍历前缀树，将每个叶子节点及其路径记下来
+
+```kotlin
+private fun FindLeakInput.findLeaks(leakingObjectIds: Set<Long>): LeaksAndUnreachableObjects {
+  val pathFinder = PathFinder(graph, listener, referenceMatchers)
+  val pathFindingResults =
+    pathFinder.findPathsFromGcRoots(leakingObjectIds, computeRetainedHeapSize)
+  val unreachableObjects = findUnreachableObjects(pathFindingResults, leakingObjectIds)
+  val shortestPaths =
+    deduplicateShortestPaths(pathFindingResults.pathsToLeakingObjects)
+  // ...
+}
+
+// 利用前缀树删除重复路径
+private fun deduplicateShortestPaths(
+   inputPathResults: List<ReferencePathNode>
+ ): List<ShortestPath> {
+   val rootTrieNode = ParentNode(0)
+
+   inputPathResults.forEach { pathNode ->
+     // Go through the linked list of nodes and build the reverse list of instances from
+     // root to leaking.
+     val path = mutableListOf<Long>()
+     var leakNode: ReferencePathNode = pathNode
+     while (leakNode is ChildNode) {
+       path.add(0, leakNode.objectId)
+       leakNode = leakNode.parent
+     }
+     path.add(0, leakNode.objectId)
+     updateTrie(pathNode, path, 0, rootTrieNode)
+   }
+
+   val outputPathResults = mutableListOf<ReferencePathNode>()
+   findResultsInTrie(rootTrieNode, outputPathResults)
+
+   if (outputPathResults.size != inputPathResults.size) {
+     SharkLog.d {
+       "Found ${inputPathResults.size} paths to retained objects," +
+         " down to ${outputPathResults.size} after removing duplicated paths"
+     }
+   } else {
+     SharkLog.d { "Found ${outputPathResults.size} paths to retained objects" }
+   }
+
+   return outputPathResults.map { retainedObjectNode ->
+     val shortestChildPath = mutableListOf<ChildNode>()
+     var node = retainedObjectNode
+     while (node is ChildNode) {
+       shortestChildPath.add(0, node)
+       node = node.parent
+     }
+     val rootNode = node as RootNode
+     ShortestPath(rootNode, shortestChildPath)
+   }
+ }
+
+// 将一个 GC ROOT PATH 添加到前缀树
+private fun updateTrie(
+  pathNode: ReferencePathNode,
+  path: List<Long>,
+  pathIndex: Int,
+  parentNode: ParentNode
+) {
+  val objectId = path[pathIndex]
+  if (pathIndex == path.lastIndex) {
+    parentNode.children[objectId] = LeafNode(objectId, pathNode)
+  } else {
+    val childNode = parentNode.children[objectId] ?: {
+      val newChildNode = ParentNode(objectId)
+      parentNode.children[objectId] = newChildNode
+      newChildNode
+    }()
+    if (childNode is ParentNode) {
+      updateTrie(pathNode, path, pathIndex + 1, childNode)
+    }
+  }
+} 
+```
+
+到此 GC ROOT PATH 已找到，最后再封装为 `LeakTrace`
+
+```kotlin
+private fun FindLeakInput.findLeaks(leakingObjectIds: Set<Long>): LeaksAndUnreachableObjects {
+  val pathFinder = PathFinder(graph, listener, referenceMatchers)
+  val pathFindingResults =
+    pathFinder.findPathsFromGcRoots(leakingObjectIds, computeRetainedHeapSize)
+  val unreachableObjects = findUnreachableObjects(pathFindingResults, leakingObjectIds)
+  val shortestPaths =
+    deduplicateShortestPaths(pathFindingResults.pathsToLeakingObjects)
+  val inspectedObjectsByPath = inspectObjects(shortestPaths)
+  val retainedSizes =
+    if (pathFindingResults.dominatorTree != null) {
+      computeRetainedSizes(inspectedObjectsByPath, pathFindingResults.dominatorTree)
+    } else {
+      null
+    }
+  val (applicationLeaks, libraryLeaks) = buildLeakTraces(
+    shortestPaths, inspectedObjectsByPath, retainedSizes
+  )
+  return LeaksAndUnreachableObjects(applicationLeaks, libraryLeaks, unreachableObjects)
+}
+
+private fun FindLeakInput.buildLeakTraces(
+  shortestPaths: List<ShortestPath>,
+  inspectedObjectsByPath: List<List<InspectedObject>>,
+  retainedSizes: Map<Long, Pair<Int, Int>>?
+): Pair<List<ApplicationLeak>, List<LibraryLeak>> {
+  listener.onAnalysisProgress(BUILDING_LEAK_TRACES)
+  val applicationLeaksMap = mutableMapOf<String, MutableList<LeakTrace>>()
+  val libraryLeaksMap =
+    mutableMapOf<String, Pair<LibraryLeakReferenceMatcher, MutableList<LeakTrace>>>()
+  shortestPaths.forEachIndexed { pathIndex, shortestPath ->
+    val inspectedObjects = inspectedObjectsByPath[pathIndex]
+    val leakTraceObjects = buildLeakTraceObjects(inspectedObjects, retainedSizes)
+    val referencePath = buildReferencePath(shortestPath.childPath, leakTraceObjects)
+    val leakTrace = LeakTrace(
+      gcRootType = GcRootType.fromGcRoot(shortestPath.root.gcRoot), // 第一个元素是 GC ROOT
+      referencePath = referencePath,                                // GC ROOT PATH
+      leakingObject = leakTraceObjects.last()                       // leaking object
+    )
+    val firstLibraryLeakNode = if (shortestPath.root is LibraryLeakNode) {
+      shortestPath.root
+    } else {
+      shortestPath.childPath.firstOrNull { it is LibraryLeakNode } as LibraryLeakNode?
+    }
+    if (firstLibraryLeakNode != null) {
+      val matcher = firstLibraryLeakNode.matcher
+      val signature: String = matcher.pattern.toString()
+        .createSHA1Hash()
+      libraryLeaksMap.getOrPut(signature) { matcher to mutableListOf() }
+        .second += leakTrace
+    } else {
+      applicationLeaksMap.getOrPut(leakTrace.signature) { mutableListOf() } += leakTrace
+    }
+  }
+  val applicationLeaks = applicationLeaksMap.map { (_, leakTraces) ->
+    ApplicationLeak(leakTraces)
+  }
+  val libraryLeaks = libraryLeaksMap.map { (_, pair) ->
+    val (matcher, leakTraces) = pair
+    LibraryLeak(leakTraces, matcher.pattern, matcher.description)
+  }
+  return applicationLeaks to libraryLeaks
 }
 ```
 
