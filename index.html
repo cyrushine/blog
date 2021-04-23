@@ -184,6 +184,57 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/blog/2021/04/23/matrix-resourcescanary/">Matrix - ResourcesCanary 浅析</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/blog/2021/04/23/matrix-resourcescanary/">
+          
+          
+            
+          
+          Activity 的泄漏检测跟 LeakCanary 一样，使用 ActivityLifecycleCallbacks 监听 Activity.onDestroy() 事件，从而收集到已销毁的 Activity 对象
+1234567891011121314151617181920212223242526272829303132333435363738public class ResourcePlu
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-04-23 04:00" pubdate>
+              2021-04-23
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/blog/categories/android/">android</a>
+            
+              <a href="/blog/categories/android/%E5%86%85%E5%AD%98/">内存</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/blog/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/blog/2021/04/16/looking-into-oom/">深入 OOM</a>
       </h1>
 
@@ -369,9 +420,9 @@ GC 时机
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/blog/tags/LeakCanary/">LeakCanary</a>
-            
               <a href="/blog/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
+            
+              <a href="/blog/tags/LeakCanary/">LeakCanary</a>
             
           </div>
         
@@ -702,60 +753,6 @@ AMS 承担的工作其中的转折点在 resumeTopActivityInnerLocked，发现 a
               <a href="/blog/tags/AMS/">AMS</a>
             
               <a href="/blog/tags/Zygote/">Zygote</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/blog/2021/02/19/threadpool/">线程池 ThreadPool 的实现</a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/blog/2021/02/19/threadpool/">
-          
-          
-            
-          
-          基础知识线程池有几个重要的参数：
-
-maximumPoolSize 最大线程数量，如果新提交的任务因为 workQueue 的容量限制而无法入队，则会尝试新开一个线程执行任务，而如果此时总线程数超过 maximumPoolSize 的限制，那么不再新开一个线程而是提交失败
-corePoolSize 核心线程数量，当任务执行完毕，线程也将结束它的生命周期，但最少不会低于 corePoolSize
-k
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-02-19 04:00" pubdate>
-              2021-02-19
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/blog/categories/Android/">Android</a>
-            
-              <a href="/blog/categories/Android/Art/">Art</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/blog/tags/threadpool/">threadpool</a>
             
           </div>
         

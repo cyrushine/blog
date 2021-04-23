@@ -191,7 +191,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      4.9k 字
+      5k 字
     </span>
   
 
@@ -201,7 +201,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      81
+      82
        分钟
     </span>
   
@@ -362,7 +362,7 @@
 <li><code>ROOT THREAD OBJECT</code></li>
 </ol>
 <p>GC ROOT 的成员变量作为子节点，<code>parent</code> 指向 GC ROOT，成员变量还有成员变量作为子节点，这样就形成了一个很大的图</p>
-<p>我们使用 <code>Stack</code> 来遍历图里的节点，首先把 GC ROOT 都入栈，然后依次出栈执行：找到非空的成员变量并加入栈中，如果 instance id == leakingObjectId 则记录起来，直到栈空或者已找完所有的泄漏对象；这样就可以沿着 <code>Node.parent</code> 一直往上走到 GC ROOT，这样泄漏对象的 GC ROOT PATH 就出来了</p>
+<p>为了构造上面的引用图以及它们的引用关系，我们使用 <code>Stack</code> 来遍历找到的 <code>Record</code>，首先把 GC ROOT 都入栈，然后依次出栈执行：找到非空的成员变量并加入栈中（此时能够建立 parent - child 二级关系），如果 instance id == leakingObjectId 则记录起来，直到栈空或者已找完所有的泄漏对象；每一层二级关系的建立最终使所有关联的节点连接起来形成图，这样就可以沿着 <code>Node.parent</code> 一直往上走到 GC ROOT，这样泄漏对象的 GC ROOT PATH 就出来了</p>
 <figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> FindLeakInput.<span class="hljs-title">findLeaks</span><span class="hljs-params">(leakingObjectIds: <span class="hljs-type">Set</span>&lt;<span class="hljs-type">Long</span>&gt;)</span></span>: LeaksAndUnreachableObjects &#123;<br>  <span class="hljs-keyword">val</span> pathFinder = PathFinder(graph, listener, referenceMatchers)<br>  <span class="hljs-keyword">val</span> pathFindingResults =<br>    pathFinder.findPathsFromGcRoots(leakingObjectIds, computeRetainedHeapSize)<br>  <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">findPathsFromGcRoots</span><span class="hljs-params">(</span></span><br><span class="hljs-function"><span class="hljs-params">  leakingObjectIds: <span class="hljs-type">Set</span>&lt;<span class="hljs-type">Long</span>&gt;,</span></span><br><span class="hljs-function"><span class="hljs-params">  computeRetainedHeapSize: <span class="hljs-type">Boolean</span></span></span><br><span class="hljs-function"><span class="hljs-params">)</span></span>: PathFindingResults &#123;<br>  <span class="hljs-comment">// ...</span><br>  <span class="hljs-keyword">val</span> state = State(<br>    leakingObjectIds = leakingObjectIds.toLongScatterSet(),<br>    sizeOfObjectInstances = sizeOfObjectInstances,<br>    computeRetainedHeapSize = computeRetainedHeapSize,<br>    javaLangObjectId = javaLangObjectId,<br>    estimatedVisitedObjects = estimatedVisitedObjects<br>  )<br>  <span class="hljs-keyword">return</span> state.findPathsFromGcRoots()<br>&#125;<br><br><span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> State.<span class="hljs-title">findPathsFromGcRoots</span><span class="hljs-params">()</span></span>: PathFindingResults &#123;<br>  <span class="hljs-comment">// 首先将 GC ROOT 入队</span><br>  enqueueGcRoots()<br><br>  <span class="hljs-keyword">val</span> shortestPathsToLeakingObjects = mutableListOf&lt;ReferencePathNode&gt;()<br>  <span class="hljs-symbol">visitingQueue@</span> <span class="hljs-keyword">while</span> (queuesNotEmpty) &#123;<br>    <span class="hljs-keyword">val</span> node = poll()<br>    <span class="hljs-keyword">if</span> (leakingObjectIds.contains(node.objectId)) &#123;<br>      shortestPathsToLeakingObjects.add(node)<br>      <span class="hljs-comment">// Found all refs, stop searching (unless computing retained size)</span><br>      <span class="hljs-keyword">if</span> (shortestPathsToLeakingObjects.size == leakingObjectIds.size()) &#123;<br>        <span class="hljs-keyword">if</span> (computeRetainedHeapSize) &#123;<br>          listener.onAnalysisProgress(FINDING_DOMINATORS)<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>          <span class="hljs-keyword">break</span><span class="hljs-symbol">@visitingQueue</span><br>        &#125;<br>      &#125;<br>    &#125;<br><br>    <span class="hljs-comment">// 找到子节点（类的静态成员变量、实例的成员变量等等）</span><br>    <span class="hljs-keyword">when</span> (<span class="hljs-keyword">val</span> heapObject = graph.findObjectById(node.objectId)) &#123;<br>      <span class="hljs-keyword">is</span> HeapClass -&gt; visitClassRecord(heapObject, node)<br>      <span class="hljs-keyword">is</span> HeapInstance -&gt; visitInstance(heapObject, node)<br>      <span class="hljs-keyword">is</span> HeapObjectArray -&gt; visitObjectArray(heapObject, node)<br>    &#125;<br>  &#125;<br>  <span class="hljs-keyword">return</span> PathFindingResults(<br>    shortestPathsToLeakingObjects,<br>    <span class="hljs-keyword">if</span> (visitTracker <span class="hljs-keyword">is</span> Dominated) visitTracker.dominatorTree <span class="hljs-keyword">else</span> <span class="hljs-literal">null</span><br>  )<br>&#125;<br></code></pre></div></td></tr></table></figure>
 
 <p>上面找到了所有泄漏对象的 GC ROOT PATH，但可能出现重复，这里利用前缀树删除重复路径；前缀树节点 <code>Node</code> 用 <code>Map&lt;Long, Node&gt;</code> 表示它引用了某个对象，叶子节点就是泄漏对象，最后广度优先遍历前缀树，将每个叶子节点及其路径记下来</p>
@@ -403,9 +403,9 @@
                   <div class="post-meta">
                     <i class="iconfont icon-tags"></i>
                     
-                      <a class="hover-with-bg" href="/blog/tags/LeakCanary/">LeakCanary</a>
-                    
                       <a class="hover-with-bg" href="/blog/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/LeakCanary/">LeakCanary</a>
                     
                   </div>
                 
