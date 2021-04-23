@@ -209,6 +209,7 @@ static class Node<K,V> implements Map.Entry<K,V> {
 
 它提供的阻塞操作包括：
 
+| API                                | 描述                     |
 |------------------------------------|-------------------------|
 | `put(e)`                           | 入队                     |
 | `offer(e, timeout, unit)`          | 设置超时的入队             |
@@ -503,3 +504,78 @@ public class PriorityBlockingQueue<E> extends AbstractQueue<E>
 * 需要自定义优先级用 `PriorityBlockingQueue`，需要无限容量用 `LinkedBlockingQueue`
 * `LinkedBlockingQueue` 入队出队分别使用两把锁，也就是说入队出队可以并行，在高并发下会比使用同一把锁的 `ArrayBlockingQueue` 性能要好
 * `ArrayBlockingQueue` 在内存利用率上会比 `LinkedBlockingQueue` 要好（`Node` 需要额外的空间），而且底层数组在构造函数时就已预先分配内存，使用时无需动态申请内存，内存波动较小；而动态申请内存的 `LinkedBlockingQueue` 可能会增加 JVM GC 的负担
+
+
+## `ConcurrentLinkedQueue`
+
+用链表实现的线程安全的队列，没有使用 `Lock` 和 `synchronized`，而是采用 `CAS` 操作和自旋的乐观锁，所以 `ConcurrentLinkedQueue` 是乐观的容器
+
+```java
+public class ConcurrentLinkedQueue<E> {
+
+    // 因为没使用锁，为了确保可见性，节点的成员变量都是 volatile
+    private static class Node<E> {
+        volatile E item;
+        volatile Node<E> next;
+    }
+
+    transient volatile Node<E> head;            // 头节点，出队时从头结点出队
+    private transient volatile Node<E> tail;    // 尾结点，入队时从尾结点入队
+}
+
+// 出队操作，不移除 Node 只是将 Node.item 置空，下一次操作才会将 Node.item == null 的空节点移除
+// 使用 for + cas
+public E poll() {
+    restartFromHead:
+    for (;;) {
+        for (Node<E> h = head, p = h, q;;) {
+            E item = p.item;
+            if (item != null && casItem(p, item, null)) {
+                // Successful CAS is the linearization point
+                // for item to be removed from this queue.
+                if (p != h) // hop two nodes at a time
+                    updateHead(h, ((q = p.next) != null) ? q : p);
+                return item;
+            }
+            else if ((q = p.next) == null) {
+                updateHead(h, p);
+                return null;
+            }
+            else if (p == q)
+                continue restartFromHead;
+            else
+                p = q;
+        }
+    }
+}
+
+// 入队，依然用的是 for + cas
+public boolean offer(E e) {
+    final Node<E> newNode = newNode(Objects.requireNonNull(e));
+    for (Node<E> t = tail, p = t;;) {
+        Node<E> q = p.next;
+        if (q == null) {
+            // p is last node
+            if (casNext(p, null, newNode)) {
+                // Successful CAS is the linearization point
+                // for e to become an element of this queue,
+                // and for newNode to become "live".
+                if (p != t) // hop two nodes at a time
+                    casTail(t, newNode);  // Failure is OK.
+                return true;
+            }
+            // Lost CAS race to another thread; re-read next
+        }
+        else if (p == q)
+            // We have fallen off list.  If tail is unchanged, it
+            // will also be off-list, in which case we need to
+            // jump to head, from which all live nodes are always
+            // reachable.  Else the new tail is a better bet.
+            p = (t != (t = tail)) ? t : head;
+        else
+            // Check for tail updates after two hops.
+            p = (p != t && t != (t = tail)) ? t : q;
+    }
+}
+```
+

@@ -792,7 +792,7 @@ object KeyedWeakReferenceFinder : LeakingObjectFinder {
 
 GC ROOT 的成员变量作为子节点，`parent` 指向 GC ROOT，成员变量还有成员变量作为子节点，这样就形成了一个很大的图
 
-我们使用 `Stack` 来遍历图里的节点，首先把 GC ROOT 都入栈，然后依次出栈执行：找到非空的成员变量并加入栈中，如果 instance id == leakingObjectId 则记录起来，直到栈空或者已找完所有的泄漏对象；这样就可以沿着 `Node.parent` 一直往上走到 GC ROOT，这样泄漏对象的 GC ROOT PATH 就出来了
+为了构造上面的引用图以及它们的引用关系，我们使用 `Stack` 来遍历找到的 `Record`，首先把 GC ROOT 都入栈，然后依次出栈执行：找到非空的成员变量并加入栈中（此时能够建立 parent - child 二级关系），如果 instance id == leakingObjectId 则记录起来，直到栈空或者已找完所有的泄漏对象；每一层二级关系的建立最终使所有关联的节点连接起来形成图，这样就可以沿着 `Node.parent` 一直往上走到 GC ROOT，这样泄漏对象的 GC ROOT PATH 就出来了
 
 ```kotlin
 private fun FindLeakInput.findLeaks(leakingObjectIds: Set<Long>): LeaksAndUnreachableObjects {
