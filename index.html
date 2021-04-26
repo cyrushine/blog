@@ -184,6 +184,45 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/blog/2021/04/26/matrix-tracecanary/"></a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/blog/2021/04/26/matrix-tracecanary/">
+          
+          
+            
+          
+          无埋点插桩为了在捕捉到卡顿堆栈后，获取各个函数的执行耗时，需要对所有函数进行无埋点插桩，在函数执行前调用 MethodBeat.i，在函数执行后调用 MethodBeat.o
+
+实现细节
+编译期：
+通过代理编译期间的任务 transformClassesWithDexTask，将全局 class 文件作为输入，利用 ASM 工具，高效地对所有 class 文件进行扫描及插桩
+插桩过程有几个关键点：
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-04-26 00:00" pubdate>
+              2021-04-26
+            </time>
+          </div>
+        
+        
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/blog/2021/04/23/matrix-resourcescanary/">Matrix - ResourcesCanary 浅析</a>
       </h1>
 
@@ -696,63 +735,6 @@ client 收到补丁包后，在后台给 V1.apk 打上 patch1.apk 得到 V2.apk�
             <i class="iconfont icon-tags"></i>
             
               <a href="/blog/tags/hotfix/">hotfix</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/blog/2021/03/02/how-application-being-created-and-init/">Application 是如何被创建和初始化的？</a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/blog/2021/03/02/how-application-being-created-and-init/">
-          
-          
-            
-          
-          时序图从 startActivity 开始，比如打开一个 app 的首页，当 app 未启动时就会走创建 Application 这条路
-
-AMS 承担的工作其中的转折点在 resumeTopActivityInnerLocked，发现 app process 不存在，走启动 app process 的流程
-12345678910111213141516171819private boolean 
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-02 04:00" pubdate>
-              2021-03-02
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/blog/categories/Android/">Android</a>
-            
-              <a href="/blog/categories/Android/Framework/">Framework</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/blog/tags/Application/">Application</a>
-            
-              <a href="/blog/tags/AMS/">AMS</a>
-            
-              <a href="/blog/tags/Zygote/">Zygote</a>
             
           </div>
         

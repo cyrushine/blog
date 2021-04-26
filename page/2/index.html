@@ -184,6 +184,63 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/blog/2021/03/02/how-application-being-created-and-init/">Application 是如何被创建和初始化的？</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/blog/2021/03/02/how-application-being-created-and-init/">
+          
+          
+            
+          
+          时序图从 startActivity 开始，比如打开一个 app 的首页，当 app 未启动时就会走创建 Application 这条路
+
+AMS 承担的工作其中的转折点在 resumeTopActivityInnerLocked，发现 app process 不存在，走启动 app process 的流程
+12345678910111213141516171819private boolean 
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-03-02 04:00" pubdate>
+              2021-03-02
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/blog/categories/Android/">Android</a>
+            
+              <a href="/blog/categories/Android/Framework/">Framework</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/blog/tags/Application/">Application</a>
+            
+              <a href="/blog/tags/AMS/">AMS</a>
+            
+              <a href="/blog/tags/Zygote/">Zygote</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/blog/2021/02/19/threadpool/">线程池 ThreadPool 的实现</a>
       </h1>
 
@@ -658,62 +715,6 @@ syncFrameState重要的方法有三个：makeCurrent，
               <a href="/blog/tags/vsync/">vsync</a>
             
               <a href="/blog/tags/ui-thread/">ui thread</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/blog/2020/12/02/vsync/">Android 图形栈（一）vsync</a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/blog/2020/12/02/vsync/">
-          
-          
-            
-          
-          android 的垂直同步模型（vsync）是隐藏在 view 系统后面的很重要的一块，它控制着 view 渲染的节奏；而且 vsync 还是比较复杂的，我们从下到上，先从最熟悉的 View.invalidate 讲起，看看简单的一个 invalidate 后面隐藏着多么复杂的工作
-从 View.invalidate() 说起
-看上图，View.invalidate() 主要做了两件事：
-
-将 V
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2020-12-02 04:00" pubdate>
-              2020-12-02
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/blog/categories/Android/">Android</a>
-            
-              <a href="/blog/categories/Android/Framework/">Framework</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/blog/tags/vsync/">vsync</a>
-            
-              <a href="/blog/tags/invalidate/">invalidate</a>
             
           </div>
         
