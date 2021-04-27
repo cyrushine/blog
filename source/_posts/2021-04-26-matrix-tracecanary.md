@@ -1,5 +1,5 @@
 
-## 无埋点插桩
+## 无埋点插桩收集函数耗时
 
 为了在捕捉到卡顿堆栈后，获取各个函数的执行耗时，需要对所有函数进行无埋点插桩，在函数执行前调用 `MethodBeat.i`，在函数执行后调用 `MethodBeat.o`
 
@@ -483,7 +483,287 @@ private class TraceMethodAdapter extends AdviceAdapter {
 // jar 包一样的，只不过用的 ZipFile API 那套 ...
 ```
 
-## 页面启动耗时
+### 收集函数执行耗时
+
+用一个 `long` 记录 `i/o` 函数调用，高位第一位表示是 `i` 函数还是 `o` 函数，后续 20 位存储 `method id`，低位 43 位存储 *相对时间戳*；运行时分配一个 100W 长度的 long 数组（占内存 7.6M）来存储，从索引 0 开始逐步递增到数组尾部，满了又从索引 0 开始，会覆盖旧数据，但因为 100W 足够大，用来收集栈帧执行时间足够了
+
+> 编译期已经对全局的函数进行插桩，在运行期间每个函数的执行前后都会调用 MethodBeat.i/o 的方法，如果是在主线程中执行，则在函数的执行前后获取当前距离 MethodBeat 模块初始化的时间 offset（为了压缩数据，存进一个long类型变量中），并将当前执行的是 MethodBeat i或者o、mehtod id 及时间 offset，存放到一个 long 类型变量中，记录到一个预先初始化好的数组 long[] 中 index 的位置（预先分配记录数据的 buffer 长度为 100w，内存占用约 7.6M）。
+> 
+> ![long buffer](https://github.com/Tencent/matrix/wiki/images/trace/run_store.jpg)
+>
+> ![summary func cast](https://github.com/Tencent/matrix/wiki/images/trace/stack.jpg)
+
+```java
+// 记录函数的开始时间
+public static void AppMethodBeat.i(int methodId) {
+    // ...
+    if (threadId == sMainThreadId) {                // 只关心主线程的慢函数，其他线程不记录
+        if (assertIn) {                             // 防止重入
+            android.util.Log.e(TAG, "ERROR!!! AppMethodBeat.i Recursive calls!!!");
+            return;
+        }
+        assertIn = true;
+        if (sIndex < Constants.BUFFER_SIZE) {       // buffer 满了则重头开始，会覆盖掉旧数据
+            mergeData(methodId, sIndex, true);
+        } else {
+            sIndex = 0;
+            mergeData(methodId, sIndex, true);
+        }
+        ++sIndex;
+        assertIn = false;
+    }
+}
+// 插入 buffer
+private static void AppMethodBeat.mergeData(int methodId, int index, boolean isIn) {
+    if (methodId == AppMethodBeat.METHOD_ID_DISPATCH) {
+        sCurrentDiffTime = SystemClock.uptimeMillis() - sDiffTime;
+    }
+    long trueId = 0L;                               // 构造函数执行时间戳，第一位表示 i/o 操作
+    if (isIn) {
+        trueId |= 1L << 63;
+    }
+    trueId |= (long) methodId << 43;                // 后续 20 位存储 method id
+    trueId |= sCurrentDiffTime & 0x7FFFFFFFFFFL;    // 低 43 位存储相对时间戳
+    sBuffer[index] = trueId;
+    checkPileup(index);
+    sLastIndex = index;
+}
+// 记录函数的结束时间，跟上面是一样的
+public static void AppMethodBeat.o(int methodId) {
+    // ...
+    if (Thread.currentThread().getId() == sMainThreadId) {
+        if (sIndex < Constants.BUFFER_SIZE) {
+            mergeData(methodId, sIndex, false);
+        } else {
+            sIndex = 0;
+            mergeData(methodId, sIndex, false);
+        }
+        ++sIndex;
+    }
+}
+```
+
+值得注意的是，因为只有低 43 位存储时间戳，如果存储完整的时间戳那是不足的，而且在分析函数执行耗时用的是 duration = end - start，实际上不需要完整的时间戳，所以这里记录的是相对时间戳（`sCurrentDiffTime`）；而且为了性能，不在 `i/o` 函数里执行 `SystemClock.uptimeMillis()`
+
+`sDiffTime` 记录加载类 `AppMethodBeat` 的时间戳，然后会起一个线程每隔 5ms 更新一次 `sCurrentDiffTime = SystemClock.uptimeMillis() - sDiffTime`
+
+> 另外，考虑到每个方法执行前后都获取系统时间（System.nanoTime）会对性能影响比较大，而实际上，单个函数执行耗时小于 5ms 的情况，对卡顿来说不是主要原因，可以忽略不计，如果是多次调用的情况，则在它的父级方法中可以反映出来，所以为了减少对性能的影响，通过另一条更新时间的线程每 5ms 去更新一个时间变量，而每个方法执行前后只读取该变量来减少性能损耗。
+
+```java
+private static Runnable sUpdateDiffTimeRunnable = new Runnable() {
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                while (!isPauseUpdateTime && status > STATUS_STOPPED) {
+                    sCurrentDiffTime = SystemClock.uptimeMillis() - sDiffTime;
+                    SystemClock.sleep(Constants.TIME_UPDATE_CYCLE_MS);
+                }
+                synchronized (updateTimeLock) {
+                    updateTimeLock.wait();
+                }
+            }
+        } catch (Exception e) {
+            MatrixLog.e(TAG, "" + e.toString());
+        }
+    }
+};
+```
+
+## 统计 APP & 页面启动耗时
+
+包括 `Application` 执行耗时、首屏启动耗时、冷/热启动耗时、页面启动耗时，它们之间的关系如下：
+
+```java
+/**
+ * 
+ * firstMethod.i       LAUNCH_ACTIVITY   onWindowFocusChange   LAUNCH_ACTIVITY    onWindowFocusChange
+ * ^                         ^                   ^                     ^                  ^
+ * |                         |                   |                     |                  |
+ * |---------app---------|---|---firstActivity---|---------...---------|---careActivity---|
+ * |<--applicationCost-->|
+ * |<--------------firstScreenCost-------------->|
+ * |<---------------------------------------coldCost------------------------------------->|
+ * .                         |<-----warmCost---->|
+ *
+ */
+```
+
+### `Application` 执行耗时
+
+通过给 `Application.attachBaseContext` 插桩，也就是第一次执行 `AppMethodBeat.i` 的时候，可以拿到 `eggBrokenTime` 作为 APP 启动时间
+
+这里解释下为什么不在 `Application` 构造函数里插桩并作为 APP 启动时间，那是因为 APP 有冷启动/热启动的概念，冷启动下 fork app process 并构造 `Application` 实例，此时算出的启动时间是正确的；但如果是热启动，`Application` 实例并没有销毁也不会执行构造函数，而是直接走 `onCreate` 函数，此时在构造函数里插桩就无法捕获到正确的启动时间了
+
+```java
+public class AppMethodBeat {
+    public static void i(int methodId) {
+        // ... 第一次执行 AppMethodBeat.i 时
+        if (status == STATUS_DEFAULT) {
+            synchronized (statusLock) {
+                if (status == STATUS_DEFAULT) {
+                    realExecute();
+                    status = STATUS_READY;
+                }
+            }
+        }
+        // ...
+    }
+
+    private static void realExecute() {
+        // ...
+        ActivityThreadHacker.hackSysHandlerCallback();
+        /// ...
+    }        
+}
+
+public class ActivityThreadHacker {
+
+    private static long sApplicationCreateBeginTime = 0L;
+    public static long getEggBrokenTime() {
+        return ActivityThreadHacker.sApplicationCreateBeginTime;
+    }    
+
+    public static void hackSysHandlerCallback() {
+        sApplicationCreateBeginTime = SystemClock.uptimeMillis();   // 记录 Application 的创建时间
+        // ...
+    }    
+}
+```
+
+初始化 `Application` 后启动第一个 `Activity`/`Service`/`BroadcastReceiver` 的时刻作为 `Application` 初始化的完结时间（为啥没有 `ContentProvider` 呢？因为它是在 `onCreate` 之前启动的，see [LeakCanary 浅析](../../../../2021/04/12/leakcanary/)）
+
+上述三大组件的启动会通过主线程的消息队列在 `ActivityThread.mH` 里执行
+
+```java
+class H extends Handler {
+    public static final int CREATE_SERVICE          = 114;
+    public static final int RECEIVER                = 113;
+    public static final int RELAUNCH_ACTIVITY       = 160;
+    public static final int EXECUTE_TRANSACTION     = 159;
+
+    public void handleMessage(Message msg) {
+        if (DEBUG_MESSAGES) Slog.v(TAG, ">>> handling: " + codeToString(msg.what));
+        switch (msg.what) {
+            // ...
+            case CREATE_SERVICE:
+                if (Trace.isTagEnabled(Trace.TRACE_TAG_ACTIVITY_MANAGER)) {
+                    Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER,
+                            ("serviceCreate: " + String.valueOf(msg.obj)));
+                }
+                handleCreateService((CreateServiceData)msg.obj);
+                Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
+                break;
+            
+            case RECEIVER:
+                Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "broadcastReceiveComp");
+                handleReceiver((ReceiverData)msg.obj);
+                Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
+                break;
+
+            case RELAUNCH_ACTIVITY:
+                handleRelaunchActivityLocally((IBinder) msg.obj);
+                break;
+
+            case EXECUTE_TRANSACTION:
+                final ClientTransaction transaction = (ClientTransaction) msg.obj;
+                mTransactionExecutor.execute(transaction);
+                if (isSystem()) {
+                    // Client transactions inside system process are recycled on the client side
+                    // instead of ClientLifecycleManager to avoid being cleared before this
+                    // message is handled.
+                    transaction.recycle();
+                }
+                // TODO(lifecycler): Recycle locally scheduled transactions.
+                break;
+
+        }
+    }
+}
+// Activity 生命周期是通过 LaunchActivityItem/StartActivityItem/ResumeActivityItem/... 执行
+```
+
+所以 `TraceCanary` 选择在第一次执行 `AppMethodBeat.i` 时，替换 `ActivityThread.sCurrentActivityThread.mH.mCallback`，在 `Handler.Callback.handleMessage(msg)` 里监听第一次启动 `Activity`/`Service`/`BroadcastReceiver` 的时刻作为 `Application` 初始化的结束点
+
+```java
+// 第一次执行时
+public static void AppMethodBeat.i(int methodId) {
+    if (status <= STATUS_STOPPED) {
+        return;
+    }
+    if (methodId >= METHOD_ID_MAX) {
+        return;
+    }
+    if (status == STATUS_DEFAULT) {
+        synchronized (statusLock) {
+            if (status == STATUS_DEFAULT) {
+                realExecute();
+                status = STATUS_READY;
+            }
+        }
+    }
+    // ...
+}
+
+// 替换 Handler.Callback
+private static void AppMethodBeat.realExecute() {
+    // ...
+    ActivityThreadHacker.hackSysHandlerCallback();
+    LooperMonitor.register(looperMonitorListener);
+}
+public static void ActivityThreadHacker.hackSysHandlerCallback() {
+    try {
+        sApplicationCreateBeginTime = SystemClock.uptimeMillis();
+        sApplicationCreateBeginMethodIndex = AppMethodBeat.getInstance().maskIndex("ApplicationCreateBeginMethodIndex");
+        Class<?> forName = Class.forName("android.app.ActivityThread");
+        Field field = forName.getDeclaredField("sCurrentActivityThread");
+        field.setAccessible(true);
+        Object activityThreadValue = field.get(forName);
+        Field mH = forName.getDeclaredField("mH");
+        mH.setAccessible(true);
+        Object handler = mH.get(activityThreadValue);
+        Class<?> handlerClass = handler.getClass().getSuperclass();
+        if (null != handlerClass) {
+            Field callbackField = handlerClass.getDeclaredField("mCallback");
+            callbackField.setAccessible(true);
+            Handler.Callback originalCallback = (Handler.Callback) callbackField.get(handler);
+            HackCallback callback = new HackCallback(originalCallback);
+            callbackField.set(handler, callback);
+        }
+        MatrixLog.i(TAG, "hook system handler completed. start:%s SDK_INT:%s", sApplicationCreateBeginTime, Build.VERSION.SDK_INT);
+    } catch (Exception e) {
+        MatrixLog.e(TAG, "hook system handler err! %s", e.getCause().toString());
+    }
+}
+
+// 记录时间点
+public boolean HackCallback.handleMessage(Message msg) {
+    // ...
+    boolean isLaunchActivity = isLaunchActivity(msg);
+    if (hasPrint > 0) {
+        MatrixLog.i(TAG, "[handleMessage] msg.what:%s begin:%s isLaunchActivity:%s SDK_INT=%s", msg.what, SystemClock.uptimeMillis()isLaunchActivity, Build.VERSION.SDK_INT);
+        hasPrint--;
+    }
+    if (!isCreated) {
+        if (isLaunchActivity || msg.what == CREATE_SERVICE
+                || msg.what == RECEIVER) { // todo for provider
+            ActivityThreadHacker.sApplicationCreateEndTime = SystemClock.uptimeMillis();
+            ActivityThreadHacker.sApplicationCreateScene = msg.what;
+            isCreated = true;
+            sIsCreatedByLaunchActivity = isLaunchActivity;
+            MatrixLog.i(TAG, "application create end, sApplicationCreateScene:%d, isLaunchActivity:%s", msg.what, isLaunchActivity);
+            synchronized (listeners) {
+                for (IApplicationCreateListener listener : listeners) {
+                    listener.onApplicationCreateEnd();
+                }
+            }
+        }
+    }
+    return null != mOriginalCallback && mOriginalCallback.handleMessage(msg);
+}
+```
+
+### 页面打开耗时
 
 注册 `ActivityLifecycleCallbacks`，在 `onActivityCreated` 记录 `Activity` 的创建时间
 
@@ -567,47 +847,11 @@ AppMethodBeat.at(Activity activity, boolean isFocus) {
 }
 ```
 
-## 首屏启动耗时
+### 首屏打开耗时
 
-第一次执行 `AppMethodBeat.i` 时（应该是 `Application.attach`），将当前时间记录为 `Application` 创建时间（`ActivityThreadHacker.sApplicationCreateBeginTime`）
-
-首屏启动耗时（`firstScreenCost`） = 第一个页面接收到焦点的时间 - 创建 `Application` 的时间
+首屏启动耗时（`firstScreenCost`） = 第一个页面（splash activity）接收到焦点的时间 - `eggBrokenTime`
 
 ```java
-public class AppMethodBeat {
-    public static void i(int methodId) {
-        // ... 第一次执行 AppMethodBeat.i 时
-        if (status == STATUS_DEFAULT) {
-            synchronized (statusLock) {
-                if (status == STATUS_DEFAULT) {
-                    realExecute();
-                    status = STATUS_READY;
-                }
-            }
-        }
-        // ...
-    }
-
-    private static void realExecute() {
-        // ...
-        ActivityThreadHacker.hackSysHandlerCallback();
-        /// ...
-    }        
-}
-
-public class ActivityThreadHacker {
-
-    private static long sApplicationCreateBeginTime = 0L;
-    public static long getEggBrokenTime() {
-        return ActivityThreadHacker.sApplicationCreateBeginTime;
-    }    
-
-    public static void hackSysHandlerCallback() {
-        sApplicationCreateBeginTime = SystemClock.uptimeMillis();   // 记录 Application 的创建时间
-        // ...
-    }    
-}
-
 public class StartupTracer {    
     public void onActivityFocused(Activity activity) {
         // ... 记录首屏启动耗时
@@ -619,18 +863,81 @@ public class StartupTracer {
 }
 ```
 
-## 冷启动和热启动耗时
+### 冷启动和热启动耗时
 
-当打开一个 `Activity` 时，如果 app process 不存在则需要通过 `zygote` 进程 `fork` 出 app process，执行 `Application.onCreate` 后再启动 `Activity`，这叫做 **冷启动**；APP 退出后，系统在内存充足的情况下并不会立刻销毁 app process，重新打开 APP 虽然会走 `Application.onCreate` 再打开 `Activity`，但这个 `Application` 实例并没有销毁（实际上是 JVM 没有被销毁），这叫 **热启动**
+当打开一个 `Activity` 时，如果 app process 不存在则需要通过 `zygote` 进程 `fork` 出 app process，实例化并执行 `Application.onCreate` 后再启动 `Activity`，这叫做 **冷启动**；APP 退出后，系统在内存充足的情况下并不会立刻销毁 app process，重新打开 APP 虽然会走 `Application.onCreate` 再打开 `Activity`，但这个 `Application` 实例并没有销毁（实际上是 JVM 没有被销毁），这叫 **热启动**
 
-怎么判断是冷启动还是热启动呢？既然 JVM 没有销毁，那么类的静态成员变量就会一直存在于内存中，判断它有没初始化即可知道是冷启动还是热启动，实际上 `Matrix` 就是这么做的
+怎么判断是冷启动还是热启动呢？既然 JVM 没有销毁，那么类的静态成员变量作为 `GC ROOT` 就会一直存在于内存中，判断它有没初始化即可知道是冷启动还是热启动，实际上 `Matrix` 就是这么做的，它的 `GC ROOT PATH` 是：
 
 `Matrix.sInstance` -> `HashSet<Plugin> plugins` -> `TracePlugin` -> `StartupTracer` -> `coldCost`
 
-`StartupTracer.coldCost` 会在 `StartupTracer.onActivityFocused` 被初始化（> 0）
+`StartupTracer.coldCost` 会在 `StartupTracer.onActivityFocused` 被初始化（> 0），初始化时如果遇到 `StartupTracer.coldCost` == 0 则是冷启动；跟我想的不太一样的是，我认为冷启动耗时是从 `eggBrokenTime` 到第一个页面（splash activity）打开的时间，而 `TraceCanary` 计算的是到第二个页面（splash activity 之后的第一个页面）打开的时间
 
 ```java
+public void StartupTracer.onActivityFocused(Activity activity) {
+    // ... coldCost == 0 冷启动
+    if (isColdStartup()) {                                             
+        // ...
+        if (hasShowSplashActivity) {
+            coldCost = uptimeMillis() - ActivityThreadHacker.getEggBrokenTime();
+        } else {
+            if (splashActivities.contains(activityName)) {
+                hasShowSplashActivity = true;
+            } else if (splashActivities.isEmpty()) {            // process which is has activity but not main UI process
+                if (isCreatedByLaunchActivity) {
+                    coldCost = firstScreenCost;
+                } else {
+                    firstScreenCost = 0;
+                    coldCost = ActivityThreadHacker.getApplicationCost();
+                }
+            } else {
+                if (isCreatedByLaunchActivity) {
+                    coldCost = firstScreenCost;
+                } else {
+                    firstScreenCost = 0;
+                    coldCost = ActivityThreadHacker.getApplicationCost();
+                }
+            }
+        }   // ...
+}
 ```
+
+上面说过冷启动耗时是到第二个页面打开的时间，那如果在第一个页面打开时 `coldCost` > 0 说明 JVM 没有销毁，是热启动（`isWarmStartUp`），热启动耗时相当于第一个页面的打开耗时
+
+```java
+public class StartupTracer {
+
+    private long lastCreateActivity = 0L;   // 当前/上一个 Activity.onCreate 的时间
+
+    public void StartupTracer.onActivityCreated(Activity activity, Bundle savedInstanceState) {
+        MatrixLog.i(TAG, "activeActivityCount:%d, coldCost:%d", activeActivityCount, coldCost);
+        if (activeActivityCount == 0 && coldCost > 0) {
+            lastCreateActivity = uptimeMillis();
+            MatrixLog.i(TAG, "lastCreateActivity:%d, activity:%s", lastCreateActivity, activity.getClass().getName());
+            isWarmStartUp = true;
+        }
+        activeActivityCount++;
+        if (isShouldRecordCreateTime) {
+            createdTimeMap.put(activity.getClass().getName() + "@" + activity.hashCode(), uptimeMillis());
+        }
+    }
+
+    public void StartupTracer.onActivityFocused(Activity activity) {
+        // ...
+        } else if (isWarmStartUp()) {
+            isWarmStartUp = false;
+            long warmCost = uptimeMillis() - lastCreateActivity;
+            MatrixLog.i(TAG, "#WarmStartup# activity:%s, warmCost:%d, now:%d, lastCreateActivity:%d", activityName, warmCost, uptimeMillis(), lastCreateActivity);
+
+            if (warmCost > 0) {
+                analyse(0, 0, warmCost, true);
+            }
+        }
+    }
+}
+```
+
+
 
 ## 参考
 
