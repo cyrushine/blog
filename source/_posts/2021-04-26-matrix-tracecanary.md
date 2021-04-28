@@ -1,4 +1,265 @@
 
+## 捕获掉帧/卡顿
+
+### 什么是掉帧/卡顿
+
+> 什么是卡顿，很多人能马上联系到的是帧率 FPS (每秒显示帧数)。那么多低的 FPS 才是卡顿呢？又或者低 FPS 真的就是卡顿吗？（以下 FPS 默认指平均帧率）
+> 
+> 其实并非如此，举个例子，游戏玩家通常追求更流畅的游戏画面体验一般要达到 60FPS 以上，但我们平时看到的大部分电影或视频 FPS 其实不高，一般只有 25FPS ~ 30FPS，而实际上我们也没有觉得卡顿。 在人眼结构上看，当一组动作在 1 秒内有 12 次变化（即 12FPS），我们会认为这组动作是连贯的；而当大于 60FPS 时，人眼很难区分出来明显的变化，所以 60FPS 也一直作为业界衡量一个界面流畅程度的重要指标。一个稳定在 30FPS 的动画，我们不会认为是卡顿的，但一旦 FPS 很不稳定，人眼往往容易感知到。
+> 
+> FPS 低并不意味着卡顿发生，而卡顿发生 FPS 一定不高。 FPS 可以衡量一个界面的流程性，但往往不能很直观的衡量卡顿的发生，这里有另一个指标（掉帧程度）可以更直观地衡量卡顿。
+> 
+> 什么是掉帧（跳帧）？ 按照理想帧率 60FPS 这个指标，计算出平均每一帧的准备时间有 1000ms/60 = 16.6667ms，如果一帧的准备时间超出这个值，则认为发生掉帧，超出的时间越长，掉帧程度越严重。假设每帧准备时间约 32ms，每次只掉一帧，那么 1 秒内实际只刷新 30 帧，即平均帧率只有 30FPS，但这时往往不会觉得是卡顿。反而如果出现某次严重掉帧（>300ms），那么这一次的变化，通常很容易感知到。所以界面的掉帧程度，往往可以更直观的反映出卡顿。
+
+造成 **掉帧** 的直接原因通常是主线程承担了繁重的其他任务，从而挤压 ui 绘制任务，或者是 ui 绘制任务本身过于繁重，这些都会造成主线程不能在规定时间内完成 ui 绘制
+
+### 捕获任务（`Message`）耗时
+
+我们知道主线程是「生产者 - 消费者」模型，任务（`Message`）都在消息队列（`MessageQueue`）里排队等待执行，如果能够度量出每个任务的执行用时，然后与某个阈值进行比较，我们就能找出耗时任务做进一步的优化
+
+从下面的代码可以看到，任务执行前后都会有特定格式的日志输出，只要捕获这些日志，就能计算出任务的执行时间
+
+```java
+public static void Looper.loop() {
+    // ...
+    for (;;) {
+        // ...
+        final Printer logging = me.mLogging;
+        if (logging != null) {
+            logging.println(">>>>> Dispatching to " + msg.target + " " +
+                    msg.callback + ": " + msg.what);
+        }
+        // ...
+        msg.target.dispatchMessage(msg);
+        // ...
+        if (logging != null) {
+            logging.println("<<<<< Finished to " + msg.target + " " + msg.callback);
+        }
+        // ...
+    }
+}
+```
+
+`LooperMonitor` 通过替换 `Looper.mLogging`，从而捕获到 `>>>>> Dispatching to` 和 `<<<<< Finished to` 的日志输出，进而算出任务耗时
+
+```java
+public class LooperMonitor {
+    // 通过反射替换 Looper.mLogging
+    private synchronized void resetPrinter() {
+        Printer originPrinter = null;
+        try {
+            if (!isReflectLoggingError) {
+                originPrinter = ReflectUtils.get(looper.getClass(), "mLogging", looper);
+                if (originPrinter == printer && null != printer) {
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            isReflectLoggingError = true;
+            Log.e(TAG, "[resetPrinter] %s", e);
+        }
+        if (null != printer) {
+            MatrixLog.w(TAG, "maybe thread:%s printer[%s] was replace other[%s]!",
+                    looper.getThread().getName(), printer, originPrinter);
+        }
+        looper.setMessageLogging(printer = new LooperPrinter(originPrinter));
+        if (null != originPrinter) {
+            MatrixLog.i(TAG, "reset printer, originPrinter[%s] in %s", originPrinter, looper.getThread().getName());
+        }
+    }
+
+    // 捕获根据特定格式的日志输出
+    class LooperPrinter implements Printer {
+        public void println(String x) {
+            if (null != origin) {
+                origin.println(x);
+                if (origin == this) {
+                    throw new RuntimeException(TAG + " origin == this");
+                }
+            }
+            if (!isHasChecked) {
+                isValid = x.charAt(0) == '>' || x.charAt(0) == '<';
+                isHasChecked = true;
+                if (!isValid) {
+                    MatrixLog.e(TAG, "[println] Printer is inValid! x:%s", x);
+                }
+            }
+            if (isValid) {
+                dispatch(x.charAt(0) == '>', x);
+            }
+        }
+    }
+
+    // 分发 Dispatching to 和 Finished to 事件
+    private void dispatch(boolean isBegin, String log) {
+        for (LooperDispatchListener listener : listeners) {
+            if (listener.isValid()) {
+                if (isBegin) {
+                    if (!listener.isHasDispatchStart) {
+                        listener.onDispatchStart(log);
+                    }
+                } else {
+                    if (listener.isHasDispatchStart) {
+                        listener.onDispatchEnd(log);
+                    }
+                }
+            } else if (!isBegin && listener.isHasDispatchStart) {
+                listener.dispatchEnd();
+            }
+        }
+    }    
+}
+```
+
+为了防止其他代码也替换 `Looper.mLogging`，`LooperMonitor` 还在主线程空闲的时候进行检查
+
+```java
+public boolean LooperMonitor.queueIdle() {
+    if (SystemClock.uptimeMillis() - lastCheckPrinterTime >= CHECK_TIME) {
+        resetPrinter();
+        lastCheckPrinterTime = SystemClock.uptimeMillis();
+    }
+    return true;
+}
+```
+
+### 收集 ui 绘制耗时
+
+如果是 ui 相关代码写得不得当，造成 ui 任务耗时过大，也会引起掉帧，所以还需要进一步计算 ui 任务里各阶段的耗时
+
+参考 [Android 图形栈（一）vsync](../../../../2020/12/02/vsync/) 知道，当 `APP_VSYNC` 到达时会调用 `FrameDisplayEventReceiver.onVsync` -> `Choreographer.doFrame` -> `Choreographer.doCallbacks`，最终按 INPUT - ANIMATION - TRAVERSAL 的顺序执行 `Choreographer.mCallbackQueues` 里的 `Runnable`
+
+`UIThreadMonitor` 动态地往这三个 `CallbackRecord` 的头部插入 `Runnable`，从而计算出每个阶段开始时间和结束时间
+
+`Choreographer.doFrame` 是由 `FrameDisplayEventReceiver.onVsync` 放入主线程任务队列的 `Message`，任务执行前会由 `LooperMonitor` 捕获到，加上 `UIThreadMonitor` 捕获的 INPUT/ANIMATION/TRAVERSAL 事件，最终形成闭环：
+
+`dispatchStart` -> `doFrameBegin` -> `doQueueBegin(INPUT)` -> `doQueueEnd(INPUT)` -> `doQueueBegin(ANIMATION)` -> `doQueueEnd(ANIMATION)` -> `doQueueBegin(TRAVERSAL)` -> `doQueueEnd(TRAVERSAL)` -> `doFrameEnd` -> `dispatchEnd`
+
+```java
+public class UIThreadMonitor {
+    // 最开始先在 INPUT 头部插入钩子
+    public synchronized void UIThreadMonitor.onStart() {
+        // ...
+        queueStatus = new int[CALLBACK_LAST + 1];
+        queueCost = new long[CALLBACK_LAST + 1];
+        addFrameCallback(CALLBACK_INPUT, this, true);
+    }
+
+    // 依次往 ANIMATION/TRAVERSAL 插入钩子
+    public void run() {
+        final long start = System.nanoTime();
+        try {
+            doFrameBegin(token);
+            doQueueBegin(CALLBACK_INPUT);
+            addFrameCallback(CALLBACK_ANIMATION, new Runnable() {
+                @Override
+                public void run() {
+                    doQueueEnd(CALLBACK_INPUT);
+                    doQueueBegin(CALLBACK_ANIMATION);
+                }
+            }, true);
+            addFrameCallback(CALLBACK_TRAVERSAL, new Runnable() {
+                @Override
+                public void run() {
+                    doQueueEnd(CALLBACK_ANIMATION);
+                    doQueueBegin(CALLBACK_TRAVERSAL);
+                }
+            }, true);
+        } finally {
+            if (config.isDevEnv()) {
+                MatrixLog.d(TAG, "[UIThreadMonitor#run] inner cost:%sns", System.nanoTime() - start);
+            }
+        }
+    }
+
+    // 主线程消息队列的任务结束钩子，也作为 TRAVERSAL 的结束标志
+    private void dispatchEnd() {
+        long traceBegin = 0;
+        if (config.isDevEnv()) {
+            traceBegin = System.nanoTime();
+        }
+        long startNs = token;
+        long intendedFrameTimeNs = startNs;
+        if (isVsyncFrame) {
+            doFrameEnd(token);
+            intendedFrameTimeNs = getIntendedFrameTimeNs(startNs);
+        }
+        // ...
+    }
+
+    private void doFrameEnd(long token) {
+        doQueueEnd(CALLBACK_TRAVERSAL);
+        for (int i : queueStatus) {
+            if (i != DO_QUEUE_END) {
+                queueCost[i] = DO_QUEUE_END_ERROR;
+                if (config.isDevEnv) {
+                    throw new RuntimeException(String.format("UIThreadMonitor happens type[%s] != DO_QUEUE_END", i));
+                }
+            }
+        }
+        queueStatus = new int[CALLBACK_LAST + 1];
+        addFrameCallback(CALLBACK_INPUT, this, true);
+    }     
+}
+```
+
+### `LooperObserver`
+
+结合上面捕获到的信息，提供一个「观察者」
+
+```java
+public abstract class LooperObserver {
+
+    private boolean isDispatchBegin = false;
+
+    /**
+     * 主线程任务开始
+     * @param beginNs       任务开始的系统时间（System.nanoTime）
+     * @param cpuBeginNs    任务开始的线程时间（SystemClock.currentThreadTimeMillis）
+     * @param token         等于 beginNs
+     */
+    @CallSuper
+    public void dispatchBegin(long beginNs, long cpuBeginNs, long token) {
+        isDispatchBegin = true;
+    }
+
+    /**
+     * 绘制一帧的耗时统计
+     * @param focusedActivity       获得焦点的 Activity
+     * @param startNs               主线程任务的开始时间
+     * @param endNs                 主线程任务的结束时间
+     * @param isVsyncFrame          此任务是否 ui 绘制任务（doFrame）
+     * @param intendedFrameTimeNs   收到 APP_VSYNC 的时间（FrameDisplayEventReceiver.onVsync）
+     * @param inputCostNs           处理 INPUT 耗时
+     * @param animationCostNs       处理 ANIMATION 耗时
+     * @param traversalCostNs       处理 TRAVERSAL 耗时
+     */
+    public void doFrame(String focusedActivity, long startNs, long endNs, boolean isVsyncFrame, long intendedFrameTimeNs, long inputCostNs, long animationCostNs, long traversalCostNs) {
+
+    }
+
+    /**
+     * 主线程任务结束
+     * @param beginNs       任务开始的系统时间（System.nanoTime）
+     * @param cpuBeginMs    任务开始的线程时间（SystemClock.currentThreadTimeMillis）
+     * @param endNs         任务结束的系统时间（System.nanoTime）
+     * @param cpuEndMs      任务结束的线程时间（SystemClock.currentThreadTimeMillis）
+     * @param token         等于 beginNs
+     * @param isVsyncFrame  此任务是否 ui 绘制任务（doFrame）
+     */
+    @CallSuper
+    public void dispatchEnd(long beginNs, long cpuBeginMs, long endNs, long cpuEndMs, long token, boolean isVsyncFrame) {
+        isDispatchBegin = false;
+    }
+
+    public boolean isDispatchBegin() {
+        return isDispatchBegin;
+    }
+}
+```
+
+
+
 ## 无埋点插桩收集函数耗时
 
 为了在捕捉到卡顿堆栈后，获取各个函数的执行耗时，需要对所有函数进行无埋点插桩，在函数执行前调用 `MethodBeat.i`，在函数执行后调用 `MethodBeat.o`
