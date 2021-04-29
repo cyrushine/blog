@@ -301,8 +301,9 @@ public class FrameDecorator {
             lastFrames[0] = 0;
         }
 
-        // 为什么不是用 endNs ？因为 doFrame 执行完还要等 surfacefling 在下一帧的时间点进行合成和显示
-        // 而不是 doFrame 后立即显示，所以要用 frameIntervalMs 的倍数
+        // 为什么不是用 endNs ？
+        // 1，因为 doFrame 执行完还要等 surfacefling 在下一帧的时间点进行合成和显示，而不是 doFrame 后立即显示，所以要用 frameIntervalMs 的倍数
+        // 2，其次考虑用户无操作/页面静止的情况，主线程的任务队列为空，没有刷新页面，如果用设备时间 endNs 会导致计算出极低的错误 FPS
         sumFrameCost += (dropFrame + 1) * frameIntervalMs;
         sumFrames += 1;
         float duration = sumFrameCost - lastCost[0];            // 距离上一次刷新 FPS 的时间间隔
