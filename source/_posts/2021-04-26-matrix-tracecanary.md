@@ -11,13 +11,13 @@
 > 
 > 什么是掉帧（跳帧）？ 按照理想帧率 60FPS 这个指标，计算出平均每一帧的准备时间有 1000ms/60 = 16.6667ms，如果一帧的准备时间超出这个值，则认为发生掉帧，超出的时间越长，掉帧程度越严重。假设每帧准备时间约 32ms，每次只掉一帧，那么 1 秒内实际只刷新 30 帧，即平均帧率只有 30FPS，但这时往往不会觉得是卡顿。反而如果出现某次严重掉帧（>300ms），那么这一次的变化，通常很容易感知到。所以界面的掉帧程度，往往可以更直观的反映出卡顿。
 
-造成 **掉帧** 的直接原因通常是主线程承担了繁重的其他任务，从而挤压 ui 绘制任务，或者是 ui 绘制任务本身过于繁重，这些都会造成主线程不能在规定时间内完成 ui 绘制
+造成 **掉帧** 的直接原因通常是 `doFrame` 过于繁重执行超时，或者其他任务挤压了 `doFrame` 的执行时间，这些都会造成主线程不能在 **帧间隔时间** 内完成 ui 绘制
 
-### 捕获任务（`Message`）耗时
+### 计算 `Message` 耗时
 
-我们知道主线程是「生产者 - 消费者」模型，任务（`Message`）都在消息队列（`MessageQueue`）里排队等待执行，如果能够度量出每个任务的执行用时，然后与某个阈值进行比较，我们就能找出耗时任务做进一步的优化
+我们知道主线程是「生产者 - 消费者」模型，任务（`Message`）都在消息队列（`MessageQueue`）里排队等待执行，如果能够度量出每个 `Message` 的耗时，然后与某个阈值进行比较，我们就能找出耗时任务做进一步的优化
 
-从下面的代码可以看到，任务执行前后都会有特定格式的日志输出，只要捕获这些日志，就能计算出任务的执行时间
+从下面的代码可以看到，`Message` 执行前后都会有特定格式的日志输出，只要捕获这些日志，就能计算出每个 `Message` 的耗时
 
 ```java
 public static void Looper.loop() {
@@ -40,7 +40,7 @@ public static void Looper.loop() {
 }
 ```
 
-`LooperMonitor` 通过替换 `Looper.mLogging`，从而捕获到 `>>>>> Dispatching to` 和 `<<<<< Finished to` 的日志输出，进而算出任务耗时
+`LooperMonitor` 通过替换 `Looper.mLogging`，从而捕获到 `>>>>> Dispatching to` 和 `<<<<< Finished to` 的日志输出进而算出 `Message` 耗时，并提供 `dispatchStart` 和 `dispatchEnd` 两个钩子
 
 ```java
 public class LooperMonitor {
@@ -123,17 +123,15 @@ public boolean LooperMonitor.queueIdle() {
 }
 ```
 
-### 收集 ui 绘制耗时
+### 计算 `doFrame` 耗时
 
-如果是 ui 相关代码写得不得当，造成 ui 任务耗时过大，也会引起掉帧，所以还需要进一步计算 ui 任务里各阶段的耗时
+上面的方法可以统计主线程里每个 `Message` 的耗时，但并不是每个 `Message` 都在做 ui 绘制（`doFrame`），比如违规放入耗时的 IO 操作；为了更精确地捕获耗时的 `doFrame`，以及进行 FPS 统计，还需做更多的工作
 
-参考 [Android 图形栈（一）vsync](../../../../2020/12/02/vsync/) 知道，当 `APP_VSYNC` 到达时会调用 `FrameDisplayEventReceiver.onVsync` -> `Choreographer.doFrame` -> `Choreographer.doCallbacks`，最终按 INPUT - ANIMATION - TRAVERSAL 的顺序执行 `Choreographer.mCallbackQueues` 里的 `Runnable`
+参考 [Android 图形栈（一）vsync](../../../../2020/12/02/vsync/) 我们知道，当 `APP_VSYNC` 到达时会走 `FrameDisplayEventReceiver.onVsync` -> `Choreographer.doFrame` -> `Choreographer.doCallbacks`，最后按 INPUT - ANIMATION - TRAVERSAL 的顺序执行 `Choreographer.mCallbackQueues` 里的 `Runnable`
 
-`UIThreadMonitor` 动态地往这三个 `CallbackRecord` 的头部插入 `Runnable`，从而计算出每个阶段开始时间和结束时间
+动态地往这三个队列的头部插入钩子，从而计算出每个阶段开始时间和结束时间，加上捕获 `Message` 的方法（`Choreographer.doFrame` 是由 `FrameDisplayEventReceiver.onVsync` 放入主线程任务队列的 `Message`），最终形成完整的闭环：
 
-`Choreographer.doFrame` 是由 `FrameDisplayEventReceiver.onVsync` 放入主线程任务队列的 `Message`，任务执行前会由 `LooperMonitor` 捕获到，加上 `UIThreadMonitor` 捕获的 INPUT/ANIMATION/TRAVERSAL 事件，最终形成闭环：
-
-`dispatchStart` -> `doFrameBegin` -> `doQueueBegin(INPUT)` -> `doQueueEnd(INPUT)` -> `doQueueBegin(ANIMATION)` -> `doQueueEnd(ANIMATION)` -> `doQueueBegin(TRAVERSAL)` -> `doQueueEnd(TRAVERSAL)` -> `doFrameEnd` -> `dispatchEnd`
+`dispatchBegin` -> `doFrameBegin` -> `doQueueBegin(INPUT)` -> `doQueueEnd(INPUT)` -> `doQueueBegin(ANIMATION)` -> `doQueueEnd(ANIMATION)` -> `doQueueBegin(TRAVERSAL)` -> `doQueueEnd(TRAVERSAL)` -> `doFrameEnd` -> `dispatchEnd`
 
 ```java
 public class UIThreadMonitor {
@@ -174,31 +172,20 @@ public class UIThreadMonitor {
 
     // 主线程消息队列的任务结束钩子，也作为 TRAVERSAL 的结束标志
     private void dispatchEnd() {
-        long traceBegin = 0;
-        if (config.isDevEnv()) {
-            traceBegin = System.nanoTime();
-        }
+        // ...
         long startNs = token;
         long intendedFrameTimeNs = startNs;
         if (isVsyncFrame) {
             doFrameEnd(token);
-            intendedFrameTimeNs = getIntendedFrameTimeNs(startNs);
+            intendedFrameTimeNs = getIntendedFrameTimeNs(startNs);  // FrameDisplayEventReceiver.mTimestampNanos
         }
         // ...
     }
 
     private void doFrameEnd(long token) {
         doQueueEnd(CALLBACK_TRAVERSAL);
-        for (int i : queueStatus) {
-            if (i != DO_QUEUE_END) {
-                queueCost[i] = DO_QUEUE_END_ERROR;
-                if (config.isDevEnv) {
-                    throw new RuntimeException(String.format("UIThreadMonitor happens type[%s] != DO_QUEUE_END", i));
-                }
-            }
-        }
-        queueStatus = new int[CALLBACK_LAST + 1];
-        addFrameCallback(CALLBACK_INPUT, this, true);
+        // ...
+        addFrameCallback(CALLBACK_INPUT, this, true);   // 继续放入下一轮 doFrame 的钩子
     }     
 }
 ```
@@ -213,9 +200,9 @@ public abstract class LooperObserver {
     private boolean isDispatchBegin = false;
 
     /**
-     * 主线程任务开始
-     * @param beginNs       任务开始的系统时间（System.nanoTime）
-     * @param cpuBeginNs    任务开始的线程时间（SystemClock.currentThreadTimeMillis）
+     * Message 开始执行
+     * @param beginNs       开始时间（System.nanoTime）
+     * @param cpuBeginNs    线程的开始时间（SystemClock.currentThreadTimeMillis）
      * @param token         等于 beginNs
      */
     @CallSuper
@@ -224,26 +211,26 @@ public abstract class LooperObserver {
     }
 
     /**
-     * 绘制一帧的耗时统计
-     * @param focusedActivity       获得焦点的 Activity
-     * @param startNs               主线程任务的开始时间
-     * @param endNs                 主线程任务的结束时间
-     * @param isVsyncFrame          此任务是否 ui 绘制任务（doFrame）
-     * @param intendedFrameTimeNs   收到 APP_VSYNC 的时间（FrameDisplayEventReceiver.onVsync）
-     * @param inputCostNs           处理 INPUT 耗时
-     * @param animationCostNs       处理 ANIMATION 耗时
-     * @param traversalCostNs       处理 TRAVERSAL 耗时
+     * Message 耗时统计
+     * @param focusedActivity       当前页面（Activity）
+     * @param startNs               Message 的开始时间（等于 beginNs）
+     * @param endNs                 Message 的结束时间（等于 endNs）
+     * @param isVsyncFrame          是否 ui 绘制任务（doFrame）
+     * @param intendedFrameTimeNs   收到 APP_VSYNC 信号的时间（FrameDisplayEventReceiver.onVsync）
+     * @param inputCostNs           doFrame INPUT 阶段耗时
+     * @param animationCostNs       doFrame ANIMATION 阶段耗时
+     * @param traversalCostNs       doFrame TRAVERSAL 阶段耗时
      */
     public void doFrame(String focusedActivity, long startNs, long endNs, boolean isVsyncFrame, long intendedFrameTimeNs, long inputCostNs, long animationCostNs, long traversalCostNs) {
 
     }
 
     /**
-     * 主线程任务结束
-     * @param beginNs       任务开始的系统时间（System.nanoTime）
-     * @param cpuBeginMs    任务开始的线程时间（SystemClock.currentThreadTimeMillis）
-     * @param endNs         任务结束的系统时间（System.nanoTime）
-     * @param cpuEndMs      任务结束的线程时间（SystemClock.currentThreadTimeMillis）
+     * Message 结束执行
+     * @param beginNs       开始时间
+     * @param cpuBeginMs    线程的开始时间
+     * @param endNs         结束时间
+     * @param cpuEndMs      结束的线程时间
      * @param token         等于 beginNs
      * @param isVsyncFrame  此任务是否 ui 绘制任务（doFrame）
      */
@@ -258,7 +245,109 @@ public abstract class LooperObserver {
 }
 ```
 
+### 计算 FPS
 
+> 我们将掉帧数划分出几个区间进行定级，掉帧数小于 3 帧的情况属于最佳，依次类推，见下表：
+> 
+> | Best  | Normal | Middle | High    | Frozen |
+> |-------|--------|--------|---------|--------|
+> | [0:3) | [3:9)  | [9:24) | [24:42) | [42:∞) |
+> 
+> 相比单看平均帧率，掉帧程度的分布可以明显的看出，界面卡顿（平均帧率低）的原因是因为连续轻微的掉帧，还是某次严重掉帧造成的。再通过 `Activity` 区分不同场景，计算每个界面在有效绘制的时间片内，掉帧程度的分布情况及平均帧率，从而来评估出一个界面的整体流畅程度。
+
+也就是说，一次掉帧可能掉了一帧、两帧或者更多帧（**掉帧数**），这里根据上表把一次掉帧划分为 `Best/Normal/Middle/High/Frozen` 五个级别，后续评价掉帧时就不再关注掉帧数而是 **掉帧次数** 及其严重级别
+
+下图绿色的 `62.00 FPS` 指的是过去 200ms 内的平均帧率
+
+灰色的 `sum: 3.0` 是 **总掉帧次数**，下面的彩虹从左到右分别代表 `Normal/Middle/High/Frozen` 这四个级别的掉帧占总掉帧的比例，往下是当前页面的掉帧数和掉帧比例
+
+最底下的图表是过去 10s 内平均帧率（200ms 时间段）的横向柱状图，每 5s 就会有 25 条记录，50 FPS 差不多是 `Normal` 的帧率下限，30 FPS 差不多是 `Middle` 的帧率下限
+
+![fps_board](../../../../image/2021-04-26-matrix-tracecanary/fps_board.jpg)
+
+```java
+// 每帧的时间间隔，默认取 16ms（60 FPS）
+public class UIThreadMonitor {
+    private long frameIntervalNanos = 16666666;
+
+    public void init(TraceConfig config) {
+        frameIntervalNanos = ReflectUtils.reflectObject(choreographer, "mFrameIntervalNanos", Constants.DEFAULT_FRAME_DURATION);
+        // ...
+    }
+}
+
+public class FrameTracer {
+    private final long frameIntervalNs;     // UIThreadMonitor.getMonitor().getFrameIntervalNanos()
+
+    private void notifyListener(final String focusedActivity, final long startNs, final long endNs, final boolean isVsyncFrame,
+                                final long intendedFrameTimeNs, final long inputCostNs, final long animationCostNs, final long traversalCostNs) {
+        long traceBegin = System.currentTimeMillis();
+        try {
+            final long jiter = endNs - intendedFrameTimeNs;         // 从收到 vsync 到完成 doFrame 的时间，也就是实际渲染一帧的耗时
+            final int dropFrame = (int) (jiter / frameIntervalNs);  // 计算出渲染这一帧对比理论 FPS 有没掉帧，掉了多少帧
+            // ...
+        }
+    }    
+}
+
+public class FrameDecorator {
+    public void doFrameAsync(String focusedActivity, long startNs, long endNs, int dropFrame, boolean isVsyncFrame, long intendedFrameTimeNs, long inputCostNs, long animationCostNs, long traversalCostNs) {
+        super.doFrameAsync(focusedActivity, startNs, endNs, dropFrame, isVsyncFrame, intendedFrameTimeNs, inputCostNs, animationCostNs, traversalCostNs);
+
+        if (!Objects.equals(focusedActivity, lastVisibleScene)) {        // 切换页面时，重置页面的统计数据
+            dropLevel = new int[FrameTracer.DropStatus.values().length];
+            lastVisibleScene = focusedActivity;
+            lastCost[0] = 0;
+            lastFrames[0] = 0;
+        }
+
+        // 为什么不是用 endNs ？因为 doFrame 执行完还要等 surfacefling 在下一帧的时间点进行合成和显示
+        // 而不是 doFrame 后立即显示，所以要用 frameIntervalMs 的倍数
+        sumFrameCost += (dropFrame + 1) * frameIntervalMs;
+        sumFrames += 1;
+        float duration = sumFrameCost - lastCost[0];            // 距离上一次刷新 FPS 的时间间隔
+
+        if (dropFrame >= Constants.DEFAULT_DROPPED_FROZEN) {    // 根据掉帧数，给发生的掉帧事故分级别统计
+            dropLevel[FrameTracer.DropStatus.DROPPED_FROZEN.index]++;
+            sumDropLevel[FrameTracer.DropStatus.DROPPED_FROZEN.index]++;
+            belongColor = frozenColor;
+        } else if (dropFrame >= Constants.DEFAULT_DROPPED_HIGH) {
+            dropLevel[FrameTracer.DropStatus.DROPPED_HIGH.index]++;
+            sumDropLevel[FrameTracer.DropStatus.DROPPED_HIGH.index]++;
+            if (belongColor != frozenColor) {
+                belongColor = highColor;
+            }
+        } // ...
+
+
+        long collectFrame = sumFrames - lastFrames[0];                              // 200ms 内刷新了几帧
+        if (duration >= 200) {                                                      // 每隔 200ms 刷新一次 FPS
+            final float fps = Math.min(maxFps, 1000.f * collectFrame / duration);   // 统计过去 200ms 的 FPS
+            updateView(view, fps, belongColor, dropLevel[FrameTracer.DropStatus.DROPPED_NORMAL.index], dropLevel[FrameTracer.DropStatus.DROPPED_MIDDLE.index] ...);
+            lastCost[0] = sumFrameCost;
+            lastFrames[0] = sumFrames;
+            // ...
+        }
+    }    
+}
+```
+
+### 统计耗时 `Message`
+
+`TraceCanary` 把耗时超过 700ms 的 `Message` 作为 `Evil Method` 上报
+
+```java
+public class EvilMethodTracer {
+    public void dispatchEnd(long beginNs, long cpuBeginMs, long endNs, long cpuEndMs, long token, boolean isVsyncFrame) {
+        long dispatchCost = (endNs - beginNs) / Constants.TIME_MILLIS_TO_NANO;
+        try {
+            if (dispatchCost >= evilThresholdMs) {
+                // ...
+            }
+        }
+    }    
+}
+```
 
 ## 无埋点插桩收集函数耗时
 
@@ -279,7 +368,7 @@ public abstract class LooperObserver {
 > 
 > 归纳起来，编译期所做的工作如下图：
 > 
-> ![transform class](https://github.com/Tencent/matrix/wiki/images/trace/build.png)
+> ![transform class](../../../../image/2021-04-26-matrix-tracecanary/build.png)
 
 ### Gradle Transform
 
@@ -750,9 +839,9 @@ private class TraceMethodAdapter extends AdviceAdapter {
 
 > 编译期已经对全局的函数进行插桩，在运行期间每个函数的执行前后都会调用 MethodBeat.i/o 的方法，如果是在主线程中执行，则在函数的执行前后获取当前距离 MethodBeat 模块初始化的时间 offset（为了压缩数据，存进一个long类型变量中），并将当前执行的是 MethodBeat i或者o、mehtod id 及时间 offset，存放到一个 long 类型变量中，记录到一个预先初始化好的数组 long[] 中 index 的位置（预先分配记录数据的 buffer 长度为 100w，内存占用约 7.6M）。
 > 
-> ![long buffer](https://github.com/Tencent/matrix/wiki/images/trace/run_store.jpg)
+> ![long buffer](../../../../image/2021-04-26-matrix-tracecanary/run_store.jpg)
 >
-> ![summary func cast](https://github.com/Tencent/matrix/wiki/images/trace/stack.jpg)
+> ![summary func cast](../../../../image/2021-04-26-matrix-tracecanary/stack.jpg)
 
 ```java
 // 记录函数的开始时间
@@ -852,7 +941,7 @@ private static Runnable sUpdateDiffTimeRunnable = new Runnable() {
 
 ### `Application` 执行耗时
 
-通过给 `Application.attachBaseContext` 插桩，也就是第一次执行 `AppMethodBeat.i` 的时候，可以拿到 `eggBrokenTime` 作为 APP 启动时间
+有了上面的插桩，通过给 `Application.attachBaseContext` 插桩，也就是第一次执行 `AppMethodBeat.i` 的时候，可以拿到 `eggBrokenTime` 作为 APP 启动时间
 
 这里解释下为什么不在 `Application` 构造函数里插桩并作为 APP 启动时间，那是因为 APP 有冷启动/热启动的概念，冷启动下 fork app process 并构造 `Application` 实例，此时算出的启动时间是正确的；但如果是热启动，`Application` 实例并没有销毁也不会执行构造函数，而是直接走 `onCreate` 函数，此时在构造函数里插桩就无法捕获到正确的启动时间了
 
