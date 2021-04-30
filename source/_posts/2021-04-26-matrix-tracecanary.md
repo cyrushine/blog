@@ -1,3 +1,9 @@
+---
+title: Matrix - TraceCanary 浅析
+date: 2021-04-26 12:00:00 +0800
+categories: [android, APM]
+tags: [APM, 性能优化]
+---
 
 ## 捕获掉帧/卡顿
 
@@ -354,10 +360,6 @@ public class EvilMethodTracer {
 
 为了在捕捉到卡顿堆栈后，获取各个函数的执行耗时，需要对所有函数进行无埋点插桩，在函数执行前调用 `MethodBeat.i`，在函数执行后调用 `MethodBeat.o`
 
-> 实现细节
-> 
-> 编译期：
-> 
 > 通过代理编译期间的任务 `transformClassesWithDexTask`，将全局 `class` 文件作为输入，利用 `ASM` 工具，高效地对所有 `class` 文件进行扫描及插桩
 > 
 > 插桩过程有几个关键点：
@@ -919,6 +921,155 @@ private static Runnable sUpdateDiffTimeRunnable = new Runnable() {
         }
     }
 };
+```
+
+## 上报耗时 `Message`
+
+上面说过可以用一个 `long` 表示函数开始/结束的相对时间戳，然后存储在一个 100M 大小的数组里，插入索引会从 0 不断增长，到达 100M 后重置为 0
+
+遇到耗时 `Message` 时，需要裁剪出有效的函数执行时间记录，所以在处理 `Message` 开始前先把索引记下来 `start`，处理完后从 `start` 到当前索引 `end` 之间就是这个 `Message` 的调用栈耗时记录
+
+要注意的是索引到尾部后会重置为 0，所以要区分 `start` 和 `end` 大小关系；当 `start < end` 取 `[start, end]`，当 `start > end` 取 `[start,] + [0, end]`
+
+```java
+public class EvilMethodTracer {
+    @Override
+    public void dispatchBegin(long beginNs, long cpuBeginMs, long token) {
+        super.dispatchBegin(beginNs, cpuBeginMs, token);
+        indexRecord = AppMethodBeat.getInstance().maskIndex("EvilMethodTracer#dispatchBegin");  // 把当前索引记下来
+    }
+
+    @Override
+    public void dispatchEnd(long beginNs, long cpuBeginMs, long endNs, long cpuEndMs, long token, boolean isVsyncFrame) {
+        super.dispatchEnd(beginNs, cpuBeginMs, endNs, cpuEndMs, token, isVsyncFrame);
+        long dispatchCost = (endNs - beginNs) / Constants.TIME_MILLIS_TO_NANO;
+        try {
+            if (dispatchCost >= evilThresholdMs) {
+                long[] data = AppMethodBeat.getInstance().copyData(indexRecord);    // 裁剪出从开始索引到当前索引间的数据
+                // ...
+            }
+        } ...
+    }    
+}
+
+// 裁剪函数执行耗时，注意区分 start < end 和 start > end 两种情况
+public class AppMethodBeat {
+    public long[] copyData(IndexRecord startRecord) {
+        return copyData(startRecord, new IndexRecord(sIndex - 1));
+    }
+
+    private long[] copyData(IndexRecord startRecord, IndexRecord endRecord) {
+        // ...
+        long[] data = new long[0];
+        int length;
+        int start = Math.max(0, startRecord.index);
+        int end = Math.max(0, endRecord.index);
+        if (end > start) {
+            length = end - start + 1;
+            data = new long[length];
+            System.arraycopy(sBuffer, start, data, 0, length);
+        } else if (end < start) {
+            length = 1 + end + (sBuffer.length - start);
+            data = new long[length];
+            System.arraycopy(sBuffer, start, data, 0, sBuffer.length - start);
+            System.arraycopy(sBuffer, 0, data, sBuffer.length - start, end + 1);
+        }
+        // ...
+    }    
+}
+```
+
+## 上报 ANR
+
+在 [阅读源码系列：ANR 是怎么产生的](../../../../2020/10/20/anr/) 说过，ANR 是因为没有及时消费 `MotionEvent`，超过 5s 后由 AMS 弹出的对话框
+
+弹出 ANR 对话框的 `Runnable` 是在分发 `MotionEvent` 时放下的一个延时炸弹（`Handler.postDelayed`），如果 `MotionEvent` 在 5s 内被消费则炸弹被移除（`Handler.removeCallbacks`）
+
+我们在 `Message` 执行前有钩子函数 `dispatchBegin`，那也可以学习 ANR 放入报告函数（注意是放在子线程的消息队列里，不然在主线程里还没执行就被 ANR 对话框杀掉了），延时 5s，然后在 `dispatchEnd` 里移除，如果主线程的 `Message` 超过 5s 未执行完，那极有可能触发 ANR，于是收集调用堆栈及耗时信息上报给服务器
+
+```java
+public class AnrTracer {
+    @Override
+    public void dispatchBegin(long beginNs, long cpuBeginMs, long token) {
+        super.dispatchBegin(beginNs, cpuBeginMs, token);
+
+        anrTask.beginRecord = AppMethodBeat.getInstance().maskIndex("AnrTracer#dispatchBegin");     // 记下调用堆栈的索引
+        anrTask.token = token;
+
+        if (traceConfig.isDevEnv()) {
+            MatrixLog.v(TAG, "* [dispatchBegin] token:%s index:%s", token, anrTask.beginRecord.index);
+        }
+        long cost = (System.nanoTime() - token) / Constants.TIME_MILLIS_TO_NANO;
+        anrHandler.postDelayed(anrTask, Constants.DEFAULT_ANR - cost);                              // 在子线程埋下延时 5s 的“炸弹”
+        lagHandler.postDelayed(lagTask, Constants.DEFAULT_NORMAL_LAG - cost);
+    }
+
+    @Override
+    public void dispatchEnd(long beginNs, long cpuBeginMs, long endNs, long cpuEndMs, long token, boolean isBelongFrame) {
+        super.dispatchEnd(beginNs, cpuBeginMs, endNs, cpuEndMs, token, isBelongFrame);
+        // ... 及时移除“炸弹”
+        if (null != anrTask) {
+            anrTask.getBeginRecord().release();
+            anrHandler.removeCallbacks(anrTask);
+        }
+        if (null != lagTask) {
+            lagHandler.removeCallbacks(lagTask);
+        }
+    }    
+}
+
+// 收集调用栈帧及其耗时、INPUUT/ANIMATION/TRAVERSAL 耗时、线程及进程信息等
+class AnrHandleTask implements Runnable {
+    @Override
+    public void run() {
+        long curTime = SystemClock.uptimeMillis();
+        boolean isForeground = isForeground();
+        // process
+        int[] processStat = Utils.getProcessPriority(Process.myPid());
+        long[] data = AppMethodBeat.getInstance().copyData(beginRecord);
+        beginRecord.release();
+        String scene = AppMethodBeat.getVisibleScene();
+        // memory
+        long[] memoryInfo = dumpMemory();
+        // Thread state
+        Thread.State status = Looper.getMainLooper().getThread().getState();
+        StackTraceElement[] stackTrace = Looper.getMainLooper().getThread().getStackTrace();
+        String dumpStack = Utils.getStack(stackTrace, "|*\t\t", 12);
+        // frame
+        UIThreadMonitor monitor = UIThreadMonitor.getMonitor();
+        long inputCost = monitor.getQueueCost(UIThreadMonitor.CALLBACK_INPUT, token);
+        long animationCost = monitor.getQueueCost(UIThreadMonitor.CALLBACK_ANIMATION, token);
+        long traversalCost = monitor.getQueueCost(UIThreadMonitor.CALLBACK_TRAVERSAL, token);
+        // trace
+        LinkedList<MethodItem> stack = new LinkedList();
+        if (data.length > 0) {
+            TraceDataUtils.structuredDataToStack(data, stack, true, curTime);
+            TraceDataUtils.trimStack(stack, Constants.TARGET_EVIL_METHOD_STACK, new TraceDataUtils.IStructuredDataFilter() {
+                @Override
+                public boolean isFilter(long during, int filterCount) {
+                    return during < filterCount * Constants.TIME_UPDATE_CYCLE_MS;
+                }
+                @Override
+                public int getFilterMaxCount() {
+                    return Constants.FILTER_STACK_MAX_COUNT;
+                }
+                @Override
+                public void fallback(List<MethodItem> stack, int size) {
+                    MatrixLog.w(TAG, "[fallback] size:%s targetSize:%s stack:%s", size, Constants.TARGET_EVIL_METHOD_STACK, stack);
+                    Iterator iterator = stack.listIterator(Math.min(size, Constants.TARGET_EVIL_METHOD_STACK));
+                    while (iterator.hasNext()) {
+                        iterator.next();
+                        iterator.remove();
+                    }
+                }
+            });
+        }
+        StringBuilder reportBuilder = new StringBuilder();
+        StringBuilder logcatBuilder = new StringBuilder();
+        long stackCost = Math.max(Constants.DEFAULT_ANR, TraceDataUtils.stackToString(stack, reportBuilder, logcatBuilder));
+        // ...
+    }
+}
 ```
 
 ## 统计 APP & 页面启动耗时
