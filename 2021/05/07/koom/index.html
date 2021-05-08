@@ -1,0 +1,528 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>KOOM - 利用子进程 dump hprof - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="KOOM - 利用子进程 dump hprof">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-05-07 04:00" pubdate>
+        2021年5月7日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.3k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      37
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">KOOM - 利用子进程 dump hprof</h1>
+            
+            <div class="markdown-body">
+              <h2 id="不冻结-APP-的-dump-hprof"><a href="#不冻结-APP-的-dump-hprof" class="headerlink" title="不冻结 APP 的 dump hprof"></a>不冻结 APP 的 dump hprof</h2><p>在 <a href="../../../../2021/04/12/leakcanary/">LeakCanary 浅析</a> 和 <a href="../../../../2021/04/23/matrix-resourcescanary/">Matrix - ResourcesCanary 浅析</a> 这两篇文章里，介绍了检测内存泄漏的两种相似的思路：</p>
+<ol>
+<li><code>WeakReference</code> + <code>ReferenceQueue</code> + 延迟 5s 检查是否被 GC</li>
+<li><code>WeakReference</code> + <code>ConcurrentLinkedQueue</code>，子线程轮询的方式每隔 1m 检查队列里的对象是否被 GC</li>
+</ol>
+<p>但无论 <code>LeakCanary</code> 还是 <code>Matrix.ResourcesCanary</code> 都没有解决 dump hprof 时整个 APP 被「冻结」的问题，而一次 dump hprof 往往要持续 10s 甚至更多，这在线上环境下是不可接受的，所以在发生内存泄漏后只能上报类信息，开发者收到后人工检查涉及此类的相关代码找出泄漏点。但是这种方式是极其低效和不准确的，如果能在端侧找出泄漏对象的 GC ROOT PATH，就能极大地减少人工量，并且提高后续修复的准确度。</p>
+<p>如果能够在不冻结 APP 的情况下 dump hprof，不仅仅能够上报内存泄漏问题，还能对 OOM 进行预警：比如监控 JVM 的内存使用率，当达到 90% 的时候将 hprof 上报分析</p>
+<p><code>KOOM</code> 提出了一个在不冻结 APP 的情况下 dump hprof 的思路：<code>fork</code> 出子进程，总体流程是这样的：</p>
+<ol>
+<li>父进程 suspend JVM</li>
+<li>父进程 fork 出子进程</li>
+<li>父进程 resume JVM 后，线程等待子进程结束从而拿到 hprof</li>
+<li>子进程调用 <code>Debug.dumpHprofData</code> 生成 hprof 后退出</li>
+<li>父进程启动 <code>Service</code> 在另一个进程里解析 hprof 并构造 GC ROOT PATH</li>
+</ol>
+<p>整个过程 APP 只在 <code>fork</code> 前后冻结了一小会，这么短的时间是可以接受的，由于 <code>fork</code> 采用 <code>Copy-On-Write</code> 机制，子进程能够继承父进程的内存</p>
+<h2 id="暂停和恢复-JVM"><a href="#暂停和恢复-JVM" class="headerlink" title="暂停和恢复 JVM"></a>暂停和恢复 JVM</h2><ol>
+<li>&lt;= Android 10，使用函数 <code>SuspendVMEv</code> 和 <code>ResumeVMEv</code></li>
+<li>&gt;= Android 11，使用类 <code>ScopedSuspendAll</code>（局部变量，构造函数暂停 JVM，析构函数恢复 JVM）</li>
+<li>&lt;= Android 4，<code>KOOM</code> 不支持</li>
+</ol>
+<p>但是要从各个 Android 版本的 so 文件里准确找到这些函数（符号）是有难度的</p>
+<p>寻找 <code>SuspendVMEv</code> 和 <code>ResumeVMEv</code> 的地址</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 自己实现 dlopen dlsym dlclose 以兼容各 Android 版本</span><br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">initForkVMSymbols</span><span class="hljs-params">()</span> </span>&#123;<br>  <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);<br>  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>  &#125;<br><br>  suspendVM = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)())kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art3Dbg9SuspendVMEv&quot;</span>);<br>  <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art3Dbg9SuspendVMEv unsupported!&quot;</span>);<br>  &#125;<br><br>  resumeVM = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)())kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art3Dbg8ResumeVMEv&quot;</span>);<br>  <span class="hljs-keyword">if</span> (resumeVM == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art3Dbg8ResumeVMEv unsupported!&quot;</span>);<br>  &#125;<br><br>  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose</span>(libHandle);<br>  <span class="hljs-keyword">return</span> suspendVM != <span class="hljs-literal">nullptr</span> &amp;&amp; resumeVM != <span class="hljs-literal">nullptr</span>;<br>&#125;<br><br><span class="hljs-function">JNIEXPORT <span class="hljs-keyword">void</span> *<span class="hljs-title">DlFcn::dlopen</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *lib_name, <span class="hljs-keyword">int</span> flags)</span> </span>&#123;<br>  <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;dlopen %s&quot;</span>, lib_name);<br>  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, init_api);<br>  <span class="hljs-keyword">if</span> (android_api_ &lt; __ANDROID_API_N__) &#123;                         <span class="hljs-comment">// N 以下打开 libart.so 查找符号</span><br>    <span class="hljs-keyword">return</span> ::<span class="hljs-built_in">dlopen</span>(lib_name, flags);<br>  &#125;<br>  <span class="hljs-keyword">if</span> (android_api_ &gt; __ANDROID_API_N__) &#123;<br>    <span class="hljs-keyword">void</span> *handle = ::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libdl.so&quot;</span>, RTLD_NOW);<br>    <span class="hljs-built_in">CHECKP</span>(handle)<br>    <span class="hljs-keyword">auto</span> __loader_dlopen = <span class="hljs-keyword">reinterpret_cast</span>&lt;__loader_dlopen_fn&gt;(::<span class="hljs-built_in">dlsym</span>(handle, <span class="hljs-string">&quot;__loader_dlopen&quot;</span>));<br>    <span class="hljs-built_in">CHECKP</span>(__loader_dlopen)<br>    <span class="hljs-keyword">if</span> (android_api_ &lt; __ANDROID_API_Q__) &#123;                       <span class="hljs-comment">// Q 以下用 __loader_dlopen 查找符号</span><br>      <span class="hljs-keyword">return</span> __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)dlerror);<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>      handle = __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)dlerror); <span class="hljs-comment">// 其他情况，从 /proc/self/maps 拿到进程的内存布局，找到 mmap 进内存的 libart.so，根据 elf 文件结构解析里面的符号</span><br>      <span class="hljs-keyword">if</span> (handle == <span class="hljs-literal">nullptr</span>) &#123;<br>        <span class="hljs-comment">// Android Q added &quot;runtime&quot; namespace</span><br>        dl_iterate_data data&#123;&#125;;<br>        data.info_.dlpi_name = lib_name;<br>        <span class="hljs-built_in">dl_iterate_phdr_wrapper</span>(dl_iterate_callback, &amp;data);<br>        <span class="hljs-built_in">CHECKP</span>(data.info_.dlpi_addr &gt; <span class="hljs-number">0</span>)<br>        handle = __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)data.info_.dlpi_addr);<br>      &#125;<br>      <span class="hljs-keyword">return</span> handle;<br>    &#125;<br>  &#125;<br>  <span class="hljs-comment">// __ANDROID_API_N__</span><br>  <span class="hljs-keyword">auto</span> *data = <span class="hljs-keyword">new</span> <span class="hljs-built_in">dl_iterate_data</span>();<br>  data-&gt;info_.dlpi_name = lib_name;<br>  <span class="hljs-built_in">dl_iterate_phdr_wrapper</span>(dl_iterate_callback, data);<br>  <span class="hljs-keyword">return</span> data;<br>&#125;<br><br><span class="hljs-function">JNIEXPORT <span class="hljs-keyword">void</span> *<span class="hljs-title">DlFcn::dlsym</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *handle, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *name)</span> </span>&#123;<br>  <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;dlsym %s&quot;</span>, name);<br>  <span class="hljs-built_in">CHECKP</span>(handle)<br>  <span class="hljs-keyword">if</span> (android_api_ != __ANDROID_API_N__) &#123;                  <span class="hljs-comment">// 用 dlopen 打开则用 dlsym 查找符号</span><br>    <span class="hljs-keyword">return</span> ::<span class="hljs-built_in">dlsym</span>(handle, name);<br>  &#125;<br>  <span class="hljs-comment">// __ANDROID_API_N__</span><br>  <span class="hljs-keyword">auto</span> *data = (dl_iterate_data *)handle;                   <span class="hljs-comment">// 否则遍历 elf 里的符号列表查找</span><br>  <span class="hljs-built_in">ElfW</span>(Addr) dlpi_addr = data-&gt;info_.dlpi_addr;<br>  <span class="hljs-function"><span class="hljs-keyword">const</span> <span class="hljs-title">ElfW</span><span class="hljs-params">(Phdr)</span> *dlpi_phdr </span>= data-&gt;info_.dlpi_phdr;<br>  <span class="hljs-built_in">ElfW</span>(Half) dlpi_phnum = data-&gt;info_.dlpi_phnum;<br>  <span class="hljs-comment">// preserved for parse .symtab</span><br>  <span class="hljs-built_in">ElfW</span>(Addr) elf_base_addr;<br><br>  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; dlpi_phnum; ++i) &#123;<br>    <span class="hljs-keyword">if</span> (dlpi_phdr[i].p_type == PT_LOAD &amp;&amp; dlpi_phdr[i].p_offset == <span class="hljs-number">0</span>) &#123;<br>      elf_base_addr = dlpi_addr + dlpi_phdr[i].p_vaddr;<br>      <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;PT_LOAD dlpi_addr %p p_vaddr %p elf_base_addr %p&quot;</span>, dlpi_addr, dlpi_phdr[i].p_vaddr,<br>            elf_base_addr);<br>    &#125;<br>    <span class="hljs-keyword">if</span> (dlpi_phdr[i].p_type == PT_DYNAMIC) &#123;<br>      <span class="hljs-built_in">ElfW</span>(Dyn) *dyn = (<span class="hljs-built_in">ElfW</span>(Dyn) *)(dlpi_addr + dlpi_phdr[i].p_vaddr);<br>      <span class="hljs-built_in">ElfW</span>(Dyn) *dyn_end = dyn + (dlpi_phdr[i].p_memsz / <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-built_in">ElfW</span>(Dyn)));<br>      <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *strtab;<br>      <span class="hljs-built_in">ElfW</span>(Sym) * symtab;<br>      <span class="hljs-keyword">bool</span> is_use_gnu_hash = <span class="hljs-literal">false</span>;<br>      <span class="hljs-comment">// for ELF hash</span><br>      <span class="hljs-keyword">size_t</span> nbucket_;<br>      <span class="hljs-keyword">size_t</span> nchain_;<br>      <span class="hljs-keyword">uint32_t</span> *bucket_;<br>      <span class="hljs-keyword">uint32_t</span> *chain_;<br>      <span class="hljs-comment">// for GNU hash</span><br>      <span class="hljs-keyword">size_t</span> gnu_nbucket_;<br>      <span class="hljs-keyword">uint32_t</span> *gnu_bucket_;<br>      <span class="hljs-keyword">uint32_t</span> *gnu_chain_;<br>      <span class="hljs-keyword">uint32_t</span> gnu_maskwords_;<br>      <span class="hljs-keyword">uint32_t</span> gnu_shift2_;<br>      <span class="hljs-built_in">ElfW</span>(Addr) * gnu_bloom_filter_;<br>      <span class="hljs-comment">// ELF parse</span><br>      <span class="hljs-keyword">for</span> (; dyn &lt; dyn_end; dyn++) &#123;<br>        <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (dyn-&gt;d_tag) &#123;<br>        <span class="hljs-keyword">case</span> DT_NULL:<br>          <span class="hljs-comment">// the end of the dynamic-section</span><br>          dyn = dyn_end;<br>          <span class="hljs-keyword">break</span>;<br>        <span class="hljs-keyword">case</span> DT_STRTAB: &#123;<br>          <span class="hljs-built_in">ElfW</span>(Addr) strtab_addr = dlpi_addr + dyn-&gt;d_un.d_ptr;<br>          strtab = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *&gt;(strtab_addr);<br>          <span class="hljs-built_in">CHECKP</span>(strtab_addr &gt;= dlpi_addr)<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">case</span> DT_SYMTAB: &#123;<br>          <span class="hljs-built_in">ElfW</span>(Addr) symtab_addr = dlpi_addr + dyn-&gt;d_un.d_ptr;<br>          symtab = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-built_in">ElfW</span>(Sym) *&gt;(symtab_addr);<br>          <span class="hljs-built_in">CHECKP</span>(symtab_addr &gt;= dlpi_addr)<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">case</span> DT_HASH: &#123;<br>          <span class="hljs-comment">// ignore DT_HASH when ELF contains DT_GNU_HASH hash table</span><br>          <span class="hljs-keyword">if</span> (is_use_gnu_hash) &#123;<br>            <span class="hljs-keyword">continue</span>;<br>          &#125;<br>          nbucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">0</span>];<br>          nchain_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">1</span>];<br>          bucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">8</span>);<br>          chain_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">8</span> + nbucket_ * <span class="hljs-number">4</span>);<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">case</span> DT_GNU_HASH: &#123;<br>          gnu_nbucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">0</span>];<br>          <span class="hljs-comment">// skip symndx</span><br>          gnu_maskwords_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">2</span>];<br>          gnu_shift2_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">3</span>];<br><br>          gnu_bloom_filter_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-built_in">ElfW</span>(Addr) *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">16</span>);<br>          gnu_bucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(gnu_bloom_filter_ + gnu_maskwords_);<br>          <span class="hljs-comment">// amend chain for symndx = header[1]</span><br>          gnu_chain_ = gnu_bucket_ + gnu_nbucket_ -<br>                       <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">1</span>];<br>          --gnu_maskwords_;<br><br>          is_use_gnu_hash = <span class="hljs-literal">true</span>;<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">default</span>:<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>      &#125;<br>      <span class="hljs-comment">// lookup symbol</span><br>      <span class="hljs-keyword">if</span> (is_use_gnu_hash) &#123;<br>        <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;lookup use gnu hash&quot;</span>);<br>        <span class="hljs-keyword">uint32_t</span> hash = <span class="hljs-built_in">elf_gnu_hash</span>((<span class="hljs-keyword">uint8_t</span> *)name);<br>        <span class="hljs-keyword">constexpr</span> <span class="hljs-keyword">uint32_t</span> kBloomMaskBits = <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-built_in">ElfW</span>(Addr)) * <span class="hljs-number">8</span>;<br>        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> word_num = (hash / kBloomMaskBits) &amp; gnu_maskwords_;<br>        <span class="hljs-function"><span class="hljs-keyword">const</span> <span class="hljs-title">ElfW</span><span class="hljs-params">(Addr)</span> bloom_word </span>= gnu_bloom_filter_[word_num];<br>        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> h1 = hash % kBloomMaskBits;<br>        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> h2 = (hash &gt;&gt; gnu_shift2_) % kBloomMaskBits;<br>        <span class="hljs-comment">// test against bloom filter</span><br>        <span class="hljs-built_in">CHECKP</span>((<span class="hljs-number">1</span> &amp; (bloom_word &gt;&gt; h1) &amp; (bloom_word &gt;&gt; h2)) != <span class="hljs-number">0</span>)<br>        <span class="hljs-comment">// bloom test says &quot;probably yes&quot;...</span><br>        <span class="hljs-keyword">uint32_t</span> n = gnu_bucket_[hash % gnu_nbucket_];<br><br>        <span class="hljs-keyword">do</span> &#123;<br>          <span class="hljs-built_in">ElfW</span>(Sym) *s = symtab + n;<br>          <span class="hljs-keyword">if</span> (((gnu_chain_[n] ^ hash) &gt;&gt; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span> &amp;&amp; <span class="hljs-built_in">strcmp</span>(strtab + s-&gt;st_name, name) == <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;find %s %p&quot;</span>, name, dlpi_addr + s-&gt;st_value);<br>            <span class="hljs-keyword">return</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">void</span> *&gt;(dlpi_addr + s-&gt;st_value);<br>          &#125;<br>        &#125; <span class="hljs-keyword">while</span> ((gnu_chain_[n++] &amp; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span>);<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;lookup use elf hash&quot;</span>);<br>        <span class="hljs-keyword">uint32_t</span> hash = <span class="hljs-built_in">elf_hash</span>((<span class="hljs-keyword">uint8_t</span> *)name);<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">uint32_t</span> n = bucket_[hash % nbucket_]; n != <span class="hljs-number">0</span>; n = chain_[n]) &#123;<br>          <span class="hljs-built_in">ElfW</span>(Sym) *s = symtab + n;<br>          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strcmp</span>(strtab + s-&gt;st_name, name) == <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;find %s %p&quot;</span>, name, dlpi_addr + s-&gt;st_value);<br>            <span class="hljs-keyword">return</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">void</span> *&gt;(dlpi_addr + s-&gt;st_value);<br>          &#125;<br>        &#125;<br>      &#125;<br>    &#125;<br>  &#125;<br>  <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>查找 <code>ScopedSuspendAll</code> 的构造函数和析构函数</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;<br>  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);<br>  <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// For above android 11</span><br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initDumpHprofSymbols</span><span class="hljs-params">()</span> </span>&#123;<br>  <span class="hljs-comment">// Parse .dynsym(GLOBAL)</span><br>  <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);<br>  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span>;<br>  &#125;<br>  ScopedSuspendAllConstructor = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *, <span class="hljs-keyword">bool</span>))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(<br>      libHandle, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllC1EPKcb&quot;</span>);<br>  <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllC1EPKcb unsupported!&quot;</span>);<br>  &#125;<br><br>  ScopedSuspendAllDestructor =<br>      (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllD1Ev&quot;</span>);<br>  <span class="hljs-keyword">if</span> (ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllD1Ev unsupported!&quot;</span>);<br>  &#125;<br><br>  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose</span>(libHandle);<br>  <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="fork"><a href="#fork" class="headerlink" title="fork"></a>fork</h2><p>使用系统调用 <code>fork</code> 创建子进程</p>
+<ol>
+<li>子进程返回 0，dump hprof 后退出进程</li>
+<li>父进程返回子进程 pid，首先恢复 JVM，然后利用 <code>waitpid</code> 阻塞直到子进程完成 dump hprof，然后处理 hprof</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;<br>  <span class="hljs-meta">@Override</span><br>  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;<br>    <span class="hljs-keyword">try</span> &#123;<br>      <span class="hljs-keyword">int</span> pid = trySuspendVMThenFork();<br>      <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">0</span>) &#123;                       <span class="hljs-comment">// 子进程</span><br>        Debug.dumpHprofData(path);<br>        KLog.i(TAG, <span class="hljs-string">&quot;notifyDumped:&quot;</span> + dumpRes);<br>        <span class="hljs-comment">//System.exit(0);</span><br>        exitProcess();<br>      &#125; <span class="hljs-keyword">else</span> &#123;                              <span class="hljs-comment">// 父进程</span><br>        resumeVM();<br>        dumpRes = waitDumping(pid);<br>        KLog.i(TAG, <span class="hljs-string">&quot;hprof pid:&quot;</span> + pid + <span class="hljs-string">&quot; dumped: &quot;</span> + path);<br>      &#125;<br><br>    &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;<br>      e.printStackTrace();<br>      KLog.e(TAG, <span class="hljs-string">&quot;dump failed caused by IOException!&quot;</span>);<br>    &#125;<br>    <span class="hljs-keyword">return</span> dumpRes;<br>  &#125;    <br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jint JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_trySuspendVMThenFork</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jobject jObject)</span> </span>&#123;<br>  <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-built_in">initForkVMSymbols</span>();<br>  &#125;<br>  <span class="hljs-keyword">if</span> (suspendVM != <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-built_in">suspendVM</span>();<br>  &#125;<br>  <span class="hljs-keyword">return</span> fork();    <span class="hljs-comment">// 用系统调用 fork 创建子进程</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>Android 11 的情况下也是利用系统调用 <code>fork</code> 出子进程</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;<br>  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);<br>  <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span> || ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span> ||<br>      HprofConstructor == <span class="hljs-literal">nullptr</span> || HprofDestructor == <span class="hljs-literal">nullptr</span> || Dump == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span> JNI_FALSE;<br>  &#125;<br>  <span class="hljs-built_in">ScopedSuspendAllConstructor</span>(gSSAHandle, LOG_TAG, <span class="hljs-literal">true</span>);<br>  <span class="hljs-keyword">pid_t</span> pid = fork();<br>  <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">-1</span>) &#123;<br>    <span class="hljs-comment">// Fork error.</span><br>    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, <span class="hljs-string">&quot;failed to fork!&quot;</span>);<br>    <span class="hljs-keyword">return</span> JNI_FALSE;<br>  &#125;<br>  <span class="hljs-keyword">if</span> (pid != <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-comment">// Parent</span><br>    <span class="hljs-built_in">ScopedSuspendAllDestructor</span>(gSSAHandle);<br><br>    <span class="hljs-keyword">int</span> stat_loc;<br>    <span class="hljs-keyword">for</span> (;;) &#123;<br>      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">waitpid</span>(pid, &amp;stat_loc, <span class="hljs-number">0</span>) != <span class="hljs-number">-1</span> || errno != EINTR) &#123;<br>        <span class="hljs-keyword">break</span>;<br>      &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> JNI_TRUE;<br>  &#125;<br>  <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="处理-hprof"><a href="#处理-hprof" class="headerlink" title="处理 hprof"></a>处理 hprof</h2><p>子进程用 <code>Debug.dumpHprofData</code> 生成 hprof 文件后结束，父进程拿到 hprof 后开个新进程，在 <code>Service</code> 里用 <code>LeakCanary.Shark</code> 解析</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;<br>  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;<br>    <span class="hljs-comment">//...</span><br>    <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;<br>    <span class="hljs-keyword">try</span> &#123;<br>      <span class="hljs-keyword">int</span> pid = trySuspendVMThenFork();<br>      <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">0</span>) &#123;                   <span class="hljs-comment">// 子进程 dump hprof 后退出</span><br>        Debug.dumpHprofData(path);<br>        KLog.i(TAG, <span class="hljs-string">&quot;notifyDumped:&quot;</span> + dumpRes);<br>        exitProcess();<br>      &#125; <span class="hljs-keyword">else</span> &#123;                          <span class="hljs-comment">// 父进程等待 dump hprof 完成</span><br>        resumeVM();<br>        dumpRes = waitDumping(pid);<br>        KLog.i(TAG, <span class="hljs-string">&quot;hprof pid:&quot;</span> + pid + <span class="hljs-string">&quot; dumped: &quot;</span> + path);<br>      &#125;<br><br>    &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;<br>      e.printStackTrace();<br>      KLog.e(TAG, <span class="hljs-string">&quot;dump failed caused by IOException!&quot;</span>);<br>    &#125;<br>    <span class="hljs-keyword">return</span> dumpRes;<br>  &#125;    <br>&#125;<br><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HeapAnalyzeService</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">IntentService</span> </span>&#123;     <span class="hljs-comment">// 在 HeapAnalyzeService 里解析 hprof</span><br>  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">runAnalysis</span><span class="hljs-params">(Application application,</span></span><br><span class="hljs-params"><span class="hljs-function">      HeapAnalysisListener heapAnalysisListener)</span> </span>&#123;<br>    KLog.i(TAG, <span class="hljs-string">&quot;runAnalysis startService&quot;</span>);<br>    Intent intent = <span class="hljs-keyword">new</span> Intent(application, HeapAnalyzeService.class);<br>    IPCReceiver ipcReceiver = buildAnalysisReceiver(heapAnalysisListener);<br>    intent.putExtra(KConstants.ServiceIntent.RECEIVER, ipcReceiver);<br>    KHeapFile heapFile = KHeapFile.getKHeapFile();<br>    intent.putExtra(KConstants.ServiceIntent.HEAP_FILE, heapFile);<br>    application.startService(intent);<br>  &#125;    <br>&#125;<br><br><span class="hljs-comment">// HeapAnalyzeService 在另一个进程，防止解析 hprof 时 OOM 影响 APP</span><br><span class="hljs-comment">// &lt;service</span><br><span class="hljs-comment">//       android:name=&quot;.analysis.HeapAnalyzeService&quot;</span><br><span class="hljs-comment">//       android:process=&quot;:heap_analysis&quot; /&gt;</span><br></code></pre></div></td></tr></table></figure>
+
+<p>Android 11 则是查找类 <code>Hprof</code> 的构造/析构函数和 <code>dump</code> 函数，在 native 层进行 dump hprof，后续依然是在 java 层开个新进程解析</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;<br>  <span class="hljs-comment">// ... 直接在 native 层 dump hprof</span><br>  <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *filename = env-&gt;<span class="hljs-built_in">GetStringUTFChars</span>(file_name, <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-built_in">HprofConstructor</span>(gHprofHandle, filename, <span class="hljs-number">-1</span>, <span class="hljs-literal">false</span>);<br>  <span class="hljs-built_in">Dump</span>(gHprofHandle);<br>  <span class="hljs-built_in">HprofDestructor</span>(gHprofHandle);<br>  env-&gt;<span class="hljs-built_in">ReleaseStringUTFChars</span>(file_name, filename);<br>  _exit(<span class="hljs-number">0</span>);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initDumpHprofSymbols</span><span class="hljs-params">()</span> </span>&#123; <span class="hljs-comment">// 查找 Hprof 类的相关函数</span><br>  <span class="hljs-comment">//...</span><br>  libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen_elf</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);<br>  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span>;<br>  &#125;<br>  HprofConstructor = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *, <span class="hljs-keyword">int</span>, <span class="hljs-keyword">bool</span>))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(<br>      libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5HprofC2EPKcib&quot;</span>);<br>  <span class="hljs-keyword">if</span> (HprofConstructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5HprofC2EPKcib unsupported!&quot;</span>);<br>  &#125;<br><br>  HprofDestructor =<br>      (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5HprofD0Ev&quot;</span>);<br>  <span class="hljs-keyword">if</span> (HprofDestructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5HprofD0Ev unsupported!&quot;</span>);<br>  &#125;<br><br>  Dump = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5Hprof4DumpEv&quot;</span>);<br>  <span class="hljs-keyword">if</span> (Dump == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5Hprof4DumpEv unsupported!&quot;</span>);<br>  &#125;<br><br>  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose_elf</span>(libHandle);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://github.com/KwaiAppTeam/KOOM">KOOM</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.sunmoonblog.com/2019/06/04/fake-dlopen/">Android dlopen 方法的使用限制及解决方案</a></li>
+<li><a target="_blank" rel="noopener" href="https://tboox.org/cn/2020/07/04/byopen/">一个绕过移动端系统限制的dlopen库: byOpen</a></li>
+</ol>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/android/">android</a>
+                    
+                      <a class="hover-with-bg" href="/blog/categories/android/APM/">APM</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/APM/">APM</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2021/04/26/matrix-tracecanary/">
+                        <span class="hidden-mobile">Matrix - TraceCanary 浅析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>

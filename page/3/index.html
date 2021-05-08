@@ -46,7 +46,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.9-a","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
   </script>
   <script  src="/blog/js/utils.js" ></script>
   <script  src="/blog/js/color-schema.js" ></script>
@@ -132,13 +132,13 @@
         
         
           <li class="nav-item" id="search-btn">
-            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
                 class="iconfont icon-search"></i>&nbsp;</a>
           </li>
         
         
           <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" href="javascript:">&nbsp;<i
+            <a class="nav-link" target="_self">&nbsp;<i
                 class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
           </li>
         
@@ -184,11 +184,68 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/12/02/vsync/">Android 图形栈（一）vsync</a>
+        <a href="/blog/2020/12/13/ui-thread-in-vsync/" target="_self">
+          Android 图形栈（二）ui thread
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/12/02/vsync/">
+        <a href="/blog/2020/12/13/ui-thread-in-vsync/" target="_self">
+          
+          
+            
+          
+          从一段 systrace 开始
+这是一段 systrace 记录，看得出来页面是比较流畅的，ui thread 全都在一个 VSYNC_app 内完成绘制，surfaceflinger 也在一个 VSYNC_sf 内完成各个层的合成；但有没发现在 ui thread 完成 doFrame 后，总是会有一个 ReaderThread 跟在后面，看名字像是跟渲染相关的线程，它跟 ui 绘制有关系吗？平
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-12-13 04:00" pubdate>
+              2020-12-13
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/blog/categories/Android/">Android</a>
+            
+              <a href="/blog/categories/Android/Framework/">Framework</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/blog/tags/vsync/">vsync</a>
+            
+              <a href="/blog/tags/ui-thread/">ui thread</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/blog/2020/12/02/vsync/" target="_self">
+          Android 图形栈（一）vsync
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/blog/2020/12/02/vsync/" target="_self">
           
           
             
@@ -240,11 +297,13 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/11/19/scoped-storage/">Scoped Storage（沙盒）</a>
+        <a href="/blog/2020/11/19/scoped-storage/" target="_self">
+          Scoped Storage（沙盒）
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/11/19/scoped-storage/">
+        <a href="/blog/2020/11/19/scoped-storage/" target="_self">
           
           
             
@@ -298,11 +357,13 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/11/11/starting-window/">starting window 和 windowDisablePreview</a>
+        <a href="/blog/2020/11/11/starting-window/" target="_self">
+          starting window 和 windowDisablePreview
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/11/11/starting-window/">
+        <a href="/blog/2020/11/11/starting-window/" target="_self">
           
           
             
@@ -355,11 +416,13 @@ starting wind
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/11/03/launch-activity-sequence/">Activity 启动流程时序图</a>
+        <a href="/blog/2020/11/03/launch-activity-sequence/" target="_self">
+          Activity 启动流程时序图
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/11/03/launch-activity-sequence/">
+        <a href="/blog/2020/11/03/launch-activity-sequence/" target="_self">
           
           
             
@@ -407,11 +470,13 @@ starting wind
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/10/31/how-glide-work/">图解 Glide</a>
+        <a href="/blog/2020/10/31/how-glide-work/" target="_self">
+          图解 Glide
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/10/31/how-glide-work/">
+        <a href="/blog/2020/10/31/how-glide-work/" target="_self">
           
           
             
@@ -459,11 +524,13 @@ starting wind
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/10/20/anr/">阅读源码系列：ANR 是怎么产生的</a>
+        <a href="/blog/2020/10/20/anr/" target="_self">
+          阅读源码系列：ANR 是怎么产生的
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/10/20/anr/">
+        <a href="/blog/2020/10/20/anr/" target="_self">
           
           
             
@@ -514,11 +581,13 @@ input 的分发
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/10/04/dispatchtouchevent/">一文搞懂事件分发，手势冲突和滑动冲突</a>
+        <a href="/blog/2020/10/04/dispatchtouchevent/" target="_self">
+          一文搞懂事件分发，手势冲突和滑动冲突
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/10/04/dispatchtouchevent/">
+        <a href="/blog/2020/10/04/dispatchtouchevent/" target="_self">
           
           
             
@@ -569,11 +638,13 @@ MotionEvent 里定义的 ACTION_XXX 还不少有 10 多个，看起来情况很�
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/09/27/handler-messagequeue-looper/">面试官家常之Handler、MessageQueue 和 Looper</a>
+        <a href="/blog/2020/09/27/handler-messagequeue-looper/" target="_self">
+          面试官家常之Handler、MessageQueue 和 Looper
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/09/27/handler-messagequeue-looper/">
+        <a href="/blog/2020/09/27/handler-messagequeue-looper/" target="_self">
           
           
             
@@ -623,11 +694,13 @@ MotionEvent 里定义的 ACTION_XXX 还不少有 10 多个，看起来情况很�
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2020/09/15/git-log/">git log命令全解析，打log还能这么随心所欲！</a>
+        <a href="/blog/2020/09/15/git-log/" target="_self">
+          git log命令全解析，打log还能这么随心所欲！
+        </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2020/09/15/git-log/">
+        <a href="/blog/2020/09/15/git-log/" target="_self">
           
           
             
@@ -666,59 +739,11 @@ MotionEvent 里定义的 ACTION_XXX 还不少有 10 多个，看起来情况很�
     </article>
   </div>
 
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/blog/2020/09/05/merge-rebase-squash/">git 的 merge, rebase 和 squash</a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/blog/2020/09/05/merge-rebase-squash/">
-          
-          
-            
-          
-          在团队合作中，毫无疑问，我们需要一个版本管理工具，相对于 SVN 这种在我们看来是老古董的工具，Git 在年轻化的团队中更受欢迎。并不仅仅是跟着大神们（Linux系）的路子在走，所以感觉很牛逼，而是 Git 真的很牛逼，当然，牛逼的同时你需要的学习曲线也是很陡的。这几天我就遇到了一个问题，其实也不是遇到问题，而是遇到了疑惑，那就是我在 github 系统中 merge 同时的 PR 的时候发现有好
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2020-09-05 04:00" pubdate>
-              2020-09-05
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/blog/categories/Git/">Git</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/blog/tags/git/">git</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
 
 
   <nav aria-label="navigation">
     <span class="pagination" id="pagination">
-      <a class="extend prev" rel="prev" href="/blog/page/2/#board"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/blog/">1</a><a class="page-number" href="/blog/page/2/#board">2</a><span class="page-number current">3</span>
+      <a class="extend prev" rel="prev" href="/blog/page/2/#board"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/blog/">1</a><a class="page-number" href="/blog/page/2/#board">2</a><span class="page-number current">3</span><a class="page-number" href="/blog/page/4/#board">4</a><a class="extend next" rel="next" href="/blog/page/4/#board"><i class="iconfont icon-arrowright"></i></a>
     </span>
   </nav>
 
@@ -792,7 +817,6 @@ MotionEvent 里定义的 ACTION_XXX 还不少有 10 多个，看起来情况很�
 
 <script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
 <script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
-<script  src="/blog/js/debouncer.js" ></script>
 <script  src="/blog/js/events.js" ></script>
 <script  src="/blog/js/plugins.js" ></script>
 
