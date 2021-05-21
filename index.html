@@ -184,13 +184,13 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/blog/2021/05/10/mmap/" target="_self">
-          mmap 和零拷贝
+        <a href="/blog/2021/05/21/mmap/" target="_self">
+          【转】mmap 和零拷贝
         </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/blog/2021/05/10/mmap/" target="_self">
+        <a href="/blog/2021/05/21/mmap/" target="_self">
           
           
             
@@ -206,8 +206,8 @@
         
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
-            <time datetime="2021-05-10 04:00" pubdate>
-              2021-05-10
+            <time datetime="2021-05-21 04:00" pubdate>
+              2021-05-21
             </time>
           </div>
         
@@ -219,6 +219,56 @@
               <a href="/blog/tags/mmap/">mmap</a>
             
               <a href="/blog/tags/%E5%86%85%E5%AD%98%EF%BC%8C%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80/">内存，虚拟地址</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/blog/2021/05/11/nonblocking-io/" target="_self">
+          【转】网络 IO 演变发展过程和模型介绍
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/blog/2021/05/11/nonblocking-io/" target="_self">
+          
+          
+            
+          
+          在互联网中提起网络，我们都会避免不了讨论高并发、百万连接。而此处的百万连接的实现，脱离不了网络 IO 的选择，因此本文作为一篇个人学习的笔记，特此进行记录一下整个网络 IO 的发展演变过程。以及目前广泛使用的网络模型。
+网络 IO 的发展在本节内容中，我们将一步一步介绍网络 IO 的演变发展过程。介绍完发展过程后，再对网络 IO 中几组容易混淆的概念进行对比、分析。
+​
+网络 IO 的各个发展阶段
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-11 04:00" pubdate>
+              2021-05-11
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/blog/tags/epoll/">epoll</a>
+            
+              <a href="/blog/tags/select/">select</a>
+            
+              <a href="/blog/tags/poll/">poll</a>
             
           </div>
         
@@ -713,59 +763,6 @@ GC 时机
               <a href="/blog/tags/JUC/">JUC</a>
             
               <a href="/blog/tags/%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8/">线程安全</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/blog/2021/03/30/https/" target="_self">
-          什么是 https ？
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/blog/2021/03/30/https/" target="_self">
-          
-          
-            
-          
-          https = http + tls
-tcp 三次握手建立连接后，再进行 tls 握手/协商得到一个秘钥，然后双方使用这个秘钥加密（对称加密）明文的 http 为密文后再发送，同样双方收到密文后也用这个秘钥解密得到明文
-对称加密 使用同一秘钥加密和解密，性能高，http 明文就是通过对称加密后才进行传输的，对称加密算法有：DES、3DES、AES 等；但秘钥交换是个问题，所以需要非对称加密的帮助
-
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-30 04:00" pubdate>
-              2021-03-30
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/blog/categories/%E7%BD%91%E7%BB%9C/">网络</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/blog/tags/https/">https</a>
             
           </div>
         

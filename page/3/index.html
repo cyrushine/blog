@@ -184,6 +184,61 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/blog/2021/01/10/aqs-basic/" target="_self">
+          Lock（一）AQS 基础
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/blog/2021/01/10/aqs-basic/" target="_self">
+          
+          
+            
+          
+          自旋锁（Spin Lock）获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码/逻辑，那就是自旋锁；比如下面的 lock()
+12345678910111213// 一个简单的自旋锁的实现class SpinLock &#123;    private val cas = AtomicReference&lt;Thread&gt;()    fun lock() &#12
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-01-10 04:00" pubdate>
+              2021-01-10
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/blog/categories/Android/">Android</a>
+            
+              <a href="/blog/categories/Android/Art/">Art</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/blog/tags/Lock/">Lock</a>
+            
+              <a href="/blog/tags/AQS/">AQS</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/blog/2020/12/27/render-thread/" target="_self">
           Android 图形栈（三）render thread
         </a>
@@ -680,62 +735,6 @@ MotionEvent 里定义的 ACTION_XXX 还不少有 10 多个，看起来情况很�
               <a href="/blog/tags/Motion/">Motion</a>
             
               <a href="/blog/tags/NestedScrolling/">NestedScrolling</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/blog/2020/09/27/handler-messagequeue-looper/" target="_self">
-          面试官家常之Handler、MessageQueue 和 Looper
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/blog/2020/09/27/handler-messagequeue-looper/" target="_self">
-          
-          
-            
-          
-          MessageQueue 是个单向链表，按 Message.when 自然序排
-它有类似于「生产者 - 消费者」模型的阻塞队列：没有 Message 时，阻塞直到新 Message 入队；否则阻塞到下一个 Message.when
-123456789101112131415161718192021222324252627282930// 这里会阻塞nativePollOnce(ptr, nextP
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2020-09-27 04:00" pubdate>
-              2020-09-27
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/blog/categories/Android/">Android</a>
-            
-              <a href="/blog/categories/Android/Framework/">Framework</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/blog/tags/Handler/">Handler</a>
-            
-              <a href="/blog/tags/Looper/">Looper</a>
             
           </div>
         
