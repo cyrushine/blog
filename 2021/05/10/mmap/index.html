@@ -1,0 +1,538 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blog/image/favicon.png">
+  <link rel="icon" href="/blog/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>mmap 和零拷贝 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/blog/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/blog/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/blog/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"cyruslin.com","root":"/blog/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/blog/js/utils.js" ></script>
+  <script  src="/blog/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/blog/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blog/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/blog/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="mmap 和零拷贝">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-05-10 04:00" pubdate>
+        2021年5月10日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.2k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      23
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">mmap 和零拷贝</h1>
+            
+            <div class="markdown-body">
+              <p>平时在面试中你肯定会经常碰见的问题就是：<code>RocketMQ</code> 为什么快？<code>Kafka</code> 为什么快？什么是 <code>mmap</code>？</p>
+<p>这一类的问题都逃不过的一个点就是 <strong>零拷贝</strong>，虽然还有一些其他的原因，但是今天我们的话题主要就是零拷贝。</p>
+<h2 id="传统-IO"><a href="#传统-IO" class="headerlink" title="传统 IO"></a>传统 IO</h2><p>在开始谈零拷贝之前，首先要对传统的 IO 方式有一个概念。基于传统的 IO 方式，底层实际上通过调用 <code>read()</code> 和 <code>write()</code> 来实现。</p>
+<p>通过 <code>read()</code> 把数据从硬盘读取到内核缓冲区，再复制到用户缓冲区；然后再通过 <code>write()</code> 写入到 socket 缓冲区，最后写入网卡设备。</p>
+<p><img src="../../../../image/2021-05-21-mmap/read_write.jpg" srcset="/blog/image/loading.gif" lazyload alt="read_write"></p>
+<p>整个过程发生了 <strong>4</strong> 次用户态和内核态的上下文切换和 <strong>4</strong> 次拷贝，具体流程如下：</p>
+<ol>
+<li>用户进程通过 <code>read()</code> 方法向操作系统发起调用，此时上下文从用户态转向内核态</li>
+<li>DMA 控制器把数据从硬盘中拷贝到读缓冲区</li>
+<li>CPU 把读缓冲区数据拷贝到应用缓冲区，上下文从内核态转为用户态，<code>read()</code> 返回</li>
+<li>用户进程通过 <code>write()</code> 方法发起调用，上下文从用户态转为内核态</li>
+<li>CPU 将应用缓冲区中数据拷贝到 socket 缓冲区</li>
+<li>DMA 控制器把数据从 socket 缓冲区拷贝到网卡，上下文从内核态切换回用户态，<code>write()</code> 返回</li>
+</ol>
+<p><img src="../../../../image/2021-05-21-mmap/read_write_swimlane.jpg" srcset="/blog/image/loading.gif" lazyload alt="read_write_swimlane"></p>
+<p>那么，这里指的 <strong>用户态</strong>、<strong>内核态</strong> 指的是什么？<strong>上下文切换</strong> 又是什么？</p>
+<p>简单来说，<strong>用户空间</strong> 指的就是用户进程的运行空间，<strong>内核空间</strong> 就是内核的运行空间。如果进程运行在内核空间就是内核态，运行在用户空间就是用户态。为了安全起见，他们之间是互相隔离的，而在用户态和内核态之间的上下文切换也是比较耗时的。从上面我们可以看到，一次简单的 IO 过程产生了 4 次上下文切换，这个无疑在高并发场景下会对性能产生较大的影响。</p>
+<p>那么什么又是 DMA 拷贝呢？</p>
+<p>因为对于一个 IO 操作而言，都是通过 CPU 发出对应的指令来完成，但是相比 CPU 来说，IO 的速度太慢了，CPU 有大量的时间处于等待 IO 的状态。因此就产生了 DMA（Direct Memory Access）直接内存访问技术，本质上来说他就是一块主板上独立的芯片，通过它来进行内存和 IO 设备的数据传输，从而减少 CPU 的等待时间。但是无论谁来拷贝，频繁的拷贝耗时也是对性能的影响。</p>
+<p><strong>零拷贝</strong> 是指计算机执行操作时，CPU 不需要先将数据从某处内存复制到另一个特定区域，这种技术通常用于通过网络传输文件时节省 CPU 周期和内存带宽。那么对于零拷贝而言，并非真的是完全没有数据拷贝的过程，只不过是减少用户态和内核态的切换次数以及 CPU 拷贝的次数。</p>
+<p>这里，仅仅有针对性的来谈谈几种常见的零拷贝技术。</p>
+<h2 id="mmap-write"><a href="#mmap-write" class="headerlink" title="mmap + write"></a><code>mmap</code> + <code>write</code></h2><p><code>mmap</code> + <code>write</code> 简单来说就是使用 <code>mmap</code> 替换了 <code>read</code> + <code>write</code> 中的 <code>read</code> 操作，减少了一次 CPU 的拷贝。</p>
+<p><code>mmap</code> 主要实现方式是将读缓冲区的地址和用户缓冲区的地址进行映射，内核缓冲区和应用缓冲区共享，从而减少了从读缓冲区到用户缓冲区的一次 CPU 拷贝。</p>
+<p><img src="../../../../image/2021-05-21-mmap/mmap_write_swimlane.jpg" srcset="/blog/image/loading.gif" lazyload alt="mmap_write_swimlane"></p>
+<p>整个过程发生了 <strong>4</strong> 次用户态和内核态的上下文切换和 <strong>3</strong> 次拷贝，具体流程如下：</p>
+<ol>
+<li>用户进程通过 <code>mmap</code> 向操作系统发起调用，上下文从用户态转向内核态</li>
+<li>DMA 控制器把数据从硬盘中拷贝到读缓冲区</li>
+<li>上下文从内核态转为用户态，<code>mmap</code> 调用返回</li>
+<li>用户进程通过 <code>write()</code> 方法发起调用，上下文从用户态转为内核态</li>
+<li>CPU 将读缓冲区中数据拷贝到 socket 缓冲区</li>
+<li>DMA 控制器把数据从 socket 缓冲区拷贝到网卡，上下文从内核态切换回用户态，<code>write()</code> 返回</li>
+</ol>
+<p><code>mmap</code> 的方式节省了一次 CPU 拷贝，同时由于用户进程中的内存是虚拟的，只是映射到内核的读缓冲区，所以可以节省一半的内存空间，比较适合大文件的传输。</p>
+<h2 id="sendfile"><a href="#sendfile" class="headerlink" title="sendfile"></a><code>sendfile</code></h2><p>相比 <code>mmap</code> 来说，<code>sendfile</code> 同样减少了一次 CPU 拷贝，而且还减少了 <strong>2</strong> 次上下文切换。</p>
+<p><img src="../../../../image/2021-05-21-mmap/sendfile.jpg" srcset="/blog/image/loading.gif" lazyload alt="sendfile"></p>
+<p><code>sendfile</code> 是 Linux 2.1 内核版本后引入的一个系统调用函数，通过使用 <code>sendfile</code> 数据可以直接在内核空间进行传输，因此避免了用户空间和内核空间的拷贝，同时由于使用 <code>sendfile</code> 替代了 <code>read</code> + <code>write</code> 从而节省了一次系统调用，也就是 <strong>2</strong> 次上下文切换。</p>
+<p><img src="../../../../image/2021-05-21-mmap/sendfile_swimlane.jpg" srcset="/blog/image/loading.gif" lazyload alt="sendfile_swimlane"></p>
+<p>整个过程发生了 <strong>2</strong> 次用户态和内核态的上下文切换和 <strong>3</strong> 次拷贝，具体流程如下：</p>
+<ol>
+<li>用户进程通过 <code>sendfile()</code> 方法向操作系统发起调用，上下文从用户态转向内核态</li>
+<li>DMA 控制器把数据从硬盘中拷贝到读缓冲区</li>
+<li>CPU 将读缓冲区中数据拷贝到 socket 缓冲区</li>
+<li>DMA 控制器把数据从 socket 缓冲区拷贝到网卡，上下文从内核态切换回用户态，<code>sendfile</code> 调用返回</li>
+<li><code>sendfile</code> 方法 IO 数据对用户空间完全不可见，所以只能适用于完全不需要用户空间处理的情况，比如静态文件服务器。</li>
+</ol>
+<h2 id="sendfile-DMA-Scatter-Gather"><a href="#sendfile-DMA-Scatter-Gather" class="headerlink" title="sendfile + DMA Scatter/Gather"></a><code>sendfile</code> + DMA Scatter/Gather</h2><p>Linux 2.4 内核版本之后对 <code>sendfile</code> 做了进一步优化，通过引入新的硬件支持，这个方式叫做 DMA Scatter/Gather。它将读缓冲区中的数据描述信息（内存地址和偏移量）记录到 socket 缓冲区，由 DMA 根据这些将数据从读缓冲区拷贝到网卡，相比之前版本减少了一次 CPU 拷贝的过程</p>
+<p><img src="../../../../image/2021-05-21-mmap/gather_swimlane.jpg" srcset="/blog/image/loading.gif" lazyload alt="gather_swimlane"></p>
+<p>整个过程发生了 <strong>2</strong> 次用户态和内核态的上下文切换和 <strong>2</strong> 次拷贝，其中更重要的是完全没有 CPU 拷贝，具体流程如下：</p>
+<ol>
+<li>用户进程通过 <code>sendfile()</code> 方法向操作系统发起调用，上下文从用户态转向内核态</li>
+<li>DMA 控制器利用 scatter 把数据从硬盘中拷贝到读缓冲区离散存储</li>
+<li>CPU 把读缓冲区中的文件描述符和数据长度发送到 socket 缓冲区</li>
+<li>DMA 控制器根据文件描述符和数据长度，使用 scatter/gather 把数据从内核缓冲区拷贝到网卡</li>
+<li><code>sendfile()</code> 调用返回，上下文从内核态切换回用户态</li>
+</ol>
+<p>DMA gather 和 <code>sendfile</code> 一样数据对用户空间不可见，而且需要硬件支持，同时输入文件描述符只能是文件，但是过程中完全没有 CPU 拷贝过程，极大提升了性能。</p>
+<h2 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h2><p>对于文章开头说的两个场景：<code>RocketMQ</code> 和 <code>Kafka</code> 都使用到了零拷贝的技术。</p>
+<p>对于 <code>MQ</code> 而言，无非就是生产者发送数据到 <code>MQ</code> 然后持久化到磁盘，之后消费者从 <code>MQ</code> 读取数据。</p>
+<p>对于 <code>RocketMQ</code> 来说这两个步骤使用的是 <code>mmap</code> + <code>write</code>，而 <code>Kafka</code> 则是使用 <code>mmap</code> + <code>write</code> 持久化数据，发送数据使用 <code>sendfile</code>。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>由于 CPU 和 IO 速度的差异问题，产生了 DMA 技术，通过 DMA 搬运来减少 CPU 的等待时间。</p>
+<p>传统的 IO <code>read</code> + <code>write</code> 方式会产生 <strong>2</strong> 次 DMA 拷贝 + <strong>2</strong> 次 CPU 拷贝，同时有 <strong>4</strong> 次上下文切换。</p>
+<p>而通过 <code>mmap</code> + <code>write</code> 方式则产生 <strong>2</strong> 次 DMA 拷贝 + <strong>1</strong> 次 CPU 拷贝，<strong>4</strong> 次上下文切换，通过内存映射减少了一次 CPU 拷贝，可以减少内存使用，适合大文件的传输。</p>
+<p><code>sendfile</code> 方式是新增的一个系统调用函数，产生 <strong>2</strong> 次 DMA 拷贝 + <strong>1</strong> 次 CPU 拷贝，但是只有 <strong>2</strong> 次上下文切换。因为只有一次调用，减少了上下文的切换，但是用户空间对 IO 数据不可见，适用于静态文件服务器。</p>
+<p><code>sendfile</code> + DMA gather 方式产生 <strong>2</strong> 次 DMA 拷贝，没有 CPU 拷贝，而且也只有 <strong>2</strong> 次上下文切换。虽然极大地提升了性能，但是需要依赖新的硬件设备支持。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://juejin.cn/post/6844903949359644680">深入剖析Linux IO原理和几种零拷贝机制的实现</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/xiaolincoding/p/13719610.html">原来 8 张图，就可以搞懂「零拷贝」了</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.toutiao.com/i6898240850917114380/">腾讯游戏工程师：Linux Zero-copy技术全面揭秘</a></li>
+</ol>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/mmap/">mmap</a>
+                    
+                      <a class="hover-with-bg" href="/blog/tags/%E5%86%85%E5%AD%98%EF%BC%8C%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80/">内存，虚拟地址</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blog/2021/05/07/koom/">
+                        <span class="hidden-mobile">KOOM - 利用子进程 dump hprof</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/blog/js/events.js" ></script>
+<script  src="/blog/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/blog/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/blog/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/blog/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/blog/js/boot.js" ></script>
+
+
+</body>
+</html>
