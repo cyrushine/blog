@@ -11,3 +11,7 @@ fd 有个隐藏属性 offset，read 从 offset 开始读取 count 个字节的�
 FileInputStream.skip(long n)
 相当于 read n 个字节然后把数据丢弃，让 fd offset 前进 n
 
+同样的 FileOutputStream 对应系统调用 write
+
+FileInputStream 和 FileOutputStream 都属于“流式” API，就像流水一样只能朝着一个方向读/写，不能后退
+
