@@ -201,8 +201,27 @@ SEEK_SET 锁的 offset 由 l_start 决定
 SEEK_CUR 锁的 offset = fd.offset + l_start
 SEEK_END 锁的 offset = fd.end + l_start
 
-所以 FileChannel.lock 就是通过 fcntl 获得一个文件锁，FileLock.release 则通过 F_UNLCK 释放锁
+所以 FileChannel.lock 就是通过 fcntl(F_SETLKW) 获得一个文件锁（阻塞，tryLock 是 fcntl(F_SETLK) 非阻塞），FileLock.release 则通过 F_UNLCK 释放锁
 
-ByteBuffer
+Buffer
 
 capacity 容量，固定不变的，在构造的时候就确定了
+position 指示器的位置，指示下一次读/写的位置
+limit 读模式表示 Buffer 里内容的大小（正常情况下 position <= limit <= capacity），写模式表示 Buffer 的容量（正常情况下 limit == capacity）
+remaining limit - position
+read mode，position - 下一次读的位置，limit - Buffer 内的数据量，capacity - Buffer 容量
+write mode，position - 下一次写的位置，limit/capacity - Buffer 容量
+flip limit, position = position, 0，用来把 Buffer 从写模式切换为读模式
+rewind position = 0
+clear position, limit = 0, capacity
+compat 将 [position, limit] 这一块数据拷贝到 [0, limit - position]，然后 position, limit = limit - positon, capacity
+
+ByteBuffer.allocateDirect(int capacity)
+DirectByteBuffer.MemoryRef(capacity)
+VMRuntime.newNonMovableArray(componentType, length)
+VMRuntime_newNonMovableArray(env, jobject, javaElementClass, length)
+Array::Alloc(Thread* self, ObjPtr<Class> array_class, int32_t component_count, size_t component_size_shift, gc::AllocatorType allocator_type)
+Heap::AllocObjectWithAllocator(Thread* self, ObjPtr<mirror::Class> klass, size_t byte_count, AllocatorType allocator, const PreFenceVisitor& pre_fence_visitor)
+Heap::TryToAllocate(Thread* self, AllocatorType allocator_type, size_t alloc_size, size_t* bytes_allocated, size_t* usable_size, size_t* bytes_tl_bulk_allocated)
+Heap->non_moving_space->Alloc(Thread* self, size_t num_bytes, size_t* bytes_allocated, size_t* usable_size, size_t* bytes_tl_bulk_allocated)
+
