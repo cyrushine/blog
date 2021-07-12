@@ -7,6 +7,7 @@ tags: [Dalvik, ART, JVM, VM]
 
 ## Dalvik
 
+
 ### Dalvik Heap
 
 Dalvik 的堆空间分为 `Zygote Heap` 和 `Active Heap`
