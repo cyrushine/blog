@@ -1,0 +1,628 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>深入探索 java.io 和 nio - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="深入探索 java.io 和 nio">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-06-25 04:00" pubdate>
+        2021年6月25日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      3.3k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      55
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">深入探索 java.io 和 nio</h1>
+            
+            <div class="markdown-body">
+              <h3 id="FileInputStream-FileOutputStream"><a href="#FileInputStream-FileOutputStream" class="headerlink" title="FileInputStream/FileOutputStream"></a>FileInputStream/FileOutputStream</h3><p><code>FileInputStream</code> 和 <code>FileOutputStream</code> 都属于“流式” API，就像流水（<code>Stream</code>）一样只能朝着一个方向读写，不能后退</p>
+<p><code>FileInputStream</code> 相当于以只读模式读文件：open(O_RDONLY) -&gt; read -&gt; close(fd)</p>
+<p><code>FileOutputStream</code> 相当于以只写模式写文件：open(O_WRONLY | O_CREAT | (append ? O_APPEND : O_TRUNC)) -&gt; write -&gt; close(fd)</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// open</span><br>FileInputStream(File file)<br>IoBridge.open(name, O_RDONLY)<br>Libcore.os.open(path, flags, <span class="hljs-number">0666</span>)<br>Linux.open(String path, <span class="hljs-keyword">int</span> flags, <span class="hljs-keyword">int</span> mode)<br>Linux_open(JNIEnv* env, jobject, jstring javaPath, jint flags, jint mode)    <span class="hljs-comment">// libcore_io_Linux.cpp</span><br><span class="hljs-comment">// 系统调用 open 的参数 flags 必须包含三个访问模式（access modes）其中之一：</span><br><span class="hljs-comment">// O_CREAT： 如果文件不存在则创建之</span><br><span class="hljs-comment">// O_APPEND：以 APPEND 的模式打开文件（附加）</span><br><span class="hljs-comment">// O_TRUNC： 如果文件存在且以写模式打开，则把文件长度置为 0</span><br>open(pathname, flags, modes)<br><br><br><span class="hljs-comment">// read</span><br>FileInputStream.read(<span class="hljs-keyword">byte</span> b[], <span class="hljs-keyword">int</span> off, <span class="hljs-keyword">int</span> len)<br>IoBridge.read(FileDescriptor fd, <span class="hljs-keyword">byte</span>[] bytes, <span class="hljs-keyword">int</span> byteOffset, <span class="hljs-keyword">int</span> byteCount)<br>Libcore.os.read(FileDescriptor fd, <span class="hljs-keyword">byte</span>[] bytes, <span class="hljs-keyword">int</span> byteOffset, <span class="hljs-keyword">int</span> byteCount)<br>Linux.readBytes(FileDescriptor fd, <span class="hljs-keyword">byte</span>[] bytes, <span class="hljs-keyword">int</span> byteOffset, <span class="hljs-keyword">int</span> byteCount)<br>Linux_readBytes(JNIEnv* env, jobject, jobject javaFd, jobject javaBytes, jint byteOffset, jint byteCount)    <span class="hljs-comment">// libcore_io_Linux.cpp</span><br><span class="hljs-comment">// 系统调用，fd 有个成员属性 offset，read 从 offset 开始读取 count 个字节的数据到 buf，offset 也会随着增长 count</span><br>read(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">void</span> *buf, size_t count)<br><br><br><span class="hljs-comment">// write</span><br>FileOutputStream.write(<span class="hljs-keyword">byte</span> b[], <span class="hljs-keyword">int</span> off, <span class="hljs-keyword">int</span> len)<br>IoBridge.write(FileDescriptor fd, <span class="hljs-keyword">byte</span>[] bytes, <span class="hljs-keyword">int</span> byteOffset, <span class="hljs-keyword">int</span> byteCount)<br>Libcore.os.write(FileDescriptor fd, <span class="hljs-keyword">byte</span>[] bytes, <span class="hljs-keyword">int</span> byteOffset, <span class="hljs-keyword">int</span> byteCount)<br>Linux.writeBytes(FileDescriptor fd, Object buffer, <span class="hljs-keyword">int</span> offset, <span class="hljs-keyword">int</span> byteCount)<br>Linux_writeBytes(JNIEnv* env, jobject, jobject javaFd, jobject javaBytes, jint byteOffset, jint byteCount)    <span class="hljs-comment">// libcore_io_Linux.cpp</span><br>write(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">const</span> <span class="hljs-keyword">void</span>* buf, size_t count)    <span class="hljs-comment">// 系统调用</span><br><br><br><span class="hljs-comment">// close</span><br>FileInputStream.close()<br>IoBridge.closeAndSignalBlockedThreads(fd)<br>Libcore.os.close(fd)<br>Linux.close(fd)<br>Linux_close(JNIEnv* env, jobject, jobject javaFd)    <span class="hljs-comment">// libcore_io_Linux.cpp</span><br>close(fd)    <span class="hljs-comment">// 系统调用</span><br></code></pre></div></td></tr></table></figure>
+
+<h3 id="RandomAccessFile"><a href="#RandomAccessFile" class="headerlink" title="RandomAccessFile"></a>RandomAccessFile</h3><p><code>RandomAccessFile</code> 提供了读写操作，相当于 <code>FileInputStream</code> 和 <code>FileOutputStream</code> 的组合</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// open，其中 mode 与 imode 之间的映射关系为 </span><br><span class="hljs-comment">// r  - O_RDONLY         - 只读</span><br><span class="hljs-comment">// rw - O_RDWR | O_CREAT - 读写</span><br>RandomAccessFile(File file, String mode)<br>IoBridge.open(name, imode)<br>Libcore.os.open(path, flags, <span class="hljs-number">0666</span>)<br>Linux.open(String path, <span class="hljs-keyword">int</span> flags, <span class="hljs-keyword">int</span> mode)<br>Linux_open(JNIEnv* env, jobject, jstring javaPath, jint flags, jint mode)    <span class="hljs-comment">// libcore_io_Linux.cpp</span><br><span class="hljs-comment">// 系统调用 open 的参数 flags 必须包含三个访问模式（access modes）其中之一：</span><br><span class="hljs-comment">// O_CREAT： 如果文件不存在则创建之</span><br><span class="hljs-comment">// O_APPEND：以 APPEND 的模式打开文件（附加）</span><br><span class="hljs-comment">// O_TRUNC： 如果文件存在且以写模式打开，则把文件长度置为 0</span><br>open(pathname, flags, modes)<br><br><br><span class="hljs-comment">// read &amp; write</span><br>read(<span class="hljs-keyword">byte</span> b[], <span class="hljs-keyword">int</span> off, <span class="hljs-keyword">int</span> len) -&gt; 系统调用 <span class="hljs-function">read</span><br><span class="hljs-function"><span class="hljs-title">write</span><span class="hljs-params">(<span class="hljs-keyword">byte</span> b[], <span class="hljs-keyword">int</span> off, <span class="hljs-keyword">int</span> len)</span> -&gt; 系统调用 write</span><br><span class="hljs-function"></span><br><span class="hljs-function"></span><br><span class="hljs-function"><span class="hljs-comment">// seek</span></span><br><span class="hljs-function">RandomAccessFile.<span class="hljs-title">seek</span><span class="hljs-params">(<span class="hljs-keyword">long</span> pos)</span></span><br><span class="hljs-function">Libcore.os.<span class="hljs-title">lseek</span><span class="hljs-params">(fd, pos, SEEK_SET)</span></span><br><span class="hljs-function">Linux.<span class="hljs-title">lseek</span><span class="hljs-params">(FileDescriptor fd, <span class="hljs-keyword">long</span> offset, <span class="hljs-keyword">int</span> whence)</span></span><br><span class="hljs-function"><span class="hljs-title">Linux_lseek</span><span class="hljs-params">(JNIEnv* env, jobject, jobject javaFd, jlong offset, jint whence)</span>    <span class="hljs-comment">// libcore_io_Linux.cpp</span></span><br><span class="hljs-function"><span class="hljs-comment">// 系统调用，改变已打开的文件描述的文件偏移（fd.offset，指示下一次读写的位置），其中 whence 的取值有：</span></span><br><span class="hljs-function"><span class="hljs-comment">// SEEK_SET - fd.offset = offset</span></span><br><span class="hljs-function"><span class="hljs-comment">// SEEK_CUR - fd.offset += offset</span></span><br><span class="hljs-function"><span class="hljs-comment">// SEEK_END - fd.offset = fd.end + offset</span></span><br><span class="hljs-function"><span class="hljs-title">lseek</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, off_t offset, <span class="hljs-keyword">int</span> whence)</span></span><br></code></pre></div></td></tr></table></figure>
+
+<p>总之，传统的 <code>java.io</code> 都是基于系统调用 <code>open</code>, <code>read</code>, <code>write</code>, <code>lseek</code> 和 <code>close</code></p>
+<ul>
+<li><code>FileInputStream</code> 包装了 <code>read</code></li>
+<li><code>FileOutputStream</code> 包装了 <code>write</code></li>
+<li><code>RandomAccessFile</code> 包装了 <code>read</code> 和 <code>write</code></li>
+</ul>
+<h3 id="FileChannel"><a href="#FileChannel" class="headerlink" title="FileChannel"></a>FileChannel</h3><p><code>FileChannel</code> 的读写操作最终是执行系统调用 <code>pread/pwrite</code>（区别于 <code>read/write</code> 的是它们不改变 <code>fd.offset</code>）</p>
+<blockquote>
+<p>pread() reads up to count bytes from file descriptor fd at offset offset (from the start of the file) into the buffer starting at buf.  The file offset is not changed.<br>pwrite() writes up to count bytes from the buffer starting at buf to the file descriptor fd at offset offset.  The file offset is not changed.<br>read() attempts to read up to count bytes from file descriptor fd into the buffer starting at buf. On  files  that  support seeking, the read operation commences at the file offset, and the file offset is incremented by the number of bytes read.<br>read() attempts to read up to count bytes from file descriptor fd into the buffer starting at buf. On  files  that  support seeking, the read operation commences at the file offset, and the file offset is incremented by the number of bytes read.</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// read</span><br>FileChannel.read(ByteBuffer dst, <span class="hljs-keyword">long</span> position)<br>FileChannelImpl.read(ByteBuffer dst, <span class="hljs-keyword">long</span> position)<br>IOUtil.read(FileDescriptor fd, ByteBuffer dst, <span class="hljs-keyword">long</span> position, NativeDispatcher nd)<br>IOUtil.readIntoNativeBuffer(FileDescriptor fd, ByteBuffer bb, <span class="hljs-keyword">long</span> position, NativeDispatcher nd)<br>FileDispatcherImpl.pread0(FileDescriptor fd, <span class="hljs-keyword">long</span> address, <span class="hljs-keyword">int</span> len, <span class="hljs-keyword">long</span> position)<br>FileDispatcherImpl_pread0(JNIEnv *env, jclass clazz, jobject fdo, jlong address, jint len, jlong offset)    <span class="hljs-comment">// FileDispatcherImpl.c</span><br>pread64(fd, buf, len, offset)    <span class="hljs-comment">// 系统调用</span><br><br><br><span class="hljs-comment">// write</span><br>FileChannel.write(ByteBuffer src, <span class="hljs-keyword">long</span> position)<br>FileChannelImpl.write(ByteBuffer src, <span class="hljs-keyword">long</span> position)<br>IOUtil.write(FileDescriptor fd, ByteBuffer src, <span class="hljs-keyword">long</span> position, NativeDispatcher nd)<br>IOUtil.writeFromNativeBuffer(FileDescriptor fd, ByteBuffer bb, <span class="hljs-keyword">long</span> position, NativeDispatcher nd)<br>FileDispatcherImpl.pwrite0(FileDescriptor fd, <span class="hljs-keyword">long</span> address, <span class="hljs-keyword">int</span> len, <span class="hljs-keyword">long</span> position)<br>FileDispatcherImpl_pwrite0(JNIEnv *env, jclass clazz, jobject fdo, jlong address, jint len, jlong offset)    <span class="hljs-comment">// FileDispatcherImpl.c</span><br>pwrite64(<span class="hljs-keyword">int</span> __fd, <span class="hljs-keyword">const</span> <span class="hljs-keyword">void</span>* __buf, size_t __count, off64_t __offset)    <span class="hljs-comment">// 系统调用</span><br></code></pre></div></td></tr></table></figure>
+
+
+<h3 id="数组的两次复制"><a href="#数组的两次复制" class="headerlink" title="数组的两次复制"></a>数组的两次复制</h3><p>咋一看，<code>FileInputStream/FileOutputStream</code> 和 <code>FileChannel</code> 最终都是通过系统调用 <code>read/write</code> 完成文件的读写操作，那 NIO 的优势体现在哪呢？</p>
+<p>其实在 C 层的入口点就可以看出来了，看下面的读操作，<code>Byte[]</code> 是作为 java object 传给 C 层的，对它的读写操作需要包裹在 <code>GetByteArrayElements/ReleaseByteArrayElements</code> 之间（通过 <code>ScopedBytesRW</code> 的构造函数和析构函数），<code>GetByteArrayElements</code> 会从 <code>Byte[]</code> 复制一份数据出来，<code>ReleaseByteArrayElements</code> 会回写数据到 <code>Byte[]</code>，也就是说 <code>Byte[]</code> 在 C 层走一圈会有两次额外的复制操作，数组越大越耗资源</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> jint <span class="hljs-title">Linux_readBytes</span><span class="hljs-params">(JNIEnv* env, jobject, jobject javaFd, jobject javaBytes, jint byteOffset, jint byteCount)</span> </span>&#123;<br>    <span class="hljs-function">ScopedBytesRW <span class="hljs-title">bytes</span><span class="hljs-params">(env, javaBytes)</span></span>;<br>    <span class="hljs-keyword">if</span> (bytes.<span class="hljs-built_in">get</span>() == <span class="hljs-literal">NULL</span>) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-built_in">IO_FAILURE_RETRY</span>(env, <span class="hljs-keyword">ssize_t</span>, read, javaFd, bytes.<span class="hljs-built_in">get</span>() + byteOffset, byteCount);<br>&#125;<br><br><span class="hljs-comment">// 看下 ScopedBytesRW 是什么</span><br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ScopedBytesRW</span> :</span> <span class="hljs-keyword">public</span> ScopedBytes&lt;<span class="hljs-literal">false</span>&gt; &#123;<br><span class="hljs-keyword">public</span>:<br>    <span class="hljs-built_in">ScopedBytesRW</span>(JNIEnv* env, jobject object) : ScopedBytes&lt;<span class="hljs-literal">false</span>&gt;(env, object) &#123;&#125;<br>    <span class="hljs-function">jbyte* <span class="hljs-title">get</span><span class="hljs-params">()</span> </span>&#123;<br>        <span class="hljs-keyword">return</span> mPtr;<br>    &#125;<br>&#125;;<br><br><span class="hljs-comment">// 貌似在 ScopedBytes 的构造函数和析构函数里做了些手脚</span><br><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">bool</span> readOnly&gt;<br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ScopedBytes</span> &#123;</span><br><span class="hljs-keyword">public</span>:<br>    <span class="hljs-built_in">ScopedBytes</span>(JNIEnv* env, jobject object)<br>    : <span class="hljs-built_in">mEnv</span>(env), <span class="hljs-built_in">mObject</span>(object), <span class="hljs-built_in">mByteArray</span>(<span class="hljs-literal">nullptr</span>), <span class="hljs-built_in">mPtr</span>(<span class="hljs-literal">nullptr</span>)<br>    &#123;<br>        <span class="hljs-keyword">if</span> (mObject == <span class="hljs-literal">nullptr</span>) &#123;<br>            <span class="hljs-built_in">jniThrowNullPointerException</span>(mEnv);<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            jclass byteArrayClass = JniConstants::<span class="hljs-built_in">GetPrimitiveByteArrayClass</span>(env);<br>            <span class="hljs-keyword">if</span> (mEnv-&gt;<span class="hljs-built_in">IsInstanceOf</span>(mObject, byteArrayClass)) &#123;<br>                mByteArray = <span class="hljs-keyword">reinterpret_cast</span>&lt;jbyteArray&gt;(mObject);<br>                mPtr = mEnv-&gt;<span class="hljs-built_in">GetByteArrayElements</span>(mByteArray, <span class="hljs-literal">nullptr</span>);                 <span class="hljs-comment">// 字节数组</span><br>            &#125; <span class="hljs-keyword">else</span> &#123;<br>                mPtr = <span class="hljs-keyword">reinterpret_cast</span>&lt;jbyte*&gt;(mEnv-&gt;<span class="hljs-built_in">GetDirectBufferAddress</span>(mObject)); <span class="hljs-comment">// DirectBuffer</span><br>            &#125;<br>        &#125;<br>    &#125;<br><br>    ~<span class="hljs-built_in">ScopedBytes</span>() &#123;<br>        <span class="hljs-keyword">if</span> (mByteArray != <span class="hljs-literal">nullptr</span>) &#123;<br>            mEnv-&gt;<span class="hljs-built_in">ReleaseByteArrayElements</span>(mByteArray, mPtr, readOnly ? JNI_ABORT : <span class="hljs-number">0</span>);<br>        &#125;<br>    &#125;<br>&#125;;<br></code></pre></div></td></tr></table></figure>
+
+
+<p><a target="_blank" rel="noopener" href="https://docs.oracle.com/javase/1.5.0/docs/guide/jni/spec/functions.html">JNI Functions</a></p>
+<blockquote>
+<p><code>Get&lt;PrimitiveType&gt;ArrayElements(JNIEnv *env, ArrayType array, jboolean *isCopy)</code></p>
+<p>A family of functions that returns the body of the primitive array. The result is valid until the corresponding Release<PrimitiveType>ArrayElements() function is called. Since the returned array may be a copy of the Java array, changes made to the returned array will not necessarily be reflected in the original array until Release<PrimitiveType>ArrayElements() is called.</p>
+<p>If isCopy is not NULL, then *isCopy is set to JNI_TRUE if a copy is made; or it is set to JNI_FALSE if no copy is made.</p>
+</blockquote>
+<blockquote>
+<p><code>Release&lt;PrimitiveType&gt;ArrayElements(JNIEnv *env, ArrayType array, NativeType *elems, jint mode)</code></p>
+<p>A family of functions that informs the VM that the native code no longer needs access to elems. The elems argument is a pointer derived from array using the corresponding Get<PrimitiveType>ArrayElements() function. If necessary, this function copies back all changes made to elems to the original array.</p>
+<p>The mode argument provides information on how the array buffer should be released. mode has no effect if elems is not a copy of the elements in array.</p>
+<p>0 - copy back the content and free the elems buffer</p>
+<p>JNI_COMMIT - copy back the content but do not free the elems buffer</p>
+<p>JNI_ABORT - free the buffer without copying back the possible changes</p>
+<p>In most cases, programmers pass “0” to the mode argument to ensure consistent behavior for both pinned and copied arrays. The other options give the programmer more control over memory management and should be used with extreme care.</p>
+</blockquote>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/21691356/ndk-does-getbytearrayelements-copy-data-from-java-to-c/21693632">NDK: Does GetByteArrayElements copy data from Java to C++?</a></p>
+<blockquote>
+<p>Get<Primitive>ArrayElements may or may not copy the data as it sees fit. The isCopy output parameter will tell you whether it has been copied. If data is not copied, then you have obtained a pointer to the data directly in the Dalvik heap. Read more here.</p>
+<p>You always need to call the corresponding Release<Primitive>ArrayElements, regardless of whether a copy was made. Copying data back to the VM array isn’t the only cleanup that might need to be done, although (according to the JNI documentation already linked) it is feasible that changes can be seen on the Java side before Release… has been called (iff data has not been copied).</p>
+<p>I don’t believe the VM is going to allow you to make the conversions that would be necessary to do what you are thinking. As I see it, either way you go, you will need to convert a byte array to a float or a float to a byte array in Java, which you cannot accomplish by type casting. The data is going to be copied at some point.</p>
+</blockquote>
+<p>为啥会有数组的复制和回写？参考 <a href="../../../../2021/05/28/dalvik_art_heap_gc/">老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）</a> 我猜有两个原因：</p>
+<ol>
+<li>GC 在标记阶段需要 <code>Stop The World</code> 以标记需要回收的对象，但很明显 VM 没法中断 native thread</li>
+<li>还有 <code>Compacting GC</code> 会通过两个 <code>Bump Pointer Space</code> 来回捣鼓堆上的对象以实现内存的整理和压缩，释放小块的内存碎片，这会导致堆上对象的地址发生变动，VM 可以找到堆上所有对此对象的引用并修改它们的地址，但 VM 没法修改 native 代码对此对象的引用</li>
+</ol>
+<h3 id="DirectByteBuffer"><a href="#DirectByteBuffer" class="headerlink" title="DirectByteBuffer"></a>DirectByteBuffer</h3><p>看 <code>FileChannel</code> 读操作的 C 层入口，不再是 <code>Byte[]</code> 对象而是 C 代码可以直接操作的虚拟地址 <code>address</code>，系统调用 <code>pread64</code> 可以直接把数据写到 <code>address</code> 上，省去了两次复制数据的操作</p>
+<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-built_in">FileDispatcherImpl_pread0</span>(JNIEnv *env, jclass clazz, jobject fdo, jlong address, jint len, jlong offset)<br>&#123;<br>    jint fd = <span class="hljs-built_in">fdval</span>(env, fdo);<br>    <span class="hljs-keyword">void</span> *buf = (<span class="hljs-keyword">void</span> *)<span class="hljs-built_in">jlong_to_ptr</span>(address);<br>    <span class="hljs-keyword">return</span> <span class="hljs-built_in">convertReturnVal</span>(env, <span class="hljs-built_in">pread64</span>(fd, buf, len, offset), JNI_TRUE);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>为啥 <code>FileChannel</code> 可以直接拿到并操作虚拟地址呢？那还得由 <code>ByteBuffer</code> 说起</p>
+<p>ByteBuffer 有两种：</p>
+<ol>
+<li>ByteBuffer.allocateDirect           - <code>DirectByteBuffer</code></li>
+<li>ByteBuffer.allocate/ByteBuffer.wrap - <code>HeapByteBuffer</code></li>
+</ol>
+<p><code>HeapByteBuffer</code> 就是对 <code>Byte[]</code> 的包装，主要看下 <code>DirectByteBuffer</code></p>
+<p><code>DirectByteBuffer</code> 其实也持有一个字节数组 <code>DirectByteBuffer.MemoryRef.buffer</code>，不同于普通的 <code>Byte[]</code> 它是直接在 non_moving_space 上分配的，也就说它不会被 GC 整理和移动所以它的地址是固定不变的，native 代码可以直接在这块内存上进行读写操作</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ByteBuffer.allocateDirect(<span class="hljs-keyword">int</span> capacity)<br>DirectByteBuffer.MemoryRef(capacity)<br>VMRuntime.newNonMovableArray(componentType, length)<br>VMRuntime_newNonMovableArray(env, jobject, javaElementClass, length)<br>Array::Alloc(Thread* self, ObjPtr&lt;Class&gt; array_class, int32_t component_count, size_t component_size_shift, gc::AllocatorType allocator_type)<br>Heap::AllocObjectWithAllocator(Thread* self, ObjPtr&lt;mirror::Class&gt; klass, size_t byte_count, AllocatorType allocator, <span class="hljs-keyword">const</span> PreFenceVisitor&amp; pre_fence_visitor)<br>Heap::TryToAllocate(Thread* self, AllocatorType allocator_type, size_t alloc_size, size_t* bytes_allocated, size_t* usable_size, size_t* bytes_tl_bulk_allocated)<br>Heap-&gt;non_moving_space-&gt;Alloc(Thread* self, size_t num_bytes, size_t* bytes_allocated, size_t* usable_size, size_t* bytes_tl_bulk_allocated)<br></code></pre></div></td></tr></table></figure>
+
+<p>看下文档 <a target="_blank" rel="noopener" href="https://docs.oracle.com/javase/1.5.0/docs/guide/jni/spec/functions.html#nio_support">NIO Support</a> 是怎么说的</p>
+<blockquote>
+<p>The NIO-related entry points allow native code to access java.nio direct buffers. The contents of a direct buffer can, potentially, reside in native memory outside of the ordinary garbage-collected heap. </p>
+<p><code>jobject NewDirectByteBuffer(JNIEnv* env, void* address, jlong capacity)</code></p>
+<p>Allocates and returns a direct java.nio.ByteBuffer referring to the block of memory starting at the memory address address and extending capacity bytes.</p>
+<p>Native code that calls this function and returns the resulting byte-buffer object to Java-level code should ensure that the buffer refers to a valid region of memory that is accessible for reading and, if appropriate, writing. An attempt to access an invalid memory location from Java code will either return an arbitrary value, have no visible effect, or cause an unspecified exception to be thrown.</p>
+<p><code>void* GetDirectBufferAddress(JNIEnv* env, jobject buf)</code></p>
+<p>Fetches and returns the starting address of the memory region referenced by the given direct java.nio.Buffer.</p>
+<p>This function allows native code to access the same memory region that is accessible to Java code via the buffer object.</p>
+</blockquote>
+<p><code>FileChannel</code> 在进行读写操作时，也即 java 层和 native 层之间进行数据传递时，总是会使用 <code>DirectByteBuffer</code> 避免数组的两次拷贝</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">FileChannelImpl.read(FileDescriptor fd, ByteBuffer dst, <span class="hljs-keyword">long</span> position, NativeDispatcher nd) <span class="hljs-keyword">throws</span> IOException &#123;<br>    <span class="hljs-keyword">if</span> (dst.isReadOnly())<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalArgumentException(<span class="hljs-string">&quot;Read-only buffer&quot;</span>);<br>    <span class="hljs-keyword">if</span> (dst <span class="hljs-keyword">instanceof</span> DirectBuffer)<br>        <span class="hljs-keyword">return</span> readIntoNativeBuffer(fd, dst, position, nd);<br>    <span class="hljs-comment">// Substitute a native buffer</span><br>    ByteBuffer bb = Util.getTemporaryDirectBuffer(dst.remaining());<br>    <span class="hljs-keyword">try</span> &#123;<br>        <span class="hljs-keyword">int</span> n = readIntoNativeBuffer(fd, bb, position, nd);<br>        bb.flip();<br>        <span class="hljs-keyword">if</span> (n &gt; <span class="hljs-number">0</span>)<br>            dst.put(bb);<br>        <span class="hljs-keyword">return</span> n;<br>    &#125; <span class="hljs-keyword">finally</span> &#123;<br>        Util.offerFirstTemporaryDirectBuffer(bb);<br>    &#125;<br>&#125;<br><br>FileChannelImpl.write(FileDescriptor fd, ByteBuffer src, <span class="hljs-keyword">long</span> position, NativeDispatcher nd) <span class="hljs-keyword">throws</span> IOException &#123;<br>    <span class="hljs-keyword">if</span> (src <span class="hljs-keyword">instanceof</span> DirectBuffer)<br>        <span class="hljs-keyword">return</span> writeFromNativeBuffer(fd, src, position, nd);<br>    <span class="hljs-comment">// Substitute a native buffer</span><br>    <span class="hljs-keyword">int</span> pos = src.position();<br>    <span class="hljs-keyword">int</span> lim = src.limit();<br>    <span class="hljs-keyword">assert</span> (pos &lt;= lim);<br>    <span class="hljs-keyword">int</span> rem = (pos &lt;= lim ? lim - pos : <span class="hljs-number">0</span>);<br>    ByteBuffer bb = Util.getTemporaryDirectBuffer(rem);<br>    <span class="hljs-keyword">try</span> &#123;<br>        bb.put(src);<br>        bb.flip();<br>        <span class="hljs-comment">// Do not update src until we see how many bytes were written</span><br>        src.position(pos);<br>        <span class="hljs-keyword">int</span> n = writeFromNativeBuffer(fd, bb, position, nd);<br>        <span class="hljs-keyword">if</span> (n &gt; <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-comment">// now update src</span><br>            src.position(pos + n);<br>        &#125;<br>        <span class="hljs-keyword">return</span> n;<br>    &#125; <span class="hljs-keyword">finally</span> &#123;<br>        Util.offerFirstTemporaryDirectBuffer(bb);<br>    &#125;<br>&#125;<br><br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * Returns a temporary buffer of at least the given size</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ByteBuffer <span class="hljs-title">getTemporaryDirectBuffer</span><span class="hljs-params">(<span class="hljs-keyword">int</span> size)</span> </span>&#123;<br>    <span class="hljs-comment">// If a buffer of this size is too large for the cache, there</span><br>    <span class="hljs-comment">// should not be a buffer in the cache that is at least as</span><br>    <span class="hljs-comment">// large. So we&#x27;ll just create a new one. Also, we don&#x27;t have</span><br>    <span class="hljs-comment">// to remove the buffer from the cache (as this method does</span><br>    <span class="hljs-comment">// below) given that we won&#x27;t put the new buffer in the cache.</span><br>    <span class="hljs-keyword">if</span> (isBufferTooLarge(size)) &#123;<br>        <span class="hljs-keyword">return</span> ByteBuffer.allocateDirect(size);<br>    &#125;<br>    BufferCache cache = bufferCache.get();<br>    ByteBuffer buf = cache.get(size);<br>    <span class="hljs-keyword">if</span> (buf != <span class="hljs-keyword">null</span>) &#123;<br>        <span class="hljs-keyword">return</span> buf;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// No suitable buffer in the cache so we need to allocate a new</span><br>        <span class="hljs-comment">// one. To avoid the cache growing then we remove the first</span><br>        <span class="hljs-comment">// buffer from the cache and free it.</span><br>        <span class="hljs-keyword">if</span> (!cache.isEmpty()) &#123;<br>            buf = cache.removeFirst();<br>            free(buf);<br>        &#125;<br>        <span class="hljs-keyword">return</span> ByteBuffer.allocateDirect(size);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+
+<h3 id="File-Lock-Supporting"><a href="#File-Lock-Supporting" class="headerlink" title="File Lock Supporting"></a>File Lock Supporting</h3><p><code>FileChannel.lock</code> 通过 <code>fcntl(F_SETLKW)</code> 获得一个文件锁（阻塞，<code>tryLock</code> 是 <code>fcntl(F_SETLK)</code> 非阻塞），<code>FileLock.release</code> 则通过 <code>F_UNLCK</code> 释放锁</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 获得锁</span><br>FileChannel.lock()<br>FileChannel.lock(<span class="hljs-number">0</span>, Long.MAX_VALUE, <span class="hljs-keyword">false</span>)<br>FileChannelImpl.lock(<span class="hljs-keyword">long</span> position, <span class="hljs-keyword">long</span> size, <span class="hljs-keyword">boolean</span> shared)<br>FileDispatcherImpl.lock(FileDescriptor fd, <span class="hljs-keyword">boolean</span> blocking, <span class="hljs-keyword">long</span> pos, <span class="hljs-keyword">long</span> size, <span class="hljs-keyword">boolean</span> shared)<br>FileDispatcherImpl.lock0(FileDescriptor fd, <span class="hljs-keyword">boolean</span> blocking, <span class="hljs-keyword">long</span> pos, <span class="hljs-keyword">long</span> size, <span class="hljs-keyword">boolean</span> shared)<br>FileDispatcherImpl_lock0(JNIEnv *env, jobject <span class="hljs-keyword">this</span>, jobject fdo, jboolean block, jlong pos, jlong size, jboolean shared)<br>fcntl(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> cmd, ... <span class="hljs-comment">/* arg */</span> )    <span class="hljs-comment">// 系统调用</span><br><br><span class="hljs-comment">// 释放锁</span><br>FileLock.release()<br>FileLockImpl.release()<br>FileChannelImpl.release(FileLockImpl fli)<br>FileDispatcherImpl.release(FileDescriptor fd, <span class="hljs-keyword">long</span> pos, <span class="hljs-keyword">long</span> size)<br>FileDispatcherImpl_release0(JNIEnv *env, jobject <span class="hljs-keyword">this</span>, jobject fdo, jlong pos, jlong size)<br>fcntl(<span class="hljs-keyword">int</span> __fd, <span class="hljs-keyword">int</span> __cmd, ...)    <span class="hljs-comment">// 系统调用</span><br></code></pre></div></td></tr></table></figure>
+
+<blockquote>
+<p>fcntl - manipulate file descriptor</p>
+<p><code>int fcntl(int fd, int cmd, ... /* arg */ )</code></p>
+<p>Linux implements traditional (“process-associated”) UNIX record locks, as standardized by POSIX.  For a Linux-specific alternative with better semantics, see the discussion of open file description locks below.</p>
+<p>F_SETLK, F_SETLKW, and F_GETLK are used to acquire, release, and test for the existence of record locks (also known as byte-range, file-segment, or file-region locks).  The third argument, lock, is a pointer to a structure that has at least the following fields (in unspecified order).</p>
+<div class="hljs code-wrapper"><pre><code>struct flock &#123;
+    ...
+    short l_type;    /* Type of lock: F_RDLCK,
+                        F_WRLCK, F_UNLCK */
+    short l_whence;  /* How to interpret l_start:
+                        SEEK_SET, SEEK_CUR, SEEK_END */
+    off_t l_start;   /* Starting offset for lock */
+    off_t l_len;     /* Number of bytes to lock */
+    pid_t l_pid;     /* PID of process blocking our lock
+                        (set by F_GETLK and F_OFD_GETLK) */
+    ...
+&#125;;
+</code></pre></div>
+</blockquote>
+<p>如果锁已被别的进程持有，<code>F_SETLK</code> 返回 -1 而 <code>F_SETLKW</code> 会阻塞直到锁被释放</p>
+<ol>
+<li><p>F_RDLCK 读锁，共享锁，可以被多个进程持有</p>
+</li>
+<li><p>F_WRLCK 写锁，排它锁（包括读锁），只能被一个进程持有</p>
+</li>
+<li><p>F_UNLCK 释放锁</p>
+</li>
+<li><p>SEEK_SET 锁的 offset 由 l_start 决定</p>
+</li>
+<li><p>SEEK_CUR 锁的 offset = fd.offset + l_start</p>
+</li>
+<li><p>SEEK_END 锁的 offset = fd.end + l_start</p>
+</li>
+</ol>
+<h3 id="Buffer-的基本概念"><a href="#Buffer-的基本概念" class="headerlink" title="Buffer 的基本概念"></a>Buffer 的基本概念</h3><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>capacity</td>
+<td>容量，固定不变的，在构造的时候就确定了</td>
+</tr>
+<tr>
+<td>position</td>
+<td>指示器的位置，指示下一次读/写的位置</td>
+</tr>
+<tr>
+<td>limit</td>
+<td>读模式表示 Buffer 里内容的大小（正常情况下 position &lt;= limit &lt;= capacity），写模式表示 Buffer 的容量（正常情况下 limit == capacity）</td>
+</tr>
+<tr>
+<td>remaining</td>
+<td>limit - position</td>
+</tr>
+<tr>
+<td>read mode</td>
+<td>position - 下一次读的位置，limit - Buffer 内的数据量，capacity - Buffer 容量</td>
+</tr>
+<tr>
+<td>write mode</td>
+<td>position - 下一次写的位置，limit/capacity - Buffer 容量</td>
+</tr>
+<tr>
+<td>flip</td>
+<td>limit, position = position, 0，用来把 Buffer 从写模式切换为读模式</td>
+</tr>
+<tr>
+<td>rewind</td>
+<td>position = 0</td>
+</tr>
+<tr>
+<td>clear</td>
+<td>position, limit = 0, capacity</td>
+</tr>
+<tr>
+<td>compat</td>
+<td>将 [position, limit] 这一块数据拷贝到 [0, limit - position]，然后 position, limit = limit - positon, capacity</td>
+</tr>
+</tbody></table>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/ART/">ART</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/nio/">nio</a>
+                    
+                      <a class="hover-with-bg" href="/tags/ART/">ART</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/05/28/dalvik-art-heap-gc/">
+                        <span class="hidden-mobile">老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
