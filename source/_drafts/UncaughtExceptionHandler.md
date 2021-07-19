@@ -35,10 +35,10 @@ public void uncaughtException(Thread t, Throwable e) {
 Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异常，但无法改变 app 被 blocked 住，然后出现 ANR（即使点击 `等待` 依然被 blocked 住），点击 `确定` 后被 kill 的命运
 
 ```log
-2021-07-19 11:13:29.464 28055-28055/com.example.myapplication D/AndroidRuntime: Shutting down VM
+2021-06-12 11:13:29.464 28055-28055/com.example.myapplication D/AndroidRuntime: Shutting down VM
 
     --------- beginning of crash
-2021-07-19 11:13:29.465 28055-28055/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: main
+2021-06-12 11:13:29.465 28055-28055/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: main
     Process: com.example.myapplication, PID: 28055
     java.lang.RuntimeException: Test Exception
         at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:58)
@@ -59,7 +59,7 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
         at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:967)
 
 // 如果 Thread.uncaughtExceptionHandler != null or DefaultUncaughtExceptionHandler != null 则能够在自己的 UncaughtExceptionHandler 里捕获异常
-2021-07-19 11:13:29.471 28055-28055/com.example.myapplication E/cyrus: main-2 UncaughtExceptionHandler: Test Exception
+2021-06-12 11:13:29.471 28055-28055/com.example.myapplication E/cyrus: main-2 UncaughtExceptionHandler: Test Exception
     java.lang.RuntimeException: Test Exception
         at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:58)
         at com.example.myapplication.MainActivity.onCreate$lambda-2(MainActivity.kt:30)
@@ -79,17 +79,17 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
         at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:967)        
 
 // app 没有立刻崩溃，但是进入 blocked 状态，点击 app 没响应然后触发 ANR
-2021-07-19 11:17:10.449 1764-28190/? I/ActivityManager: Collecting stacks for pid 28055
-2021-07-19 11:17:10.449 1764-28190/? I/system_server: libdebuggerd_client: started dumping process 28055
-2021-07-19 11:17:10.450 697-697/? I/tombstoned: registered intercept for pid 28055 and type kDebuggerdJavaBacktrace
-2021-07-19 11:17:10.450 28055-28065/com.example.myapplication I/e.myapplicatio: Thread[6,tid=28065,WaitingInMainSignalCatcherLoop,Thread*=0xb400007271841000,peer=0x13780260,"Signal Catcher"]: reacting to signal 3
-2021-07-19 11:17:10.528 697-697/? I/tombstoned: received crash request for pid 28055
-2021-07-19 11:17:10.528 697-697/? I/tombstoned: found intercept fd 512 for pid 28055 and type kDebuggerdJavaBacktrace
-2021-07-19 11:17:10.528 28055-28065/com.example.myapplication I/e.myapplicatio: Wrote stack traces to tombstoned
-2021-07-19 11:17:10.529 1764-28190/? I/system_server: libdebuggerd_client: done dumping process 28055
+2021-06-12 11:17:10.449 1764-28190/? I/ActivityManager: Collecting stacks for pid 28055
+2021-06-12 11:17:10.449 1764-28190/? I/system_server: libdebuggerd_client: started dumping process 28055
+2021-06-12 11:17:10.450 697-697/? I/tombstoned: registered intercept for pid 28055 and type kDebuggerdJavaBacktrace
+2021-06-12 11:17:10.450 28055-28065/com.example.myapplication I/e.myapplicatio: Thread[6,tid=28065,WaitingInMainSignalCatcherLoop,Thread*=0xb400007271841000,peer=0x13780260,"Signal Catcher"]: reacting to signal 3
+2021-06-12 11:17:10.528 697-697/? I/tombstoned: received crash request for pid 28055
+2021-06-12 11:17:10.528 697-697/? I/tombstoned: found intercept fd 512 for pid 28055 and type kDebuggerdJavaBacktrace
+2021-06-12 11:17:10.528 28055-28065/com.example.myapplication I/e.myapplicatio: Wrote stack traces to tombstoned
+2021-06-12 11:17:10.529 1764-28190/? I/system_server: libdebuggerd_client: done dumping process 28055
 
 // 需要一段时间来 dump ANR 信息
-2021-07-19 11:17:15.839 1764-28190/? E/ActivityManager: ANR in com.example.myapplication (com.example.myapplication/.MainActivity)
+2021-06-12 11:17:15.839 1764-28190/? E/ActivityManager: ANR in com.example.myapplication (com.example.myapplication/.MainActivity)
     PID: 28055
     Reason: Input dispatching timed out (com.example.myapplication/com.example.myapplication.MainActivity, 7fc1f1 com.example.myapplication/com.example.myapplication.MainActivity (server) is not responding. Waited 8001ms for MotionEvent(action=DOWN))
     Parent: com.example.myapplication/.MainActivity
@@ -99,7 +99,7 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
     full avg10=0.00 avg60=0.00 avg300=0.00 total=5127529
     ----- End output from /proc/pressure/memory -----
     
-    CPU usage from 0ms to 5796ms later (2021-07-19 11:17:09.982 to 2021-07-19 11:17:15.778):
+    CPU usage from 0ms to 5796ms later (2021-06-12 11:17:09.982 to 2021-06-12 11:17:15.778):
       0.1% 1465/media.codec: 0% user + 0% kernel / faults: 38284 minor
       18% 1764/system_server: 8.2% user + 10% kernel / faults: 4408 minor
       0% 1509/media.swcodec: 0% user + 0% kernel / faults: 21804 minor
@@ -155,7 +155,7 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
       0.1% 676/jbd2/sda31-8: 0% user + 0.1% kernel
       0% 793/android.hardware.audio.service: 0% user + 0% kernel / faults: 39 minor
       0% 798/android.hardware.bluetooth@1.0-service-qti: 0% user + 0% kernel / faults: 11 minor
-2021-07-19 11:17:15.839 1764-28190/? E/ActivityManager:   0.1% 807/android.hardware.health@2.1-service: 0% user + 0.1% kernel / faults: 9 minor
+2021-06-12 11:17:15.839 1764-28190/? E/ActivityManager:   0.1% 807/android.hardware.health@2.1-service: 0% user + 0.1% kernel / faults: 9 minor
       0% 828/android.hardware.neuralnetworks@1.3-service-qti: 0% user + 0% kernel / faults: 65 minor
       0.1% 851/android.hardware.wifi@1.0-service: 0.1% user + 0% kernel
       0% 1365/cameraserver: 0% user + 0% kernel / faults: 70 minor
@@ -175,7 +175,7 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
       0.1% 28106/kworker/u16:3: 0% user + 0.1% kernel
       0.1% 28171/kworker/0:1: 0% user + 0.1% kernel
     14% TOTAL: 7.1% user + 6.5% kernel + 0.1% iowait + 0.5% irq + 0.2% softirq
-    CPU usage from 41ms to 439ms later (2021-07-19 11:17:10.023 to 2021-07-19 11:17:10.422) with 99% awake:
+    CPU usage from 41ms to 439ms later (2021-06-12 11:17:10.023 to 2021-06-12 11:17:10.422) with 99% awake:
       51% 1764/system_server: 18% user + 33% kernel / faults: 929 minor
         39% 28190/AnrConsumer: 9% user + 30% kernel
         6% 1789/android.ui: 3% user + 3% kernel
@@ -193,13 +193,13 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
     8.9% TOTAL: 2.8% user + 5.7% kernel + 0.3% irq
 
 // 点击 ANR 对话框的确定按钮杀死 app
-2021-07-19 11:18:58.935 1764-1789/? I/ActivityManager: Killing 28055:com.example.myapplication/u0a161 (adj 0): user request after error
-2021-07-19 11:18:58.937 1764-1789/? I/Process: PerfMonitor : current process sending signal quiet. PID: 28055 SIG: 9
-2021-07-19 11:18:58.938 1764-1802/? I/Process: PerfMonitor : current process killing process group. PID: 28055
-2021-07-19 11:18:58.965 706-706/? I/Zygote: Process 28055 exited due to signal 9 (Killed)
-2021-07-19 11:18:58.966 1764-1802/? I/libprocessgroup: Successfully killed process cgroup uid 10161 pid 28055 in 28ms
-2021-07-19 11:18:58.970 882-882/? I/vendor.qti.hardware.servicetracker@1.2-service: killProcess is called for pid : 28055
-2021-07-19 11:18:58.970 1764-5448/? W/ANRStateManager: clear state, but process isn't exist. hash=92035998 uid=10161 pid=28055 state=16
+2021-06-12 11:18:58.935 1764-1789/? I/ActivityManager: Killing 28055:com.example.myapplication/u0a161 (adj 0): user request after error
+2021-06-12 11:18:58.937 1764-1789/? I/Process: PerfMonitor : current process sending signal quiet. PID: 28055 SIG: 9
+2021-06-12 11:18:58.938 1764-1802/? I/Process: PerfMonitor : current process killing process group. PID: 28055
+2021-06-12 11:18:58.965 706-706/? I/Zygote: Process 28055 exited due to signal 9 (Killed)
+2021-06-12 11:18:58.966 1764-1802/? I/libprocessgroup: Successfully killed process cgroup uid 10161 pid 28055 in 28ms
+2021-06-12 11:18:58.970 882-882/? I/vendor.qti.hardware.servicetracker@1.2-service: killProcess is called for pid : 28055
+2021-06-12 11:18:58.970 1764-5448/? W/ANRStateManager: clear state, but process isn't exist. hash=92035998 uid=10161 pid=28055 state=16
 ```
 
 
@@ -208,7 +208,7 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
 app 没有发生 ANR 也没有崩溃，且无论 `DefaultUncaughtExceptionHandler` 是否为 null，`Thread.uncaughtExceptionHandler` 都能够有限捕获异常
 
 ```log
-2021-07-19 17:20:41.503 20615-22015/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-10
+2021-06-12 17:20:41.503 20615-22015/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-10
     Process: com.example.myapplication, PID: 20615
     java.lang.RuntimeException: Test Exception
         at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:75)
@@ -216,7 +216,7 @@ app 没有发生 ANR 也没有崩溃，且无论 `DefaultUncaughtExceptionHandle
         at com.example.myapplication.MainActivity$onCreate$4$1.invoke(MainActivity.kt:36)
         at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:30)
 
-2021-07-19 17:20:41.509 20615-22015/com.example.myapplication E/cyrus: Thread-10-3890 UncaughtExceptionHandler: Test Exception
+2021-06-12 17:20:41.509 20615-22015/com.example.myapplication E/cyrus: Thread-10-3890 UncaughtExceptionHandler: Test Exception
     java.lang.RuntimeException: Test Exception
         at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:75)
         at com.example.myapplication.MainActivity$onCreate$4$1.invoke(MainActivity.kt:38)
@@ -231,7 +231,7 @@ app 没有发生 ANR 也没有崩溃
 
 ```log
     --------- beginning of crash
-2021-07-19 11:06:58.817 27816-27929/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-3
+2021-06-12 11:06:58.817 27816-27929/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-3
     Process: com.example.myapplication, PID: 27816
     java.lang.RuntimeException: Test Exception
         at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:58)
@@ -240,7 +240,7 @@ app 没有发生 ANR 也没有崩溃
         at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:30)
 
 // DefaultUncaughtExceptionHandler != null 则能够捕获异常
-2021-07-19 17:03:51.701 20615-20884/com.example.myapplication E/cyrus: Thread-2-3882 DefaultUncaughtExceptionHandler: Test Exception
+2021-06-12 17:03:51.701 20615-20884/com.example.myapplication E/cyrus: Thread-2-3882 DefaultUncaughtExceptionHandler: Test Exception
     java.lang.RuntimeException: Test Exception
         at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:75)
         at com.example.myapplication.MainActivity$onCreate$2$1.invoke(MainActivity.kt:24)
@@ -248,11 +248,11 @@ app 没有发生 ANR 也没有崩溃
         at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:30)        
 
 // 当 DefaultUncaughtExceptionHandler == null 时异常被输出到标准异常流
-2021-07-19 17:13:54.170 20615-21405/com.example.myapplication W/System.err: Exception in thread "Thread-8" java.lang.RuntimeException: Test Exception
-2021-07-19 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:75)
-2021-07-19 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at com.example.myapplication.MainActivity$onCreate$1$1.invoke(MainActivity.kt:17)
-2021-07-19 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at com.example.myapplication.MainActivity$onCreate$1$1.invoke(MainActivity.kt:15)
-2021-07-19 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:30)   
+2021-06-12 17:13:54.170 20615-21405/com.example.myapplication W/System.err: Exception in thread "Thread-8" java.lang.RuntimeException: Test Exception
+2021-06-12 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:75)
+2021-06-12 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at com.example.myapplication.MainActivity$onCreate$1$1.invoke(MainActivity.kt:17)
+2021-06-12 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at com.example.myapplication.MainActivity$onCreate$1$1.invoke(MainActivity.kt:15)
+2021-06-12 17:13:54.171 20615-21405/com.example.myapplication W/System.err:     at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:30)   
 ```
 
 
@@ -263,13 +263,13 @@ app 没有发生 ANR 也没有崩溃
 ```log
 // 除了有上一节的日志外，还会有以下日志并且 app 被 kill
 // app process 收到信号 SIGKILL(9) 被迫退出，app 立刻崩溃掉
-2021-07-19 11:06:58.870 27816-27929/com.example.myapplication I/Process: Sending signal. PID: 27816 SIG: 9
-2021-07-19 11:06:58.910 1764-1802/? I/Process: PerfMonitor : current process killing process group. PID: 27816
-2021-07-19 11:06:58.911 1764-2936/? I/ActivityManager: Process com.example.myapplication (pid 27816) has died: prcp CRE 
-2021-07-19 11:06:58.911 706-706/? I/Zygote: Process 27816 exited due to signal 9 (Killed)
-2021-07-19 11:06:58.912 1764-1802/? I/libprocessgroup: Successfully killed process cgroup uid 10161 pid 27816 in 0ms
-2021-07-19 11:06:58.917 1764-2936/? W/ANRStateManager: clear state, but process isn't exist. hash=224220282 uid=10161 pid=27816 state=16
-2021-07-19 11:06:58.919 882-8554/? I/vendor.qti.hardware.servicetracker@1.2-service: killProcess is called for pid : 27816
+2021-06-12 11:06:58.870 27816-27929/com.example.myapplication I/Process: Sending signal. PID: 27816 SIG: 9
+2021-06-12 11:06:58.910 1764-1802/? I/Process: PerfMonitor : current process killing process group. PID: 27816
+2021-06-12 11:06:58.911 1764-2936/? I/ActivityManager: Process com.example.myapplication (pid 27816) has died: prcp CRE 
+2021-06-12 11:06:58.911 706-706/? I/Zygote: Process 27816 exited due to signal 9 (Killed)
+2021-06-12 11:06:58.912 1764-1802/? I/libprocessgroup: Successfully killed process cgroup uid 10161 pid 27816 in 0ms
+2021-06-12 11:06:58.917 1764-2936/? W/ANRStateManager: clear state, but process isn't exist. hash=224220282 uid=10161 pid=27816 state=16
+2021-06-12 11:06:58.919 882-8554/? I/vendor.qti.hardware.servicetracker@1.2-service: killProcess is called for pid : 27816
 ```
 
 
