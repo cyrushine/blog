@@ -1,3 +1,9 @@
+---
+title: Uncaught Exception Handling
+date: 2021-06-18 12:00:00 +0800
+categories: [Framework]
+tags: [uncaught exception, exception, 崩溃, 崩溃日志, crash]
+---
 
 ## 测试
 
@@ -27,7 +33,7 @@ public void uncaughtException(Thread t, Throwable e) {
 }
 ```
 
-下面仅考虑 `Thread.uncaughtExceptionHandler`、`DefaultUncaughtExceptionHandler` 和`主线程`三个因素
+下面仅考虑 `Thread.uncaughtExceptionHandler`、`DefaultUncaughtExceptionHandler` 和 `主线程` 三个因素
 
 
 ### 主线程
@@ -205,7 +211,7 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
 
 ### 子线程且 Thread.uncaughtExceptionHandler != null
 
-app 没有发生 ANR 也没有崩溃，且无论 `DefaultUncaughtExceptionHandler` 是否为 null，`Thread.uncaughtExceptionHandler` 都能够有限捕获异常
+app 没有发生 ANR 也没有崩溃，且无论 `DefaultUncaughtExceptionHandler` 是否为 null，`Thread.uncaughtExceptionHandler` 都能够有限捕获异常，说明线程的 UncaughtExceptionHandler 比默认的 UncaughtExceptionHandler 优先级要高
 
 ```log
 2021-06-12 17:20:41.503 20615-22015/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-10
@@ -282,11 +288,13 @@ app 没有发生 ANR 也没有崩溃
 | | 默认 | KillApplicationHandler 捕获到异常并杀死 app |
 
 
-## Show Me The Code
+## 代码跟踪
 
-### Throw Exception 时发生了什么
+### 抛出 Uncaught Exception 时发生了什么
 
-java 层发生 uncaught exception 相当于调用了 JNIEnv->Throw，这个方法的实现很简单，就是把 exception 记录在 Thread::tlsPtr_::exception
+有一个 API 可以抛出异常：`JNIEnv->Throw`，所以我猜当 java 层发生 uncaught exception 时相当于调用了它
+
+这个方法的实现很简单，就是把 exception 记录在 Thread::tlsPtr_::exception
 
 ```cpp
 // art/runtime/jni/jni_internal.cc
@@ -311,10 +319,9 @@ void Thread::SetException(ObjPtr<mirror::Throwable> new_exception) {
 mirror::Throwable* exception;   // The pending exception or null.
 ```
 
+接下来我猜想埋点在代码里的异常检查流程在发现 pending exception != null 后，会中断字节码的执行（`Thread.run()`）从而回到 native 代码
 
-### 从 Thread 的生命周期开始
-
-接下来我猜想埋点在代码里的异常检查流程在发现 pending exception != null 后，会中断字节码的执行并退出 Thread.run()，从而回到 native thread 代码
+让我们从开启一个线程 `Thread.start()` 看看这个流程
 
 ```cpp
 Thread.start()
@@ -675,8 +682,10 @@ void Thread::HandleUncaughtExceptions(ScopedObjectAccessAlreadyRunnable& soa) {
 }
 ```
 
+线程进入 VM 的入口点是 `Thread.run()`，执行完毕（或者发生 uncaught exception 被中断字节码的执行）退出 VM 回到 native 代码后，就执行销毁线程的流程：`ThreadList::Unregister` -> `Thread::Destroy`，其中 `HandleUncaughtExceptions` 会检查是否有 uncaught exception/pending exception，有的话再次进入 VM 执行 `Thread.dispatchUncaughtException`
 
-### 找到 Uncaught Exception 的入口点 dispatchUncaughtException
+
+#### dispatchUncaughtException（Uncaught Exception Handling 的入口点）
 
 如果有 `Thread.uncaughtExceptionHandler` 则直接给它处理，否则事件冒泡给到 ThreadGroup，ThreadGroup 会把异常一直冒泡到 root ThreadGroup，然后交由 `DefaultUncaughtExceptionHandler` 处理
 
@@ -893,313 +902,31 @@ private static class KillApplicationHandler implements Thread.UncaughtExceptionH
 ```
 
 
-## 为什么主线程发生 Uncaught Exception 会被 blocked 而不能恢复
+## 主线程遇到 Uncaught Exception 时发生了什么
+
+上面在研究子线程时已经发现：Uncaught Exception 会中断字节码的执行流程从而回到 native 代码，主线程在回到 native 代码后选择依次执行 `DetachCurrentThread` 和 `DestroyJavaVM`
 
 ```cpp
-// frameworks/base/cmds/app_process/app_main.cpp
 // zygote 进程的 native 层入口点，app 进程是由 zygote fork 出来的，所以这也算是 app 进程的入口点
+// frameworks/base/cmds/app_process/app_main.cpp
 int main(int argc, char* const argv[])
-{
-    if (!LOG_NDEBUG) {
-      String8 argv_String;
-      for (int i = 0; i < argc; ++i) {
-        argv_String.append("\"");
-        argv_String.append(argv[i]);
-        argv_String.append("\" ");
-      }
-      ALOGV("app_process main with argv: %s", argv_String.string());
-    }
 
-    AppRuntime runtime(argv[0], computeArgBlockSize(argc, argv));
-    // Process command line arguments
-    // ignore argv[0]
-    argc--;
-    argv++;
-
-    // Everything up to '--' or first non '-' arg goes to the vm.
-    //
-    // The first argument after the VM args is the "parent dir", which
-    // is currently unused.
-    //
-    // After the parent dir, we expect one or more the following internal
-    // arguments :
-    //
-    // --zygote : Start in zygote mode
-    // --start-system-server : Start the system server.
-    // --application : Start in application (stand alone, non zygote) mode.
-    // --nice-name : The nice name for this process.
-    //
-    // For non zygote starts, these arguments will be followed by
-    // the main class name. All remaining arguments are passed to
-    // the main method of this class.
-    //
-    // For zygote starts, all remaining arguments are passed to the zygote.
-    // main function.
-    //
-    // Note that we must copy argument string values since we will rewrite the
-    // entire argument block when we apply the nice name to argv0.
-    //
-    // As an exception to the above rule, anything in "spaced commands"
-    // goes to the vm even though it has a space in it.
-    const char* spaced_commands[] = { "-cp", "-classpath" };
-    // Allow "spaced commands" to be succeeded by exactly 1 argument (regardless of -s).
-    bool known_command = false;
-
-    int i;
-    for (i = 0; i < argc; i++) {
-        if (known_command == true) {
-          runtime.addOption(strdup(argv[i]));
-          // The static analyzer gets upset that we don't ever free the above
-          // string. Since the allocation is from main, leaking it doesn't seem
-          // problematic. NOLINTNEXTLINE
-          ALOGV("app_process main add known option '%s'", argv[i]);
-          known_command = false;
-          continue;
-        }
-
-        for (int j = 0;
-             j < static_cast<int>(sizeof(spaced_commands) / sizeof(spaced_commands[0]));
-             ++j) {
-          if (strcmp(argv[i], spaced_commands[j]) == 0) {
-            known_command = true;
-            ALOGV("app_process main found known command '%s'", argv[i]);
-          }
-        }
-
-        if (argv[i][0] != '-') {
-            break;
-        }
-        if (argv[i][1] == '-' && argv[i][2] == 0) {
-            ++i; // Skip --.
-            break;
-        }
-
-        runtime.addOption(strdup(argv[i]));
-        // The static analyzer gets upset that we don't ever free the above
-        // string. Since the allocation is from main, leaking it doesn't seem
-        // problematic. NOLINTNEXTLINE
-        ALOGV("app_process main add option '%s'", argv[i]);
-    }
-
-    // Parse runtime arguments.  Stop at first unrecognized option.
-    bool zygote = false;
-    bool startSystemServer = false;
-    bool application = false;
-    String8 niceName;
-    String8 className;
-
-    ++i;  // Skip unused "parent dir" argument.
-    while (i < argc) {
-        const char* arg = argv[i++];
-        if (strcmp(arg, "--zygote") == 0) {
-            zygote = true;
-            niceName = ZYGOTE_NICE_NAME;
-        } else if (strcmp(arg, "--start-system-server") == 0) {
-            startSystemServer = true;
-        } else if (strcmp(arg, "--application") == 0) {
-            application = true;
-        } else if (strncmp(arg, "--nice-name=", 12) == 0) {
-            niceName.setTo(arg + 12);
-        } else if (strncmp(arg, "--", 2) != 0) {
-            className.setTo(arg);
-            break;
-        } else {
-            --i;
-            break;
-        }
-    }
-
-    Vector<String8> args;
-    if (!className.isEmpty()) {
-        // We're not in zygote mode, the only argument we need to pass
-        // to RuntimeInit is the application argument.
-        //
-        // The Remainder of args get passed to startup class main(). Make
-        // copies of them before we overwrite them with the process name.
-        args.add(application ? String8("application") : String8("tool"));
-        runtime.setClassNameAndArgs(className, argc - i, argv + i);
-
-        if (!LOG_NDEBUG) {
-          String8 restOfArgs;
-          char* const* argv_new = argv + i;
-          int argc_new = argc - i;
-          for (int k = 0; k < argc_new; ++k) {
-            restOfArgs.append("\"");
-            restOfArgs.append(argv_new[k]);
-            restOfArgs.append("\" ");
-          }
-          ALOGV("Class name = %s, args = %s", className.string(), restOfArgs.string());
-        }
-    } else {
-        // We're in zygote mode.
-        maybeCreateDalvikCache();
-
-        if (startSystemServer) {
-            args.add(String8("start-system-server"));
-        }
-
-        char prop[PROP_VALUE_MAX];
-        if (property_get(ABI_LIST_PROPERTY, prop, NULL) == 0) {
-            LOG_ALWAYS_FATAL("app_process: Unable to determine ABI list from property %s.",
-                ABI_LIST_PROPERTY);
-            return 11;
-        }
-
-        String8 abiFlag("--abi-list=");
-        abiFlag.append(prop);
-        args.add(abiFlag);
-
-        // In zygote mode, pass all remaining arguments to the zygote
-        // main() method.
-        for (; i < argc; ++i) {
-            args.add(String8(argv[i]));
-        }
-    }
-
-    if (!niceName.isEmpty()) {
-        runtime.setArgv0(niceName.string(), true /* setProcName */);
-    }
-
-    if (zygote) {
-        runtime.start("com.android.internal.os.ZygoteInit", args, zygote);
-    } else if (className) {
-        runtime.start("com.android.internal.os.RuntimeInit", args, zygote);
-    } else {
-        fprintf(stderr, "Error: no class name or --zygote supplied.\n");
-        app_usage();
-        LOG_ALWAYS_FATAL("app_process: no class name or --zygote supplied.");
-    }
-}
-
-/*
- * Start the Android runtime.  This involves starting the virtual machine
- * and calling the "static void main(String[] args)" method in the class
- * named by "className".
- *
- * Passes the main function two arguments, the class name and the specified
- * options string.
- *
- * 执行 ZygoteInit.main(args)
- */
-void AndroidRuntime::start(const char* className, const Vector<String8>& options, bool zygote)
-{
-    ALOGD(">>>>>> START %s uid %d <<<<<<\n",
-            className != NULL ? className : "(unknown)", getuid());
-
-    static const String8 startSystemServer("start-system-server");
-    // Whether this is the primary zygote, meaning the zygote which will fork system server.
-    bool primary_zygote = false;
-
-    /*
-     * 'startSystemServer == true' means runtime is obsolete and not run from
-     * init.rc anymore, so we print out the boot start event here.
-     */
-    for (size_t i = 0; i < options.size(); ++i) {
-        if (options[i] == startSystemServer) {
-            primary_zygote = true;
-           /* track our progress through the boot sequence */
-           const int LOG_BOOT_PROGRESS_START = 3000;
-           LOG_EVENT_LONG(LOG_BOOT_PROGRESS_START,  ns2ms(systemTime(SYSTEM_TIME_MONOTONIC)));
-        }
-    }
-
-    const char* rootDir = getenv("ANDROID_ROOT");
-    if (rootDir == NULL) {
-        rootDir = "/system";
-        if (!hasDir("/system")) {
-            LOG_FATAL("No root directory specified, and /system does not exist.");
-            return;
-        }
-        setenv("ANDROID_ROOT", rootDir, 1);
-    }
-
-    const char* artRootDir = getenv("ANDROID_ART_ROOT");
-    if (artRootDir == NULL) {
-        LOG_FATAL("No ART directory specified with ANDROID_ART_ROOT environment variable.");
-        return;
-    }
-
-    const char* i18nRootDir = getenv("ANDROID_I18N_ROOT");
-    if (i18nRootDir == NULL) {
-        LOG_FATAL("No runtime directory specified with ANDROID_I18N_ROOT environment variable.");
-        return;
-    }
-
-    const char* tzdataRootDir = getenv("ANDROID_TZDATA_ROOT");
-    if (tzdataRootDir == NULL) {
-        LOG_FATAL("No tz data directory specified with ANDROID_TZDATA_ROOT environment variable.");
-        return;
-    }
-
-    //const char* kernelHack = getenv("LD_ASSUME_KERNEL");
-    //ALOGD("Found LD_ASSUME_KERNEL='%s'\n", kernelHack);
-
-    /* start the virtual machine */
-    JniInvocation jni_invocation;
-    jni_invocation.Init(NULL);
+// 启动 VM，首次进入 java 层，入口点是 ZygoteInit.main(args)
+// frameworks/base/core/jni/AndroidRuntime.cpp 
+void AndroidRuntime::start(const char* className, const Vector<String8>& options, bool zygote) {
+    // ...
+    // 启动 VM 后此线程就成为 VM 的主线程，直到 VM 退出后此线程才会结束生命
+    // Start VM.  This thread becomes the main thread of the VM, and will not return until the VM exits.
     JNIEnv* env;
     if (startVm(&mJavaVM, &env, zygote, primary_zygote) != 0) {
         return;
     }
-    onVmCreated(env);
-
-    /*
-     * Register android functions.
-     */
-    if (startReg(env) < 0) {
-        ALOGE("Unable to register all android natives\n");
-        return;
-    }
-
-    /*
-     * We want to call main() with a String array with arguments in it.
-     * At present we have two arguments, the class name and an option string.
-     * Create an array to hold them.
-     */
-    jclass stringClass;
-    jobjectArray strArray;
-    jstring classNameStr;
-
-    stringClass = env->FindClass("java/lang/String");
-    assert(stringClass != NULL);
-    strArray = env->NewObjectArray(options.size() + 1, stringClass, NULL);
-    assert(strArray != NULL);
-    classNameStr = env->NewStringUTF(className);
-    assert(classNameStr != NULL);
-    env->SetObjectArrayElement(strArray, 0, classNameStr);
-
-    for (size_t i = 0; i < options.size(); ++i) {
-        jstring optionsStr = env->NewStringUTF(options.itemAt(i).string());
-        assert(optionsStr != NULL);
-        env->SetObjectArrayElement(strArray, i + 1, optionsStr);
-    }
-
-    /*
-     * Start VM.  This thread becomes the main thread of the VM, and will
-     * not return until the VM exits.
-     */
-    char* slashClassName = toSlashClassName(className != NULL ? className : "");
-    jclass startClass = env->FindClass(slashClassName);
-    if (startClass == NULL) {
-        ALOGE("JavaVM unable to locate class '%s'\n", slashClassName);
-        /* keep going */
-    } else {
-        jmethodID startMeth = env->GetStaticMethodID(startClass, "main",
-            "([Ljava/lang/String;)V");
-        if (startMeth == NULL) {
-            ALOGE("JavaVM unable to find main() in '%s'\n", className);
-            /* keep going */
-        } else {
-            env->CallStaticVoidMethod(startClass, startMeth, strArray);
-
-#if 0
-            if (env->ExceptionCheck())
-                threadExitUncaughtException(env);
-#endif
-        }
-    }
-    free(slashClassName);
-
+    // ...
+    // ZygoteInit.main(args)
+    env->CallStaticVoidMethod(startClass, startMeth, strArray);
+    // ...
+    // 还记得上面出现过的这行日志吗：D/AndroidRuntime: Shutting down VM
+    // 就是在这里打印出来的，此时主线程已经退出了 VM 并准备销毁 VM
     ALOGD("Shutting down VM\n");
     if (mJavaVM->DetachCurrentThread() != JNI_OK)
         ALOGW("Warning: unable to detach main thread\n");
@@ -1208,400 +935,48 @@ void AndroidRuntime::start(const char* className, const Vector<String8>& options
 }
 ```
 
-```java
-// 启动 zygote server，监听并处理 fork app 进程的请求
-class ZygoteInit {
-    public static void main(String[] argv) {
-        ZygoteServer zygoteServer = null;
+DetachCurrentThread 会调用 `HandleUncaughtExceptions`，这个方法也在上面介绍过了，它会检查是否有 uncaught exception/pending exception，有的话则再次进入 VM 执行 `Thread.dispatchUncaughtException()`，所以主线程的 uncaught exception 也是能够被捕获的
 
-        // Mark zygote start. This ensures that thread creation will throw
-        // an error.
-        ZygoteHooks.startZygoteNoThreadCreation();
-
-        // Zygote goes into its own process group.
-        try {
-            Os.setpgid(0, 0);
-        } catch (ErrnoException ex) {
-            throw new RuntimeException("Failed to setpgid(0,0)", ex);
-        }
-
-        Runnable caller;
-        try {
-            // Store now for StatsLogging later.
-            final long startTime = SystemClock.elapsedRealtime();
-            final boolean isRuntimeRestarted = "1".equals(
-                    SystemProperties.get("sys.boot_completed"));
-
-            String bootTimeTag = Process.is64Bit() ? "Zygote64Timing" : "Zygote32Timing";
-            TimingsTraceLog bootTimingsTraceLog = new TimingsTraceLog(bootTimeTag,
-                    Trace.TRACE_TAG_DALVIK);
-            bootTimingsTraceLog.traceBegin("ZygoteInit");
-            RuntimeInit.preForkInit();
-
-            boolean startSystemServer = false;
-            String zygoteSocketName = "zygote";
-            String abiList = null;
-            boolean enableLazyPreload = false;
-            for (int i = 1; i < argv.length; i++) {
-                if ("start-system-server".equals(argv[i])) {
-                    startSystemServer = true;
-                } else if ("--enable-lazy-preload".equals(argv[i])) {
-                    enableLazyPreload = true;
-                } else if (argv[i].startsWith(ABI_LIST_ARG)) {
-                    abiList = argv[i].substring(ABI_LIST_ARG.length());
-                } else if (argv[i].startsWith(SOCKET_NAME_ARG)) {
-                    zygoteSocketName = argv[i].substring(SOCKET_NAME_ARG.length());
-                } else {
-                    throw new RuntimeException("Unknown command line argument: " + argv[i]);
-                }
-            }
-
-            final boolean isPrimaryZygote = zygoteSocketName.equals(Zygote.PRIMARY_SOCKET_NAME);
-            if (!isRuntimeRestarted) {
-                if (isPrimaryZygote) {
-                    FrameworkStatsLog.write(FrameworkStatsLog.BOOT_TIME_EVENT_ELAPSED_TIME_REPORTED,
-                            BOOT_TIME_EVENT_ELAPSED_TIME__EVENT__ZYGOTE_INIT_START,
-                            startTime);
-                } else if (zygoteSocketName.equals(Zygote.SECONDARY_SOCKET_NAME)) {
-                    FrameworkStatsLog.write(FrameworkStatsLog.BOOT_TIME_EVENT_ELAPSED_TIME_REPORTED,
-                            BOOT_TIME_EVENT_ELAPSED_TIME__EVENT__SECONDARY_ZYGOTE_INIT_START,
-                            startTime);
-                }
-            }
-
-            if (abiList == null) {
-                throw new RuntimeException("No ABI list supplied.");
-            }
-
-            // In some configurations, we avoid preloading resources and classes eagerly.
-            // In such cases, we will preload things prior to our first fork.
-            if (!enableLazyPreload) {
-                bootTimingsTraceLog.traceBegin("ZygotePreload");
-                EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_START,
-                        SystemClock.uptimeMillis());
-                preload(bootTimingsTraceLog);
-                EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_END,
-                        SystemClock.uptimeMillis());
-                bootTimingsTraceLog.traceEnd(); // ZygotePreload
-            }
-
-            // Do an initial gc to clean up after startup
-            bootTimingsTraceLog.traceBegin("PostZygoteInitGC");
-            gcAndFinalize();
-            bootTimingsTraceLog.traceEnd(); // PostZygoteInitGC
-
-            bootTimingsTraceLog.traceEnd(); // ZygoteInit
-
-            Zygote.initNativeState(isPrimaryZygote);
-
-            ZygoteHooks.stopZygoteNoThreadCreation();
-
-            zygoteServer = new ZygoteServer(isPrimaryZygote);
-
-            if (startSystemServer) {
-                Runnable r = forkSystemServer(abiList, zygoteSocketName, zygoteServer);
-
-                // {@code r == null} in the parent (zygote) process, and {@code r != null} in the
-                // child (system_server) process.
-                if (r != null) {
-                    r.run();
-                    return;
-                }
-            }
-
-            Log.i(TAG, "Accepting command socket connections");
-
-            // The select loop returns early in the child process after a fork and
-            // loops forever in the zygote.
-            caller = zygoteServer.runSelectLoop(abiList);
-        } catch (Throwable ex) {
-            Log.e(TAG, "System zygote died with exception", ex);
-            throw ex;
-        } finally {
-            if (zygoteServer != null) {
-                zygoteServer.closeServerSocket();
-            }
-        }
-
-        // We're in the child process and have exited the select loop. Proceed to execute the
-        // command.
-        if (caller != null) {
-            caller.run();
-        }
-    }
+```cpp
+// art/runtime/jni/java_vm_ext.cc
+static jint DetachCurrentThread(JavaVM* vm) {
+  if (vm == nullptr || Thread::Current() == nullptr) {
+    return JNI_ERR;
+  }
+  JavaVMExt* raw_vm = reinterpret_cast<JavaVMExt*>(vm);
+  Runtime* runtime = raw_vm->GetRuntime();
+  runtime->DetachCurrentThread();
+  return JNI_OK;
 }
 
-class ZygoteServer {
-    /**
-     * Runs the zygote process's select loop. Accepts new connections as
-     * they happen, and reads commands from connections one spawn-request's
-     * worth at a time.
-     * @param abiList list of ABIs supported by this zygote.
-     */
-    Runnable runSelectLoop(String abiList) {
-        ArrayList<FileDescriptor> socketFDs = new ArrayList<>();
-        ArrayList<ZygoteConnection> peers = new ArrayList<>();
-
-        socketFDs.add(mZygoteSocket.getFileDescriptor());
-        peers.add(null);
-
-        mUsapPoolRefillTriggerTimestamp = INVALID_TIMESTAMP;
-
-        while (true) {
-            fetchUsapPoolPolicyPropsWithMinInterval();
-            mUsapPoolRefillAction = UsapPoolRefillAction.NONE;
-
-            int[] usapPipeFDs = null;
-            StructPollfd[] pollFDs;
-
-            // Allocate enough space for the poll structs, taking into account
-            // the state of the USAP pool for this Zygote (could be a
-            // regular Zygote, a WebView Zygote, or an AppZygote).
-            if (mUsapPoolEnabled) {
-                usapPipeFDs = Zygote.getUsapPipeFDs();
-                pollFDs = new StructPollfd[socketFDs.size() + 1 + usapPipeFDs.length];
-            } else {
-                pollFDs = new StructPollfd[socketFDs.size()];
-            }
-
-            /*
-             * For reasons of correctness the USAP pool pipe and event FDs
-             * must be processed before the session and server sockets.  This
-             * is to ensure that the USAP pool accounting information is
-             * accurate when handling other requests like API deny list
-             * exemptions.
-             */
-
-            int pollIndex = 0;
-            for (FileDescriptor socketFD : socketFDs) {
-                pollFDs[pollIndex] = new StructPollfd();
-                pollFDs[pollIndex].fd = socketFD;
-                pollFDs[pollIndex].events = (short) POLLIN;
-                ++pollIndex;
-            }
-
-            final int usapPoolEventFDIndex = pollIndex;
-
-            if (mUsapPoolEnabled) {
-                pollFDs[pollIndex] = new StructPollfd();
-                pollFDs[pollIndex].fd = mUsapPoolEventFD;
-                pollFDs[pollIndex].events = (short) POLLIN;
-                ++pollIndex;
-
-                // The usapPipeFDs array will always be filled in if the USAP Pool is enabled.
-                assert usapPipeFDs != null;
-                for (int usapPipeFD : usapPipeFDs) {
-                    FileDescriptor managedFd = new FileDescriptor();
-                    managedFd.setInt$(usapPipeFD);
-
-                    pollFDs[pollIndex] = new StructPollfd();
-                    pollFDs[pollIndex].fd = managedFd;
-                    pollFDs[pollIndex].events = (short) POLLIN;
-                    ++pollIndex;
-                }
-            }
-
-            int pollTimeoutMs;
-
-            if (mUsapPoolRefillTriggerTimestamp == INVALID_TIMESTAMP) {
-                pollTimeoutMs = -1;
-            } else {
-                long elapsedTimeMs = System.currentTimeMillis() - mUsapPoolRefillTriggerTimestamp;
-
-                if (elapsedTimeMs >= mUsapPoolRefillDelayMs) {
-                    // The refill delay has elapsed during the period between poll invocations.
-                    // We will now check for any currently ready file descriptors before refilling
-                    // the USAP pool.
-                    pollTimeoutMs = 0;
-                    mUsapPoolRefillTriggerTimestamp = INVALID_TIMESTAMP;
-                    mUsapPoolRefillAction = UsapPoolRefillAction.DELAYED;
-
-                } else if (elapsedTimeMs <= 0) {
-                    // This can occur if the clock used by currentTimeMillis is reset, which is
-                    // possible because it is not guaranteed to be monotonic.  Because we can't tell
-                    // how far back the clock was set the best way to recover is to simply re-start
-                    // the respawn delay countdown.
-                    pollTimeoutMs = mUsapPoolRefillDelayMs;
-
-                } else {
-                    pollTimeoutMs = (int) (mUsapPoolRefillDelayMs - elapsedTimeMs);
-                }
-            }
-
-            int pollReturnValue;
-            try {
-                pollReturnValue = Os.poll(pollFDs, pollTimeoutMs);
-            } catch (ErrnoException ex) {
-                throw new RuntimeException("poll failed", ex);
-            }
-
-            if (pollReturnValue == 0) {
-                // The poll returned zero results either when the timeout value has been exceeded
-                // or when a non-blocking poll is issued and no FDs are ready.  In either case it
-                // is time to refill the pool.  This will result in a duplicate assignment when
-                // the non-blocking poll returns zero results, but it avoids an additional
-                // conditional in the else branch.
-                mUsapPoolRefillTriggerTimestamp = INVALID_TIMESTAMP;
-                mUsapPoolRefillAction = UsapPoolRefillAction.DELAYED;
-
-            } else {
-                boolean usapPoolFDRead = false;
-
-                while (--pollIndex >= 0) {
-                    if ((pollFDs[pollIndex].revents & POLLIN) == 0) {
-                        continue;
-                    }
-
-                    if (pollIndex == 0) {
-                        // Zygote server socket
-                        ZygoteConnection newPeer = acceptCommandPeer(abiList);
-                        peers.add(newPeer);
-                        socketFDs.add(newPeer.getFileDescriptor());
-                    } else if (pollIndex < usapPoolEventFDIndex) {
-                        // Session socket accepted from the Zygote server socket
-
-                        try {
-                            ZygoteConnection connection = peers.get(pollIndex);
-                            boolean multipleForksOK = !isUsapPoolEnabled()
-                                    && ZygoteHooks.isIndefiniteThreadSuspensionSafe();
-                            final Runnable command =
-                                    connection.processCommand(this, multipleForksOK);
-
-                            // TODO (chriswailes): Is this extra check necessary?
-                            if (mIsForkChild) {
-                                // We're in the child. We should always have a command to run at
-                                // this stage if processCommand hasn't called "exec".
-                                if (command == null) {
-                                    throw new IllegalStateException("command == null");
-                                }
-
-                                return command;
-                            } else {
-                                // We're in the server - we should never have any commands to run.
-                                if (command != null) {
-                                    throw new IllegalStateException("command != null");
-                                }
-
-                                // We don't know whether the remote side of the socket was closed or
-                                // not until we attempt to read from it from processCommand. This
-                                // shows up as a regular POLLIN event in our regular processing
-                                // loop.
-                                if (connection.isClosedByPeer()) {
-                                    connection.closeSocket();
-                                    peers.remove(pollIndex);
-                                    socketFDs.remove(pollIndex);
-                                }
-                            }
-                        } catch (Exception e) {
-                            if (!mIsForkChild) {
-                                // We're in the server so any exception here is one that has taken
-                                // place pre-fork while processing commands or reading / writing
-                                // from the control socket. Make a loud noise about any such
-                                // exceptions so that we know exactly what failed and why.
-
-                                Slog.e(TAG, "Exception executing zygote command: ", e);
-
-                                // Make sure the socket is closed so that the other end knows
-                                // immediately that something has gone wrong and doesn't time out
-                                // waiting for a response.
-                                ZygoteConnection conn = peers.remove(pollIndex);
-                                conn.closeSocket();
-
-                                socketFDs.remove(pollIndex);
-                            } else {
-                                // We're in the child so any exception caught here has happened post
-                                // fork and before we execute ActivityThread.main (or any other
-                                // main() method). Log the details of the exception and bring down
-                                // the process.
-                                Log.e(TAG, "Caught post-fork exception in child process.", e);
-                                throw e;
-                            }
-                        } finally {
-                            // Reset the child flag, in the event that the child process is a child-
-                            // zygote. The flag will not be consulted this loop pass after the
-                            // Runnable is returned.
-                            mIsForkChild = false;
-                        }
-
-                    } else {
-                        // Either the USAP pool event FD or a USAP reporting pipe.
-
-                        // If this is the event FD the payload will be the number of USAPs removed.
-                        // If this is a reporting pipe FD the payload will be the PID of the USAP
-                        // that was just specialized.  The `continue` statements below ensure that
-                        // the messagePayload will always be valid if we complete the try block
-                        // without an exception.
-                        long messagePayload;
-
-                        try {
-                            byte[] buffer = new byte[Zygote.USAP_MANAGEMENT_MESSAGE_BYTES];
-                            int readBytes =
-                                    Os.read(pollFDs[pollIndex].fd, buffer, 0, buffer.length);
-
-                            if (readBytes == Zygote.USAP_MANAGEMENT_MESSAGE_BYTES) {
-                                DataInputStream inputStream =
-                                        new DataInputStream(new ByteArrayInputStream(buffer));
-
-                                messagePayload = inputStream.readLong();
-                            } else {
-                                Log.e(TAG, "Incomplete read from USAP management FD of size "
-                                        + readBytes);
-                                continue;
-                            }
-                        } catch (Exception ex) {
-                            if (pollIndex == usapPoolEventFDIndex) {
-                                Log.e(TAG, "Failed to read from USAP pool event FD: "
-                                        + ex.getMessage());
-                            } else {
-                                Log.e(TAG, "Failed to read from USAP reporting pipe: "
-                                        + ex.getMessage());
-                            }
-
-                            continue;
-                        }
-
-                        if (pollIndex > usapPoolEventFDIndex) {
-                            Zygote.removeUsapTableEntry((int) messagePayload);
-                        }
-
-                        usapPoolFDRead = true;
-                    }
-                }
-
-                if (usapPoolFDRead) {
-                    int usapPoolCount = Zygote.getUsapPoolCount();
-
-                    if (usapPoolCount < mUsapPoolSizeMin) {
-                        // Immediate refill
-                        mUsapPoolRefillAction = UsapPoolRefillAction.IMMEDIATE;
-                    } else if (mUsapPoolSizeMax - usapPoolCount >= mUsapPoolRefillThreshold) {
-                        // Delayed refill
-                        mUsapPoolRefillTriggerTimestamp = System.currentTimeMillis();
-                    }
-                }
-            }
-
-            if (mUsapPoolRefillAction != UsapPoolRefillAction.NONE) {
-                int[] sessionSocketRawFDs =
-                        socketFDs.subList(1, socketFDs.size())
-                                .stream()
-                                .mapToInt(FileDescriptor::getInt$)
-                                .toArray();
-
-                final boolean isPriorityRefill =
-                        mUsapPoolRefillAction == UsapPoolRefillAction.IMMEDIATE;
-
-                final Runnable command =
-                        fillUsapPool(sessionSocketRawFDs, isPriorityRefill);
-
-                if (command != null) {
-                    return command;
-                } else if (isPriorityRefill) {
-                    // Schedule a delayed refill to finish refilling the pool.
-                    mUsapPoolRefillTriggerTimestamp = System.currentTimeMillis();
-                }
-            }
-        }
-    }
+// art/runtime/runtime.cc
+void Runtime::DetachCurrentThread() {
+  ScopedTrace trace(__FUNCTION__);
+  Thread* self = Thread::Current();
+  if (self == nullptr) {
+    LOG(FATAL) << "attempting to detach thread that is not attached";
+  }
+  if (self->HasManagedStack()) {
+    LOG(FATAL) << *Thread::Current() << " attempting to detach while still running code";
+  }
+  thread_list_->Unregister(self);
 }
+
+ThreadList::Unregister
+Thread::Destroy
+HandleUncaughtExceptions
 ```
+
+然后主线程就会把 VM 销毁掉并结束自己的生命周期，但 app 进程并没有结束，还有其他 native thread 的存在，从系统申请的资源如 Surface 也没有释放，所以 app 页面依然存在并没有出现 **崩溃/闪退** 的现象
+
+归属于 app 的窗口没有被回收，那么 input 事件依然会分发给 app，input 事件是需要主线程来消费的，但此时主线程已退出，很明显会阻塞住，所以会触发 ANR
+
+如果用户选择继续等待，app 就变成一个没有 VM 没有主线程的僵尸进程但还没退出，选择确定会发送 SIGKILL 信号杀死 app 进程
+
+
+## 收集崩溃日志
+
+* DefaultUncaughtExceptionHandler 可以收集到 app 的崩溃日志，也就是主线程的 Uncaught Exception
+* 当然它也可以收集到子线程的 Uncaught Exception
+* 它可以提高 app 的稳定性，防止 KillApplicationHandler 粗暴地把 app 杀死
+* 理论上来说，把崩溃日志写入文件，甚至于即刻上传至服务器都是可以做到的，因为触发 ANR 需要 5s，然后弹出 ANR 对话框直到用户选择杀死 app 也需要几秒钟的时间
