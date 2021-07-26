@@ -980,3 +980,4 @@ HandleUncaughtExceptions
 * 当然它也可以收集到子线程的 Uncaught Exception
 * 它可以提高 app 的稳定性，防止 KillApplicationHandler 粗暴地把 app 杀死
 * 理论上来说，把崩溃日志写入文件，甚至于即刻上传至服务器都是可以做到的，因为触发 ANR 需要 5s，然后弹出 ANR 对话框直到用户选择杀死 app 也需要几秒钟的时间
+* [Shutdown Hook](../../../../2021/06/20/kill-exit/)
