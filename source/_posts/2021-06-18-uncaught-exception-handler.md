@@ -209,7 +209,7 @@ Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异�
 ```
 
 
-### 子线程且 Thread.uncaughtExceptionHandler != null
+### 子线程且 UEH != null
 
 app 没有发生 ANR 也没有崩溃，且无论 `DefaultUncaughtExceptionHandler` 是否为 null，`Thread.uncaughtExceptionHandler` 都能够有限捕获异常，说明线程的 UncaughtExceptionHandler 比默认的 UncaughtExceptionHandler 优先级要高
 
@@ -231,7 +231,7 @@ app 没有发生 ANR 也没有崩溃，且无论 `DefaultUncaughtExceptionHandle
 ```
 
 
-### 子线程且两个 UncaughtExceptionHandler 都置空 or DefaultUncaughtExceptionHandler != null
+### 子线程且两个 UEH 都置空 or DUEH != null
 
 app 没有发生 ANR 也没有崩溃
 
@@ -262,7 +262,7 @@ app 没有发生 ANR 也没有崩溃
 ```
 
 
-### 子线程且为默认 DefaultUncaughtExceptionHandler 
+### 子线程且为默认 DUEH 
 
 默认的 DefaultUncaughtExceptionHandler 是 KillApplicationHandler，它会杀死 app
 
@@ -290,7 +290,7 @@ app 没有发生 ANR 也没有崩溃
 
 ## 代码跟踪
 
-### 抛出 Uncaught Exception 时发生了什么
+### 抛出 UE 时发生了什么
 
 有一个 API 可以抛出异常：`JNIEnv->Throw`，所以我猜当 java 层发生 uncaught exception 时相当于调用了它
 
@@ -685,7 +685,7 @@ void Thread::HandleUncaughtExceptions(ScopedObjectAccessAlreadyRunnable& soa) {
 线程进入 VM 的入口点是 `Thread.run()`，执行完毕（或者发生 uncaught exception 被中断字节码的执行）退出 VM 回到 native 代码后，就执行销毁线程的流程：`ThreadList::Unregister` -> `Thread::Destroy`，其中 `HandleUncaughtExceptions` 会检查是否有 uncaught exception/pending exception，有的话再次进入 VM 执行 `Thread.dispatchUncaughtException`
 
 
-#### dispatchUncaughtException（Uncaught Exception Handling 的入口点）
+#### UEH 的入口点
 
 如果有 `Thread.uncaughtExceptionHandler` 则直接给它处理，否则事件冒泡给到 ThreadGroup，ThreadGroup 会把异常一直冒泡到 root ThreadGroup，然后交由 `DefaultUncaughtExceptionHandler` 处理
 
@@ -732,7 +732,7 @@ public class ThreadGroup {
 ```
 
 
-## 谁打印了 AndroidRuntime: FATAL EXCEPTION
+## 谁打印了 FATAL EXCEPTION
 
 在上面的代码块里 dispatchUncaughtException 还调用了 `Thread.uncaughtExceptionPreHandler`，这个 handler 是在 app 进程初始化时配置的，而且没有暴露给用户，就是它打印了 `AndroidRuntime: FATAL EXCEPTION` 的日志
 
@@ -902,7 +902,7 @@ private static class KillApplicationHandler implements Thread.UncaughtExceptionH
 ```
 
 
-## 主线程遇到 Uncaught Exception 时发生了什么
+## 主线程遇到 UE 时发生了什么
 
 上面在研究子线程时已经发现：Uncaught Exception 会中断字节码的执行流程从而回到 native 代码，主线程在回到 native 代码后选择依次执行 `DetachCurrentThread` 和 `DestroyJavaVM`
 
