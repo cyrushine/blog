@@ -231,7 +231,7 @@ app 没有发生 ANR 也没有崩溃，且无论 `DefaultUncaughtExceptionHandle
 ```
 
 
-### 子线程且两个 UEH 都置空 or DUEH != null
+### 两个UEH都置空 or DUEH != null
 
 app 没有发生 ANR 也没有崩溃
 
