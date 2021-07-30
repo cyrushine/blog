@@ -1,0 +1,448 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-06-27 00:00" pubdate>
+        2021年6月27日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      968 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      19
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none"></h1>
+            
+            <div class="markdown-body">
+              <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessRecord</span> </span>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">appNotResponding</span><span class="hljs-params">(String activityShortComponentName, ApplicationInfo aInfo,</span></span><br><span class="hljs-params"><span class="hljs-function">            String parentShortComponentName, WindowProcessController parentProcess,</span></span><br><span class="hljs-params"><span class="hljs-function">            <span class="hljs-keyword">boolean</span> aboveSystem, String annotation, <span class="hljs-keyword">boolean</span> onlyDumpSelf)</span> </span>&#123;<br>        ArrayList&lt;Integer&gt; firstPids = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;(<span class="hljs-number">5</span>);<br>        SparseArray&lt;Boolean&gt; lastPids = <span class="hljs-keyword">new</span> SparseArray&lt;&gt;(<span class="hljs-number">20</span>);<br><br>        mWindowProcessController.appEarlyNotResponding(annotation, () -&gt; kill(<span class="hljs-string">&quot;anr&quot;</span>,<br>                  ApplicationExitInfo.REASON_ANR, <span class="hljs-keyword">true</span>));<br><br>        <span class="hljs-keyword">long</span> anrTime = SystemClock.uptimeMillis();<br>        <span class="hljs-keyword">if</span> (isMonitorCpuUsage()) &#123;<br>            mService.updateCpuStatsNow();<br>        &#125;<br><br>        <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isSilentAnr;<br>        <span class="hljs-keyword">synchronized</span> (mService) &#123;<br>            <span class="hljs-comment">// PowerManager.reboot() can block for a long time, so ignore ANRs while shutting down.</span><br>            <span class="hljs-keyword">if</span> (mService.mAtmInternal.isShuttingDown()) &#123;<br>                Slog.i(TAG, <span class="hljs-string">&quot;During shutdown skipping ANR: &quot;</span> + <span class="hljs-keyword">this</span> + <span class="hljs-string">&quot; &quot;</span> + annotation);<br>                <span class="hljs-keyword">return</span>;<br>            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (isNotResponding()) &#123;<br>                Slog.i(TAG, <span class="hljs-string">&quot;Skipping duplicate ANR: &quot;</span> + <span class="hljs-keyword">this</span> + <span class="hljs-string">&quot; &quot;</span> + annotation);<br>                <span class="hljs-keyword">return</span>;<br>            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (isCrashing()) &#123;<br>                Slog.i(TAG, <span class="hljs-string">&quot;Crashing app skipping ANR: &quot;</span> + <span class="hljs-keyword">this</span> + <span class="hljs-string">&quot; &quot;</span> + annotation);<br>                <span class="hljs-keyword">return</span>;<br>            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (killedByAm) &#123;<br>                Slog.i(TAG, <span class="hljs-string">&quot;App already killed by AM skipping ANR: &quot;</span> + <span class="hljs-keyword">this</span> + <span class="hljs-string">&quot; &quot;</span> + annotation);<br>                <span class="hljs-keyword">return</span>;<br>            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (killed) &#123;<br>                Slog.i(TAG, <span class="hljs-string">&quot;Skipping died app ANR: &quot;</span> + <span class="hljs-keyword">this</span> + <span class="hljs-string">&quot; &quot;</span> + annotation);<br>                <span class="hljs-keyword">return</span>;<br>            &#125;<br><br>            <span class="hljs-comment">// In case we come through here for the same app before completing</span><br>            <span class="hljs-comment">// this one, mark as anring now so we will bail out.</span><br>            setNotResponding(<span class="hljs-keyword">true</span>);<br><br>            <span class="hljs-comment">// Log the ANR to the event log.</span><br>            EventLog.writeEvent(EventLogTags.AM_ANR, userId, pid, processName, info.flags,<br>                    annotation);<br><br>            <span class="hljs-comment">// Dump thread traces as quickly as we can, starting with &quot;interesting&quot; processes.</span><br>            firstPids.add(pid);<br><br>            <span class="hljs-comment">// Don&#x27;t dump other PIDs if it&#x27;s a background ANR or is requested to only dump self.</span><br>            isSilentAnr = isSilentAnr();<br>            <span class="hljs-keyword">if</span> (!isSilentAnr &amp;&amp; !onlyDumpSelf) &#123;<br>                <span class="hljs-keyword">int</span> parentPid = pid;<br>                <span class="hljs-keyword">if</span> (parentProcess != <span class="hljs-keyword">null</span> &amp;&amp; parentProcess.getPid() &gt; <span class="hljs-number">0</span>) &#123;<br>                    parentPid = parentProcess.getPid();<br>                &#125;<br>                <span class="hljs-keyword">if</span> (parentPid != pid) firstPids.add(parentPid);<br><br>                <span class="hljs-keyword">if</span> (MY_PID != pid &amp;&amp; MY_PID != parentPid) firstPids.add(MY_PID);<br><br>                <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = getLruProcessList().size() - <span class="hljs-number">1</span>; i &gt;= <span class="hljs-number">0</span>; i--) &#123;<br>                    ProcessRecord r = getLruProcessList().get(i);<br>                    <span class="hljs-keyword">if</span> (r != <span class="hljs-keyword">null</span> &amp;&amp; r.thread != <span class="hljs-keyword">null</span>) &#123;<br>                        <span class="hljs-keyword">int</span> myPid = r.pid;<br>                        <span class="hljs-keyword">if</span> (myPid &gt; <span class="hljs-number">0</span> &amp;&amp; myPid != pid &amp;&amp; myPid != parentPid &amp;&amp; myPid != MY_PID) &#123;<br>                            <span class="hljs-keyword">if</span> (r.isPersistent()) &#123;<br>                                firstPids.add(myPid);<br>                                <span class="hljs-keyword">if</span> (DEBUG_ANR) Slog.i(TAG, <span class="hljs-string">&quot;Adding persistent proc: &quot;</span> + r);<br>                            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (r.treatLikeActivity) &#123;<br>                                firstPids.add(myPid);<br>                                <span class="hljs-keyword">if</span> (DEBUG_ANR) Slog.i(TAG, <span class="hljs-string">&quot;Adding likely IME: &quot;</span> + r);<br>                            &#125; <span class="hljs-keyword">else</span> &#123;<br>                                lastPids.put(myPid, Boolean.TRUE);<br>                                <span class="hljs-keyword">if</span> (DEBUG_ANR) Slog.i(TAG, <span class="hljs-string">&quot;Adding ANR proc: &quot;</span> + r);<br>                            &#125;<br>                        &#125;<br>                    &#125;<br>                &#125;<br>            &#125;<br>        &#125;<br><br>        <span class="hljs-comment">// Log the ANR to the main log.</span><br>        StringBuilder info = <span class="hljs-keyword">new</span> StringBuilder();<br>        info.setLength(<span class="hljs-number">0</span>);<br>        info.append(<span class="hljs-string">&quot;ANR in &quot;</span>).append(processName);<br>        <span class="hljs-keyword">if</span> (activityShortComponentName != <span class="hljs-keyword">null</span>) &#123;<br>            info.append(<span class="hljs-string">&quot; (&quot;</span>).append(activityShortComponentName).append(<span class="hljs-string">&quot;)&quot;</span>);<br>        &#125;<br>        info.append(<span class="hljs-string">&quot;\n&quot;</span>);<br>        info.append(<span class="hljs-string">&quot;PID: &quot;</span>).append(pid).append(<span class="hljs-string">&quot;\n&quot;</span>);<br>        <span class="hljs-keyword">if</span> (annotation != <span class="hljs-keyword">null</span>) &#123;<br>            info.append(<span class="hljs-string">&quot;Reason: &quot;</span>).append(annotation).append(<span class="hljs-string">&quot;\n&quot;</span>);<br>        &#125;<br>        <span class="hljs-keyword">if</span> (parentShortComponentName != <span class="hljs-keyword">null</span><br>                &amp;&amp; parentShortComponentName.equals(activityShortComponentName)) &#123;<br>            info.append(<span class="hljs-string">&quot;Parent: &quot;</span>).append(parentShortComponentName).append(<span class="hljs-string">&quot;\n&quot;</span>);<br>        &#125;<br><br>        StringBuilder report = <span class="hljs-keyword">new</span> StringBuilder();<br>        report.append(MemoryPressureUtil.currentPsiState());<br>        ProcessCpuTracker processCpuTracker = <span class="hljs-keyword">new</span> ProcessCpuTracker(<span class="hljs-keyword">true</span>);<br><br>        <span class="hljs-comment">// don&#x27;t dump native PIDs for background ANRs unless it is the process of interest</span><br>        String[] nativeProcs = <span class="hljs-keyword">null</span>;<br>        <span class="hljs-keyword">if</span> (isSilentAnr || onlyDumpSelf) &#123;<br>            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; NATIVE_STACKS_OF_INTEREST.length; i++) &#123;<br>                <span class="hljs-keyword">if</span> (NATIVE_STACKS_OF_INTEREST[i].equals(processName)) &#123;<br>                    nativeProcs = <span class="hljs-keyword">new</span> String[] &#123; processName &#125;;<br>                    <span class="hljs-keyword">break</span>;<br>                &#125;<br>            &#125;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            nativeProcs = NATIVE_STACKS_OF_INTEREST;<br>        &#125;<br><br>        <span class="hljs-keyword">int</span>[] pids = nativeProcs == <span class="hljs-keyword">null</span> ? <span class="hljs-keyword">null</span> : Process.getPidsForCommands(nativeProcs);<br>        ArrayList&lt;Integer&gt; nativePids = <span class="hljs-keyword">null</span>;<br><br>        <span class="hljs-keyword">if</span> (pids != <span class="hljs-keyword">null</span>) &#123;<br>            nativePids = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;(pids.length);<br>            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i : pids) &#123;<br>                nativePids.add(i);<br>            &#125;<br>        &#125;<br><br>        <span class="hljs-comment">// For background ANRs, don&#x27;t pass the ProcessCpuTracker to</span><br>        <span class="hljs-comment">// avoid spending 1/2 second collecting stats to rank lastPids.</span><br>        StringWriter tracesFileException = <span class="hljs-keyword">new</span> StringWriter();<br>        <span class="hljs-comment">// To hold the start and end offset to the ANR trace file respectively.</span><br>        <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span>[] offsets = <span class="hljs-keyword">new</span> <span class="hljs-keyword">long</span>[<span class="hljs-number">2</span>];<br>        File tracesFile = ActivityManagerService.dumpStackTraces(firstPids,<br>                isSilentAnr ? <span class="hljs-keyword">null</span> : processCpuTracker, isSilentAnr ? <span class="hljs-keyword">null</span> : lastPids,<br>                nativePids, tracesFileException, offsets);<br><br>        <span class="hljs-keyword">if</span> (isMonitorCpuUsage()) &#123;<br>            mService.updateCpuStatsNow();<br>            <span class="hljs-keyword">synchronized</span> (mService.mProcessCpuTracker) &#123;<br>                report.append(mService.mProcessCpuTracker.printCurrentState(anrTime));<br>            &#125;<br>            info.append(processCpuTracker.printCurrentLoad());<br>            info.append(report);<br>        &#125;<br>        report.append(tracesFileException.getBuffer());<br><br>        info.append(processCpuTracker.printCurrentState(anrTime));<br><br>        Slog.e(TAG, info.toString());<br>        <span class="hljs-keyword">if</span> (tracesFile == <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-comment">// There is no trace file, so dump (only) the alleged culprit&#x27;s threads to the log</span><br>            Process.sendSignal(pid, Process.SIGNAL_QUIT);<br>        &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (offsets[<span class="hljs-number">1</span>] &gt; <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-comment">// We&#x27;ve dumped into the trace file successfully</span><br>            mService.mProcessList.mAppExitInfoTracker.scheduleLogAnrTrace(<br>                    pid, uid, getPackageList(), tracesFile, offsets[<span class="hljs-number">0</span>], offsets[<span class="hljs-number">1</span>]);<br>        &#125;<br><br>        FrameworkStatsLog.write(FrameworkStatsLog.ANR_OCCURRED, uid, processName,<br>                activityShortComponentName == <span class="hljs-keyword">null</span> ? <span class="hljs-string">&quot;unknown&quot;</span>: activityShortComponentName,<br>                annotation,<br>                (<span class="hljs-keyword">this</span>.info != <span class="hljs-keyword">null</span>) ? (<span class="hljs-keyword">this</span>.info.isInstantApp()<br>                        ? FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__TRUE<br>                        : FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__FALSE)<br>                        : FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__UNAVAILABLE,<br>                isInterestingToUserLocked()<br>                        ? FrameworkStatsLog.ANROCCURRED__FOREGROUND_STATE__FOREGROUND<br>                        : FrameworkStatsLog.ANROCCURRED__FOREGROUND_STATE__BACKGROUND,<br>                getProcessClassEnum(),<br>                (<span class="hljs-keyword">this</span>.info != <span class="hljs-keyword">null</span>) ? <span class="hljs-keyword">this</span>.info.packageName : <span class="hljs-string">&quot;&quot;</span>);<br>        <span class="hljs-keyword">final</span> ProcessRecord parentPr = parentProcess != <span class="hljs-keyword">null</span><br>                ? (ProcessRecord) parentProcess.mOwner : <span class="hljs-keyword">null</span>;<br>        mService.addErrorToDropBox(<span class="hljs-string">&quot;anr&quot;</span>, <span class="hljs-keyword">this</span>, processName, activityShortComponentName,<br>                parentShortComponentName, parentPr, annotation, report.toString(), tracesFile,<br>                <span class="hljs-keyword">null</span>);<br><br>        <span class="hljs-keyword">if</span> (mWindowProcessController.appNotResponding(info.toString(), () -&gt; kill(<span class="hljs-string">&quot;anr&quot;</span>,<br>                ApplicationExitInfo.REASON_ANR, <span class="hljs-keyword">true</span>),<br>                () -&gt; &#123;<br>                    <span class="hljs-keyword">synchronized</span> (mService) &#123;<br>                        mService.mServices.scheduleServiceTimeoutLocked(<span class="hljs-keyword">this</span>);<br>                    &#125;<br>                &#125;)) &#123;<br>            <span class="hljs-keyword">return</span>;<br>        &#125;<br><br>        <span class="hljs-keyword">synchronized</span> (mService) &#123;<br>            <span class="hljs-comment">// mBatteryStatsService can be null if the AMS is constructed with injector only. This</span><br>            <span class="hljs-comment">// will only happen in tests.</span><br>            <span class="hljs-keyword">if</span> (mService.mBatteryStatsService != <span class="hljs-keyword">null</span>) &#123;<br>                mService.mBatteryStatsService.noteProcessAnr(processName, uid);<br>            &#125;<br><br>            <span class="hljs-keyword">if</span> (isSilentAnr() &amp;&amp; !isDebugging()) &#123;<br>                kill(<span class="hljs-string">&quot;bg anr&quot;</span>, ApplicationExitInfo.REASON_ANR, <span class="hljs-keyword">true</span>);<br>                <span class="hljs-keyword">return</span>;<br>            &#125;<br><br>            <span class="hljs-comment">// Set the app&#x27;s notResponding state, and look up the errorReportReceiver</span><br>            makeAppNotRespondingLocked(activityShortComponentName,<br>                    annotation != <span class="hljs-keyword">null</span> ? <span class="hljs-string">&quot;ANR &quot;</span> + annotation : <span class="hljs-string">&quot;ANR&quot;</span>, info.toString());<br><br>            <span class="hljs-comment">// mUiHandler can be null if the AMS is constructed with injector only. This will only</span><br>            <span class="hljs-comment">// happen in tests.</span><br>            <span class="hljs-keyword">if</span> (mService.mUiHandler != <span class="hljs-keyword">null</span>) &#123;<br>                <span class="hljs-comment">// Bring up the infamous App Not Responding dialog</span><br>                Message msg = Message.obtain();<br>                msg.what = ActivityManagerService.SHOW_NOT_RESPONDING_UI_MSG;<br>                msg.obj = <span class="hljs-keyword">new</span> AppNotRespondingDialog.Data(<span class="hljs-keyword">this</span>, aInfo, aboveSystem);<br><br>                mService.mUiHandler.sendMessage(msg);<br>            &#125;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/06/22/xcrash/">
+                        <span class="hidden-mobile">崩溃日志收集库 xCrash 浅析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?7d0c9146781b5fb9ae68cfc826d0be54";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
