@@ -14,8 +14,8 @@ mp4 = box + box + box + ...
 
 box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：
 
-1. moov - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息
-2. mdat - 保存了 H264 NALU
+1. `moov` - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息
+2. `mdat` - 保存了 H264 NALU
 
 本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念
 
@@ -33,7 +33,7 @@ track = chunk + chunk + chunk + ...
 
 比如下图说明 track 有 486 个 chunk，每个 chunk 在文件里的偏移量都记录在后面的表里
 
-![stco box](../../../../2021-07-05-mp4-structure/stco.webp)
+![stco box](../../../../image/2021-07-05-mp4-structure/stco.webp)
 
 # sample
 
@@ -51,7 +51,7 @@ chunk = sample + sample + sample + ...
 
 那么可以计算出这个 track 共有 486 个 chunk（和上面 Stco Box 的描述一致） 和 `15 + 485 * 14 + 5 = 4796` 个 sample
 
-![stsc box](../../../../2021-07-05-mp4-structure/stsc.webp)
+![stsc box](../../../../image/2021-07-05-mp4-structure/stsc.webp)
 
 至此我们可以通过 `sample id -> chunk id -> chunk offset` 这个链条定位某个 sample 所在的 chunk 及其偏移，但 sample 偏移还是没法得知，而 `Stsz Box` 正是记录了每个 sample 的大小，如下图：
 
@@ -60,7 +60,7 @@ chunk = sample + sample + sample + ...
 
 那么 sample 在文件里的偏移就可以通过 chunk offset 前进 n 个排在前面的 sample 的长度得出：`sample offset = chunk offset + samples before in the chunk`
 
-![stsz box](../../../../2021-07-05-mp4-structure/stsz.webp)
+![stsz box](../../../../image/2021-07-05-mp4-structure/stsz.webp)
 
 # DTS 和 PTS
 
@@ -75,14 +75,14 @@ chunk = sample + sample + sample + ...
 
 在没有 B frame 的情况下 DTS 和 PTS 的输出顺序是一样的，有 B frame 的话就不一样了，如下图：
 
-![dts-pts](../../../../2021-07-05-mp4-structure/dts-pts.jpg)
+![dts-pts](../../../../image/2021-07-05-mp4-structure/dts-pts.jpg)
 
 `Stts Box` 是 sample id 和解码时间 DTS 之间的映射表，通过这个表格我们可以找到任何时间的 sample，如下图：
 
 1. sample delta 值一样说明是固定帧率，帧率为 `30000 / 1001 = 29.97`
 2. 可以计算出该 video track 的时长为 `6796 * 1001 = 6802796`（6796 跟上面我们计算的 sample 数量一致），换算成秒就是 `6802796 / 30000 = 226.75s`（30000 是 mvhd box 里定义的时间单位）
 
-![stts box](../../../../2021-07-05-mp4-structure/stts.webp)
+![stts box](../../../../image/2021-07-05-mp4-structure/stts.webp)
 
 `Ctts Box` 描述了每个 sample 的 `composition time` 和 `decode time` 之间的差值，通过 composition time 就可以计算出 PTS，如下图：
 
@@ -90,7 +90,7 @@ chunk = sample + sample + sample + ...
 * sample count  - 连续相同 offset 的 sample 个数
 * sample offset - CT 和 DT 之间的 offset
 
-![ctts box](../../../../2021-07-05-mp4-structure/ctts.webp)
+![ctts box](../../../../image/2021-07-05-mp4-structure/ctts.webp)
 
 计算前面 5 个 sample 的 DTS 和 PTS
 
@@ -107,7 +107,7 @@ chunk = sample + sample + sample + ...
 
 # overview
 
-![overview](../../../../2021-07-05-mp4-structure/overview.jpg)
+![overview](../../../../image/2021-07-05-mp4-structure/overview.jpg)
 
 # 应用之 seek
 
