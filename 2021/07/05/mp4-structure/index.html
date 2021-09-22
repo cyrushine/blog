@@ -239,8 +239,8 @@
 
 <p>box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：</p>
 <ol>
-<li>moov - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息</li>
-<li>mdat - 保存了 H264 NALU</li>
+<li><code>moov</code> - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息</li>
+<li><code>mdat</code> - 保存了 H264 NALU</li>
 </ol>
 <p>本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念</p>
 <h1 id="chunk"><a href="#chunk" class="headerlink" title="chunk"></a>chunk</h1><p>一个 mp4 文件可以包含多个 <code>track</code>（视频、音频和字幕），而每个 track 则由多个 <code>chunk</code> 组成</p>
@@ -248,7 +248,7 @@
 
 <p><code>Stco Box</code> 描述了一个 track 有多少个 chunk 以及每个 chunk 在 mp4 文件里的偏移量，这样就具有了快速定位（<code>seek</code>）chunk 的能力</p>
 <p>比如下图说明 track 有 486 个 chunk，每个 chunk 在文件里的偏移量都记录在后面的表里</p>
-<p><img src="../../../../2021-07-05-mp4-structure/stco.webp" srcset="/image/loading.gif" lazyload alt="stco box"></p>
+<p><img src="../../../../image/2021-07-05-mp4-structure/stco.webp" srcset="/image/loading.gif" lazyload alt="stco box"></p>
 <h1 id="sample"><a href="#sample" class="headerlink" title="sample"></a>sample</h1><p><code>sample</code>（采样）相当于一帧，解码的过程就是计算出一帧帧的图像，每个 chunk 包含多个 <code>sample</code></p>
 <figure class="highlight glsl"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs glsl">chunk = <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + ...<br></code></pre></div></td></tr></table></figure>
 
@@ -259,14 +259,14 @@
 <li>第 486 个 chunk 包含 5 个 sample</li>
 </ol>
 <p>那么可以计算出这个 track 共有 486 个 chunk（和上面 Stco Box 的描述一致） 和 <code>15 + 485 * 14 + 5 = 4796</code> 个 sample</p>
-<p><img src="../../../../2021-07-05-mp4-structure/stsc.webp" srcset="/image/loading.gif" lazyload alt="stsc box"></p>
+<p><img src="../../../../image/2021-07-05-mp4-structure/stsc.webp" srcset="/image/loading.gif" lazyload alt="stsc box"></p>
 <p>至此我们可以通过 <code>sample id -&gt; chunk id -&gt; chunk offset</code> 这个链条定位某个 sample 所在的 chunk 及其偏移，但 sample 偏移还是没法得知，而 <code>Stsz Box</code> 正是记录了每个 sample 的大小，如下图：</p>
 <ol>
 <li>sample count = 6796，与上面我们计算出的数据一致</li>
 <li>sample size 是一张记录了每个 sample 大小的表（所以 stsz box 会很大）</li>
 </ol>
 <p>那么 sample 在文件里的偏移就可以通过 chunk offset 前进 n 个排在前面的 sample 的长度得出：<code>sample offset = chunk offset + samples before in the chunk</code></p>
-<p><img src="../../../../2021-07-05-mp4-structure/stsz.webp" srcset="/image/loading.gif" lazyload alt="stsz box"></p>
+<p><img src="../../../../image/2021-07-05-mp4-structure/stsz.webp" srcset="/image/loading.gif" lazyload alt="stsz box"></p>
 <h1 id="DTS-和-PTS"><a href="#DTS-和-PTS" class="headerlink" title="DTS 和 PTS"></a>DTS 和 PTS</h1><table>
 <thead>
 <tr>
@@ -300,20 +300,20 @@
 </tr>
 </tbody></table>
 <p>在没有 B frame 的情况下 DTS 和 PTS 的输出顺序是一样的，有 B frame 的话就不一样了，如下图：</p>
-<p><img src="../../../../2021-07-05-mp4-structure/dts-pts.jpg" srcset="/image/loading.gif" lazyload alt="dts-pts"></p>
+<p><img src="../../../../image/2021-07-05-mp4-structure/dts-pts.jpg" srcset="/image/loading.gif" lazyload alt="dts-pts"></p>
 <p><code>Stts Box</code> 是 sample id 和解码时间 DTS 之间的映射表，通过这个表格我们可以找到任何时间的 sample，如下图：</p>
 <ol>
 <li>sample delta 值一样说明是固定帧率，帧率为 <code>30000 / 1001 = 29.97</code></li>
 <li>可以计算出该 video track 的时长为 <code>6796 * 1001 = 6802796</code>（6796 跟上面我们计算的 sample 数量一致），换算成秒就是 <code>6802796 / 30000 = 226.75s</code>（30000 是 mvhd box 里定义的时间单位）</li>
 </ol>
-<p><img src="../../../../2021-07-05-mp4-structure/stts.webp" srcset="/image/loading.gif" lazyload alt="stts box"></p>
+<p><img src="../../../../image/2021-07-05-mp4-structure/stts.webp" srcset="/image/loading.gif" lazyload alt="stts box"></p>
 <p><code>Ctts Box</code> 描述了每个 sample 的 <code>composition time</code> 和 <code>decode time</code> 之间的差值，通过 composition time 就可以计算出 PTS，如下图：</p>
 <ul>
 <li>entry count   - 描述了下面 sample count 和 sample delta 组成的二元组个数</li>
 <li>sample count  - 连续相同 offset 的 sample 个数</li>
 <li>sample offset - CT 和 DT 之间的 offset</li>
 </ul>
-<p><img src="../../../../2021-07-05-mp4-structure/ctts.webp" srcset="/image/loading.gif" lazyload alt="ctts box"></p>
+<p><img src="../../../../image/2021-07-05-mp4-structure/ctts.webp" srcset="/image/loading.gif" lazyload alt="ctts box"></p>
 <p>计算前面 5 个 sample 的 DTS 和 PTS</p>
 <table>
 <thead>
@@ -361,7 +361,7 @@
 </tbody></table>
 <p>解码：0 - 1 - 2 - 3 - 4</p>
 <p>显示：0 - 3 - 2 - 4 - 1</p>
-<h1 id="overview"><a href="#overview" class="headerlink" title="overview"></a>overview</h1><p><img src="../../../../2021-07-05-mp4-structure/overview.jpg" srcset="/image/loading.gif" lazyload alt="overview"></p>
+<h1 id="overview"><a href="#overview" class="headerlink" title="overview"></a>overview</h1><p><img src="../../../../image/2021-07-05-mp4-structure/overview.jpg" srcset="/image/loading.gif" lazyload alt="overview"></p>
 <h1 id="应用之-seek"><a href="#应用之-seek" class="headerlink" title="应用之 seek"></a>应用之 seek</h1><p>拖动视频进度条，进度条对应的应该是 PTS，那么根据 PTS 找到对应的 sample，如果是 P/B frame 还需要往前寻找所在 GOP 的 I frame，然后找到它所在的 chunk 而从定位到它的偏移值，从这个偏移值开始读取整个 GOP 长度的数据流并解码</p>
 <h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
 <li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzI0NTMxMjA1MQ==&mid=2247483932&idx=1&sn=60d7bc3d4330c362e0e49a287d72a9d7&chksm=e9513d40de26b4569f1d664d026d7f5b3df556f454db9b35d4a2981abbae631ad7fd4746558f&scene=21#wechat_redirect">音视频封装：MP4结构概述和分析工具</a></li>
