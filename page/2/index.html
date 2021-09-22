@@ -184,6 +184,63 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/05/07/koom/" target="_self">
+          KOOM - 利用子进程 dump hprof
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/05/07/koom/" target="_self">
+          
+          
+            
+          
+          不冻结 APP 的 dump hprof在 LeakCanary 浅析 和 Matrix - ResourcesCanary 浅析 这两篇文章里，介绍了检测内存泄漏的两种相似的思路：
+
+WeakReference + ReferenceQueue + 延迟 5s 检查是否被 GC
+WeakReference + ConcurrentLinkedQueue，子线程轮询的方式每隔 1m 检查队列里的对
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-07 04:00" pubdate>
+              2021-05-07
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/android/">android</a>
+            
+              <a href="/categories/android/APM/">APM</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
+            
+              <a href="/tags/APM/">APM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/04/26/matrix-tracecanary/" target="_self">
           Matrix - TraceCanary 浅析
         </a>
@@ -722,68 +779,11 @@ tcp 三次握手建立连接后，再进行 tls 握手/协商得到一个秘钥�
     </article>
   </div>
 
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/12/how-tinker-work/" target="_self">
-          解析 Tinker 是如何实现热修复的
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/12/how-tinker-work/" target="_self">
-          
-          
-            
-          
-          简介Tinker 是微信团队开源的一款 android 热修复框架，它的使用流程大体是：
-
-client 安装 V1.apk
-提交了一些 hotfix，打包出 V2.apk
-利用 Tinker 提供的差分工具，在 server 计算出补丁包 patch1.apk，并下发给 client
-client 收到补丁包后，在后台给 V1.apk 打上 patch1.apk 得到 V2.apk（V1.apk
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-12 04:00" pubdate>
-              2021-03-12
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/categories/Android/">Android</a>
-            
-              <a href="/categories/Android/Library/">Library</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/hotfix/">hotfix</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
 
 
   <nav aria-label="navigation">
     <span class="pagination" id="pagination">
-      <a class="extend prev" rel="prev" href="/"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/#board">3</a><a class="page-number" href="/page/4/#board">4</a><a class="extend next" rel="next" href="/page/3/#board"><i class="iconfont icon-arrowright"></i></a>
+      <a class="extend prev" rel="prev" href="/"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/#board">3</a><a class="page-number" href="/page/4/#board">4</a><a class="page-number" href="/page/5/#board">5</a><a class="extend next" rel="next" href="/page/3/#board"><i class="iconfont icon-arrowright"></i></a>
     </span>
   </nav>
 

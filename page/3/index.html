@@ -184,6 +184,63 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/03/12/how-tinker-work/" target="_self">
+          解析 Tinker 是如何实现热修复的
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/03/12/how-tinker-work/" target="_self">
+          
+          
+            
+          
+          简介Tinker 是微信团队开源的一款 android 热修复框架，它的使用流程大体是：
+
+client 安装 V1.apk
+提交了一些 hotfix，打包出 V2.apk
+利用 Tinker 提供的差分工具，在 server 计算出补丁包 patch1.apk，并下发给 client
+client 收到补丁包后，在后台给 V1.apk 打上 patch1.apk 得到 V2.apk（V1.apk
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-03-12 04:00" pubdate>
+              2021-03-12
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/Android/">Android</a>
+            
+              <a href="/categories/Android/Library/">Library</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/hotfix/">hotfix</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/03/02/how-application-being-created-and-init/" target="_self">
           Application 是如何被创建和初始化的？
         </a>
@@ -687,66 +744,11 @@ syncFrameState重要的方法有三个：makeCurrent，
     </article>
   </div>
 
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2020/12/13/ui-thread-in-vsync/" target="_self">
-          Android 图形栈（二）ui thread
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2020/12/13/ui-thread-in-vsync/" target="_self">
-          
-          
-            
-          
-          从一段 systrace 开始
-这是一段 systrace 记录，看得出来页面是比较流畅的，ui thread 全都在一个 VSYNC_app 内完成绘制，surfaceflinger 也在一个 VSYNC_sf 内完成各个层的合成；但有没发现在 ui thread 完成 doFrame 后，总是会有一个 ReaderThread 跟在后面，看名字像是跟渲染相关的线程，它跟 ui 绘制有关系吗？平
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2020-12-13 04:00" pubdate>
-              2020-12-13
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/categories/Android/">Android</a>
-            
-              <a href="/categories/Android/Framework/">Framework</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/vsync/">vsync</a>
-            
-              <a href="/tags/ui-thread/">ui thread</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
 
 
   <nav aria-label="navigation">
     <span class="pagination" id="pagination">
-      <a class="extend prev" rel="prev" href="/page/2/#board"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/#board">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/#board">4</a><a class="extend next" rel="next" href="/page/4/#board"><i class="iconfont icon-arrowright"></i></a>
+      <a class="extend prev" rel="prev" href="/page/2/#board"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/#board">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/#board">4</a><a class="page-number" href="/page/5/#board">5</a><a class="extend next" rel="next" href="/page/4/#board"><i class="iconfont icon-arrowright"></i></a>
     </span>
   </nav>
 

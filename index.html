@@ -184,6 +184,64 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/07/05/mp4-structure/" target="_self">
+          MP4 文件结构浅析
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/07/05/mp4-structure/" target="_self">
+          
+          
+            
+          
+          概述mp4 文件由一个个连续的 box 组成
+1mp4 = box + box + box + ...
+
+box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：
+
+moov - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息
+mdat - 保存了 H264 NALU
+
+本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念
+chunk
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-07-05 04:00" pubdate>
+              2021-07-05
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mp4/">mp4</a>
+            
+              <a href="/tags/pts/">pts</a>
+            
+              <a href="/tags/dts/">dts</a>
+            
+              <a href="/tags/box/">box</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/06/28/logan/" target="_self">
           日志库 Logan
         </a>
@@ -720,68 +778,11 @@ Android 系统的第一个 Dalvik 虚拟机是由 Zygote 进程创建的。应�
     </article>
   </div>
 
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/05/07/koom/" target="_self">
-          KOOM - 利用子进程 dump hprof
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/05/07/koom/" target="_self">
-          
-          
-            
-          
-          不冻结 APP 的 dump hprof在 LeakCanary 浅析 和 Matrix - ResourcesCanary 浅析 这两篇文章里，介绍了检测内存泄漏的两种相似的思路：
-
-WeakReference + ReferenceQueue + 延迟 5s 检查是否被 GC
-WeakReference + ConcurrentLinkedQueue，子线程轮询的方式每隔 1m 检查队列里的对
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-05-07 04:00" pubdate>
-              2021-05-07
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/categories/android/">android</a>
-            
-              <a href="/categories/android/APM/">APM</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
-            
-              <a href="/tags/APM/">APM</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
 
 
   <nav aria-label="navigation">
     <span class="pagination" id="pagination">
-      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="page-number" href="/page/3/#board">3</a><a class="page-number" href="/page/4/#board">4</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
+      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="page-number" href="/page/3/#board">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/#board">5</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
     </span>
   </nav>
 
