@@ -176,17 +176,23 @@ class ProcessRecord {
 
 ## logcat system 
 
+> `adb logcat -v threadtime > logcat`
+> 
+> `-b` 指定 ring buffer，默认是 `main`, `system` 和 `crash`
+
 从上面的代码可以看到 logcat system 里会输出一段 ANR 日志如下，前四行包含了一些基本信息：
 
-* `ANR` 关键字
-* 发生 ANR 的 app process name 及 android component name
-* app process id
-* 原因/描述（看得出来这是由于没有及时消费 input event 而产生的 ANR）
-* parent component (?)
-
+1. `ANR` 关键字
+2. 发生 ANR 的 app process name 及 android component name
+3. app process id
+4. 原因/描述（看得出来这是由于没有及时消费 input event 而产生的 ANR）
+5. parent component (?)
+6. `Load: 0.17 / 0.44 / 0.71` 读取自 `/proc/loadavg`，表示 1, 5 和 15 分钟内的系统平均负载
+7. 内存压力统计信息，读取自 `/proc/pressure/memory`
 
 
 ``` log
+# from mi 9
 09-29 16:03:03.457  1763 29602 E ActivityManager: ANR in com.example.myapplication (com.example.myapplication/.MainActivity)
 09-29 16:03:03.457  1763 29602 E ActivityManager: PID: 27750
 09-29 16:03:03.457  1763 29602 E ActivityManager: Reason: Input dispatching timed out (com.example.myapplication/com.example.myapplication.MainActivity, 23ec514 com.example.myapplication/com.example.myapplication.MainActivity (server) is not responding. Waited 8008ms for MotionEvent(action=DOWN))
@@ -347,3 +353,93 @@ class ProcessRecord {
 09-29 16:03:03.457  1763 29602 E ActivityManager:   3.5% 26155/mdnsd: 0% user + 3.5% kernel
 09-29 16:03:03.457  1763 29602 E ActivityManager: 15% TOTAL: 6.1% user + 7.5% kernel + 0.9% irq + 0.4% softirq
 ```
+
+### load average
+
+用进程数来描述 CPU 负载压力
+
+```java
+class ProcessRecord {
+    void appNotResponding(...) {
+        // ...
+        if (isMonitorCpuUsage()) {
+            mService.updateCpuStatsNow();
+            synchronized (mService.mProcessCpuTracker) {
+                report.append(mService.mProcessCpuTracker.printCurrentState(anrTime));
+            }
+            info.append(processCpuTracker.printCurrentLoad());  // 这里输出系统平均负载
+            info.append(report);
+        }
+        // ...
+    }
+}
+
+class ProcessCpuTracker {
+
+    // 三个值分别对应 mLoad1, mLoad5 和 mLoad15
+    final public String printCurrentLoad() {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new FastPrintWriter(sw, false, 128);
+        pw.print("Load: ");
+        pw.print(mLoad1);
+        pw.print(" / ");
+        pw.print(mLoad5);
+        pw.print(" / ");
+        pw.println(mLoad15);
+        pw.flush();
+        return sw.toString();
+    }    
+
+    // 这三个变量来自 /proc/loadavg
+    public void update() {
+        // ...
+        final float[] loadAverages = mLoadAverageData;
+        if (Process.readProcFile("/proc/loadavg", LOAD_AVERAGE_FORMAT,
+                null, null, loadAverages)) {
+            float load1 = loadAverages[0];
+            float load5 = loadAverages[1];
+            float load15 = loadAverages[2];
+            if (load1 != mLoad1 || load5 != mLoad5 || load15 != mLoad15) {
+                mLoad1 = load1;
+                mLoad5 = load5;
+                mLoad15 = load15;
+                onLoadChanged(load1, load5, load15);
+            }
+        }
+        // ...
+    }    
+}
+```
+
+> man proc.5
+> 
+> /proc/loadavg
+> 
+> The  first  three  fields in this file are load average figures giving the number of jobs in the run queue (state R) or waiting for disk I/O (state D) averaged over 1, 5, and 15 minutes.  They are the same as the load average numbers given by uptime(1) and other programs.  
+> 
+> The fourth field consists of two numbers separated by a slash (/).  The first of these is the number of currently  runnable  kernel  scheduling entities (processes, threads).  The value after the slash is the number of kernel scheduling entities that currently exist on the system.  
+> 
+> The fifth field is the PID of the process that was most recently created on the system.
+
+在绿联 6812（4 x A53@1.5G）上获取的值是 `13.31 13.74 13.81 2/1167 3888`
+
+* 在过去的 1, 5, 15 分钟内 CPU 的平均负载是 13.31, 13.74, 13.81
+* 当前有 1167 个进程，其中有 2 个正在运行
+* 最近创建的一个进程是 3888
+
+> 在 Linux 系统中，uptime、w、top 等命令都会有系统平均负载 load average 的输出，系统平均负载被定义为在特定时间间隔内运行队列中的平均进程数
+> 
+> 如果一个进程满足以下条件则其就会位于运行队列中：它没有在等待 I/O 操作的结果，它没有主动进入等待状态(也就是没有调用'wait')，没有被停止(例如：等待终止)
+> 
+> 例如：<br>
+> [root@opendigest root]# uptime <br>
+> 7:51pm up 2 days, 5:43, 2 users, load average: 8.13, 5.90, 4.94 <br>
+> 命令输出的最后内容表示在过去的 1、5、15 分钟内运行队列中的平均进程数量
+> 
+> 一般来说只要每个 CPU 的当前活动进程数不大于 3 那么系统的性能就是良好的，如果每个 CPU 的任务数大于 5 那么就表示这台机器的性能有严重问题。对于上面的例子来说，假设系统有两个 CPU 那么其每个 CPU 的当前任务数为：8.13 / 2 = 4.065，这表示该系统的性能是可以接受的
+
+这么看来 `13.81 / 4 = 3.45` 这块绿联屏的性能还是可以接受的
+
+### PSI (Pressure Stall Information)
+
+
