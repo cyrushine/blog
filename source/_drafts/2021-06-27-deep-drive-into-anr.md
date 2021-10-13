@@ -22,7 +22,8 @@ InputManagerCallback.notifyANR
 InputManagerCallback.notifyANRInner
 ActivityManagerService.inputDispatchingTimedOut
 AnrHelper.appNotResponding
-ProcessRecord.appNotResponding
+AnrRecord.appNotResponding
+ProcessErrorStateRecord.appNotResponding
 ActivityManagerService.UiHandler.handleMessage(SHOW_NOT_RESPONDING_UI_MSG)
 AppErrors.handleShowAnrUi
 ProcessRecord.ErrorDialogController.showAnrDialogs
@@ -30,20 +31,18 @@ ProcessRecord.ErrorDialogController.showAnrDialogs
 
 # 日志
 
-其中 `ProcessRecord.appNotResponding` 是输出 ANR 日志的关键方法
+其中 `ProcessErrorStateRecord.appNotResponding` 是输出 ANR 日志的关键方法
 
 ```java
-class ProcessRecord {
+class ProcessErrorStateRecord {
     void appNotResponding(String activityShortComponentName, ApplicationInfo aInfo,
             String parentShortComponentName, WindowProcessController parentProcess,
             boolean aboveSystem, String annotation, boolean onlyDumpSelf) {
         // ...
-
         // Log the ANR to the main log.
-        // 输出 logcat system 的 anr 日志
         StringBuilder info = new StringBuilder();
         info.setLength(0);
-        info.append("ANR in ").append(processName);
+        info.append("ANR in ").append(mApp.processName);
         if (activityShortComponentName != null) {
             info.append(" (").append(activityShortComponentName).append(")");
         }
@@ -56,33 +55,19 @@ class ProcessRecord {
                 && parentShortComponentName.equals(activityShortComponentName)) {
             info.append("Parent: ").append(parentShortComponentName).append("\n");
         }
+        if (errorId != null) {
+            info.append("ErrorId: ").append(errorId.toString()).append("\n");
+        }
+        info.append("Frozen: ").append(mApp.mOptRecord.isFrozen()).append("\n");
+
+        // ...
 
         StringBuilder report = new StringBuilder();
         report.append(MemoryPressureUtil.currentPsiState());
         ProcessCpuTracker processCpuTracker = new ProcessCpuTracker(true);
 
         // don't dump native PIDs for background ANRs unless it is the process of interest
-        String[] nativeProcs = null;
-        if (isSilentAnr || onlyDumpSelf) {
-            for (int i = 0; i < NATIVE_STACKS_OF_INTEREST.length; i++) {
-                if (NATIVE_STACKS_OF_INTEREST[i].equals(processName)) {
-                    nativeProcs = new String[] { processName };
-                    break;
-                }
-            }
-        } else {
-            nativeProcs = NATIVE_STACKS_OF_INTEREST;
-        }
-
-        int[] pids = nativeProcs == null ? null : Process.getPidsForCommands(nativeProcs);
-        ArrayList<Integer> nativePids = null;
-
-        if (pids != null) {
-            nativePids = new ArrayList<>(pids.length);
-            for (int i : pids) {
-                nativePids.add(i);
-            }
-        }
+        // ...
 
         // For background ANRs, don't pass the ProcessCpuTracker to
         // avoid spending 1/2 second collecting stats to rank lastPids.
@@ -91,13 +76,11 @@ class ProcessRecord {
         final long[] offsets = new long[2];
         File tracesFile = ActivityManagerService.dumpStackTraces(firstPids,
                 isSilentAnr ? null : processCpuTracker, isSilentAnr ? null : lastPids,
-                nativePids, tracesFileException, offsets);
+                nativePids, tracesFileException, offsets, annotation);
 
         if (isMonitorCpuUsage()) {
             mService.updateCpuStatsNow();
-            synchronized (mService.mProcessCpuTracker) {
-                report.append(mService.mProcessCpuTracker.printCurrentState(anrTime));
-            }
+            mService.mAppProfiler.printCurrentCpuState(report, anrTime);
             info.append(processCpuTracker.printCurrentLoad());
             info.append(report);
         }
@@ -112,32 +95,91 @@ class ProcessRecord {
         } else if (offsets[1] > 0) {
             // We've dumped into the trace file successfully
             mService.mProcessList.mAppExitInfoTracker.scheduleLogAnrTrace(
-                    pid, uid, getPackageList(), tracesFile, offsets[0], offsets[1]);
+                    pid, mApp.uid, mApp.getPackageList(), tracesFile, offsets[0], offsets[1]);
         }
 
-        FrameworkStatsLog.write(FrameworkStatsLog.ANR_OCCURRED, uid, processName,
-                activityShortComponentName == null ? "unknown": activityShortComponentName,
+        // Check if package is still being loaded
+        float loadingProgress = 1;
+        IncrementalMetrics incrementalMetrics = null;
+        final PackageManagerInternal packageManagerInternal = mService.getPackageManagerInternal();
+        if (mApp.info != null && mApp.info.packageName != null) {
+            IncrementalStatesInfo incrementalStatesInfo =
+                    packageManagerInternal.getIncrementalStatesInfo(
+                            mApp.info.packageName, mApp.uid, mApp.userId);
+            if (incrementalStatesInfo != null) {
+                loadingProgress = incrementalStatesInfo.getProgress();
+            }
+            final String codePath = mApp.info.getCodePath();
+            if (codePath != null && !codePath.isEmpty()
+                    && IncrementalManager.isIncrementalPath(codePath)) {
+                // Report in the main log that the incremental package is still loading
+                Slog.e(TAG, "App ANR on incremental package " + mApp.info.packageName
+                        + " which is " + ((int) (loadingProgress * 100)) + "% loaded.");
+                final IBinder incrementalService = ServiceManager.getService(
+                        Context.INCREMENTAL_SERVICE);
+                if (incrementalService != null) {
+                    final IncrementalManager incrementalManager = new IncrementalManager(
+                            IIncrementalService.Stub.asInterface(incrementalService));
+                    incrementalMetrics = incrementalManager.getMetrics(codePath);
+                }
+            }
+        }
+        if (incrementalMetrics != null) {
+            // Report in the main log about the incremental package
+            info.append("Package is ").append((int) (loadingProgress * 100)).append("% loaded.\n");
+        }
+
+        FrameworkStatsLog.write(FrameworkStatsLog.ANR_OCCURRED, mApp.uid, mApp.processName,
+                activityShortComponentName == null ? "unknown" : activityShortComponentName,
                 annotation,
-                (this.info != null) ? (this.info.isInstantApp()
+                (mApp.info != null) ? (mApp.info.isInstantApp()
                         ? FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__TRUE
                         : FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__FALSE)
                         : FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__UNAVAILABLE,
-                isInterestingToUserLocked()
+                mApp.isInterestingToUserLocked()
                         ? FrameworkStatsLog.ANROCCURRED__FOREGROUND_STATE__FOREGROUND
                         : FrameworkStatsLog.ANROCCURRED__FOREGROUND_STATE__BACKGROUND,
-                getProcessClassEnum(),
-                (this.info != null) ? this.info.packageName : "");
+                mApp.getProcessClassEnum(),
+                (mApp.info != null) ? mApp.info.packageName : "",
+                incrementalMetrics != null /* isIncremental */, loadingProgress,
+                incrementalMetrics != null ? incrementalMetrics.getMillisSinceOldestPendingRead()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getStorageHealthStatusCode()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getDataLoaderStatusCode()
+                        : -1,
+                incrementalMetrics != null && incrementalMetrics.getReadLogsEnabled(),
+                incrementalMetrics != null ? incrementalMetrics.getMillisSinceLastDataLoaderBind()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getDataLoaderBindDelayMillis()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getTotalDelayedReads()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getTotalFailedReads()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getLastReadErrorUid()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getMillisSinceLastReadError()
+                        : -1,
+                incrementalMetrics != null ? incrementalMetrics.getLastReadErrorNumber()
+                        : 0,
+                incrementalMetrics != null ? incrementalMetrics.getTotalDelayedReadsDurationMillis()
+                        : -1);
         final ProcessRecord parentPr = parentProcess != null
                 ? (ProcessRecord) parentProcess.mOwner : null;
-        mService.addErrorToDropBox("anr", this, processName, activityShortComponentName,
-                parentShortComponentName, parentPr, annotation, report.toString(), tracesFile,
-                null);
+        mService.addErrorToDropBox("anr", mApp, mApp.processName, activityShortComponentName,
+                parentShortComponentName, parentPr, null, report.toString(), tracesFile,
+                null, new Float(loadingProgress), incrementalMetrics, errorId);
 
-        if (mWindowProcessController.appNotResponding(info.toString(), () -> kill("anr",
-                ApplicationExitInfo.REASON_ANR, true),
+        if (mApp.getWindowProcessController().appNotResponding(info.toString(),
                 () -> {
                     synchronized (mService) {
-                        mService.mServices.scheduleServiceTimeoutLocked(this);
+                        mApp.killLocked("anr", ApplicationExitInfo.REASON_ANR, true);
+                    }
+                },
+                () -> {
+                    synchronized (mService) {
+                        mService.mServices.scheduleServiceTimeoutLocked(mApp);
                     }
                 })) {
             return;
@@ -147,17 +189,20 @@ class ProcessRecord {
             // mBatteryStatsService can be null if the AMS is constructed with injector only. This
             // will only happen in tests.
             if (mService.mBatteryStatsService != null) {
-                mService.mBatteryStatsService.noteProcessAnr(processName, uid);
+                mService.mBatteryStatsService.noteProcessAnr(mApp.processName, mApp.uid);
             }
 
-            if (isSilentAnr() && !isDebugging()) {
-                kill("bg anr", ApplicationExitInfo.REASON_ANR, true);
+            if (isSilentAnr() && !mApp.isDebugging()) {
+                mApp.killLocked("bg anr", ApplicationExitInfo.REASON_ANR, true);
                 return;
             }
 
-            // Set the app's notResponding state, and look up the errorReportReceiver
-            makeAppNotRespondingLocked(activityShortComponentName,
-                    annotation != null ? "ANR " + annotation : "ANR", info.toString());
+            synchronized (mProcLock) {
+                // Set the app's notResponding state, and look up the errorReportReceiver
+                makeAppNotRespondingLSP(activityShortComponentName,
+                        annotation != null ? "ANR " + annotation : "ANR", info.toString());
+                mDialogController.setAnrController(anrController);
+            }
 
             // mUiHandler can be null if the AMS is constructed with injector only. This will only
             // happen in tests.
@@ -165,11 +210,11 @@ class ProcessRecord {
                 // Bring up the infamous App Not Responding dialog
                 Message msg = Message.obtain();
                 msg.what = ActivityManagerService.SHOW_NOT_RESPONDING_UI_MSG;
-                msg.obj = new AppNotRespondingDialog.Data(this, aInfo, aboveSystem);
+                msg.obj = new AppNotRespondingDialog.Data(mApp, aInfo, aboveSystem);
 
-                mService.mUiHandler.sendMessage(msg);
+                mService.mUiHandler.sendMessageDelayed(msg, anrDialogDelayMs);
             }
-        }
+        }        
     }
 }
 ```
@@ -188,7 +233,7 @@ class ProcessRecord {
 4. 原因/描述（看得出来这是由于没有及时消费 input event 而产生的 ANR）
 5. parent component (?)
 6. `Load: 0.17 / 0.44 / 0.71` 读取自 `/proc/loadavg`，表示 1, 5 和 15 分钟内的系统平均负载
-7. 内存压力统计信息，读取自 `/proc/pressure/memory`
+7. 内存压力统计信息（Pressure Stall Information），读取自 `/proc/pressure/memory`，表示任务阻塞在内存资源上的总时长
 
 
 ``` log
@@ -359,7 +404,7 @@ class ProcessRecord {
 用进程数来描述 CPU 负载压力
 
 ```java
-class ProcessRecord {
+class ProcessErrorStateRecord {
     void appNotResponding(...) {
         // ...
         if (isMonitorCpuUsage()) {
@@ -442,4 +487,555 @@ class ProcessCpuTracker {
 
 ### PSI (Pressure Stall Information)
 
+> Pressure Stall Information 提供了一种评估系统资源压力的方法。系统有三个基础资源：CPU、Memory 和 IO，无论这些资源配置如何增加，似乎永远无法满足软件的需求。一旦产生资源竞争，就有可能带来延迟增大，使用户体验到卡顿
+> 
+> 如果没有一种相对准确的方法检测系统的资源压力程度，有两种后果：一种是资源使用者过度克制，没有充分使用系统资源；另一种是经常产生资源竞争，过度使用资源导致等待延迟过大。准确的检测方法可以帮忙资源使用者确定合适的工作量，同时也可以帮助系统制定高效的资源调度策略，最大化利用系统资源，最大化改善用户体验
+> 
+> Facebook 在 2018 年开源了一套解决重要计算集群管理问题的 Linux 内核组件和相关工具，PSI 是其中重要的资源度量工具，它提供了一种实时检测系统资源竞争程度的方法，以竞争等待时间的方式呈现，简单而准确地供用户以及资源调度者进行决策
+> 
+> 在此之前，Linux 也有一些资源压力的评估方法，最具代表性的是 load average 和 vmpressure
 
+每类资源的压力信息都通过 proc 文件系统的独立文件来提供，路径为：`/proc/pressure/memory`，`/proc/pressure/cpu` 和 `/proc/pressure/io`，其中 /proc/pressure/io 输出格式如下：
+
+```log
+some avg10=0.30 avg60=0.12 avg300=0.02 total=4170757
+full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503
+```
+
+* avg10、avg60、avg300 分别代表 10s、60s、300s 的时间周期内的阻塞时间百分比
+* total 是总累计时间，以毫秒为单位
+* some 这一行，代表至少有一个任务在某个资源上阻塞的时间占比
+* full 这一行，代表所有的非 idle 任务同时被阻塞的时间占比，这期间 cpu 被完全浪费，会带来严重的性能问题
+
+我们以 IO 的 some 和 full 来举例说明，假设在 60 秒的时间段内，系统有两个 task，在 60 秒的周期内的运行情况如下图所示：
+
+![proc_pressure_io_1]((../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.jpg))
+
+红色阴影部分表示任务由于等待 IO 资源而进入阻塞状态。Task A 和 Task B 同时阻塞的部分为 full，占比 16.66%；至少有一个任务阻塞（仅 Task B 阻塞的部分也计算入内）的部分为 some，占比 50%
+
+some 和 full 都是在某一时间段内阻塞时间占比的总和，阻塞时间不一定连续，如下图所示：
+
+![proc_pressure_io_2]((../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.jpg))
+
+IO 和 memory 都有 some 和 full 两个维度，那是因为的确有可能系统中的所有任务都阻塞在 IO 或者 memory 资源，同时 CPU 进入 idle 状态
+
+但是 CPU 资源不可能出现这个情况：不可能全部的 runnable 的任务都等待 CPU 资源，至少有一个 runnable 任务会被调度器选中占有 CPU 资源，因此 CPU 资源没有 full 维度的 PSI 信息呈现
+
+通过这些阻塞占比数据，我们可以看到短期以及中长期一段时间内各种资源的压力情况，可以较精确的确定时延抖动原因，并制定对应的负载管理策略
+
+```log
+09-29 16:03:03.457  1763 29602 E ActivityManager: ----- Output from /proc/pressure/memory -----
+09-29 16:03:03.457  1763 29602 E ActivityManager: some avg10=0.00 avg60=0.00 avg300=0.02 total=32995625
+09-29 16:03:03.457  1763 29602 E ActivityManager: full avg10=0.00 avg60=0.00 avg300=0.00 total=11591183
+09-29 16:03:03.457  1763 29602 E ActivityManager: ----- End output from /proc/pressure/memory -----
+```
+
+现在我们来看看 anr logcat 里输出的 /proc/pressure/memory 内容，full 都为零说明任务同时阻塞在内存资源上的情况没有出现，some - avg300=0.02 表明在有任务阻塞在内存资源上 6s（300s * 0.02，注意这 6s 是总和，不一定是连续的）
+
+```java
+public final class MemoryPressureUtil {
+    private static final String FILE = "/proc/pressure/memory";
+    private static final String TAG = "MemoryPressure";
+
+    /**
+     * @return a stanza about memory PSI to add to a report.
+     */
+    public static String currentPsiState() {
+        final StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskReads();
+        StringWriter contents = new StringWriter();
+        try {
+            if (new File(FILE).exists()) {
+                contents.append("----- Output from /proc/pressure/memory -----\n");
+                contents.append(IoUtils.readFileAsString(FILE));
+                contents.append("----- End output from /proc/pressure/memory -----\n\n");
+            }
+        } catch (IOException e) {
+            Slog.e(TAG, "Could not read " + FILE, e);
+        } finally {
+            StrictMode.setThreadPolicy(savedPolicy);
+        }
+        return contents.toString();
+    }
+
+    private MemoryPressureUtil(){}
+}
+```
+
+### CPU usage
+
+```java
+class ProcessCpuTracker {
+    final public String printCurrentState(long now) {
+        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+        buildWorkingProcs();
+
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new FastPrintWriter(sw, false, 1024);
+
+        pw.print("CPU usage from ");
+        if (now > mLastSampleTime) {
+            pw.print(now-mLastSampleTime);
+            pw.print("ms to ");
+            pw.print(now-mCurrentSampleTime);
+            pw.print("ms ago");
+        } else {
+            pw.print(mLastSampleTime-now);
+            pw.print("ms to ");
+            pw.print(mCurrentSampleTime-now);
+            pw.print("ms later");
+        }
+        pw.print(" (");
+        pw.print(sdf.format(new Date(mLastSampleWallTime)));
+        pw.print(" to ");
+        pw.print(sdf.format(new Date(mCurrentSampleWallTime)));
+        pw.print(")");
+
+        long sampleTime = mCurrentSampleTime - mLastSampleTime;
+        long sampleRealTime = mCurrentSampleRealTime - mLastSampleRealTime;
+        long percAwake = sampleRealTime > 0 ? ((sampleTime*100) / sampleRealTime) : 0;
+        if (percAwake != 100) {
+            pw.print(" with ");
+            pw.print(percAwake);
+            pw.print("% awake");
+        }
+        pw.println(":");
+
+        final int totalTime = mRelUserTime + mRelSystemTime + mRelIoWaitTime
+                + mRelIrqTime + mRelSoftIrqTime + mRelIdleTime;
+
+        if (DEBUG) Slog.i(TAG, "totalTime " + totalTime + " over sample time "
+                + (mCurrentSampleTime-mLastSampleTime));
+
+        int N = mWorkingProcs.size();
+        for (int i=0; i<N; i++) {
+            Stats st = mWorkingProcs.get(i);
+            printProcessCPU(pw, st.added ? " +" : (st.removed ? " -": "  "),
+                    st.pid, st.name, (int)st.rel_uptime,
+                    st.rel_utime, st.rel_stime, 0, 0, 0, st.rel_minfaults, st.rel_majfaults);
+            if (!st.removed && st.workingThreads != null) {
+                int M = st.workingThreads.size();
+                for (int j=0; j<M; j++) {
+                    Stats tst = st.workingThreads.get(j);
+                    printProcessCPU(pw,
+                            tst.added ? "   +" : (tst.removed ? "   -": "    "),
+                            tst.pid, tst.name, (int)st.rel_uptime,
+                            tst.rel_utime, tst.rel_stime, 0, 0, 0, 0, 0);
+                }
+            }
+        }
+
+        printProcessCPU(pw, "", -1, "TOTAL", totalTime, mRelUserTime, mRelSystemTime,
+                mRelIoWaitTime, mRelIrqTime, mRelSoftIrqTime, 0, 0);
+
+        pw.flush();
+        return sw.toString();
+    }    
+}
+```
+
+#### 
+
+1. `Process.getPids(dir, array)` 遍历目录 `dir` 下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
+2. 
+
+```java
+class ProcessCpuTracker {
+    final void buildWorkingProcs() {
+        if (!mWorkingProcsSorted) {
+            mWorkingProcs.clear();
+            final int N = mProcStats.size();
+            for (int i=0; i<N; i++) {
+                Stats stats = mProcStats.get(i);
+                if (stats.working) {
+                    mWorkingProcs.add(stats);
+                    if (stats.threadStats != null && stats.threadStats.size() > 1) {
+                        stats.workingThreads.clear();
+                        final int M = stats.threadStats.size();
+                        for (int j=0; j<M; j++) {
+                            Stats tstats = stats.threadStats.get(j);
+                            if (tstats.working) {
+                                stats.workingThreads.add(tstats);
+                            }
+                        }
+                        Collections.sort(stats.workingThreads, sLoadComparator);
+                    }
+                }
+            }
+            Collections.sort(mWorkingProcs, sLoadComparator);
+            mWorkingProcsSorted = true;
+        }
+    }
+
+    public void update() {
+        if (DEBUG) Slog.v(TAG, "Update: " + this);
+
+        final long nowUptime = SystemClock.uptimeMillis();
+        final long nowRealtime = SystemClock.elapsedRealtime();
+        final long nowWallTime = System.currentTimeMillis();
+
+        final long[] sysCpu = mSystemCpuData;
+        if (Process.readProcFile("/proc/stat", SYSTEM_CPU_FORMAT,
+                null, sysCpu, null)) {
+            // Total user time is user + nice time.
+            final long usertime = (sysCpu[0]+sysCpu[1]) * mJiffyMillis;
+            // Total system time is simply system time.
+            final long systemtime = sysCpu[2] * mJiffyMillis;
+            // Total idle time is simply idle time.
+            final long idletime = sysCpu[3] * mJiffyMillis;
+            // Total irq time is iowait + irq + softirq time.
+            final long iowaittime = sysCpu[4] * mJiffyMillis;
+            final long irqtime = sysCpu[5] * mJiffyMillis;
+            final long softirqtime = sysCpu[6] * mJiffyMillis;
+
+            // This code is trying to avoid issues with idle time going backwards,
+            // but currently it gets into situations where it triggers most of the time. :(
+            if (true || (usertime >= mBaseUserTime && systemtime >= mBaseSystemTime
+                    && iowaittime >= mBaseIoWaitTime && irqtime >= mBaseIrqTime
+                    && softirqtime >= mBaseSoftIrqTime && idletime >= mBaseIdleTime)) {
+                mRelUserTime = (int)(usertime - mBaseUserTime);
+                mRelSystemTime = (int)(systemtime - mBaseSystemTime);
+                mRelIoWaitTime = (int)(iowaittime - mBaseIoWaitTime);
+                mRelIrqTime = (int)(irqtime - mBaseIrqTime);
+                mRelSoftIrqTime = (int)(softirqtime - mBaseSoftIrqTime);
+                mRelIdleTime = (int)(idletime - mBaseIdleTime);
+                mRelStatsAreGood = true;
+
+                if (DEBUG) {
+                    Slog.i("Load", "Total U:" + (sysCpu[0]*mJiffyMillis)
+                          + " N:" + (sysCpu[1]*mJiffyMillis)
+                          + " S:" + (sysCpu[2]*mJiffyMillis) + " I:" + (sysCpu[3]*mJiffyMillis)
+                          + " W:" + (sysCpu[4]*mJiffyMillis) + " Q:" + (sysCpu[5]*mJiffyMillis)
+                          + " O:" + (sysCpu[6]*mJiffyMillis));
+                    Slog.i("Load", "Rel U:" + mRelUserTime + " S:" + mRelSystemTime
+                          + " I:" + mRelIdleTime + " Q:" + mRelIrqTime);
+                }
+
+                mBaseUserTime = usertime;
+                mBaseSystemTime = systemtime;
+                mBaseIoWaitTime = iowaittime;
+                mBaseIrqTime = irqtime;
+                mBaseSoftIrqTime = softirqtime;
+                mBaseIdleTime = idletime;
+
+            } else {
+                mRelUserTime = 0;
+                mRelSystemTime = 0;
+                mRelIoWaitTime = 0;
+                mRelIrqTime = 0;
+                mRelSoftIrqTime = 0;
+                mRelIdleTime = 0;
+                mRelStatsAreGood = false;
+                Slog.w(TAG, "/proc/stats has gone backwards; skipping CPU update");
+                return;
+            }
+        }
+
+        mLastSampleTime = mCurrentSampleTime;
+        mCurrentSampleTime = nowUptime;
+        mLastSampleRealTime = mCurrentSampleRealTime;
+        mCurrentSampleRealTime = nowRealtime;
+        mLastSampleWallTime = mCurrentSampleWallTime;
+        mCurrentSampleWallTime = nowWallTime;
+
+        final StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskReads();
+        try {
+            mCurPids = collectStats("/proc", -1, mFirst, mCurPids, mProcStats);
+        } finally {
+            StrictMode.setThreadPolicy(savedPolicy);
+        }
+
+        final float[] loadAverages = mLoadAverageData;
+        if (Process.readProcFile("/proc/loadavg", LOAD_AVERAGE_FORMAT,
+                null, null, loadAverages)) {
+            float load1 = loadAverages[0];
+            float load5 = loadAverages[1];
+            float load15 = loadAverages[2];
+            if (load1 != mLoad1 || load5 != mLoad5 || load15 != mLoad15) {
+                mLoad1 = load1;
+                mLoad5 = load5;
+                mLoad15 = load15;
+                onLoadChanged(load1, load5, load15);
+            }
+        }
+
+        if (DEBUG) Slog.i(TAG, "*** TIME TO COLLECT STATS: "
+                + (SystemClock.uptimeMillis()-mCurrentSampleTime));
+
+        mWorkingProcsSorted = false;
+        mFirst = false;
+    }
+
+    private int[] collectStats(String statsFile, int parentPid, boolean first,
+            int[] curPids, ArrayList<Stats> allProcs) {
+
+        int[] pids = Process.getPids(statsFile, curPids);
+        int NP = (pids == null) ? 0 : pids.length;
+        int NS = allProcs.size();
+        int curStatsIndex = 0;
+        for (int i=0; i<NP; i++) {
+            int pid = pids[i];
+            if (pid < 0) {
+                NP = pid;
+                break;
+            }
+            Stats st = curStatsIndex < NS ? allProcs.get(curStatsIndex) : null;
+
+            if (st != null && st.pid == pid) {
+                // Update an existing process...
+                st.added = false;
+                st.working = false;
+                curStatsIndex++;
+                if (DEBUG) Slog.v(TAG, "Existing "
+                        + (parentPid < 0 ? "process" : "thread")
+                        + " pid " + pid + ": " + st);
+
+                if (st.interesting) {
+                    final long uptime = SystemClock.uptimeMillis();
+
+                    final long[] procStats = mProcessStatsData;
+                    if (!Process.readProcFile(st.statFile.toString(),
+                            PROCESS_STATS_FORMAT, null, procStats, null)) {
+                        continue;
+                    }
+
+                    final long minfaults = procStats[PROCESS_STAT_MINOR_FAULTS];
+                    final long majfaults = procStats[PROCESS_STAT_MAJOR_FAULTS];
+                    final long utime = procStats[PROCESS_STAT_UTIME] * mJiffyMillis;
+                    final long stime = procStats[PROCESS_STAT_STIME] * mJiffyMillis;
+
+                    if (utime == st.base_utime && stime == st.base_stime) {
+                        st.rel_utime = 0;
+                        st.rel_stime = 0;
+                        st.rel_minfaults = 0;
+                        st.rel_majfaults = 0;
+                        if (st.active) {
+                            st.active = false;
+                        }
+                        continue;
+                    }
+
+                    if (!st.active) {
+                        st.active = true;
+                    }
+
+                    if (parentPid < 0) {
+                        getName(st, st.cmdlineFile);
+                        if (st.threadStats != null) {
+                            mCurThreadPids = collectStats(st.threadsDir, pid, false,
+                                    mCurThreadPids, st.threadStats);
+                        }
+                    }
+
+                    if (DEBUG) Slog.v("Load", "Stats changed " + st.name + " pid=" + st.pid
+                            + " utime=" + utime + "-" + st.base_utime
+                            + " stime=" + stime + "-" + st.base_stime
+                            + " minfaults=" + minfaults + "-" + st.base_minfaults
+                            + " majfaults=" + majfaults + "-" + st.base_majfaults);
+
+                    st.rel_uptime = uptime - st.base_uptime;
+                    st.base_uptime = uptime;
+                    st.rel_utime = (int)(utime - st.base_utime);
+                    st.rel_stime = (int)(stime - st.base_stime);
+                    st.base_utime = utime;
+                    st.base_stime = stime;
+                    st.rel_minfaults = (int)(minfaults - st.base_minfaults);
+                    st.rel_majfaults = (int)(majfaults - st.base_majfaults);
+                    st.base_minfaults = minfaults;
+                    st.base_majfaults = majfaults;
+                    st.working = true;
+                }
+
+                continue;
+            }
+
+            if (st == null || st.pid > pid) {
+                // We have a new process!
+                st = new Stats(pid, parentPid, mIncludeThreads);
+                allProcs.add(curStatsIndex, st);
+                curStatsIndex++;
+                NS++;
+                if (DEBUG) Slog.v(TAG, "New "
+                        + (parentPid < 0 ? "process" : "thread")
+                        + " pid " + pid + ": " + st);
+
+                final String[] procStatsString = mProcessFullStatsStringData;
+                final long[] procStats = mProcessFullStatsData;
+                st.base_uptime = SystemClock.uptimeMillis();
+                String path = st.statFile.toString();
+                //Slog.d(TAG, "Reading proc file: " + path);
+                if (Process.readProcFile(path, PROCESS_FULL_STATS_FORMAT, procStatsString,
+                        procStats, null)) {
+                    // This is a possible way to filter out processes that
+                    // are actually kernel threads...  do we want to?  Some
+                    // of them do use CPU, but there can be a *lot* that are
+                    // not doing anything.
+                    st.vsize = procStats[PROCESS_FULL_STAT_VSIZE];
+                    if (true || procStats[PROCESS_FULL_STAT_VSIZE] != 0) {
+                        st.interesting = true;
+                        st.baseName = procStatsString[0];
+                        st.base_minfaults = procStats[PROCESS_FULL_STAT_MINOR_FAULTS];
+                        st.base_majfaults = procStats[PROCESS_FULL_STAT_MAJOR_FAULTS];
+                        st.base_utime = procStats[PROCESS_FULL_STAT_UTIME] * mJiffyMillis;
+                        st.base_stime = procStats[PROCESS_FULL_STAT_STIME] * mJiffyMillis;
+                    } else {
+                        Slog.i(TAG, "Skipping kernel process pid " + pid
+                                + " name " + procStatsString[0]);
+                        st.baseName = procStatsString[0];
+                    }
+                } else {
+                    Slog.w(TAG, "Skipping unknown process pid " + pid);
+                    st.baseName = "<unknown>";
+                    st.base_utime = st.base_stime = 0;
+                    st.base_minfaults = st.base_majfaults = 0;
+                }
+
+                if (parentPid < 0) {
+                    getName(st, st.cmdlineFile);
+                    if (st.threadStats != null) {
+                        mCurThreadPids = collectStats(st.threadsDir, pid, true,
+                                mCurThreadPids, st.threadStats);
+                    }
+                } else if (st.interesting) {
+                    st.name = st.baseName;
+                    st.nameWidth = onMeasureProcessName(st.name);
+                }
+
+                if (DEBUG) Slog.v("Load", "Stats added " + st.name + " pid=" + st.pid
+                        + " utime=" + st.base_utime + " stime=" + st.base_stime
+                        + " minfaults=" + st.base_minfaults + " majfaults=" + st.base_majfaults);
+
+                st.rel_utime = 0;
+                st.rel_stime = 0;
+                st.rel_minfaults = 0;
+                st.rel_majfaults = 0;
+                st.added = true;
+                if (!first && st.interesting) {
+                    st.working = true;
+                }
+                continue;
+            }
+
+            // This process has gone away!
+            st.rel_utime = 0;
+            st.rel_stime = 0;
+            st.rel_minfaults = 0;
+            st.rel_majfaults = 0;
+            st.removed = true;
+            st.working = true;
+            allProcs.remove(curStatsIndex);
+            NS--;
+            if (DEBUG) Slog.v(TAG, "Removed "
+                    + (parentPid < 0 ? "process" : "thread")
+                    + " pid " + pid + ": " + st);
+            // Decrement the loop counter so that we process the current pid
+            // again the next time through the loop.
+            i--;
+            continue;
+        }
+
+        while (curStatsIndex < NS) {
+            // This process has gone away!
+            final Stats st = allProcs.get(curStatsIndex);
+            st.rel_utime = 0;
+            st.rel_stime = 0;
+            st.rel_minfaults = 0;
+            st.rel_majfaults = 0;
+            st.removed = true;
+            st.working = true;
+            allProcs.remove(curStatsIndex);
+            NS--;
+            if (localLOGV) Slog.v(TAG, "Removed pid " + st.pid + ": " + st);
+        }
+
+        return pids;
+    }    
+}
+```
+
+```cpp
+// Process.getPids(dir, array)
+// 从 /proc 获取 pid 列表到 array
+jintArray android_os_Process_getPids(JNIEnv* env, jobject clazz,
+                                     jstring file /* /proc */, jintArray lastArray)
+{
+    if (file == NULL) {
+        jniThrowNullPointerException(env, NULL);
+        return NULL;
+    }
+
+    const char* file8 = env->GetStringUTFChars(file, NULL);
+    if (file8 == NULL) {
+        jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+        return NULL;
+    }
+
+    DIR* dirp = opendir(file8);
+
+    env->ReleaseStringUTFChars(file, file8);
+
+    if(dirp == NULL) {
+        return NULL;
+    }
+
+    jsize curCount = 0;
+    jint* curData = NULL;
+    if (lastArray != NULL) {
+        curCount = env->GetArrayLength(lastArray);
+        curData = env->GetIntArrayElements(lastArray, 0);
+    }
+
+    jint curPos = 0;
+
+    struct dirent* entry;
+    while ((entry=readdir(dirp)) != NULL) {
+        const char* p = entry->d_name;
+        while (*p) {
+            if (*p < '0' || *p > '9') break;
+            p++;
+        }
+        if (*p != 0) continue;
+
+        char* end;
+        int pid = strtol(entry->d_name, &end, 10);
+        //ALOGI("File %s pid=%d\n", entry->d_name, pid);
+        if (curPos >= curCount) {
+            jsize newCount = (curCount == 0) ? 10 : (curCount*2);
+            jintArray newArray = env->NewIntArray(newCount);
+            if (newArray == NULL) {
+                closedir(dirp);
+                jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+                return NULL;
+            }
+            jint* newData = env->GetIntArrayElements(newArray, 0);
+            if (curData != NULL) {
+                memcpy(newData, curData, sizeof(jint)*curCount);
+                env->ReleaseIntArrayElements(lastArray, curData, 0);
+            }
+            lastArray = newArray;
+            curCount = newCount;
+            curData = newData;
+        }
+
+        curData[curPos] = pid;
+        curPos++;
+    }
+
+    closedir(dirp);
+
+    if (curData != NULL && curPos > 0) {
+        qsort(curData, curPos, sizeof(jint), pid_compare);
+    }
+
+    while (curPos < curCount) {
+        curData[curPos] = -1;
+        curPos++;
+    }
+
+    if (curData != NULL) {
+        env->ReleaseIntArrayElements(lastArray, curData, 0);
+    }
+
+    return lastArray;
+}
+```
