@@ -225,7 +225,7 @@ class ProcessErrorStateRecord {
 > 
 > `-b` 指定 ring buffer，默认是 `main`, `system` 和 `crash`
 
-从上面的代码可以看到 logcat system 里会输出一段 ANR 日志如下，前四行包含了一些基本信息：
+从上面的代码可以看到 logcat system 里会输出一段 ANR 日志如下，包含以下几部分的信息（它们的次序可能会有所变化）：
 
 1. `ANR` 关键字
 2. 发生 ANR 的 app process name 及 android component name
@@ -563,7 +563,122 @@ public final class MemoryPressureUtil {
 
 ### CPU usage
 
+`printProcessCPU(prefix, pid, label, totalTime, user, system, iowait, irg, softIrq, minFaults, majFaults)` 打印一行的 CPU 使用率（一行对应一个进程），各个字段解释如下：
+
+| 字段名 | 描述 |
+|-------|------|
+| prefix | 前缀一般是 2、4 或更多倍数的空格，用以格式化输出 |
+| pid | 进程 ID 号 |
+| label | 进程名称 |
+|  |  |
+|  |  |
+|  |  |
+|  |  |
+
+
+```log
+[prefix][(user + system + iowait + irq + softIrq) / totalTime]% [pid]/[label]: 
+[user/totalTime]% user + [system/totalTime]% kernel + [iowait/totalTime]% iowait + [irq/totalTime]% irq + [softirq/totalTime]% softirq / faults: [minFaults] minor [majFaults] major
+
+32% 8356/com.taobao.taobao: 17% user + 15% kernel / faults: 9334 minor 85 major
+```
+
+
 ```java
+class ProcessCpuTracker {
+    private void printProcessCPU(PrintWriter pw, String prefix, int pid, String label,
+            int totalTime, int user, int system, int iowait, int irq, int softIrq,
+            int minFaults, int majFaults) {
+        pw.print(prefix);
+        if (totalTime == 0) totalTime = 1;
+        printRatio(pw, user+system+iowait+irq+softIrq, totalTime);
+        pw.print("% ");
+        if (pid >= 0) {
+            pw.print(pid);
+            pw.print("/");
+        }
+        pw.print(label);
+        pw.print(": ");
+        printRatio(pw, user, totalTime);
+        pw.print("% user + ");
+        printRatio(pw, system, totalTime);
+        pw.print("% kernel");
+        if (iowait > 0) {
+            pw.print(" + ");
+            printRatio(pw, iowait, totalTime);
+            pw.print("% iowait");
+        }
+        if (irq > 0) {
+            pw.print(" + ");
+            printRatio(pw, irq, totalTime);
+            pw.print("% irq");
+        }
+        if (softIrq > 0) {
+            pw.print(" + ");
+            printRatio(pw, softIrq, totalTime);
+            pw.print("% softirq");
+        }
+        if (minFaults > 0 || majFaults > 0) {
+            pw.print(" / faults:");
+            if (minFaults > 0) {
+                pw.print(" ");
+                pw.print(minFaults);
+                pw.print(" minor");
+            }
+            if (majFaults > 0) {
+                pw.print(" ");
+                pw.print(majFaults);
+                pw.print(" major");
+            }
+        }
+        pw.println();
+    }   
+
+    /**
+     * 打印 numerator / denominator 至 pw，最多保留一位小数位
+     */
+    private void printRatio(PrintWriter pw, long numerator, long denominator) {
+        long thousands = (numerator*1000)/denominator;
+        long hundreds = thousands/10;
+        pw.print(hundreds);
+        if (hundreds < 10) {
+            long remainder = thousands - (hundreds*10);
+            if (remainder != 0) {
+                pw.print('.');
+                pw.print(remainder);
+            }
+        }
+    }
+}
+```
+
+```java
+class ProcessErrorStateRecord {
+    void appNotResponding(String activityShortComponentName, ApplicationInfo aInfo,
+            String parentShortComponentName, WindowProcessController parentProcess,
+            boolean aboveSystem, String annotation, boolean onlyDumpSelf) {
+        // ...
+        StringBuilder report = new StringBuilder();
+        report.append(MemoryPressureUtil.currentPsiState());
+        // ...
+        if (isMonitorCpuUsage()) {
+            mService.updateCpuStatsNow();
+            mService.mAppProfiler.printCurrentCpuState(report, anrTime);
+            info.append(processCpuTracker.printCurrentLoad());
+            info.append(report);
+        }
+        // ...
+    }
+}
+
+class AppProfiler {
+    void printCurrentCpuState(StringBuilder report, long time) {
+        synchronized (mProcessCpuTracker) {
+            report.append(mProcessCpuTracker.printCurrentState(time));
+        }
+    }    
+}
+
 class ProcessCpuTracker {
     final public String printCurrentState(long now) {
         final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -633,11 +748,6 @@ class ProcessCpuTracker {
     }    
 }
 ```
-
-#### 
-
-1. `Process.getPids(dir, array)` 遍历目录 `dir` 下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
-2. 
 
 ```java
 class ProcessCpuTracker {
@@ -952,6 +1062,7 @@ class ProcessCpuTracker {
     }    
 }
 ```
+`Process.getPids(dir, array)` 遍历目录 `dir` 下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
 
 ```cpp
 // Process.getPids(dir, array)
