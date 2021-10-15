@@ -563,7 +563,92 @@ public final class MemoryPressureUtil {
 
 ### CPU usage
 
-`printProcessCPU(prefix, pid, label, totalTime, user, system, iowait, irg, softIrq, minFaults, majFaults)` 打印一行的 CPU 使用率（一行对应一个进程），各个字段解释如下：
+在 MI 9 上通过 `cat /proc/8538/stat` 打印出的内容如下（8538 是通过 `ps -A | grep com.tencent.mm` 查找出的微信的 pid）：
+
+```shell
+cepheus:/proc $ cat /proc/8538/stat
+8538 (com.tencent.mm) S 690 690 0 0 -1 1077952832 2355958 1597 22562 6 39676 24386 2 1 20 0 209 0 464604 73654394880 26729 18446744073709551615 1 1 0 0 0 0 4608 4097 1073775868 0 0 0 17 0 0 0 2401 0 0 0 0 0 0 0 0 0 0
+```
+
+一些重要字段的含义如下（来自 `man proc.5` 里的 `/proc/[pid]/stat` 章节）：
+
+| index | name | value | desc |
+|-------|------|-------|------|
+| 0 | pid          | 8538             | pid |
+| 1 | comm         | (com.tencent.mm) | command, The filename of the executable, 这里是包名 |
+| 2 | state        | S                | process state，进程状态：R - Running, S - Sleeping(interruptible), D - Waiting(uninterruptible), Z - Zombie ... |
+| 3 | ppid         | 690              | 父进程的 PID |
+| 4 | pgrp         | 690              | group ID |
+| 5 |              | 0                |  |
+| 6 |              | 0                |  |
+| 7 |              | -1               |  |
+| 8 |              | 1077952832       |  |
+| 9 |              | 2355958          |  |
+| 10 | minflt      | 1597            | minor page faults (which have not required loading a memory page from disk), 加载 CPU 指令时发生缺页错误，但指令以及加载至物理内存，只需将虚存映射到物理内存即可 |
+| 11 | cminflt     | 22562           |  |
+| 12 | majflt      | 6               | major page faults (which have required loading a memory page from disk), 同样是加载 CPU 指令时发生缺页错误，但此时需要从磁盘读取指令，比上面的情况要严重 |
+| 13 | cmajflt     | 39676           |  |
+| 14 | utime       | 24386           | Amount of time that this process has been scheduled in user mode, 进程运行在用户态的 CPU 时间 |
+| 15 | stime       | 2               | Amount of time that this process has been scheduled in kernel mode, 进程运行在内核态的 CPU 时间 |
+| 16 | cutime      | 1 |  |
+| 17 | cstime      | 20 |  |
+| 18 | priority    | 0 | 优先级（在创建进程的时候就设置好后续不能更改） |
+| 19 | nice        | 209 | 进程最终优先级 = priorty + nice，nice 值可以在运行时动态修改 |
+| 20 | num_threads | 0 |  |
+| 21 | | 464604 |  |
+| 22 | starttime | 73654394880 | The time the process started after system boot, 进程的运行时间（是一个从系统启动时间开始算起的相对值） |
+| 23 | 26729 |  |
+| 24 | 18446744073709551615 |  |
+| 25 | 1 |  |
+| 26 | 1 |  |
+| 27 | 0 |  |
+| 28 | 0 |  |
+| 29 | 0 |  |
+| 30 | 0 |  |
+| 31 | 4608 |  |
+| 32 | 4097 |  |
+| 33 | 1073775868 |  |
+| 34 | 0 |  |
+| 35 | 0 |  |
+| 36 | 0 |  |
+| 37 | 17 |  |
+| 38 | 0 |  |
+| 39 | 0 |  |
+| 40 | 0 |  |
+| 41 | 2401 |  |
+| 42 | 0 |  |
+| 43 | 0 |  |
+| 44 | 0 |  |
+| 45 | 0 |  |
+| 46 | 0 |  |
+| 47 | 0 |  |
+| 48 | 0 |  |
+| 49 | 0 |  |
+| 50 | 0 |  |
+| 51 | 0 |  |
+
+> Linux 对于物理内存的管理方法
+> 
+> 由 MMU 把物理内存分割成众多个 page，每个 page 是 4KB. 然后把 page 映射到进程的虚拟内存空间，CPU 在执行进程中的指令时以虚拟内存地址为基础，通过 map 映射进而找到物理内存中实际存放指令的地址
+> 
+> 缺页错误 (page fault)
+> 
+> 严格说这里指的是 major page fault，名字听起来挺严重，实际上并不是什么"错误"
+> 
+> 大致是这样，一个程序可能占几 MB，但并不是所有的指令都要同时运行，有些是在初始化时运行，有些是在特定条件下才会去运行。因此 linux 并不会把所有的指令都从磁盘加载到物理内存，那么当 cpu 在执行指令时如果发现下一条要执行的指令不在物理内存时，就会 raise a page fault 通知 MMU 把下面要执行的指令从磁盘加载到物理内存中
+> 
+> 还有另一种就是 minor fault
+> 
+> minor page fault 指的是要执行的指令实际上已经在物理内存，只是这个 page 没有映射到当前进程的虚拟内存，这时就会 raise a minor page fault 让 MMU 把这个 page 映射进当前进程的虚拟内存，因此 minor page fault 并不需要去访问磁盘
+> 
+> What a Swap?
+> 
+> 当物理内存不够时，把一些物理内存 page 写入到磁盘以腾出一些空闲的 page 出来供进程使用，这就是 swap out；反过来说当 CPU 要执行的指令被发现已经 swap out 到了磁盘中，这时就需要从磁盘把这些指令再 swap in 到物理内存中让CPU去执行
+> 
+> swap in 和 swap out 的操作都是比较耗时的, 频繁的 swap in 和 swap out 操作很影响系统性能
+
+
+`printProcessCPU(prefix, pid, label, totalTime, user, system, iowait, irg, softIrq, minFaults, majFaults)` 打印出一行的 CPU 使用率（一行对应一个进程），各个字段解释如下：
 
 | 字段名 | 描述 |
 |-------|------|
@@ -1062,7 +1147,207 @@ class ProcessCpuTracker {
     }    
 }
 ```
-`Process.getPids(dir, array)` 遍历目录 `dir` 下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
+
+```cpp
+jboolean android_os_Process_readProcFile(JNIEnv* env, jobject clazz,
+        jstring file, jintArray format, jobjectArray outStrings,
+        jlongArray outLongs, jfloatArray outFloats)
+{
+    if (file == NULL || format == NULL) {
+        jniThrowNullPointerException(env, NULL);
+        return JNI_FALSE;
+    }
+
+    const char* file8 = env->GetStringUTFChars(file, NULL);
+    if (file8 == NULL) {
+        jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+        return JNI_FALSE;
+    }
+
+    ::android::base::unique_fd fd(open(file8, O_RDONLY | O_CLOEXEC));
+    if (!fd.ok()) {
+        if (kDebugProc) {
+            ALOGW("Unable to open process file: %s\n", file8);
+        }
+        env->ReleaseStringUTFChars(file, file8);
+        return JNI_FALSE;
+    }
+    env->ReleaseStringUTFChars(file, file8);
+
+    // Most proc files we read are small, so we only go through the
+    // loop once and use the stack buffer.  We allocate a buffer big
+    // enough for the whole file.
+
+    char readBufferStack[kProcReadStackBufferSize];
+    std::unique_ptr<char[]> readBufferHeap;
+    char* readBuffer = &readBufferStack[0];
+    ssize_t readBufferSize = kProcReadStackBufferSize;
+    ssize_t numberBytesRead;
+    for (;;) {
+        // By using pread, we can avoid an lseek to rewind the FD
+        // before retry, saving a system call.
+        numberBytesRead = pread(fd, readBuffer, readBufferSize, 0);
+        if (numberBytesRead < 0 && errno == EINTR) {
+            continue;
+        }
+        if (numberBytesRead < 0) {
+            if (kDebugProc) {
+                ALOGW("Unable to open process file: %s fd=%d\n", file8, fd.get());
+            }
+            return JNI_FALSE;
+        }
+        if (numberBytesRead < readBufferSize) {
+            break;
+        }
+        if (readBufferSize > std::numeric_limits<ssize_t>::max() / 2) {
+            if (kDebugProc) {
+                ALOGW("Proc file too big: %s fd=%d\n", file8, fd.get());
+            }
+            return JNI_FALSE;
+        }
+        readBufferSize = std::max(readBufferSize * 2,
+                                  kProcReadMinHeapBufferSize);
+        readBufferHeap.reset();  // Free address space before getting more.
+        readBufferHeap = std::make_unique<char[]>(readBufferSize);
+        if (!readBufferHeap) {
+            jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+            return JNI_FALSE;
+        }
+        readBuffer = readBufferHeap.get();
+    }
+
+    // parseProcLineArray below modifies the buffer while parsing!
+    return android_os_Process_parseProcLineArray(
+        env, clazz, readBuffer, 0, numberBytesRead,
+        format, outStrings, outLongs, outFloats);
+}
+
+jboolean android_os_Process_parseProcLineArray(JNIEnv* env, jobject clazz,
+        char* buffer, jint startIndex, jint endIndex, jintArray format,
+        jobjectArray outStrings, jlongArray outLongs, jfloatArray outFloats)
+{
+
+    const jsize NF = env->GetArrayLength(format);
+    const jsize NS = outStrings ? env->GetArrayLength(outStrings) : 0;
+    const jsize NL = outLongs ? env->GetArrayLength(outLongs) : 0;
+    const jsize NR = outFloats ? env->GetArrayLength(outFloats) : 0;
+
+    jint* formatData = env->GetIntArrayElements(format, 0);
+    jlong* longsData = outLongs ?
+        env->GetLongArrayElements(outLongs, 0) : NULL;
+    jfloat* floatsData = outFloats ?
+        env->GetFloatArrayElements(outFloats, 0) : NULL;
+    if (formatData == NULL || (NL > 0 && longsData == NULL)
+            || (NR > 0 && floatsData == NULL)) {
+        if (formatData != NULL) {
+            env->ReleaseIntArrayElements(format, formatData, 0);
+        }
+        if (longsData != NULL) {
+            env->ReleaseLongArrayElements(outLongs, longsData, 0);
+        }
+        if (floatsData != NULL) {
+            env->ReleaseFloatArrayElements(outFloats, floatsData, 0);
+        }
+        jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+        return JNI_FALSE;
+    }
+
+    jsize i = startIndex;
+    jsize di = 0;
+
+    jboolean res = JNI_TRUE;
+
+    for (jsize fi=0; fi<NF; fi++) {
+        jint mode = formatData[fi];
+        if ((mode&PROC_PARENS) != 0) {
+            i++;
+        } else if ((mode&PROC_QUOTES) != 0) {
+            if (buffer[i] == '"') {
+                i++;
+            } else {
+                mode &= ~PROC_QUOTES;
+            }
+        }
+        const char term = (char)(mode&PROC_TERM_MASK);
+        const jsize start = i;
+        if (i >= endIndex) {
+            if (kDebugProc) {
+                ALOGW("Ran off end of data @%d", i);
+            }
+            res = JNI_FALSE;
+            break;
+        }
+
+        jsize end = -1;
+        if ((mode&PROC_PARENS) != 0) {
+            while (i < endIndex && buffer[i] != ')') {
+                i++;
+            }
+            end = i;
+            i++;
+        } else if ((mode&PROC_QUOTES) != 0) {
+            while (buffer[i] != '"' && i < endIndex) {
+                i++;
+            }
+            end = i;
+            i++;
+        }
+        while (i < endIndex && buffer[i] != term) {
+            i++;
+        }
+        if (end < 0) {
+            end = i;
+        }
+
+        if (i < endIndex) {
+            i++;
+            if ((mode&PROC_COMBINE) != 0) {
+                while (i < endIndex && buffer[i] == term) {
+                    i++;
+                }
+            }
+        }
+
+        //ALOGI("Field %" PRId32 ": %" PRId32 "-%" PRId32 " dest=%" PRId32 " mode=0x%" PRIx32 "\n", i, start, end, di, mode);
+
+        if ((mode&(PROC_OUT_FLOAT|PROC_OUT_LONG|PROC_OUT_STRING)) != 0) {
+            char c = buffer[end];
+            buffer[end] = 0;
+            if ((mode&PROC_OUT_FLOAT) != 0 && di < NR) {
+                char* end;
+                floatsData[di] = strtof(buffer+start, &end);
+            }
+            if ((mode&PROC_OUT_LONG) != 0 && di < NL) {
+                if ((mode&PROC_CHAR) != 0) {
+                    // Caller wants single first character returned as one long.
+                    longsData[di] = buffer[start];
+                } else {
+                    char* end;
+                    longsData[di] = strtoll(buffer+start, &end, 10);
+                }
+            }
+            if ((mode&PROC_OUT_STRING) != 0 && di < NS) {
+                jstring str = env->NewStringUTF(buffer+start);
+                env->SetObjectArrayElement(outStrings, di, str);
+            }
+            buffer[end] = c;
+            di++;
+        }
+    }
+
+    env->ReleaseIntArrayElements(format, formatData, 0);
+    if (longsData != NULL) {
+        env->ReleaseLongArrayElements(outLongs, longsData, 0);
+    }
+    if (floatsData != NULL) {
+        env->ReleaseFloatArrayElements(outFloats, floatsData, 0);
+    }
+
+    return res;
+}
+```
+
+`Process.getPids(dir, array)` 遍历目录 `dir` （这里传入的是 `/proc`）下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
 
 ```cpp
 // Process.getPids(dir, array)
@@ -1150,3 +1435,8 @@ jintArray android_os_Process_getPids(JNIEnv* env, jobject clazz,
     return lastArray;
 }
 ```
+
+# 参考
+
+1. [Linux对内存的管理, 以及page fault的概念](https://www.jianshu.com/p/f9b8c139c2ed)
+2. [Understanding page faults and memory swap-in/outs: when should you worry?](https://scoutapm.com/blog/understanding-page-faults-and-memory-swap-in-outs-when-should-you-worry)
