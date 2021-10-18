@@ -563,178 +563,9 @@ public final class MemoryPressureUtil {
 
 ### CPU usage
 
-在 MI 9 上通过 `cat /proc/8538/stat` 打印出的内容如下（8538 是通过 `ps -A | grep com.tencent.mm` 查找出的微信的 pid）：
-
-```shell
-cepheus:/proc $ cat /proc/8538/stat
-8538 (com.tencent.mm) S 690 690 0 0 -1 1077952832 2355958 1597 22562 6 39676 24386 2 1 20 0 209 0 464604 73654394880 26729 18446744073709551615 1 1 0 0 0 0 4608 4097 1073775868 0 0 0 17 0 0 0 2401 0 0 0 0 0 0 0 0 0 0
-```
-
-一些重要字段的含义如下（来自 `man proc.5` 里的 `/proc/[pid]/stat` 章节）：
-
-| index | name | value | desc |
-|-------|------|-------|------|
-| 0 | pid          | 8538             | pid |
-| 1 | comm         | (com.tencent.mm) | command, The filename of the executable, 这里是包名 |
-| 2 | state        | S                | process state，进程状态：R - Running, S - Sleeping(interruptible), D - Waiting(uninterruptible), Z - Zombie ... |
-| 3 | ppid         | 690              | 父进程的 PID |
-| 4 | pgrp         | 690              | group ID |
-| 5 |              | 0                |  |
-| 6 |              | 0                |  |
-| 7 |              | -1               |  |
-| 8 |              | 1077952832       |  |
-| 9 |              | 2355958          |  |
-| 10 | minflt      | 1597            | minor page faults (which have not required loading a memory page from disk), 加载 CPU 指令时发生缺页错误，但指令以及加载至物理内存，只需将虚存映射到物理内存即可 |
-| 11 | cminflt     | 22562           |  |
-| 12 | majflt      | 6               | major page faults (which have required loading a memory page from disk), 同样是加载 CPU 指令时发生缺页错误，但此时需要从磁盘读取指令，比上面的情况要严重 |
-| 13 | cmajflt     | 39676           |  |
-| 14 | utime       | 24386           | Amount of time that this process has been scheduled in user mode, 进程运行在用户态的 CPU 时间 |
-| 15 | stime       | 2               | Amount of time that this process has been scheduled in kernel mode, 进程运行在内核态的 CPU 时间 |
-| 16 | cutime      | 1 |  |
-| 17 | cstime      | 20 |  |
-| 18 | priority    | 0 | 优先级（在创建进程的时候就设置好后续不能更改） |
-| 19 | nice        | 209 | 进程最终优先级 = priorty + nice，nice 值可以在运行时动态修改 |
-| 20 | num_threads | 0 |  |
-| 21 | | 464604 |  |
-| 22 | starttime | 73654394880 | The time the process started after system boot, 进程的运行时间（是一个从系统启动时间开始算起的相对值） |
-| 23 | 26729 |  |
-| 24 | 18446744073709551615 |  |
-| 25 | 1 |  |
-| 26 | 1 |  |
-| 27 | 0 |  |
-| 28 | 0 |  |
-| 29 | 0 |  |
-| 30 | 0 |  |
-| 31 | 4608 |  |
-| 32 | 4097 |  |
-| 33 | 1073775868 |  |
-| 34 | 0 |  |
-| 35 | 0 |  |
-| 36 | 0 |  |
-| 37 | 17 |  |
-| 38 | 0 |  |
-| 39 | 0 |  |
-| 40 | 0 |  |
-| 41 | 2401 |  |
-| 42 | 0 |  |
-| 43 | 0 |  |
-| 44 | 0 |  |
-| 45 | 0 |  |
-| 46 | 0 |  |
-| 47 | 0 |  |
-| 48 | 0 |  |
-| 49 | 0 |  |
-| 50 | 0 |  |
-| 51 | 0 |  |
-
-> Linux 对于物理内存的管理方法
-> 
-> 由 MMU 把物理内存分割成众多个 page，每个 page 是 4KB. 然后把 page 映射到进程的虚拟内存空间，CPU 在执行进程中的指令时以虚拟内存地址为基础，通过 map 映射进而找到物理内存中实际存放指令的地址
-> 
-> 缺页错误 (page fault)
-> 
-> 严格说这里指的是 major page fault，名字听起来挺严重，实际上并不是什么"错误"
-> 
-> 大致是这样，一个程序可能占几 MB，但并不是所有的指令都要同时运行，有些是在初始化时运行，有些是在特定条件下才会去运行。因此 linux 并不会把所有的指令都从磁盘加载到物理内存，那么当 cpu 在执行指令时如果发现下一条要执行的指令不在物理内存时，就会 raise a page fault 通知 MMU 把下面要执行的指令从磁盘加载到物理内存中
-> 
-> 还有另一种就是 minor fault
-> 
-> minor page fault 指的是要执行的指令实际上已经在物理内存，只是这个 page 没有映射到当前进程的虚拟内存，这时就会 raise a minor page fault 让 MMU 把这个 page 映射进当前进程的虚拟内存，因此 minor page fault 并不需要去访问磁盘
-> 
-> What a Swap?
-> 
-> 当物理内存不够时，把一些物理内存 page 写入到磁盘以腾出一些空闲的 page 出来供进程使用，这就是 swap out；反过来说当 CPU 要执行的指令被发现已经 swap out 到了磁盘中，这时就需要从磁盘把这些指令再 swap in 到物理内存中让CPU去执行
-> 
-> swap in 和 swap out 的操作都是比较耗时的, 频繁的 swap in 和 swap out 操作很影响系统性能
-
-
-`printProcessCPU(prefix, pid, label, totalTime, user, system, iowait, irg, softIrq, minFaults, majFaults)` 打印出一行的 CPU 使用率（一行对应一个进程），各个字段解释如下：
-
-| 字段名 | 描述 |
-|-------|------|
-| prefix | 前缀一般是 2、4 或更多倍数的空格，用以格式化输出 |
-| pid | 进程 ID 号 |
-| label | 进程名称 |
-|  |  |
-|  |  |
-|  |  |
-|  |  |
-
-
 ```log
-[prefix][(user + system + iowait + irq + softIrq) / totalTime]% [pid]/[label]: 
-[user/totalTime]% user + [system/totalTime]% kernel + [iowait/totalTime]% iowait + [irq/totalTime]% irq + [softirq/totalTime]% softirq / faults: [minFaults] minor [majFaults] major
-
-32% 8356/com.taobao.taobao: 17% user + 15% kernel / faults: 9334 minor 85 major
-```
-
-
-```java
-class ProcessCpuTracker {
-    private void printProcessCPU(PrintWriter pw, String prefix, int pid, String label,
-            int totalTime, int user, int system, int iowait, int irq, int softIrq,
-            int minFaults, int majFaults) {
-        pw.print(prefix);
-        if (totalTime == 0) totalTime = 1;
-        printRatio(pw, user+system+iowait+irq+softIrq, totalTime);
-        pw.print("% ");
-        if (pid >= 0) {
-            pw.print(pid);
-            pw.print("/");
-        }
-        pw.print(label);
-        pw.print(": ");
-        printRatio(pw, user, totalTime);
-        pw.print("% user + ");
-        printRatio(pw, system, totalTime);
-        pw.print("% kernel");
-        if (iowait > 0) {
-            pw.print(" + ");
-            printRatio(pw, iowait, totalTime);
-            pw.print("% iowait");
-        }
-        if (irq > 0) {
-            pw.print(" + ");
-            printRatio(pw, irq, totalTime);
-            pw.print("% irq");
-        }
-        if (softIrq > 0) {
-            pw.print(" + ");
-            printRatio(pw, softIrq, totalTime);
-            pw.print("% softirq");
-        }
-        if (minFaults > 0 || majFaults > 0) {
-            pw.print(" / faults:");
-            if (minFaults > 0) {
-                pw.print(" ");
-                pw.print(minFaults);
-                pw.print(" minor");
-            }
-            if (majFaults > 0) {
-                pw.print(" ");
-                pw.print(majFaults);
-                pw.print(" major");
-            }
-        }
-        pw.println();
-    }   
-
-    /**
-     * 打印 numerator / denominator 至 pw，最多保留一位小数位
-     */
-    private void printRatio(PrintWriter pw, long numerator, long denominator) {
-        long thousands = (numerator*1000)/denominator;
-        long hundreds = thousands/10;
-        pw.print(hundreds);
-        if (hundreds < 10) {
-            long remainder = thousands - (hundreds*10);
-            if (remainder != 0) {
-                pw.print('.');
-                pw.print(remainder);
-            }
-        }
-    }
-}
+09-29 16:03:03.457  1763 29602 E ActivityManager: CPU usage from 0ms to 14680ms later (2021-09-29 16:02:48.726 to 2021-09-29 16:03:03.406):
+09-29 16:03:03.457  1763 29602 E ActivityManager: CPU usage from 57ms to 615ms later (2021-09-29 16:02:48.783 to 2021-09-29 16:02:49.341):
 ```
 
 ```java
@@ -800,68 +631,180 @@ class ProcessCpuTracker {
             pw.print("% awake");
         }
         pw.println(":");
-
-        final int totalTime = mRelUserTime + mRelSystemTime + mRelIoWaitTime
-                + mRelIrqTime + mRelSoftIrqTime + mRelIdleTime;
-
-        if (DEBUG) Slog.i(TAG, "totalTime " + totalTime + " over sample time "
-                + (mCurrentSampleTime-mLastSampleTime));
-
-        int N = mWorkingProcs.size();
-        for (int i=0; i<N; i++) {
-            Stats st = mWorkingProcs.get(i);
-            printProcessCPU(pw, st.added ? " +" : (st.removed ? " -": "  "),
-                    st.pid, st.name, (int)st.rel_uptime,
-                    st.rel_utime, st.rel_stime, 0, 0, 0, st.rel_minfaults, st.rel_majfaults);
-            if (!st.removed && st.workingThreads != null) {
-                int M = st.workingThreads.size();
-                for (int j=0; j<M; j++) {
-                    Stats tst = st.workingThreads.get(j);
-                    printProcessCPU(pw,
-                            tst.added ? "   +" : (tst.removed ? "   -": "    "),
-                            tst.pid, tst.name, (int)st.rel_uptime,
-                            tst.rel_utime, tst.rel_stime, 0, 0, 0, 0, 0);
-                }
-            }
-        }
-
-        printProcessCPU(pw, "", -1, "TOTAL", totalTime, mRelUserTime, mRelSystemTime,
-                mRelIoWaitTime, mRelIrqTime, mRelSoftIrqTime, 0, 0);
-
-        pw.flush();
-        return sw.toString();
+        // ...
     }    
 }
 ```
 
-```java
-class ProcessCpuTracker {
-    final void buildWorkingProcs() {
-        if (!mWorkingProcsSorted) {
-            mWorkingProcs.clear();
-            final int N = mProcStats.size();
-            for (int i=0; i<N; i++) {
-                Stats stats = mProcStats.get(i);
-                if (stats.working) {
-                    mWorkingProcs.add(stats);
-                    if (stats.threadStats != null && stats.threadStats.size() > 1) {
-                        stats.workingThreads.clear();
-                        final int M = stats.threadStats.size();
-                        for (int j=0; j<M; j++) {
-                            Stats tstats = stats.threadStats.get(j);
-                            if (tstats.working) {
-                                stats.workingThreads.add(tstats);
-                            }
-                        }
-                        Collections.sort(stats.workingThreads, sLoadComparator);
-                    }
-                }
-            }
-            Collections.sort(mWorkingProcs, sLoadComparator);
-            mWorkingProcsSorted = true;
-        }
+#### 收集进程 `/proc/[pid]`
+
+`Process.getPids(dir, array)` 遍历目录 `dir` （这里传入的是 `/proc`）下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
+
+```cpp
+// Process.getPids(dir, array)
+// 从 /proc 获取 pid 列表到 array
+jintArray android_os_Process_getPids(JNIEnv* env, jobject clazz,
+                                     jstring file /* /proc */, jintArray lastArray)
+{
+    if (file == NULL) {
+        jniThrowNullPointerException(env, NULL);
+        return NULL;
     }
 
+    const char* file8 = env->GetStringUTFChars(file, NULL);
+    if (file8 == NULL) {
+        jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+        return NULL;
+    }
+
+    DIR* dirp = opendir(file8);
+
+    env->ReleaseStringUTFChars(file, file8);
+
+    if(dirp == NULL) {
+        return NULL;
+    }
+
+    jsize curCount = 0;
+    jint* curData = NULL;
+    if (lastArray != NULL) {
+        curCount = env->GetArrayLength(lastArray);
+        curData = env->GetIntArrayElements(lastArray, 0);
+    }
+
+    jint curPos = 0;
+
+    struct dirent* entry;
+    while ((entry=readdir(dirp)) != NULL) {
+        const char* p = entry->d_name;
+        while (*p) {
+            if (*p < '0' || *p > '9') break;
+            p++;
+        }
+        if (*p != 0) continue;
+
+        char* end;
+        int pid = strtol(entry->d_name, &end, 10);
+        //ALOGI("File %s pid=%d\n", entry->d_name, pid);
+        if (curPos >= curCount) {
+            jsize newCount = (curCount == 0) ? 10 : (curCount*2);
+            jintArray newArray = env->NewIntArray(newCount);
+            if (newArray == NULL) {
+                closedir(dirp);
+                jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+                return NULL;
+            }
+            jint* newData = env->GetIntArrayElements(newArray, 0);
+            if (curData != NULL) {
+                memcpy(newData, curData, sizeof(jint)*curCount);
+                env->ReleaseIntArrayElements(lastArray, curData, 0);
+            }
+            lastArray = newArray;
+            curCount = newCount;
+            curData = newData;
+        }
+
+        curData[curPos] = pid;
+        curPos++;
+    }
+
+    closedir(dirp);
+
+    if (curData != NULL && curPos > 0) {
+        qsort(curData, curPos, sizeof(jint), pid_compare);
+    }
+
+    while (curPos < curCount) {
+        curData[curPos] = -1;
+        curPos++;
+    }
+
+    if (curData != NULL) {
+        env->ReleaseIntArrayElements(lastArray, curData, 0);
+    }
+
+    return lastArray;
+}
+```
+
+#### 进程概览 `/proc/[pid]/stat`
+
+在 MI 9 上通过 `cat /proc/8538/stat` 打印出的内容如下（8538 是通过 `ps -A | grep com.tencent.mm` 查找出的微信的 pid）：
+
+```shell
+cepheus:/proc $ cat /proc/8538/stat
+8538 (com.tencent.mm) S 690 690 0 0 -1 1077952832 2355958 1597 22562 6 39676 24386 2 1 20 0 209 0 464604 73654394880 26729 18446744073709551615 1 1 0 0 0 0 4608 4097 1073775868 0 0 0 17 0 0 0 2401 0 0 0 0 0 0 0 0 0 0
+```
+
+一些重要字段的含义如下（来自 `man proc.5` 里的 `/proc/[pid]/stat` 章节）：
+
+| index | name | value | desc |
+|-------|------|-------|------|
+| 0  | pid         | 8538             | pid |
+| 1  | comm        | (com.tencent.mm) | command, The filename of the executable, 这里是包名 |
+| 2  | state       | S                | process state，进程状态：R - Running, S - Sleeping(interruptible), D - Waiting(uninterruptible), Z - Zombie ... |
+| 3  | ppid        | 690              | 父进程的 PID |
+| 4  | pgrp        | 690              | group ID |
+| 5  |             | 0                |  |
+| 6  |             | 0                |  |
+| 7  |             | -1               |  |
+| 8  |             | 1077952832       |  |
+| 9  | minflt      | 2355958          | minor page faults (which have not required loading a memory page from disk), 加载 CPU 指令时发生缺页错误，但指令以及加载至物理内存，只需将虚存映射到物理内存即可 |
+| 10 | cminflt     | 1597             |  |
+| 11 | majflt      | 22562            | major page faults (which have required loading a memory page from disk), 同样是加载 CPU 指令时发生缺页错误，但此时需要从磁盘读取指令，比上面的情况要严重 |
+| 12 | cmajflt     | 6                |  |
+| 13 | utime       | 39676            | Amount of time that this process has been scheduled in user mode, 进程运行在用户态的 CPU 时间 |
+| 14 | stime       | 24386            | Amount of time that this process has been scheduled in kernel mode, 进程运行在内核态的 CPU 时间 |
+| 15 | cutime      | 2                |  |
+| 16 | cstime      | 1                |  |
+| 17 | priority    | 20               | 优先级（在创建进程的时候就设置好后续不能更改） |
+| 18 | nice        | 0                | 进程最终优先级 = priorty + nice，nice 值可以在运行时动态修改 |
+| 19 | num_threads | 209              |  |
+| 20 |             | 0                |  |
+| 21 | starttime   | 464604           | The time the process started after system boot, 进程的运行时间（是一个从系统启动时间开始算起的相对值） |
+| 22 | vsize       | 73654394880      | Virtual memory size in bytes |
+
+> Linux 对于物理内存的管理方法
+> 
+> 由 MMU 把物理内存分割成众多个 page，每个 page 是 4KB. 然后把 page 映射到进程的虚拟内存空间，CPU 在执行进程中的指令时以虚拟内存地址为基础，通过 map 映射进而找到物理内存中实际存放指令的地址
+> 
+> 缺页错误 (page fault)
+> 
+> 严格说这里指的是 major page fault，名字听起来挺严重，实际上并不是什么"错误"
+> 
+> 大致是这样，一个程序可能占几 MB，但并不是所有的指令都要同时运行，有些是在初始化时运行，有些是在特定条件下才会去运行。因此 linux 并不会把所有的指令都从磁盘加载到物理内存，那么当 cpu 在执行指令时如果发现下一条要执行的指令不在物理内存时，就会 raise a page fault 通知 MMU 把下面要执行的指令从磁盘加载到物理内存中
+> 
+> 还有另一种就是 minor fault
+> 
+> minor page fault 指的是要执行的指令实际上已经在物理内存，只是这个 page 没有映射到当前进程的虚拟内存，这时就会 raise a minor page fault 让 MMU 把这个 page 映射进当前进程的虚拟内存，因此 minor page fault 并不需要去访问磁盘
+> 
+> What a Swap?
+> 
+> 当物理内存不够时，把一些物理内存 page 写入到磁盘以腾出一些空闲的 page 出来供进程使用，这就是 swap out；反过来说当 CPU 要执行的指令被发现已经 swap out 到了磁盘中，这时就需要从磁盘把这些指令再 swap in 到物理内存中让CPU去执行
+> 
+> swap in 和 swap out 的操作都是比较耗时的, 频繁的 swap in 和 swap out 操作很影响系统性能
+
+`ProcessCpuTracker.update` 和 `ProcessCpuTracker.collectStats` 读取并解析 `/proc/[pid]/stat` 文件内容为 `Stats` 结构，保存在 `ProcessCpuTracker.mProcStats` 以供后续打印，它的重要字段有：
+
+| field | desc |
+|-------|------|
+| pid            | 进程 ID，来自 `/proc` 目录下的纯数字目录 |
+| name           | 进程名，来自 `/proc/[pid]/stat#comm` |
+| base_uptime    | 取自 `SystemClock.uptimeMillis()` |
+| base_utime     | 运行在用户态的 CPU 时间 |
+| base_stime     | 运行在核心态的 CPU 时间 |
+| base_majfaults | major page faults |
+| base_minfaults | minor page faults |
+| rel_uptime     |  |
+| rel_utime      |  |
+| rel_stime      |  |
+| rel_majfaults  |  |
+| rel_minfaults  |  |
+
+第一次遇到进程时（构造 `State`）将初始值填入 `base_xxx`，下次遇到进程时给 `rel_xxx` 赋值：`rel_xxx = [now] - base_xxx` 并更新 `base_xxx` 为当前值 `[now]`，也就是说 `base_xxx` 是当前快照而 `rel_xxx` 是当前与上一次快照的差值
+
+```java
+class ProcessCpuTracker {
     public void update() {
         if (DEBUG) Slog.v(TAG, "Update: " + this);
 
@@ -1347,92 +1290,241 @@ jboolean android_os_Process_parseProcLineArray(JNIEnv* env, jobject clazz,
 }
 ```
 
-`Process.getPids(dir, array)` 遍历目录 `dir` （这里传入的是 `/proc`）下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
+#### CPU 概览 `/proc/stat`
 
-```cpp
-// Process.getPids(dir, array)
-// 从 /proc 获取 pid 列表到 array
-jintArray android_os_Process_getPids(JNIEnv* env, jobject clazz,
-                                     jstring file /* /proc */, jintArray lastArray)
-{
-    if (file == NULL) {
-        jniThrowNullPointerException(env, NULL);
-        return NULL;
-    }
+`ProcessCpuTracker.update()` 同时也从 `/proc/stat` 收集了某个时间段内总的 CPU 时间用以计算各进程的 CPU 使用率；下面是从 MI 9 上获取的 `/proc/stat` 文件内容，看得出来它有八个核心（骁龙 855），CPU 时间的单位为 `jiffies`，各字段的含义如下：
 
-    const char* file8 = env->GetStringUTFChars(file, NULL);
-    if (file8 == NULL) {
-        jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
-        return NULL;
-    }
+> `jiffies` 是内核中的一个全局变量，用来记录自系统启动以来产生的 **节拍数**，在 linux 中一个节拍大致可理解为操作系统进程调度的最小时间片，不同 linux 内核可能值有不同，通常在 1ms 到 10ms 之间
 
-    DIR* dirp = opendir(file8);
+| index | name | desc |
+|-------|------|------|
+| 0 | user       | 处于用户态的运行时间（nice <= 0 的进程）                                |
+| 1 | nice       | 处于用户态的运行时间（nice > 0 的进程）                                |
+| 2 | system     | 处于核心态的运行时间                                                   |
+| 3 | idle       | 除 IO 等待时间以外的其它等待时间                                        |
+| 4 | iowait     | IO等待时间                                                            |
+| 5 | irq        | 硬中断时间                                                            |	
+| 6 | softirq    | 软中断时间                                                            |	
+| 7 | steal      | 被盗时间，虚拟化环境中运行其他操作系统上花费的时间（since Linux 2.6.11）  |
+| 8 | guest      | 来宾时间，操作系统运行虚拟CPU花费的时间(since Linux 2.6.24)              |
+| 9 | guest_nice | nice 来宾时间，运行一个带 nice 值的 guest 花费的时间(since Linux 2.6.33) |
 
-    env->ReleaseStringUTFChars(file, file8);
+可以看到跟 `进程概览` 一样，`mBaseXxxTime` 记录的是当前值，`mRelXxxTime` 记录的是当前与上一次的差值
 
-    if(dirp == NULL) {
-        return NULL;
-    }
+```shell
+cepheus:/ $ cat /proc/stat
+cpu  1908033 248762 1291479 9313559 21704 241034 75778 0 0 0
+cpu0 261151 61609 246778 2138176 9728 89991 29646 0 0 0
+cpu1 280460 61787 257071 884928 2710 43158 18528 0 0 0
+cpu2 280724 62167 252355 892787 2211 44246 9462 0 0 0
+cpu3 184034 10677 205483 975756 2070 33267 12197 0 0 0
+cpu4 283943 16128 102688 1078345 1403 9754 1747 0 0 0
+cpu5 289844 13063 106131 1078167 1614 10022 1788 0 0 0
+cpu6 292748 12779 104992 1080547 1446 9863 1902 0 0 0
+cpu7 35125 10548 15978 1184849 520 730 504 0 0 0
+intr 195962347 0 0 0 0 26288625 0 2879495 0 2097574 0 0 0 0 280 76 0 11 0 2 0 199 0 2 0 2 92 0 0 2 30 0 0 390294 340099 0 35976 0 0 0 0 0 0 0 0 0 0 0 138 0 0 0 0 0 0 0 1 0 147 0 102 0 0 66880 0 0 0 0 0 0 6032 0 0 0 0 0 0 0 0 0 0 0 0 0 212 0 0 0 0 0 0 0 0 0 0 0 0 5551 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2308413 6080542 16668 0 0 29 0 0 0 0 0 0 0 2938 1213 12 12 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3135 0 0 0 0 0 0 0 0 0 0 0 0 467941 0 0 0 0 0 0 0 0 0 0 0 16029 443134 6 192353 303384 26156 0 0 0 0 0 226499 103608 771093 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 498 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 153671 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6 4 52028 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 65667 0 77 0 0 0 0 0 0 0 330476 0 0 0 0 1342751 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 1 0 0 1 0 1 0 1 0 1 0 0 0 25847 0 0 72 0 0 0 527 4 0 2 2 0 0 3 0 0 5 0 0 0 0 0 62695 0 0 0 0 0 23 0 0 0 0 0 0 0 0 4 2 0 7 0 0 0 0 0 0 0 6 7 7 0 7 0 30 351 0 0 0 0 0 0 0 0 0 7 0 0 7 0 0 1034 504 0 760 2 0 0 1 0 0 0 0 0 0 0 0 22385 1250 4578494 1293217 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 455534 0 0 23167
+ctxt 292922052
+btime 1634510913
+processes 215684
+procs_running 1
+procs_blocked 0
+softirq 28955158 6101535 6564415 106706 1458910 1999704 0 1242328 6001922 0 5479638
+```
 
-    jsize curCount = 0;
-    jint* curData = NULL;
-    if (lastArray != NULL) {
-        curCount = env->GetArrayLength(lastArray);
-        curData = env->GetIntArrayElements(lastArray, 0);
-    }
+```java
+class ProcessCpuTracker {
+    public void update() {
+        if (DEBUG) Slog.v(TAG, "Update: " + this);
 
-    jint curPos = 0;
+        final long nowUptime = SystemClock.uptimeMillis();
+        final long nowRealtime = SystemClock.elapsedRealtime();
+        final long nowWallTime = System.currentTimeMillis();
 
-    struct dirent* entry;
-    while ((entry=readdir(dirp)) != NULL) {
-        const char* p = entry->d_name;
-        while (*p) {
-            if (*p < '0' || *p > '9') break;
-            p++;
-        }
-        if (*p != 0) continue;
+        final long[] sysCpu = mSystemCpuData;
+        if (Process.readProcFile("/proc/stat", SYSTEM_CPU_FORMAT,
+                null, sysCpu, null)) {
+            // Total user time is user + nice time.
+            final long usertime = (sysCpu[0]+sysCpu[1]) * mJiffyMillis;
+            // Total system time is simply system time.
+            final long systemtime = sysCpu[2] * mJiffyMillis;
+            // Total idle time is simply idle time.
+            final long idletime = sysCpu[3] * mJiffyMillis;
+            // Total irq time is iowait + irq + softirq time.
+            final long iowaittime = sysCpu[4] * mJiffyMillis;
+            final long irqtime = sysCpu[5] * mJiffyMillis;
+            final long softirqtime = sysCpu[6] * mJiffyMillis;
 
-        char* end;
-        int pid = strtol(entry->d_name, &end, 10);
-        //ALOGI("File %s pid=%d\n", entry->d_name, pid);
-        if (curPos >= curCount) {
-            jsize newCount = (curCount == 0) ? 10 : (curCount*2);
-            jintArray newArray = env->NewIntArray(newCount);
-            if (newArray == NULL) {
-                closedir(dirp);
-                jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
-                return NULL;
+            // This code is trying to avoid issues with idle time going backwards,
+            // but currently it gets into situations where it triggers most of the time. :(
+            if (true || (usertime >= mBaseUserTime && systemtime >= mBaseSystemTime
+                    && iowaittime >= mBaseIoWaitTime && irqtime >= mBaseIrqTime
+                    && softirqtime >= mBaseSoftIrqTime && idletime >= mBaseIdleTime)) {
+                mRelUserTime = (int)(usertime - mBaseUserTime);
+                mRelSystemTime = (int)(systemtime - mBaseSystemTime);
+                mRelIoWaitTime = (int)(iowaittime - mBaseIoWaitTime);
+                mRelIrqTime = (int)(irqtime - mBaseIrqTime);
+                mRelSoftIrqTime = (int)(softirqtime - mBaseSoftIrqTime);
+                mRelIdleTime = (int)(idletime - mBaseIdleTime);
+                mRelStatsAreGood = true;
+
+                if (DEBUG) {
+                    Slog.i("Load", "Total U:" + (sysCpu[0]*mJiffyMillis)
+                          + " N:" + (sysCpu[1]*mJiffyMillis)
+                          + " S:" + (sysCpu[2]*mJiffyMillis) + " I:" + (sysCpu[3]*mJiffyMillis)
+                          + " W:" + (sysCpu[4]*mJiffyMillis) + " Q:" + (sysCpu[5]*mJiffyMillis)
+                          + " O:" + (sysCpu[6]*mJiffyMillis));
+                    Slog.i("Load", "Rel U:" + mRelUserTime + " S:" + mRelSystemTime
+                          + " I:" + mRelIdleTime + " Q:" + mRelIrqTime);
+                }
+
+                mBaseUserTime = usertime;
+                mBaseSystemTime = systemtime;
+                mBaseIoWaitTime = iowaittime;
+                mBaseIrqTime = irqtime;
+                mBaseSoftIrqTime = softirqtime;
+                mBaseIdleTime = idletime;
+
+            } else {
+                mRelUserTime = 0;
+                mRelSystemTime = 0;
+                mRelIoWaitTime = 0;
+                mRelIrqTime = 0;
+                mRelSoftIrqTime = 0;
+                mRelIdleTime = 0;
+                mRelStatsAreGood = false;
+                Slog.w(TAG, "/proc/stats has gone backwards; skipping CPU update");
+                return;
             }
-            jint* newData = env->GetIntArrayElements(newArray, 0);
-            if (curData != NULL) {
-                memcpy(newData, curData, sizeof(jint)*curCount);
-                env->ReleaseIntArrayElements(lastArray, curData, 0);
-            }
-            lastArray = newArray;
-            curCount = newCount;
-            curData = newData;
         }
 
-        curData[curPos] = pid;
-        curPos++;
+        mLastSampleTime = mCurrentSampleTime;
+        mCurrentSampleTime = nowUptime;
+        mLastSampleRealTime = mCurrentSampleRealTime;
+        mCurrentSampleRealTime = nowRealtime;
+        mLastSampleWallTime = mCurrentSampleWallTime;
+        mCurrentSampleWallTime = nowWallTime;
+        // ...
+    }    
+}
+```
+
+#### 打印进程概览
+
+`printProcessCPU(prefix, pid, label, totalTime, user, system, iowait, irg, softIrq, minFaults, majFaults)` 打印出一行的 CPU 使用率（一行对应一个进程）
+
+`ProcessCpuTracker.printCurrentState` 会输出两类 CPU 使用率：
+
+1. 在进程生存的时间段内（`SystemClock.uptimeMillis()`），分配给进程的 CPU 时间的占比，细分用户态和内核态
+2. 在两个采集点（`ProcessCpuTracker.update`）之间的时间段内，CPU 的整体使用率（idle time 表示空闲）
+
+```log
+[prefix][(user + system + iowait + irq + softIrq) / totalTime]% [pid]/[label]: 
+[user/totalTime]% user + [system/totalTime]% kernel + [iowait/totalTime]% iowait + [irq/totalTime]% irq + [softirq/totalTime]% softirq / faults: [minFaults] minor [majFaults] major
+
+32% 8356/com.taobao.taobao: 17% user + 15% kernel / faults: 9334 minor 85 major
+19% TOTAL: 8% user + 9.2% kernel + 0.6% iowait + 0.9% irq + 0.4% softirq
+```
+
+```java
+class ProcessCpuTracker {
+    final public String printCurrentState(long now) {
+        // ...
+        final int totalTime = mRelUserTime + mRelSystemTime + mRelIoWaitTime
+                + mRelIrqTime + mRelSoftIrqTime + mRelIdleTime;
+
+        if (DEBUG) Slog.i(TAG, "totalTime " + totalTime + " over sample time "
+                + (mCurrentSampleTime-mLastSampleTime));
+
+        int N = mWorkingProcs.size();
+        for (int i=0; i<N; i++) {
+            Stats st = mWorkingProcs.get(i);
+            printProcessCPU(pw, st.added ? " +" : (st.removed ? " -": "  "),
+                    st.pid, st.name, (int)st.rel_uptime,
+                    st.rel_utime, st.rel_stime, 0, 0, 0, st.rel_minfaults, st.rel_majfaults);
+            if (!st.removed && st.workingThreads != null) {
+                int M = st.workingThreads.size();
+                for (int j=0; j<M; j++) {
+                    Stats tst = st.workingThreads.get(j);
+                    printProcessCPU(pw,
+                            tst.added ? "   +" : (tst.removed ? "   -": "    "),
+                            tst.pid, tst.name, (int)st.rel_uptime,
+                            tst.rel_utime, tst.rel_stime, 0, 0, 0, 0, 0);
+                }
+            }
+        }
+
+        printProcessCPU(pw, "", -1, "TOTAL", totalTime, mRelUserTime, mRelSystemTime,
+                mRelIoWaitTime, mRelIrqTime, mRelSoftIrqTime, 0, 0);
+
+        pw.flush();
+        return sw.toString();
+    }    
+}
+
+class ProcessCpuTracker {
+    private void printProcessCPU(PrintWriter pw, String prefix, int pid, String label,
+            int totalTime, int user, int system, int iowait, int irq, int softIrq,
+            int minFaults, int majFaults) {
+        pw.print(prefix);
+        if (totalTime == 0) totalTime = 1;
+        printRatio(pw, user+system+iowait+irq+softIrq, totalTime);
+        pw.print("% ");
+        if (pid >= 0) {
+            pw.print(pid);
+            pw.print("/");
+        }
+        pw.print(label);
+        pw.print(": ");
+        printRatio(pw, user, totalTime);
+        pw.print("% user + ");
+        printRatio(pw, system, totalTime);
+        pw.print("% kernel");
+        if (iowait > 0) {
+            pw.print(" + ");
+            printRatio(pw, iowait, totalTime);
+            pw.print("% iowait");
+        }
+        if (irq > 0) {
+            pw.print(" + ");
+            printRatio(pw, irq, totalTime);
+            pw.print("% irq");
+        }
+        if (softIrq > 0) {
+            pw.print(" + ");
+            printRatio(pw, softIrq, totalTime);
+            pw.print("% softirq");
+        }
+        if (minFaults > 0 || majFaults > 0) {
+            pw.print(" / faults:");
+            if (minFaults > 0) {
+                pw.print(" ");
+                pw.print(minFaults);
+                pw.print(" minor");
+            }
+            if (majFaults > 0) {
+                pw.print(" ");
+                pw.print(majFaults);
+                pw.print(" major");
+            }
+        }
+        pw.println();
+    }   
+
+    /**
+     * 打印 numerator / denominator 至 pw，最多保留一位小数位
+     */
+    private void printRatio(PrintWriter pw, long numerator, long denominator) {
+        long thousands = (numerator*1000)/denominator;
+        long hundreds = thousands/10;
+        pw.print(hundreds);
+        if (hundreds < 10) {
+            long remainder = thousands - (hundreds*10);
+            if (remainder != 0) {
+                pw.print('.');
+                pw.print(remainder);
+            }
+        }
     }
-
-    closedir(dirp);
-
-    if (curData != NULL && curPos > 0) {
-        qsort(curData, curPos, sizeof(jint), pid_compare);
-    }
-
-    while (curPos < curCount) {
-        curData[curPos] = -1;
-        curPos++;
-    }
-
-    if (curData != NULL) {
-        env->ReleaseIntArrayElements(lastArray, curData, 0);
-    }
-
-    return lastArray;
 }
 ```
 
