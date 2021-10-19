@@ -1588,7 +1588,16 @@ class ActivityManagerService {
 
 ## 进程的次序
 
+日志文件是由一个个的进程信息组成，而这些进程在 dump 的时候是有次序的，如下代码所示：
 
+1. 第一个是发生 ANR 的进程的 pid
+2. 第二个是 parent pid（有的话）
+3. 第三个是 system server 进程
+4. 其他 APP 进程（受 AMS 管理的进程，保存在 `ActivityManagerService.mProcessList`）
+5. 然后是 native processes，其实就是进程的 `cmdline` 包含在 `WatchDog.NATIVE_STACKS_OF_INTEREST` 里的进程；进程的 `cmdline` 读取自 `/proc/[pid]/cmdline`，APP 是包名，其他则是可执行程序的路径
+6. 最后是 `lastPids`，它们是 `ActivityManagerService.mProcessList` 里不正常的进程（比如 ANR process）
+
+如果进程很多，那么 dump processes 耗费的时间也是很可观的，所以整个 dump processes 的过程有个时间上限 20s，超过这个阈值即使还有进程没有 dump 也会将其忽略，这也就解释了为什么要按上面的逻辑对进程进行排序，因为要优先打印重要的进程信息
 
 ```java
 class ProcessErrorStateRecord {
@@ -1670,11 +1679,30 @@ class ProcessErrorStateRecord {
         // ...
     }    
 }
-```
 
-##
+class WatchDog {
+    // Which native processes to dump into dropbox's stack traces
+    public static final String[] NATIVE_STACKS_OF_INTEREST = new String[] {
+        "/system/bin/audioserver",
+        "/system/bin/cameraserver",
+        "/system/bin/drmserver",
+        "/system/bin/keystore2",
+        "/system/bin/mediadrmserver",
+        "/system/bin/mediaserver",
+        "/system/bin/netd",
+        "/system/bin/sdcard",
+        "/system/bin/surfaceflinger",
+        "/system/bin/vold",
+        "media.extractor", // system/bin/mediaextractor
+        "media.metrics", // system/bin/mediametrics
+        "media.codec", // vendor/bin/hw/android.hardware.media.omx@1.0-service
+        "media.swcodec", // /apex/com.android.media.swcodec/bin/mediaswcodec
+        "media.transcoding", // Media transcoding service
+        "com.android.bluetooth",  // Bluetooth service
+        "/apex/com.android.os.statsd/bin/statsd",  // Stats daemon
+    };    
+}
 
-```java
 class ActivityManagerService {
     public static Pair<Long, Long> dumpStackTraces(String tracesFile, ArrayList<Integer> firstPids,
             ArrayList<Integer> nativePids, ArrayList<Integer> extraPids) {
@@ -1773,7 +1801,104 @@ class ActivityManagerService {
         Slog.i(TAG, "Done dumping");
         return firstPidStart >= 0 ? new Pair<>(firstPidStart, firstPidEnd) : null;
     }
+}
+```
 
+```cpp
+jintArray android_os_Process_getPidsForCommands(JNIEnv* env, jobject clazz,
+        jobjectArray commandNames)
+{
+    if (commandNames == NULL) {
+        jniThrowNullPointerException(env, NULL);
+        return NULL;
+    }
+
+    Vector<String8> commands;
+
+    jsize count = env->GetArrayLength(commandNames);
+
+    for (int i=0; i<count; i++) {
+        jobject obj = env->GetObjectArrayElement(commandNames, i);
+        if (obj != NULL) {
+            const char* str8 = env->GetStringUTFChars((jstring)obj, NULL);
+            if (str8 == NULL) {
+                jniThrowNullPointerException(env, "Element in commandNames");
+                return NULL;
+            }
+            commands.add(String8(str8));
+            env->ReleaseStringUTFChars((jstring)obj, str8);
+        } else {
+            jniThrowNullPointerException(env, "Element in commandNames");
+            return NULL;
+        }
+    }
+
+    Vector<jint> pids;
+
+    DIR *proc = opendir("/proc");
+    if (proc == NULL) {
+        fprintf(stderr, "/proc: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    struct dirent *d;
+    while ((d = readdir(proc))) {
+        int pid = atoi(d->d_name);
+        if (pid <= 0) continue;
+
+        char path[PATH_MAX];
+        char data[PATH_MAX];
+        snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
+
+        int fd = open(path, O_RDONLY | O_CLOEXEC);
+        if (fd < 0) {
+            continue;
+        }
+        const int len = read(fd, data, sizeof(data)-1);
+        close(fd);
+
+        if (len < 0) {
+            continue;
+        }
+        data[len] = 0;
+
+        for (int i=0; i<len; i++) {
+            if (data[i] == ' ') {
+                data[i] = 0;
+                break;
+            }
+        }
+
+        for (size_t i=0; i<commands.size(); i++) {
+            if (commands[i] == data) {
+                pids.add(pid);
+                break;
+            }
+        }
+    }
+
+    closedir(proc);
+
+    jintArray pidArray = env->NewIntArray(pids.size());
+    if (pidArray == NULL) {
+        jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
+        return NULL;
+    }
+
+    if (pids.size() > 0) {
+        env->SetIntArrayRegion(pidArray, 0, pids.size(), pids.array());
+    }
+
+    return pidArray;
+}
+```
+
+## dumpJavaTracesTombstoned
+
+
+
+```java
+class ActivityManagerService {
     private static long dumpJavaTracesTombstoned(int pid, String fileName, long timeoutMs) {
         final long timeStart = SystemClock.elapsedRealtime();
         boolean javaSuccess = Debug.dumpJavaBacktraceToFileTimeout(pid, fileName,
@@ -2040,6 +2165,10 @@ bool debuggerd_trigger_dump(pid_t tid, DebuggerdDumpType dump_type, unsigned int
   return true;
 }
 ```
+
+## dumpNativeBacktraceToFileTimeout
+
+
 
 # 参考
 
