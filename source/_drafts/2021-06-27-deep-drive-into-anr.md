@@ -29,197 +29,7 @@ AppErrors.handleShowAnrUi
 ProcessRecord.ErrorDialogController.showAnrDialogs
 ```
 
-# 日志
-
-其中 `ProcessErrorStateRecord.appNotResponding` 是输出 ANR 日志的关键方法
-
-```java
-class ProcessErrorStateRecord {
-    void appNotResponding(String activityShortComponentName, ApplicationInfo aInfo,
-            String parentShortComponentName, WindowProcessController parentProcess,
-            boolean aboveSystem, String annotation, boolean onlyDumpSelf) {
-        // ...
-        // Log the ANR to the main log.
-        StringBuilder info = new StringBuilder();
-        info.setLength(0);
-        info.append("ANR in ").append(mApp.processName);
-        if (activityShortComponentName != null) {
-            info.append(" (").append(activityShortComponentName).append(")");
-        }
-        info.append("\n");
-        info.append("PID: ").append(pid).append("\n");
-        if (annotation != null) {
-            info.append("Reason: ").append(annotation).append("\n");
-        }
-        if (parentShortComponentName != null
-                && parentShortComponentName.equals(activityShortComponentName)) {
-            info.append("Parent: ").append(parentShortComponentName).append("\n");
-        }
-        if (errorId != null) {
-            info.append("ErrorId: ").append(errorId.toString()).append("\n");
-        }
-        info.append("Frozen: ").append(mApp.mOptRecord.isFrozen()).append("\n");
-
-        // ...
-
-        StringBuilder report = new StringBuilder();
-        report.append(MemoryPressureUtil.currentPsiState());
-        ProcessCpuTracker processCpuTracker = new ProcessCpuTracker(true);
-
-        // don't dump native PIDs for background ANRs unless it is the process of interest
-        // ...
-
-        // For background ANRs, don't pass the ProcessCpuTracker to
-        // avoid spending 1/2 second collecting stats to rank lastPids.
-        StringWriter tracesFileException = new StringWriter();
-        // To hold the start and end offset to the ANR trace file respectively.
-        final long[] offsets = new long[2];
-        File tracesFile = ActivityManagerService.dumpStackTraces(firstPids,
-                isSilentAnr ? null : processCpuTracker, isSilentAnr ? null : lastPids,
-                nativePids, tracesFileException, offsets, annotation);
-
-        if (isMonitorCpuUsage()) {
-            mService.updateCpuStatsNow();
-            mService.mAppProfiler.printCurrentCpuState(report, anrTime);
-            info.append(processCpuTracker.printCurrentLoad());
-            info.append(report);
-        }
-        report.append(tracesFileException.getBuffer());
-
-        info.append(processCpuTracker.printCurrentState(anrTime));
-
-        Slog.e(TAG, info.toString());
-        if (tracesFile == null) {
-            // There is no trace file, so dump (only) the alleged culprit's threads to the log
-            Process.sendSignal(pid, Process.SIGNAL_QUIT);
-        } else if (offsets[1] > 0) {
-            // We've dumped into the trace file successfully
-            mService.mProcessList.mAppExitInfoTracker.scheduleLogAnrTrace(
-                    pid, mApp.uid, mApp.getPackageList(), tracesFile, offsets[0], offsets[1]);
-        }
-
-        // Check if package is still being loaded
-        float loadingProgress = 1;
-        IncrementalMetrics incrementalMetrics = null;
-        final PackageManagerInternal packageManagerInternal = mService.getPackageManagerInternal();
-        if (mApp.info != null && mApp.info.packageName != null) {
-            IncrementalStatesInfo incrementalStatesInfo =
-                    packageManagerInternal.getIncrementalStatesInfo(
-                            mApp.info.packageName, mApp.uid, mApp.userId);
-            if (incrementalStatesInfo != null) {
-                loadingProgress = incrementalStatesInfo.getProgress();
-            }
-            final String codePath = mApp.info.getCodePath();
-            if (codePath != null && !codePath.isEmpty()
-                    && IncrementalManager.isIncrementalPath(codePath)) {
-                // Report in the main log that the incremental package is still loading
-                Slog.e(TAG, "App ANR on incremental package " + mApp.info.packageName
-                        + " which is " + ((int) (loadingProgress * 100)) + "% loaded.");
-                final IBinder incrementalService = ServiceManager.getService(
-                        Context.INCREMENTAL_SERVICE);
-                if (incrementalService != null) {
-                    final IncrementalManager incrementalManager = new IncrementalManager(
-                            IIncrementalService.Stub.asInterface(incrementalService));
-                    incrementalMetrics = incrementalManager.getMetrics(codePath);
-                }
-            }
-        }
-        if (incrementalMetrics != null) {
-            // Report in the main log about the incremental package
-            info.append("Package is ").append((int) (loadingProgress * 100)).append("% loaded.\n");
-        }
-
-        FrameworkStatsLog.write(FrameworkStatsLog.ANR_OCCURRED, mApp.uid, mApp.processName,
-                activityShortComponentName == null ? "unknown" : activityShortComponentName,
-                annotation,
-                (mApp.info != null) ? (mApp.info.isInstantApp()
-                        ? FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__TRUE
-                        : FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__FALSE)
-                        : FrameworkStatsLog.ANROCCURRED__IS_INSTANT_APP__UNAVAILABLE,
-                mApp.isInterestingToUserLocked()
-                        ? FrameworkStatsLog.ANROCCURRED__FOREGROUND_STATE__FOREGROUND
-                        : FrameworkStatsLog.ANROCCURRED__FOREGROUND_STATE__BACKGROUND,
-                mApp.getProcessClassEnum(),
-                (mApp.info != null) ? mApp.info.packageName : "",
-                incrementalMetrics != null /* isIncremental */, loadingProgress,
-                incrementalMetrics != null ? incrementalMetrics.getMillisSinceOldestPendingRead()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getStorageHealthStatusCode()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getDataLoaderStatusCode()
-                        : -1,
-                incrementalMetrics != null && incrementalMetrics.getReadLogsEnabled(),
-                incrementalMetrics != null ? incrementalMetrics.getMillisSinceLastDataLoaderBind()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getDataLoaderBindDelayMillis()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getTotalDelayedReads()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getTotalFailedReads()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getLastReadErrorUid()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getMillisSinceLastReadError()
-                        : -1,
-                incrementalMetrics != null ? incrementalMetrics.getLastReadErrorNumber()
-                        : 0,
-                incrementalMetrics != null ? incrementalMetrics.getTotalDelayedReadsDurationMillis()
-                        : -1);
-        final ProcessRecord parentPr = parentProcess != null
-                ? (ProcessRecord) parentProcess.mOwner : null;
-        mService.addErrorToDropBox("anr", mApp, mApp.processName, activityShortComponentName,
-                parentShortComponentName, parentPr, null, report.toString(), tracesFile,
-                null, new Float(loadingProgress), incrementalMetrics, errorId);
-
-        if (mApp.getWindowProcessController().appNotResponding(info.toString(),
-                () -> {
-                    synchronized (mService) {
-                        mApp.killLocked("anr", ApplicationExitInfo.REASON_ANR, true);
-                    }
-                },
-                () -> {
-                    synchronized (mService) {
-                        mService.mServices.scheduleServiceTimeoutLocked(mApp);
-                    }
-                })) {
-            return;
-        }
-
-        synchronized (mService) {
-            // mBatteryStatsService can be null if the AMS is constructed with injector only. This
-            // will only happen in tests.
-            if (mService.mBatteryStatsService != null) {
-                mService.mBatteryStatsService.noteProcessAnr(mApp.processName, mApp.uid);
-            }
-
-            if (isSilentAnr() && !mApp.isDebugging()) {
-                mApp.killLocked("bg anr", ApplicationExitInfo.REASON_ANR, true);
-                return;
-            }
-
-            synchronized (mProcLock) {
-                // Set the app's notResponding state, and look up the errorReportReceiver
-                makeAppNotRespondingLSP(activityShortComponentName,
-                        annotation != null ? "ANR " + annotation : "ANR", info.toString());
-                mDialogController.setAnrController(anrController);
-            }
-
-            // mUiHandler can be null if the AMS is constructed with injector only. This will only
-            // happen in tests.
-            if (mService.mUiHandler != null) {
-                // Bring up the infamous App Not Responding dialog
-                Message msg = Message.obtain();
-                msg.what = ActivityManagerService.SHOW_NOT_RESPONDING_UI_MSG;
-                msg.obj = new AppNotRespondingDialog.Data(mApp, aInfo, aboveSystem);
-
-                mService.mUiHandler.sendMessageDelayed(msg, anrDialogDelayMs);
-            }
-        }        
-    }
-}
-```
-
-## logcat system 
+# logcat system 
 
 > `adb logcat -v threadtime > logcat`
 > 
@@ -234,7 +44,7 @@ class ProcessErrorStateRecord {
 5. parent component (?)
 6. `Load: 0.17 / 0.44 / 0.71` 读取自 `/proc/loadavg`，表示 1, 5 和 15 分钟内的系统平均负载
 7. 内存压力统计信息（Pressure Stall Information），读取自 `/proc/pressure/memory`，表示任务阻塞在内存资源上的总时长
-
+8. 最近几个采集点之间的 CPU 使用率（CPU Usage）
 
 ``` log
 # from mi 9
@@ -399,7 +209,68 @@ class ProcessErrorStateRecord {
 09-29 16:03:03.457  1763 29602 E ActivityManager: 15% TOTAL: 6.1% user + 7.5% kernel + 0.9% irq + 0.4% softirq
 ```
 
-### load average
+上面的日志是在 `ProcessErrorStateRecord.appNotResponding` 输出的，`info` 是输出至 logcat system 的日志
+
+```java
+class ProcessErrorStateRecord {
+    void appNotResponding(String activityShortComponentName, ApplicationInfo aInfo,
+            String parentShortComponentName, WindowProcessController parentProcess,
+            boolean aboveSystem, String annotation, boolean onlyDumpSelf) {
+        // ...
+        // Log the ANR to the main log.
+        StringBuilder info = new StringBuilder();
+        info.setLength(0);
+        info.append("ANR in ").append(mApp.processName);
+        if (activityShortComponentName != null) {
+            info.append(" (").append(activityShortComponentName).append(")");
+        }
+        info.append("\n");
+        info.append("PID: ").append(pid).append("\n");
+        if (annotation != null) {
+            info.append("Reason: ").append(annotation).append("\n");
+        }
+        if (parentShortComponentName != null
+                && parentShortComponentName.equals(activityShortComponentName)) {
+            info.append("Parent: ").append(parentShortComponentName).append("\n");
+        }
+        if (errorId != null) {
+            info.append("ErrorId: ").append(errorId.toString()).append("\n");
+        }
+        info.append("Frozen: ").append(mApp.mOptRecord.isFrozen()).append("\n");
+
+        // ...
+
+        StringBuilder report = new StringBuilder();
+        report.append(MemoryPressureUtil.currentPsiState());
+        ProcessCpuTracker processCpuTracker = new ProcessCpuTracker(true);
+
+        // don't dump native PIDs for background ANRs unless it is the process of interest
+        // ...
+
+        // For background ANRs, don't pass the ProcessCpuTracker to
+        // avoid spending 1/2 second collecting stats to rank lastPids.
+        StringWriter tracesFileException = new StringWriter();
+        // To hold the start and end offset to the ANR trace file respectively.
+        final long[] offsets = new long[2];
+        File tracesFile = ActivityManagerService.dumpStackTraces(firstPids,
+                isSilentAnr ? null : processCpuTracker, isSilentAnr ? null : lastPids,
+                nativePids, tracesFileException, offsets, annotation);
+
+        if (isMonitorCpuUsage()) {
+            mService.updateCpuStatsNow();
+            mService.mAppProfiler.printCurrentCpuState(report, anrTime);
+            info.append(processCpuTracker.printCurrentLoad());
+            info.append(report);
+        }
+        report.append(tracesFileException.getBuffer());
+        info.append(processCpuTracker.printCurrentState(anrTime));
+        Slog.e(TAG, info.toString());
+        // ...
+    }
+}
+```
+
+## load average
 
 用进程数来描述 CPU 负载压力
 
@@ -485,7 +356,7 @@ class ProcessCpuTracker {
 
 这么看来 `13.81 / 4 = 3.45` 这块绿联屏的性能还是可以接受的
 
-### PSI (Pressure Stall Information)
+## PSI (Pressure Stall Information)
 
 > Pressure Stall Information 提供了一种评估系统资源压力的方法。系统有三个基础资源：CPU、Memory 和 IO，无论这些资源配置如何增加，似乎永远无法满足软件的需求。一旦产生资源竞争，就有可能带来延迟增大，使用户体验到卡顿
 > 
@@ -561,11 +432,20 @@ public final class MemoryPressureUtil {
 }
 ```
 
-### CPU usage
+## CPU usage
+
+`ProcessCpuTracker` 顾名思义是用来跟踪进程 CPU 使用率的，它的数据是在 `ProcessCpuTracker.update()` 里采集的（`/proc/stat`, `/proc/[pid]/stat`），`mCurrentSampleTime` 是上一次执行 `ProcessCpuTracker.update()` 的时间（既是数据快照的时间，也是两次数据快照差值的结束时间），而 `mLastSampleTime` 是上上次执行 `ProcessCpuTracker.update()` 的时间（也是两次数据快照差值的开始时间），`now` 是发生 ANR 的时间，它们的关系有：
+
+1. 如果是 `anr - mLastSampleTime - mCurrentSampleTime`，说明 ANR 发生在两次快照差值（统计时间段）之前，对应的是 `later`
+2. 如果是 `mLastSampleTime - mCurrentSampleTime - anr`，说明 ANR 发生在两次快照差值（统计时间段）之后，对应的是 `ago`
 
 ```log
+// 第一段 CPU Usage 是由 mService.mAppProfiler.printCurrentCpuState(report, anrTime) 打印出来的
 09-29 16:03:03.457  1763 29602 E ActivityManager: CPU usage from 0ms to 14680ms later (2021-09-29 16:02:48.726 to 2021-09-29 16:03:03.406):
+...
+// 第二段 CPU Usage 是由 info.append(processCpuTracker.printCurrentState(anrTime)) 打印出来的
 09-29 16:03:03.457  1763 29602 E ActivityManager: CPU usage from 57ms to 615ms later (2021-09-29 16:02:48.783 to 2021-09-29 16:02:49.341):
+...
 ```
 
 ```java
@@ -583,6 +463,9 @@ class ProcessErrorStateRecord {
             info.append(processCpuTracker.printCurrentLoad());
             info.append(report);
         }
+        report.append(tracesFileException.getBuffer());
+        info.append(processCpuTracker.printCurrentState(anrTime));
+        Slog.e(TAG, info.toString());       // info 是输出至 logcat system 的日志文本
         // ...
     }
 }
@@ -636,7 +519,7 @@ class ProcessCpuTracker {
 }
 ```
 
-#### 收集进程 `/proc/[pid]`
+### 收集进程 `/proc/[pid]`
 
 `Process.getPids(dir, array)` 遍历目录 `dir` （这里传入的是 `/proc`）下的条目，找到纯数字的条目（即为 `pid`）加入到 `array`（pid array），`array` 会复用，只有当 `pid` 的数量超过 `array` 容量时才分配新的数组
 
@@ -727,7 +610,7 @@ jintArray android_os_Process_getPids(JNIEnv* env, jobject clazz,
 }
 ```
 
-#### 进程概览 `/proc/[pid]/stat`
+### 进程概览 `/proc/[pid]/stat`
 
 在 MI 9 上通过 `cat /proc/8538/stat` 打印出的内容如下（8538 是通过 `ps -A | grep com.tencent.mm` 查找出的微信的 pid）：
 
@@ -1290,7 +1173,7 @@ jboolean android_os_Process_parseProcLineArray(JNIEnv* env, jobject clazz,
 }
 ```
 
-#### CPU 概览 `/proc/stat`
+### CPU 概览 `/proc/stat`
 
 `ProcessCpuTracker.update()` 同时也从 `/proc/stat` 收集了某个时间段内总的 CPU 时间用以计算各进程的 CPU 使用率；下面是从 MI 9 上获取的 `/proc/stat` 文件内容，看得出来它有八个核心（骁龙 855），CPU 时间的单位为 `jiffies`，各字段的含义如下：
 
@@ -1408,7 +1291,7 @@ class ProcessCpuTracker {
 }
 ```
 
-#### 打印进程概览
+### 打印进程概览
 
 `printProcessCPU(prefix, pid, label, totalTime, user, system, iowait, irg, softIrq, minFaults, majFaults)` 打印出一行的 CPU 使用率（一行对应一个进程）
 
@@ -1528,7 +1411,639 @@ class ProcessCpuTracker {
 }
 ```
 
+# ANR 日志文件
+
+ANR 日志文件太大了，下面仅展示日志的基本结构，整个示例文件可以在 [这里](../../../../files/2021-06-27-deep-drive-into-anr/anr_2021-09-29-16-02-49-393) 下载
+
+日志文件包含多个进程，每个进程以 `----- pid [pid] at [time] -----` 开始，以 `----- end [pid] -----` 结束，而且很明显地分为 `java process` 和 `native process`
+
+```log
+# java process 包含了 JVM 各种统计信息以及 thread trace
+----- pid 001 at 2021-09-29 16:02:49 -----
+Cmd line: com.example.myapplication
+...
+
+DALVIK THREADS (16):
+"main" prio=5 tid=1 Sleeping
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x72313478 self=0xb400007f542bbc00
+  | sysTid=27750 nice=-10 cgrp=default sched=0/0 handle=0x7f559584f8
+  | state=S schedstat=( 439366137 82406360 402 ) utm=36 stm=7 core=0 HZ=100
+  | stack=0x7ffd85d000-0x7ffd85f000 stackSize=8192KB
+  | held mutexes=
+  at java.lang.Thread.sleep(Native method)
+  - sleeping on <0x0bd69ce3> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:442)
+  - locked <0x0bd69ce3> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:358)
+  at com.example.myapplication.MainActivity.onCreate$lambda-0(MainActivity.kt:20)
+  at com.example.myapplication.MainActivity.lambda$b-o9DaQhxOUy1smA7kVJfKXtbVM(MainActivity.kt:-1)
+  at com.example.myapplication.-$$Lambda$MainActivity$b-o9DaQhxOUy1smA7kVJfKXtbVM.onClick(lambda:-1)
+  at android.view.View.performClick(View.java:7509)
+  at android.view.View.performClickInternal(View.java:7486)
+  at android.view.View.access$3600(View.java:841)
+  at android.view.View$PerformClick.run(View.java:28709)
+  at android.os.Handler.handleCallback(Handler.java:938)
+  at android.os.Handler.dispatchMessage(Handler.java:99)
+  at android.os.Looper.loop(Looper.java:236)
+  at android.app.ActivityThread.main(ActivityThread.java:8061)
+  at java.lang.reflect.Method.invoke(Native method)
+  at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:656)
+  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:967)
+
+...
+
+----- end 001 -----
+
+# native process 就只有各个线程的 PC 寄存器值
+----- pid 002 at 2021-09-29 16:02:52 -----
+Cmd line: media.codec
+ABI: 'arm'
+
+"omx@1.0-service" sysTid=1464
+    #00 pc 000a0644  /apex/com.android.runtime/lib/bionic/libc.so (__ioctl+8) (BuildId: 3516bc395829323390a814b64aaaf5a1)
+    #01 pc 0006c56b  /apex/com.android.runtime/lib/bionic/libc.so (ioctl+26) (BuildId: 3516bc395829323390a814b64aaaf5a1)
+    #02 pc 0005f5f3  /apex/com.android.vndk.v30/lib/libhidlbase.so (android::hardware::IPCThreadState::talkWithDriver(bool)+190) (BuildId: 7de33783f64b9b0b626cd0b96a05b2d8)
+    #03 pc 0005f79f  /apex/com.android.vndk.v30/lib/libhidlbase.so (android::hardware::IPCThreadState::getAndExecuteCommand()+22) (BuildId: 7de33783f64b9b0b626cd0b96a05b2d8)
+    #04 pc 00060671  /apex/com.android.vndk.v30/lib/libhidlbase.so (android::hardware::IPCThreadState::joinThreadPool(bool)+100) (BuildId: 7de33783f64b9b0b626cd0b96a05b2d8)
+    #05 pc 00002389  /vendor/bin/hw/android.hardware.media.omx@1.0-service (main+936) (BuildId: 116b35d790a6fac142d3d1eac096a1b8)
+    #06 pc 0005fddb  /apex/com.android.runtime/lib/bionic/libc.so (__libc_init+66) (BuildId: 3516bc395829323390a814b64aaaf5a1)
+
+...
+
+----- end 002 -----
+```
+
+## 目录和文件名
+
+`ProcessErrorStateRecord.appNotResponding` 在输出 logcat 日志的同时也输出了更加详细的 ANR Trace 至文件里，如下代码所示，`ActivityManagerService.dumpStackTraces` 创建了日志文件 `/data/anr/anr_[yyyy-MM-dd-HH-mm-ss-SSS]`
+
+`/data/anr` 目录下超过一天，或者超过 64 个日志文件后最旧的，都会被清理掉
+
+> 旧版本的 Android 上日志文件在 /data/anr/traces.txt
+
+```java
+class ProcessErrorStateRecord {
+    public static final String ANR_TRACE_DIR = "/data/anr";
+    static final String ANR_FILE_PREFIX = "anr_";
+
+    void appNotResponding(String activityShortComponentName, ApplicationInfo aInfo,
+            String parentShortComponentName, WindowProcessController parentProcess,
+            boolean aboveSystem, String annotation, boolean onlyDumpSelf) {
+        // ...
+        final long[] offsets = new long[2];
+        File tracesFile = ActivityManagerService.dumpStackTraces(firstPids,
+                isSilentAnr ? null : processCpuTracker, isSilentAnr ? null : lastPids,
+                nativePids, tracesFileException, offsets, annotation);
+        // ...                
+        if (tracesFile == null) {
+            // There is no trace file, so dump (only) the alleged culprit's threads to the log
+            Process.sendSignal(pid, Process.SIGNAL_QUIT);
+        } else if (offsets[1] > 0) {
+            // We've dumped into the trace file successfully
+            mService.mProcessList.mAppExitInfoTracker.scheduleLogAnrTrace(
+                    pid, mApp.uid, mApp.getPackageList(), tracesFile, offsets[0], offsets[1]);
+        }
+        // ...
+    }    
+}
+
+class ActivityManagerService {
+    /* package */ static File dumpStackTraces(ArrayList<Integer> firstPids,
+            ProcessCpuTracker processCpuTracker, SparseArray<Boolean> lastPids,
+            ArrayList<Integer> nativePids, StringWriter logExceptionCreatingFile,
+            long[] firstPidOffsets, String subject) {
+        // ...
+        final File tracesDir = new File(ANR_TRACE_DIR);
+        // Each set of ANR traces is written to a separate file and dumpstate will process
+        // all such files and add them to a captured bug report if they're recent enough.
+        maybePruneOldTraces(tracesDir);
+
+        // NOTE: We should consider creating the file in native code atomically once we've
+        // gotten rid of the old scheme of dumping and lot of the code that deals with paths
+        // can be removed.
+        File tracesFile;
+        try {
+            tracesFile = createAnrDumpFile(tracesDir);
+        } catch (IOException e) {
+            Slog.w(TAG, "Exception creating ANR dump file:", e);
+            if (logExceptionCreatingFile != null) {
+                logExceptionCreatingFile.append("----- Exception creating ANR dump file -----\n");
+                e.printStackTrace(new PrintWriter(logExceptionCreatingFile));
+            }
+            return null;
+        }
+        // ...
+    }
+
+    private static synchronized File createAnrDumpFile(File tracesDir) throws IOException {
+        if (sAnrFileDateFormat == null) {
+            sAnrFileDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
+        }
+
+        final String formattedDate = sAnrFileDateFormat.format(new Date());
+        final File anrFile = new File(tracesDir, ANR_FILE_PREFIX + formattedDate);
+
+        if (anrFile.createNewFile()) {
+            FileUtils.setPermissions(anrFile.getAbsolutePath(), 0600, -1, -1); // -rw-------
+            return anrFile;
+        } else {
+            throw new IOException("Unable to create ANR dump file: createNewFile failed");
+        }
+    }  
+
+    /**
+     * Prune all trace files that are more than a day old.
+     *
+     * NOTE: It might make sense to move this functionality to tombstoned eventually, along with a
+     * shift away from anr_XX and tombstone_XX to a more descriptive name. We do it here for now
+     * since it's the system_server that creates trace files for most ANRs.
+     */
+    private static void maybePruneOldTraces(File tracesDir) {
+        final File[] files = tracesDir.listFiles();
+        if (files == null) return;
+
+        final int max = SystemProperties.getInt("tombstoned.max_anr_count", 64);
+        final long now = System.currentTimeMillis();
+        try {
+            Arrays.sort(files, Comparator.comparingLong(File::lastModified).reversed());
+            for (int i = 0; i < files.length; ++i) {
+                if (i > max || (now - files[i].lastModified()) > DAY_IN_MILLIS) {
+                    if (!files[i].delete()) {
+                        Slog.w(TAG, "Unable to prune stale trace file: " + files[i]);
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            // The modification times changed while we were sorting. Bail...
+            // https://issuetracker.google.com/169836837
+            Slog.w(TAG, "tombstone modification times changed while sorting; not pruning", e);
+        }
+    }          
+}
+```
+
+但是没有 root 权限的 adb 是没法查看文件的，也就没法通过 `adb pull` 把日志拉取出来进行分析，想要拿到 ANR Trace 只能通过 `adb bugreport`（参考 [ANRs](https://developer.android.com/topic/performance/vitals/anr) 和 [Bug Reports](https://developer.android.com/studio/debug/bug-report)）
+
+![data_anr_permission](../../../../image/2021-07-10-deep-drive-into-anr/data_anr_permission.png)
+
+## 进程的次序
+
+
+
+```java
+class ProcessErrorStateRecord {
+    void appNotResponding(String activityShortComponentName, ApplicationInfo aInfo,
+            String parentShortComponentName, WindowProcessController parentProcess,
+            boolean aboveSystem, String annotation, boolean onlyDumpSelf) {
+        ArrayList<Integer> firstPids = new ArrayList<>(5);
+        SparseArray<Boolean> lastPids = new SparseArray<>(20);
+        synchronized (mService) {
+            // ...
+            // Dump thread traces as quickly as we can, starting with "interesting" processes.
+            firstPids.add(pid);
+
+            // Don't dump other PIDs if it's a background ANR or is requested to only dump self.
+            isSilentAnr = isSilentAnr();
+            if (!isSilentAnr && !onlyDumpSelf) {
+                int parentPid = pid;
+                if (parentProcess != null && parentProcess.getPid() > 0) {
+                    parentPid = parentProcess.getPid();
+                }
+                if (parentPid != pid) firstPids.add(parentPid);
+
+                if (MY_PID != pid && MY_PID != parentPid) firstPids.add(MY_PID);
+
+                final int ppid = parentPid;
+                mService.mProcessList.forEachLruProcessesLOSP(false, r -> {
+                    if (r != null && r.getThread() != null) {
+                        int myPid = r.getPid();
+                        if (myPid > 0 && myPid != pid && myPid != ppid && myPid != MY_PID) {
+                            if (r.isPersistent()) {
+                                firstPids.add(myPid);
+                                if (DEBUG_ANR) Slog.i(TAG, "Adding persistent proc: " + r);
+                            } else if (r.mServices.isTreatedLikeActivity()) {
+                                firstPids.add(myPid);
+                                if (DEBUG_ANR) Slog.i(TAG, "Adding likely IME: " + r);
+                            } else {
+                                lastPids.put(myPid, Boolean.TRUE);
+                                if (DEBUG_ANR) Slog.i(TAG, "Adding ANR proc: " + r);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Log the ANR to the main log ...
+
+        // don't dump native PIDs for background ANRs unless it is the process of interest
+        String[] nativeProcs = null;
+        if (isSilentAnr || onlyDumpSelf) {
+            for (int i = 0; i < NATIVE_STACKS_OF_INTEREST.length; i++) {
+                if (NATIVE_STACKS_OF_INTEREST[i].equals(mApp.processName)) {
+                    nativeProcs = new String[] { mApp.processName };
+                    break;
+                }
+            }
+        } else {
+            nativeProcs = NATIVE_STACKS_OF_INTEREST;
+        }
+
+        int[] pids = nativeProcs == null ? null : Process.getPidsForCommands(nativeProcs);
+        ArrayList<Integer> nativePids = null;
+
+        if (pids != null) {
+            nativePids = new ArrayList<>(pids.length);
+            for (int i : pids) {
+                nativePids.add(i);
+            }
+        }
+
+        // For background ANRs, don't pass the ProcessCpuTracker to
+        // avoid spending 1/2 second collecting stats to rank lastPids.
+        StringWriter tracesFileException = new StringWriter();
+        // To hold the start and end offset to the ANR trace file respectively.
+        final long[] offsets = new long[2];
+        File tracesFile = ActivityManagerService.dumpStackTraces(firstPids,
+                isSilentAnr ? null : processCpuTracker, isSilentAnr ? null : lastPids,
+                nativePids, tracesFileException, offsets, annotation);
+        // ...
+    }    
+}
+```
+
+##
+
+```java
+class ActivityManagerService {
+    public static Pair<Long, Long> dumpStackTraces(String tracesFile, ArrayList<Integer> firstPids,
+            ArrayList<Integer> nativePids, ArrayList<Integer> extraPids) {
+
+        Slog.i(TAG, "Dumping to " + tracesFile);
+
+        // We don't need any sort of inotify based monitoring when we're dumping traces via
+        // tombstoned. Data is piped to an "intercept" FD installed in tombstoned so we're in full
+        // control of all writes to the file in question.
+
+        // We must complete all stack dumps within 20 seconds.
+        long remainingTime = 20 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
+
+        // As applications are usually interested with the ANR stack traces, but we can't share with
+        // them the stack traces other than their own stacks. So after the very first PID is
+        // dumped, remember the current file size.
+        long firstPidStart = -1;
+        long firstPidEnd = -1;
+
+        // First collect all of the stacks of the most important pids.
+        if (firstPids != null) {
+            int num = firstPids.size();
+            for (int i = 0; i < num; i++) {
+                final int pid = firstPids.get(i);
+                // We don't copy ANR traces from the system_server intentionally.
+                final boolean firstPid = i == 0 && MY_PID != pid;
+                File tf = null;
+                if (firstPid) {
+                    tf = new File(tracesFile);
+                    firstPidStart = tf.exists() ? tf.length() : 0;
+                }
+
+                Slog.i(TAG, "Collecting stacks for pid " + pid);
+                final long timeTaken = dumpJavaTracesTombstoned(pid, tracesFile,
+                                                                remainingTime);
+
+                remainingTime -= timeTaken;
+                if (remainingTime <= 0) {
+                    Slog.e(TAG, "Aborting stack trace dump (current firstPid=" + pid
+                            + "); deadline exceeded.");
+                    return firstPidStart >= 0 ? new Pair<>(firstPidStart, firstPidEnd) : null;
+                }
+
+                if (firstPid) {
+                    firstPidEnd = tf.length();
+                }
+                if (DEBUG_ANR) {
+                    Slog.d(TAG, "Done with pid " + firstPids.get(i) + " in " + timeTaken + "ms");
+                }
+            }
+        }
+
+        // Next collect the stacks of the native pids
+        if (nativePids != null) {
+            for (int pid : nativePids) {
+                Slog.i(TAG, "Collecting stacks for native pid " + pid);
+                final long nativeDumpTimeoutMs = Math.min(NATIVE_DUMP_TIMEOUT_MS, remainingTime);
+
+                final long start = SystemClock.elapsedRealtime();
+                Debug.dumpNativeBacktraceToFileTimeout(
+                        pid, tracesFile, (int) (nativeDumpTimeoutMs / 1000));
+                final long timeTaken = SystemClock.elapsedRealtime() - start;
+
+                remainingTime -= timeTaken;
+                if (remainingTime <= 0) {
+                    Slog.e(TAG, "Aborting stack trace dump (current native pid=" + pid +
+                        "); deadline exceeded.");
+                    return firstPidStart >= 0 ? new Pair<>(firstPidStart, firstPidEnd) : null;
+                }
+
+                if (DEBUG_ANR) {
+                    Slog.d(TAG, "Done with native pid " + pid + " in " + timeTaken + "ms");
+                }
+            }
+        }
+
+        // Lastly, dump stacks for all extra PIDs from the CPU tracker.
+        if (extraPids != null) {
+            for (int pid : extraPids) {
+                Slog.i(TAG, "Collecting stacks for extra pid " + pid);
+
+                final long timeTaken = dumpJavaTracesTombstoned(pid, tracesFile, remainingTime);
+
+                remainingTime -= timeTaken;
+                if (remainingTime <= 0) {
+                    Slog.e(TAG, "Aborting stack trace dump (current extra pid=" + pid +
+                            "); deadline exceeded.");
+                    return firstPidStart >= 0 ? new Pair<>(firstPidStart, firstPidEnd) : null;
+                }
+
+                if (DEBUG_ANR) {
+                    Slog.d(TAG, "Done with extra pid " + pid + " in " + timeTaken + "ms");
+                }
+            }
+        }
+        Slog.i(TAG, "Done dumping");
+        return firstPidStart >= 0 ? new Pair<>(firstPidStart, firstPidEnd) : null;
+    }
+
+    private static long dumpJavaTracesTombstoned(int pid, String fileName, long timeoutMs) {
+        final long timeStart = SystemClock.elapsedRealtime();
+        boolean javaSuccess = Debug.dumpJavaBacktraceToFileTimeout(pid, fileName,
+                (int) (timeoutMs / 1000));
+        if (javaSuccess) {
+            // Check that something is in the file, actually. Try-catch should not be necessary,
+            // but better safe than sorry.
+            try {
+                long size = new File(fileName).length();
+                if (size < JAVA_DUMP_MINIMUM_SIZE) {
+                    Slog.w(TAG, "Successfully created Java ANR file is empty!");
+                    javaSuccess = false;
+                }
+            } catch (Exception e) {
+                Slog.w(TAG, "Unable to get ANR file size", e);
+                javaSuccess = false;
+            }
+        }
+        if (!javaSuccess) {
+            Slog.w(TAG, "Dumping Java threads failed, initiating native stack dump.");
+            if (!Debug.dumpNativeBacktraceToFileTimeout(pid, fileName,
+                    (NATIVE_DUMP_TIMEOUT_MS / 1000))) {
+                Slog.w(TAG, "Native stack dump failed!");
+            }
+        }
+
+        return SystemClock.elapsedRealtime() - timeStart;
+    }
+}
+```
+
+```cpp
+static jboolean android_os_Debug_dumpJavaBacktraceToFileTimeout(JNIEnv* env, jobject clazz,
+        jint pid, jstring fileName, jint timeoutSecs) {
+    const bool ret = dumpTraces(env, pid, fileName, timeoutSecs, kDebuggerdJavaBacktrace);
+    return ret ? JNI_TRUE : JNI_FALSE;
+}
+
+static bool dumpTraces(JNIEnv* env, jint pid, jstring fileName, jint timeoutSecs,
+                       DebuggerdDumpType dumpType) {
+    const ScopedUtfChars fileNameChars(env, fileName);
+    if (fileNameChars.c_str() == nullptr) {
+        return false;
+    }
+
+    android::base::unique_fd fd(open(fileNameChars.c_str(),
+                                     O_CREAT | O_WRONLY | O_NOFOLLOW | O_CLOEXEC | O_APPEND,
+                                     0666));
+    if (fd < 0) {
+        PLOG(ERROR) << "Can't open " << fileNameChars.c_str();
+        return false;
+    }
+
+    int res = dump_backtrace_to_file_timeout(pid, dumpType, timeoutSecs, fd);
+    if (fdatasync(fd.get()) != 0) {
+        PLOG(ERROR) << "Failed flushing trace.";
+    }
+    return res == 0;
+}
+
+int dump_backtrace_to_file_timeout(pid_t tid, DebuggerdDumpType dump_type, int timeout_secs,
+                                   int fd) {
+  android::base::unique_fd copy(dup(fd));
+  if (copy == -1) {
+    return -1;
+  }
+
+  // debuggerd_trigger_dump results in every thread in the process being interrupted
+  // by a signal, so we need to fetch the wchan data before calling that.
+  std::string wchan_data = get_wchan_data(fd, tid);
+
+  int timeout_ms = timeout_secs > 0 ? timeout_secs * 1000 : 0;
+  int ret = debuggerd_trigger_dump(tid, dump_type, timeout_ms, std::move(copy)) ? 0 : -1;
+
+  // Dump wchan data, since only privileged processes (CAP_SYS_ADMIN) can read
+  // kernel stack traces (/proc/*/stack).
+  if (!WriteStringToFd(wchan_data, fd)) {
+    LOG(WARNING) << TAG "Failed to dump wchan data for pid: " << tid;
+  }
+
+  return ret;
+}
+
+bool debuggerd_trigger_dump(pid_t tid, DebuggerdDumpType dump_type, unsigned int timeout_ms,
+                            unique_fd output_fd) {
+  pid_t pid = tid;
+  if (dump_type == kDebuggerdJavaBacktrace) {
+    // Java dumps always get sent to the tgid, so we need to resolve our tid to a tgid.
+    android::procinfo::ProcessInfo procinfo;
+    std::string error;
+    if (!android::procinfo::GetProcessInfo(tid, &procinfo, &error)) {
+      log_error(output_fd, 0, "failed to get process info: %s", error.c_str());
+      return false;
+    }
+    pid = procinfo.pid;
+  }
+
+  LOG(INFO) << TAG "started dumping process " << pid;
+
+  // Rather than try to deal with poll() all the way through the flow, we update
+  // the socket timeout between each step (and only use poll() during the final
+  // copy loop).
+  const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+  auto update_timeout = [timeout_ms, &output_fd](int sockfd, auto end) {
+    if (timeout_ms <= 0) return true;
+
+    auto remaining = end - std::chrono::steady_clock::now();
+    if (remaining < decltype(remaining)::zero()) {
+      log_error(output_fd, 0, "timeout expired");
+      return false;
+    }
+
+    struct timeval timeout;
+    populate_timeval(&timeout, remaining);
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0) {
+      log_error(output_fd, errno, "failed to set receive timeout");
+      return false;
+    }
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0) {
+      log_error(output_fd, errno, "failed to set send timeout");
+      return false;
+    }
+    return true;
+  };
+
+  unique_fd sockfd(socket(AF_LOCAL, SOCK_SEQPACKET, 0));
+  if (sockfd == -1) {
+    log_error(output_fd, errno, "failed to create socket");
+    return false;
+  }
+
+  if (!update_timeout(sockfd, end)) return false;
+
+  if (socket_local_client_connect(sockfd.get(), kTombstonedInterceptSocketName,
+                                  ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_SEQPACKET) == -1) {
+    log_error(output_fd, errno, "failed to connect to tombstoned");
+    return false;
+  }
+
+  InterceptRequest req = {
+      .dump_type = dump_type,
+      .pid = pid,
+  };
+
+  // Create an intermediate pipe to pass to the other end.
+  unique_fd pipe_read, pipe_write;
+  if (!Pipe(&pipe_read, &pipe_write)) {
+    log_error(output_fd, errno, "failed to create pipe");
+    return false;
+  }
+
+  std::string pipe_size_str;
+  int pipe_buffer_size = 1024 * 1024;
+  if (android::base::ReadFileToString("/proc/sys/fs/pipe-max-size", &pipe_size_str)) {
+    pipe_size_str = android::base::Trim(pipe_size_str);
+
+    if (!android::base::ParseInt(pipe_size_str.c_str(), &pipe_buffer_size, 0)) {
+      LOG(FATAL) << "failed to parse pipe max size '" << pipe_size_str << "'";
+    }
+  }
+
+  if (fcntl(pipe_read.get(), F_SETPIPE_SZ, pipe_buffer_size) != pipe_buffer_size) {
+    log_error(output_fd, errno, "failed to set pipe buffer size");
+  }
+
+  if (!update_timeout(sockfd, end)) return false;
+  ssize_t rc = SendFileDescriptors(sockfd, &req, sizeof(req), pipe_write.get());
+  pipe_write.reset();
+  if (rc != sizeof(req)) {
+    log_error(output_fd, errno, "failed to send output fd to tombstoned");
+    return false;
+  }
+
+  auto get_response = [&output_fd](const char* kind, int sockfd, InterceptResponse* response) {
+    ssize_t rc = TEMP_FAILURE_RETRY(recv(sockfd, response, sizeof(*response), MSG_TRUNC));
+    if (rc == 0) {
+      log_error(output_fd, 0, "failed to read %s response from tombstoned: timeout reached?", kind);
+      return false;
+    } else if (rc == -1) {
+      log_error(output_fd, errno, "failed to read %s response from tombstoned", kind);
+      return false;
+    } else if (rc != sizeof(*response)) {
+      log_error(output_fd, 0,
+                "received packet of unexpected length from tombstoned while reading %s response: "
+                "expected %zd, received %zd",
+                kind, sizeof(response), rc);
+      return false;
+    }
+    return true;
+  };
+
+  // Check to make sure we've successfully registered.
+  InterceptResponse response;
+  if (!update_timeout(sockfd, end)) return false;
+  if (!get_response("initial", sockfd, &response)) return false;
+  if (response.status != InterceptStatus::kRegistered) {
+    log_error(output_fd, 0, "unexpected registration response: %d",
+              static_cast<int>(response.status));
+    return false;
+  }
+
+  // Send the signal.
+  const int signal = (dump_type == kDebuggerdJavaBacktrace) ? SIGQUIT : BIONIC_SIGNAL_DEBUGGER;
+  sigval val = {.sival_int = (dump_type == kDebuggerdNativeBacktrace) ? 1 : 0};
+  if (sigqueue(pid, signal, val) != 0) {
+    log_error(output_fd, errno, "failed to send signal to pid %d", pid);
+    return false;
+  }
+
+  if (!update_timeout(sockfd, end)) return false;
+  if (!get_response("status", sockfd, &response)) return false;
+  if (response.status != InterceptStatus::kStarted) {
+    response.error_message[sizeof(response.error_message) - 1] = '\0';
+    log_error(output_fd, 0, "tombstoned reported failure: %s", response.error_message);
+    return false;
+  }
+
+  // Forward output from the pipe to the output fd.
+  while (true) {
+    auto remaining = end - std::chrono::steady_clock::now();
+    auto remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(remaining).count();
+    if (timeout_ms <= 0) {
+      remaining_ms = -1;
+    } else if (remaining_ms < 0) {
+      log_error(output_fd, 0, "timeout expired");
+      return false;
+    }
+
+    struct pollfd pfd = {
+        .fd = pipe_read.get(), .events = POLLIN, .revents = 0,
+    };
+
+    rc = poll(&pfd, 1, remaining_ms);
+    if (rc == -1) {
+      if (errno == EINTR) {
+        continue;
+      } else {
+        log_error(output_fd, errno, "error while polling");
+        return false;
+      }
+    } else if (rc == 0) {
+      log_error(output_fd, 0, "timeout expired");
+      return false;
+    }
+
+    char buf[1024];
+    rc = TEMP_FAILURE_RETRY(read(pipe_read.get(), buf, sizeof(buf)));
+    if (rc == 0) {
+      // Done.
+      break;
+    } else if (rc == -1) {
+      log_error(output_fd, errno, "error while reading");
+      return false;
+    }
+
+    if (!android::base::WriteFully(output_fd.get(), buf, rc)) {
+      log_error(output_fd, errno, "error while writing");
+      return false;
+    }
+  }
+
+  LOG(INFO) << TAG "done dumping process " << pid;
+
+  return true;
+}
+```
+
 # 参考
 
 1. [Linux对内存的管理, 以及page fault的概念](https://www.jianshu.com/p/f9b8c139c2ed)
 2. [Understanding page faults and memory swap-in/outs: when should you worry?](https://scoutapm.com/blog/understanding-page-faults-and-memory-swap-in-outs-when-should-you-worry)
+3. [Android Developer ANRs](https://developer.android.com/topic/performance/vitals/anr)
+4. [Android Developer Bug Reports](https://developer.android.com/studio/debug/bug-report)
