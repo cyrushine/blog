@@ -380,13 +380,13 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503
 
 我们以 IO 的 some 和 full 来举例说明，假设在 60 秒的时间段内，系统有两个 task，在 60 秒的周期内的运行情况如下图所示：
 
-![proc_pressure_io_1]((../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.jpg))
+![proc_pressure_io_1](../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.jpg)
 
 红色阴影部分表示任务由于等待 IO 资源而进入阻塞状态。Task A 和 Task B 同时阻塞的部分为 full，占比 16.66%；至少有一个任务阻塞（仅 Task B 阻塞的部分也计算入内）的部分为 some，占比 50%
 
 some 和 full 都是在某一时间段内阻塞时间占比的总和，阻塞时间不一定连续，如下图所示：
 
-![proc_pressure_io_2]((../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.jpg))
+![proc_pressure_io_2](../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.jpg)
 
 IO 和 memory 都有 some 和 full 两个维度，那是因为的确有可能系统中的所有任务都阻塞在 IO 或者 memory 资源，同时 CPU 进入 idle 状态
 
@@ -1895,7 +1895,27 @@ jintArray android_os_Process_getPidsForCommands(JNIEnv* env, jobject clazz,
 
 ## dumpJavaTracesTombstoned
 
+dump process 时分为 `java process` 和 `native process`，此章节将讨论 dump java process
 
+跟着下面的代码一路跟踪下去最终会来到 `debuggerd_trigger_dump`，大概过一遍发现此方法并没有实现 dump java process 逻辑，那它都干了些什么：
+
+1. 创建一条 [管道](https://man7.org/linux/man-pages/man7/pipe.7.html)：`pipe_read` - `pipe_write`
+2. 创建一个 unix domain socket 连接到 `/dev/socket/tombstoned_intercept` 并将需要被 dump 的进程的 `pid` 和 `pipe_write` 发送过去，再发送 `initial` 和 `status` 指令确保 `debuggerd` 正常工作（`debuggerd` 将会把 java process dump 写入到 `pipe_write` 里）
+3. 在一个 `while(true)` 循环里等待 `pipe_read` 直到可读/有数据（[`poll`](https://man7.org/linux/man-pages/man2/poll.2.html)，参考 [网络 IO 演变发展过程和模型介绍](../../../../2021/05/11/nonblocking-io/)），将数据写入日志文件，这里的数据就是 process dump 的内容；同时上面有讲过 dump 是有时间上限的，所以循环里还要时刻检查是否还有剩余时间
+
+> man pipe.7
+> 
+> Pipes provide a unidirectional interprocess communication channel.  A pipe has a read end and a write end.  Data written to the write end of a pipe can be read from the read end of the pipe.
+> 
+> If a process attempts to read from an empty pipe, then read(2) will block until data is available.  If a process attempts to write to a full pipe (see below), then write(2) blocks until sufficient data has been read from > the pipe to allow the write to complete.
+> 
+> A pipe has a limited capacity.  If the pipe is full, then a write(2) will block or fail, depending on whether the O_NONBLOCK flag is set (see below).  Different implementations have different limits for the pipe capacity.
+> 
+> In Linux versions before 2.6.11, the capacity of a pipe was the same as the system page size (e.g., 4096 bytes on i386).  
+> 
+> Since Linux 2.6.11, the pipe capacity is 16 pages (i.e., 65,536 bytes in a system with a page size  of  4096 bytes).  
+> 
+> Since Linux 2.6.35, the default pipe capacity is 16 pages, but the capacity can be queried and set using the fcntl(2) F_GETPIPE_SZ and F_SETPIPE_SZ operations. 
 
 ```java
 class ActivityManagerService {
@@ -2164,7 +2184,96 @@ bool debuggerd_trigger_dump(pid_t tid, DebuggerdDumpType dump_type, unsigned int
 
   return true;
 }
+
+// Helper for SendFileDescriptorVector that constructs a std::vector for you, e.g.:
+//   SendFileDescriptors(sock, "foo", 3, std::move(fd1), std::move(fd2))
+template <typename... Args>
+ssize_t SendFileDescriptors(borrowed_fd sock, const void* data, size_t len, Args&&... sent_fds) {
+  // Do not allow implicit conversion to int: people might try to do something along the lines of:
+  //   SendFileDescriptors(..., std::move(a_unique_fd))
+  // and be surprised when the unique_fd isn't closed afterwards.
+  AssertType<int>(std::forward<Args>(sent_fds)...);
+  std::vector<int> fds;
+  Append(fds, std::forward<Args>(sent_fds)...);
+  return SendFileDescriptorVector(sock, data, len, fds);
+}
+
+ssize_t SendFileDescriptorVector(borrowed_fd sockfd, const void* data, size_t len,
+                                 const std::vector<int>& fds) {
+  static const size_t page_size = sysconf(_SC_PAGE_SIZE);
+  size_t cmsg_space = CMSG_SPACE(sizeof(int) * fds.size());
+  size_t cmsg_len = CMSG_LEN(sizeof(int) * fds.size());
+  if (cmsg_space >= page_size) {
+    errno = ENOMEM;
+    return -1;
+  }
+
+  alignas(struct cmsghdr) char cmsg_buf[cmsg_space];
+  iovec iov = {.iov_base = const_cast<void*>(data), .iov_len = len};
+  msghdr msg = {
+      .msg_name = nullptr,
+      .msg_namelen = 0,
+      .msg_iov = &iov,
+      .msg_iovlen = 1,
+      .msg_control = cmsg_buf,
+      // We can't cast to the actual type of the field, because it's different across platforms.
+      .msg_controllen = static_cast<unsigned int>(cmsg_space),
+      .msg_flags = 0,
+  };
+
+  struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+  cmsg->cmsg_level = SOL_SOCKET;
+  cmsg->cmsg_type = SCM_RIGHTS;
+  cmsg->cmsg_len = cmsg_len;
+
+  int* cmsg_fds = reinterpret_cast<int*>(CMSG_DATA(cmsg));
+  for (size_t i = 0; i < fds.size(); ++i) {
+    cmsg_fds[i] = fds[i];
+  }
+
+#if defined(__linux__)
+  int flags = MSG_NOSIGNAL;
+#else
+  int flags = 0;
+#endif
+
+  return TEMP_FAILURE_RETRY(sendmsg(sockfd.get(), &msg, flags));
+}
 ```
+
+### Unix Domain Socket
+
+```cpp
+/* 
+ * man socket.2
+ * 
+ * domain: 
+ *   AF_UNIX/AF_LOCAL Local communication
+ *   AF_INET          IPv4 Internet protocols
+ *   AF_INET6         IPv6 Internet protocols
+ *   ...
+ *
+ * type: 
+ *   SOCK_STREAM     Provides sequenced, reliable, two-way, connection-based byte streams, 网络协议簇上的实现就是 TCP
+ *   SOCK_DGRAM      connectionless, unreliable messages of a fixed maximum length, 网络协议簇上的实现就是 UDP
+ *   SOCK_SEQPACKET  Provides a sequenced, reliable, two-way connection-based data transmission path for datagrams of fixed maximum length
+ *                   a consumer is required to read an entire packet with each input system call
+ *                   看起来像是 TCP + UDP
+ */
+int socket(int domain, int type, int protocol)
+```
+
+使用 Java/Kotlin 编程 `socket` 一般就是代表 [网络协议簇](https://www.ruanyifeng.com/blog/2012/05/internet_protocol_suite_part_i.html) 中的传输层协议 TCP 和 UDP，但在 C 里 [socket](https://man7.org/linux/man-pages/man7/socket.7.html) 包含一整套 API 如下图：
+
+![socket](../../../../image/2021-07-10-deep-drive-into-anr/socket.jpg)
+
+`Unix Domain Socket`，也就是 `socket(AF_UNIX/AF_LOCAL, ...)` 则是一种 `IPC` 机制，对标的是 `pipe`、`FIFO`、`signal`，它不走网络协议簇（性能好）却又可以使用上图所示丰富的 API 实现双向的、全双工的、多路复用的 IPC。相比其它 IPC 机制有明显的优越性，目前已成为使用最广泛的 IPC 机制，比如 X Window 服务器和 GUI 程序之间就是通过 Unix Domain Socket 通讯的
+
+Unix Domain Socket 与网络 socket 编程最明显的不同在于地址格式不同，用结构体 `sockaddr_un` 表示，网络编程的地址是 `ip:port` 而 Unix Domain Socket 的地址是一个 socket 类型的文件在文件系统中的路径，这个文件在 `bind` 调用时创建，如果该文件已存在则 `bind` 错误返回，`close` 后需要自己主动删除
+
+### debuggerd
+
+上面说到 `debuggerd_trigger_dump` 并不包含 java process dump 逻辑而是通过 Unix Domain Socket 从 `/dev/socket/tombstoned_intercept` 拿到 dump 内容，这个函数实现在 `/system/core/debuggerd/client/debuggerd_client.cpp`，从路径上看似乎有个 `debuggerd` 进程的存在
 
 ## dumpNativeBacktraceToFileTimeout
 
