@@ -2275,6 +2275,461 @@ Unix Domain Socket 与网络 socket 编程最明显的不同在于地址格式�
 
 上面说到 `debuggerd_trigger_dump` 并不包含 java process dump 逻辑而是通过 Unix Domain Socket 从 `/dev/socket/tombstoned_intercept` 拿到 dump 内容，这个函数实现在 `/system/core/debuggerd/client/debuggerd_client.cpp`，从路径上看似乎有个 `debuggerd` 进程的存在
 
+### SignalCatcher & SIGQUIT
+
+如下图所示，`zygote` fork 出 system server 和 app process 后会创建一个叫 `Signal Catcher` 的 native thread 并将其绑定到 VM，它的 routine 是 ` SignalCatcher::Run`，main loop 是等待并响应信号 `SIGQUIT` 和 `SIGUSR1`
+
+![signal_catcher_thread](../../../../image/2021-07-10-deep-drive-into-anr/signal_catcher_thread.png)
+
+> int sigwait(const sigset_t *set, int *sig)
+> 
+> The  sigwait()  function  suspends execution of the calling thread until one of the signals specified in the signal set set becomes pending.  The function accepts the signal (removes it from the pending list of signals), and returns the signal number in sig
+
+```cpp
+// art/runtime/runtime.cc
+void Runtime::InitNonZygoteOrPostFork(
+    JNIEnv* env,
+    bool is_system_server,
+    // This is true when we are initializing a child-zygote. It requires
+    // native bridge initialization to be able to run guest native code in
+    // doPreload().
+    bool is_child_zygote,
+    NativeBridgeAction action,
+    const char* isa,
+    bool profile_system_server) {
+    
+    // ...
+    StartSignalCatcher();
+    // ...
+}
+
+void Runtime::StartSignalCatcher() {
+  if (!is_zygote_) {
+    signal_catcher_ = new SignalCatcher();
+  }
+}
+
+// art/runtime/signal_catcher.cc
+SignalCatcher::SignalCatcher()
+    : lock_("SignalCatcher lock"),
+      cond_("SignalCatcher::cond_", lock_),
+      thread_(nullptr) {
+  SetHaltFlag(false);
+
+  // Create a raw pthread; its start routine will attach to the runtime.
+  CHECK_PTHREAD_CALL(pthread_create, (&pthread_, nullptr, &Run, this), "signal catcher thread");
+
+  Thread* self = Thread::Current();
+  MutexLock mu(self, lock_);
+  while (thread_ == nullptr) {
+    cond_.Wait(self);
+  }
+}
+
+void* SignalCatcher::Run(void* arg) {
+  SignalCatcher* signal_catcher = reinterpret_cast<SignalCatcher*>(arg);
+  CHECK(signal_catcher != nullptr);
+
+  Runtime* runtime = Runtime::Current();
+  CHECK(runtime->AttachCurrentThread("Signal Catcher", true, runtime->GetSystemThreadGroup(),
+                                     !runtime->IsAotCompiler()));
+
+  Thread* self = Thread::Current();
+  DCHECK_NE(self->GetState(), kRunnable);
+  {
+    MutexLock mu(self, signal_catcher->lock_);
+    signal_catcher->thread_ = self;
+    signal_catcher->cond_.Broadcast(self);
+  }
+
+  // Set up mask with signals we want to handle.
+  SignalSet signals;
+  signals.Add(SIGQUIT);
+  signals.Add(SIGUSR1);
+
+  while (true) {
+    int signal_number = signal_catcher->WaitForSignal(self, signals);
+    if (signal_catcher->ShouldHalt()) {
+      runtime->DetachCurrentThread();
+      return nullptr;
+    }
+
+    switch (signal_number) {
+    case SIGQUIT:
+      signal_catcher->HandleSigQuit();
+      break;
+    case SIGUSR1:
+      signal_catcher->HandleSigUsr1();
+      break;
+    default:
+      LOG(ERROR) << "Unexpected signal %d" << signal_number;
+      break;
+    }
+  }
+}
+
+int SignalCatcher::WaitForSignal(Thread* self, SignalSet& signals) {
+  ScopedThreadStateChange tsc(self, kWaitingInMainSignalCatcherLoop);
+
+  // Signals for sigwait() must be blocked but not ignored.  We
+  // block signals like SIGQUIT for all threads, so the condition
+  // is met.  When the signal hits, we wake up, without any signal
+  // handlers being invoked.
+  int signal_number = signals.Wait();
+  if (!ShouldHalt()) {
+    // Let the user know we got the signal, just in case the system's too screwed for us to
+    // actually do what they want us to do...
+    LOG(INFO) << *self << ": reacting to signal " << signal_number;
+
+    // If anyone's holding locks (which might prevent us from getting back into state Runnable), say so...
+    Runtime::Current()->DumpLockHolders(LOG_STREAM(INFO));
+  }
+
+  return signal_number;
+}
+
+class SignalSet {
+public:
+
+  int Wait() {
+    // Sleep in sigwait() until a signal arrives. gdb causes EINTR failures.
+    int signal_number;
+    int rc = TEMP_FAILURE_RETRY(sigwait64(&set_, &signal_number));
+    if (rc != 0) {
+      PLOG(FATAL) << "sigwait failed";
+    }
+    return signal_number;
+  }
+};
+```
+
+#### dump java process
+
+APP 在收到信号 `SIGQUIT(3)` 后，`Signal Catcher` 线程会将有关 VM 的信息 dump 出来，如下面的代码所示，是不是跟 ANR Traces 日志里的内容很相似？这样我们就可以看着代码一点点地分析出日志里各段的含义
+
+```log
+// 以下日志来自 SignalCatcher::HandleSigQuit
+----- pid 27750(当前进程，也就是被 dump 的进程) at 2021-09-29 16:02:49(输出这段日志的时间) -----
+Cmd line: com.example.myapplication(来自 /proc/pid/cmdline)
+Build fingerprint: 'Xiaomi/cepheus/cepheus:11/RKQ1.200826.002/V12.5.4.0.RFACNXM:user/release-keys'
+ABI: 'arm64'
+Build type: optimized(debug or optimized)
+
+// ClassLinker::DumpForSigQuit
+Zygote loaded classes=15972 post zygote classes=782 (为了节省内存 zygote 会加载一些必要的 class，这样 fork 出来的 APP 进程就可以通过父子进程的 Copy-On-Write 机制共享之，15972 是 zygote 加载的 class 数量，782 是 APP 进程额外加载的 class 数量)
+Dumping registered class loaders (打印 classloader 实例数组)
+#0 dalvik.system.PathClassLoader: [], parent #1
+#1 java.lang.BootClassLoader: [], no parent
+#2 dalvik.system.PathClassLoader: [/system/framework/tcmclient.jar], parent #0
+#3 dalvik.system.PathClassLoader: [], parent #0
+#4 dalvik.system.PathClassLoader: [/data/app/~~syr7K6mbdRUo_PMCa5m4Zg==/com.example.myapplication-y5fNXmdEYq8yPQiK04h7mw==/base.apk:/data/app/~~syr7K6mbdRUo_PMCa5m4Zg==/com.example.myapplication-y5fNXmdEYq8yPQiK04h7mw==/base.apk!classes4.dex:/data/app/~~syr7K6mbdRUo_PMCa5m4Zg==/com.example.myapplication-y5fNXmdEYq8yPQiK04h7mw==/base.apk!classes3.dex:/data/app/~~syr7K6mbdRUo_PMCa5m4Zg==/com.example.myapplication-y5fNXmdEYq8yPQiK04h7mw==/base.apk!classes2.dex], parent #1
+#5 dalvik.system.PathClassLoader: [/system/app/MiuiContentCatcher/MiuiContentCatcher.apk], parent #1
+#6 dalvik.system.PathClassLoader: [/system/app/CatcherPatch/CatcherPatch.apk], parent #1
+Done dumping class loaders
+Classes initialized: 371 in 14.764ms
+
+/* 
+ * InternTable::DumpForSigQuit
+ * 
+ * Class InternTable used to intern strings.
+ * There are actually two tables: one that holds strong references to its strings, and one that holds weak references. 
+ * The former is used for string literals, for which there is an effective reference from the constant pool. 
+ * The latter is used for strings interned at runtime via String.intern. 
+ * Some code (XML parsers being a prime example) relies on being able to intern arbitrarily many strings for the duration of a parse without permanently increasing the memory footprint.
+ * 
+ * 这个 InternTable 其实就是 String.intern() 方法描述里说的那个字符串池（A pool of strings, initially empty, is maintained privately by the class String）
+ * 它包含两个 table，字符串字面量（来自于字符串常量池）的引用保存在 string table，通过 String.intern() 添加进来的字符串引用保存在 weak table
+ * 
+ * String.intern() 将搜索 InternTable，如果 InternTable 存在相同的字符串则返回它的引用，否则将当前字符串添加到 InternTable 里，这样的好处是可以降低字符串处理程序的内存波动
+ * 
+ */
+Intern table: 32394 strong; 523 weak
+
+//  JavaVMExt::DumpForSigQuit (JNI 相关，不太懂)
+JNI: CheckJNI is on; globals=735 (plus 64 weak)
+Libraries: /data/app/~~syr7K6mbdRUo_PMCa5m4Zg==/com.example.myapplication-y5fNXmdEYq8yPQiK04h7mw==/base.apk!/lib/arm64-v8a/libnative-lib.so libandroid.so libaudioeffect_jni.so libcompiler_rt.so libicu_jni.so libjavacore.so libjavacrypto.so libjnigraphics.so libmedia_jni.so libmiuinative.so libopenjdk.so libqti_performance.so librs_jni.so libsfplugin_ccodec.so libsoundpool.so libstats_jni.so libwebviewchromium_loader.so (17)
+
+// Heap::DumpForSigQuit
+Heap: 47% free, 2796KB/5303KB; 71822 objects (VM 堆相关情况，堆申请了 5303KB 的内存，用了 2795KB 剩余 47% 的内存，堆里一共有 71822 个对象)
+
+// Heap::DumpGcPerformanceInfo (GC 相关信息)
+Dumping cumulative Gc timings
+Start Dumping histograms for 1 iterations for concurrent copying
+ScanImmuneSpaces:	Sum: 12.444ms 99% C.I. 12.444ms-12.444ms Avg: 12.444ms Max: 12.444ms
+ProcessMarkStack:	Sum: 12.292ms 99% C.I. 12.292ms-12.292ms Avg: 12.292ms Max: 12.292ms
+VisitConcurrentRoots:	Sum: 6.499ms 99% C.I. 6.499ms-6.499ms Avg: 6.499ms Max: 6.499ms
+ScanCardsForSpace:	Sum: 1.231ms 99% C.I. 1.231ms-1.231ms Avg: 1.231ms Max: 1.231ms
+SweepSystemWeaks:	Sum: 924us 99% C.I. 924us-924us Avg: 924us Max: 924us
+GrayAllDirtyImmuneObjects:	Sum: 792us 99% C.I. 792us-792us Avg: 792us Max: 792us
+ClearFromSpace:	Sum: 777us 99% C.I. 777us-777us Avg: 777us Max: 777us
+InitializePhase:	Sum: 544us 99% C.I. 544us-544us Avg: 544us Max: 544us
+FlipOtherThreads:	Sum: 309us 99% C.I. 309us-309us Avg: 309us Max: 309us
+VisitNonThreadRoots:	Sum: 270us 99% C.I. 270us-270us Avg: 270us Max: 270us
+RecordFree:	Sum: 95us 99% C.I. 95us-95us Avg: 95us Max: 95us
+CopyingPhase:	Sum: 82us 99% C.I. 82us-82us Avg: 82us Max: 82us
+ForwardSoftReferences:	Sum: 77us 99% C.I. 77us-77us Avg: 77us Max: 77us
+EnqueueFinalizerReferences:	Sum: 60us 99% C.I. 60us-60us Avg: 60us Max: 60us
+MarkZygoteLargeObjects:	Sum: 56us 99% C.I. 56us-56us Avg: 56us Max: 56us
+ProcessReferences:	Sum: 55us 99% C.I. 8us-47us Avg: 27.500us Max: 47us
+(Paused)GrayAllNewlyDirtyImmuneObjects:	Sum: 40us 99% C.I. 40us-40us Avg: 40us Max: 40us
+SweepLargeObjects:	Sum: 38us 99% C.I. 38us-38us Avg: 38us Max: 38us
+SwapBitmaps:	Sum: 36us 99% C.I. 36us-36us Avg: 36us Max: 36us
+ThreadListFlip:	Sum: 35us 99% C.I. 35us-35us Avg: 35us Max: 35us
+SweepAllocSpace:	Sum: 26us 99% C.I. 26us-26us Avg: 26us Max: 26us
+MarkStackAsLive:	Sum: 18us 99% C.I. 18us-18us Avg: 18us Max: 18us
+ReclaimPhase:	Sum: 14us 99% C.I. 14us-14us Avg: 14us Max: 14us
+EmptyRBMarkBitStack:	Sum: 13us 99% C.I. 13us-13us Avg: 13us Max: 13us
+(Paused)FlipCallback:	Sum: 11us 99% C.I. 11us-11us Avg: 11us Max: 11us
+ResumeRunnableThreads:	Sum: 10us 99% C.I. 10us-10us Avg: 10us Max: 10us
+(Paused)SetFromSpace:	Sum: 8us 99% C.I. 8us-8us Avg: 8us Max: 8us
+UnBindBitmaps:	Sum: 7us 99% C.I. 7us-7us Avg: 7us Max: 7us
+FlipThreadRoots:	Sum: 6us 99% C.I. 6us-6us Avg: 6us Max: 6us
+Sweep:	Sum: 5us 99% C.I. 5us-5us Avg: 5us Max: 5us
+(Paused)ClearCards:	Sum: 3us 99% C.I. 250ns-1000ns Avg: 142ns Max: 1000ns
+ResumeOtherThreads:	Sum: 2us 99% C.I. 2us-2us Avg: 2us Max: 2us
+Done Dumping histograms
+concurrent copying paused:	Sum: 101us 99% C.I. 101us-101us Avg: 101us Max: 101us
+concurrent copying freed-bytes: Avg: 138KB Max: 138KB Min: 138KB
+Freed-bytes histogram: 0:1
+concurrent copying total time: 36.779ms mean time: 36.779ms
+concurrent copying freed: 1138 objects with total size 138KB
+concurrent copying throughput: 31611.1/s / 3844KB/s  per cpu-time: 4429000/s / 4325KB/s
+Average major GC reclaim bytes ratio 0.841027 over 1 GC cycles
+Average major GC copied live bytes ratio 0.757154 over 5 major GCs
+Cumulative bytes moved 13614368
+Cumulative objects moved 237506
+Peak regions allocated 35 (8960KB) / 1024 (256MB)
+Start Dumping histograms for 1 iterations for young concurrent copying
+ScanImmuneSpaces:	Sum: 9.300ms 99% C.I. 9.300ms-9.300ms Avg: 9.300ms Max: 9.300ms
+ProcessMarkStack:	Sum: 2.551ms 99% C.I. 2.551ms-2.551ms Avg: 2.551ms Max: 2.551ms
+VisitConcurrentRoots:	Sum: 1.263ms 99% C.I. 1.263ms-1.263ms Avg: 1.263ms Max: 1.263ms
+SweepSystemWeaks:	Sum: 530us 99% C.I. 530us-530us Avg: 530us Max: 530us
+ClearFromSpace:	Sum: 390us 99% C.I. 390us-390us Avg: 390us Max: 390us
+InitializePhase:	Sum: 289us 99% C.I. 289us-289us Avg: 289us Max: 289us
+GrayAllDirtyImmuneObjects:	Sum: 163us 99% C.I. 163us-163us Avg: 163us Max: 163us
+ScanCardsForSpace:	Sum: 129us 99% C.I. 129us-129us Avg: 129us Max: 129us
+FlipOtherThreads:	Sum: 75us 99% C.I. 75us-75us Avg: 75us Max: 75us
+VisitNonThreadRoots:	Sum: 54us 99% C.I. 54us-54us Avg: 54us Max: 54us
+EnqueueFinalizerReferences:	Sum: 45us 99% C.I. 45us-45us Avg: 45us Max: 45us
+SweepArray:	Sum: 21us 99% C.I. 21us-21us Avg: 21us Max: 21us
+ProcessReferences:	Sum: 20us 99% C.I. 1us-19us Avg: 10us Max: 19us
+RecordFree:	Sum: 19us 99% C.I. 0.250us-19us Avg: 9.500us Max: 19us
+(Paused)GrayAllNewlyDirtyImmuneObjects:	Sum: 18us 99% C.I. 18us-18us Avg: 18us Max: 18us
+CopyingPhase:	Sum: 15us 99% C.I. 15us-15us Avg: 15us Max: 15us
+ForwardSoftReferences:	Sum: 14us 99% C.I. 14us-14us Avg: 14us Max: 14us
+FreeList:	Sum: 13us 99% C.I. 13us-13us Avg: 13us Max: 13us
+ThreadListFlip:	Sum: 8us 99% C.I. 8us-8us Avg: 8us Max: 8us
+SwapBitmaps:	Sum: 7us 99% C.I. 7us-7us Avg: 7us Max: 7us
+ReclaimPhase:	Sum: 6us 99% C.I. 6us-6us Avg: 6us Max: 6us
+MarkZygoteLargeObjects:	Sum: 5us 99% C.I. 5us-5us Avg: 5us Max: 5us
+ResetStack:	Sum: 4us 99% C.I. 4us-4us Avg: 4us Max: 4us
+EmptyRBMarkBitStack:	Sum: 3us 99% C.I. 3us-3us Avg: 3us Max: 3us
+(Paused)FlipCallback:	Sum: 2us 99% C.I. 2us-2us Avg: 2us Max: 2us
+(Paused)SetFromSpace:	Sum: 1us 99% C.I. 1us-1us Avg: 1us Max: 1us
+(Paused)ClearCards:	Sum: 0 99% C.I. 0ns-0ns Avg: 0ns Max: 0ns
+Done Dumping histograms
+young concurrent copying paused:	Sum: 33us 99% C.I. 33us-33us Avg: 33us Max: 33us
+young concurrent copying freed-bytes: Avg: 4116KB Max: 4116KB Min: 4116KB
+Freed-bytes histogram: 3840:1
+young concurrent copying total time: 14.952ms mean time: 14.952ms
+young concurrent copying freed: 48492 objects with total size 4116KB
+young concurrent copying throughput: 3.46371e+06/s / 287MB/s  per cpu-time: 602219428/s / 574MB/s
+Average minor GC reclaim bytes ratio 1.88288 over 1 GC cycles
+Average minor GC copied live bytes ratio 0.126374 over 3 minor GCs
+Cumulative bytes moved 2004720
+Cumulative objects moved 28694
+Peak regions allocated 35 (8960KB) / 1024 (256MB)
+Total time spent in GC: 51.731ms
+Mean GC size throughput: 80MB/s per cpu-time: 103MB/s
+Mean GC object throughput: 959386 objects/s
+Total number of allocations 121452
+Total bytes allocated 7051KB
+Total bytes freed 4255KB
+Free memory 2506KB
+Free memory until GC 2506KB
+Free memory until OOME 253MB
+Total memory 5303KB
+Max memory 256MB
+Zygote space size 3464KB
+Total mutator paused time: 134us
+Total time waiting for GC to complete: 11.571ms
+Total GC count: 2
+Total GC time: 51.731ms
+Total blocking GC count: 0
+Total blocking GC time: 0
+Histogram of GC count per 10000 ms: 0:16,1:1
+Histogram of blocking GC count per 10000 ms: 0:17
+Native bytes total: 21234628 registered: 60540
+Total native bytes at last GC: 20854836
+
+// OatFileManager::DumpForSigQuit
+/data/dalvik-cache/arm64/system@priv-app@RtMiCloudSDK@RtMiCloudSDK.apk@classes.dex: speed
+/data/dalvik-cache/arm64/system@app@MiuiContentCatcher@MiuiContentCatcher.apk@classes.dex: speed
+/data/dalvik-cache/arm64/system@app@CatcherPatch@CatcherPatch.apk@classes.dex: speed
+
+// Jit::DumpForSigQuit (JIT 相关)
+Current JIT code cache size (used / resident): 5KB / 32KB
+Current JIT data cache size (used / resident): 10KB / 32KB
+Zygote JIT code cache size (at point of fork): 60KB / 64KB
+Zygote JIT data cache size (at point of fork): 54KB / 60KB
+Current JIT mini-debug-info size: 44KB
+Current JIT capacity: 64KB
+Current number of JIT JNI stub entries: 0
+Current number of JIT code cache entries: 64
+Total number of JIT compilations: 17
+Total number of JIT compilations for on stack replacement: 0
+Total number of JIT code cache collections: 0
+Memory used for stack maps: Avg: 67B Max: 272B Min: 16B
+Memory used for compiled code: Avg: 304B Max: 1320B Min: 20B
+Memory used for profiling info: Avg: 111B Max: 728B Min: 32B
+Start Dumping histograms for 64 iterations for JIT timings
+Compiling:	Sum: 143.499ms 99% C.I. 0.115ms-18.703ms Avg: 2.242ms Max: 22.565ms
+TrimMaps:	Sum: 4.510ms 99% C.I. 8us-707.999us Avg: 70.468us Max: 864us
+Done Dumping histograms
+Memory used for compilation: Avg: 139KB Max: 837KB Min: 15KB
+
+// ProfileSaver::DumpInstanceInfo
+ProfileSaver total_bytes_written=2330
+ProfileSaver total_number_of_writes=1
+ProfileSaver total_number_of_code_cache_queries=2
+ProfileSaver total_number_of_skipped_writes=1
+ProfileSaver total_number_of_failed_writes=0
+ProfileSaver total_ms_of_sleep=312878
+ProfileSaver total_ms_of_work=4
+ProfileSaver total_number_of_hot_spikes=0
+ProfileSaver total_number_of_wake_ups=1
+
+// ThreadList::DumpForSigQuit
+suspend all histogram:	Sum: 289us 99% C.I. 2us-164us Avg: 20.642us Max: 164us (应该是中断所有线程的执行耗费的时间)
+
+// ThreadList::Dump (已绑定到 VM 的线程)
+DALVIK THREADS (16):
+
+// Thread::Dump
+"main"(线程名) [daemon(如果是 daemon thread)] prio=5(优先级) tid=1(线程 ID) Sleeping(可以是：NEW, RUNNABLE, TIMED_WAITTING|SLEEPING, WAITTING, BLOCKED 和 TERMINATED，参考 art::ThreadState)
+  | group="main"(线程组) sCount=1() dsCount=0 flags=1 obj=0x72313478 self=0xb400007f542bbc00
+  | sysTid=27750 nice=-10 cgrp=default sched=0/0 handle=0x7f559584f8
+  | state=S schedstat=( 439366137 82406360 402 ) utm=36 stm=7 core=0 HZ=100
+  | stack=0x7ffd85d000-0x7ffd85f000 stackSize=8192KB
+  | held mutexes=
+  at java.lang.Thread.sleep(Native method)
+  - sleeping on <0x0bd69ce3> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:442)
+  - locked <0x0bd69ce3> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:358)
+  at com.example.myapplication.MainActivity.onCreate$lambda-0(MainActivity.kt:20)
+  at com.example.myapplication.MainActivity.lambda$b-o9DaQhxOUy1smA7kVJfKXtbVM(MainActivity.kt:-1)
+  at com.example.myapplication.-$$Lambda$MainActivity$b-o9DaQhxOUy1smA7kVJfKXtbVM.onClick(lambda:-1)
+  at android.view.View.performClick(View.java:7509)
+  at android.view.View.performClickInternal(View.java:7486)
+  at android.view.View.access$3600(View.java:841)
+  at android.view.View$PerformClick.run(View.java:28709)
+  at android.os.Handler.handleCallback(Handler.java:938)
+  at android.os.Handler.dispatchMessage(Handler.java:99)
+  at android.os.Looper.loop(Looper.java:236)
+  at android.app.ActivityThread.main(ActivityThread.java:8061)
+  at java.lang.reflect.Method.invoke(Native method)
+  at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:656)
+  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:967)
+
+"Signal Catcher" daemon prio=10 tid=4 Runnable
+  | group="system" sCount=0 dsCount=0 flags=0 obj=0x12d80260 self=0xb400007ebd813800
+  | sysTid=27771 nice=-20 cgrp=default sched=0/0 handle=0x7ebdf73cc0
+  | state=R schedstat=( 11436460 2051300 7 ) utm=0 stm=0 core=4 HZ=100
+  | stack=0x7ebde7c000-0x7ebde7e000 stackSize=995KB
+  | held mutexes= "mutator lock"(shared held)
+  native: #00 pc 000000000047c188  /apex/com.android.art/lib64/libart.so (art::DumpNativeStack(std::__1::basic_ostream<char, std::__1::char_traits<char> >&, int, BacktraceMap*, char const*, art::ArtMethod*, void*, bool)+140)
+  native: #01 pc 0000000000581444  /apex/com.android.art/lib64/libart.so (art::Thread::DumpStack(std::__1::basic_ostream<char, std::__1::char_traits<char> >&, bool, BacktraceMap*, bool) const+380)
+  native: #02 pc 000000000059e288  /apex/com.android.art/lib64/libart.so (art::DumpCheckpoint::Run(art::Thread*)+924)
+  native: #03 pc 0000000000597c2c  /apex/com.android.art/lib64/libart.so (art::ThreadList::RunCheckpoint(art::Closure*, art::Closure*)+536)
+  native: #04 pc 0000000000596cb4  /apex/com.android.art/lib64/libart.so (art::ThreadList::Dump(std::__1::basic_ostream<char, std::__1::char_traits<char> >&, bool)+1928)
+  native: #05 pc 000000000059614c  /apex/com.android.art/lib64/libart.so (art::ThreadList::DumpForSigQuit(std::__1::basic_ostream<char, std::__1::char_traits<char> >&)+776)
+  native: #06 pc 0000000000543c68  /apex/com.android.art/lib64/libart.so (art::Runtime::DumpForSigQuit(std::__1::basic_ostream<char, std::__1::char_traits<char> >&)+196)
+  native: #07 pc 0000000000559810  /apex/com.android.art/lib64/libart.so (art::SignalCatcher::HandleSigQuit()+1400)
+  native: #08 pc 00000000005587d8  /apex/com.android.art/lib64/libart.so (art::SignalCatcher::Run(void*)+348)
+  native: #09 pc 00000000000f4204  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+64)
+  native: #10 pc 000000000008ec64  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64)
+  (no managed stack frames)
+```
+
+```cpp
+void SignalCatcher::HandleSigQuit() {
+  Runtime* runtime = Runtime::Current();
+  std::ostringstream os;
+  os << "\n"
+      << "----- pid " << getpid() << " at " << GetIsoDate() << " -----\n";
+
+  DumpCmdLine(os);
+
+  // Note: The strings "Build fingerprint:" and "ABI:" are chosen to match the format used by
+  // debuggerd. This allows, for example, the stack tool to work.
+  std::string fingerprint = runtime->GetFingerprint();
+  os << "Build fingerprint: '" << (fingerprint.empty() ? "unknown" : fingerprint) << "'\n";
+  os << "ABI: '" << GetInstructionSetString(runtime->GetInstructionSet()) << "'\n";
+
+  os << "Build type: " << (kIsDebugBuild ? "debug" : "optimized") << "\n";
+
+  runtime->DumpForSigQuit(os);
+
+  if ((false)) {
+    std::string maps;
+    if (android::base::ReadFileToString("/proc/self/maps", &maps)) {
+      os << "/proc/self/maps:\n" << maps;
+    }
+  }
+  os << "----- end " << getpid() << " -----\n";
+  Output(os.str());
+}
+
+void Runtime::DumpForSigQuit(std::ostream& os) {
+  GetClassLinker()->DumpForSigQuit(os);
+  GetInternTable()->DumpForSigQuit(os);
+  GetJavaVM()->DumpForSigQuit(os);
+  GetHeap()->DumpForSigQuit(os);
+  oat_file_manager_->DumpForSigQuit(os);
+  if (GetJit() != nullptr) {
+    GetJit()->DumpForSigQuit(os);
+  } else {
+    os << "Running non JIT\n";
+  }
+  DumpDeoptimizations(os);
+  TrackedAllocators::Dump(os);
+  GetMetrics()->DumpForSigQuit(os);
+  os << "\n";
+
+  thread_list_->DumpForSigQuit(os);
+  BaseMutex::DumpAll(os);
+
+  // Inform anyone else who is interested in SigQuit.
+  {
+    ScopedObjectAccess soa(Thread::Current());
+    callbacks_->SigQuit();
+  }
+}
+
+static void DumpCmdLine(std::ostream& os) {
+#if defined(__linux__)
+  // Show the original command line, and the current command line too if it's changed.
+  // On Android, /proc/self/cmdline will have been rewritten to something like "system_server".
+  // Note: The string "Cmd line:" is chosen to match the format used by debuggerd.
+  std::string current_cmd_line;
+  if (android::base::ReadFileToString("/proc/self/cmdline", &current_cmd_line)) {
+    current_cmd_line.resize(current_cmd_line.find_last_not_of('\0') + 1);  // trim trailing '\0's
+    std::replace(current_cmd_line.begin(), current_cmd_line.end(), '\0', ' ');
+
+    os << "Cmd line: " << current_cmd_line << "\n";
+    const char* stashed_cmd_line = GetCmdLine();
+    if (stashed_cmd_line != nullptr && current_cmd_line != stashed_cmd_line
+            && strcmp(stashed_cmd_line, "<unset>") != 0) {
+      os << "Original command line: " << stashed_cmd_line << "\n";
+    }
+  }
+#else
+  os << "Cmd line: " << GetCmdLine() << "\n";
+#endif
+}
+```
+
 ## dumpNativeBacktraceToFileTimeout
 
 
@@ -2285,3 +2740,4 @@ Unix Domain Socket 与网络 socket 编程最明显的不同在于地址格式�
 2. [Understanding page faults and memory swap-in/outs: when should you worry?](https://scoutapm.com/blog/understanding-page-faults-and-memory-swap-in-outs-when-should-you-worry)
 3. [Android Developer ANRs](https://developer.android.com/topic/performance/vitals/anr)
 4. [Android Developer Bug Reports](https://developer.android.com/studio/debug/bug-report)
+5. [微信Android客户端的ANR监控方案](https://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=2649288031&idx=1&sn=91c94e16460a4685a9c0c8e1b9c362a6)
