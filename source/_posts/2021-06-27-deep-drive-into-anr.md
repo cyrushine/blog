@@ -1,3 +1,10 @@
+---
+title: 深入 ANR：产生的根源、处理流程和日志文件
+date: 2021-06-28 12:00:00 +0800
+categories: [Library]
+tags: [log, logcat]
+---
+
 # overview
 
 在 [阅读源码系列：ANR 是怎么产生的](../../../../2020/10/20/anr/) 聊过不及时消费 input event 会产生 `ANR`：
