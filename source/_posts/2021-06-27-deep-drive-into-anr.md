@@ -2966,6 +2966,152 @@ dump_backtrace_to_file_timeout(pid_t tid, DebuggerdDumpType dump_type, int timeo
 debuggerd_trigger_dump(pid_t tid, DebuggerdDumpType dump_type, unsigned int timeout_ms, unique_fd output_fd)
 ```
 
+# ANR Dialog
+
+在 `ActivityManagerService.mUiHandler` 里打开 `AppNotRespondingDialog`，这个对话框一般会包含两个按钮：等待和关闭，如果选择关闭则会通过 `kill(pid, SIGKILL)` 杀死 ANR 进程
+
+```java
+ProcessRecord.ErrorDialogController.showAnrDialogs
+ProcessRecord.ErrorDialogController.scheduleForAllDialogs
+ProcessRecord.ErrorDialogController.forAllDialogs
+
+class AppNotRespondingDialog {
+    private final Handler mHandler = new Handler() {
+        public void handleMessage(Message msg) {
+            Intent appErrorIntent = null;
+
+            MetricsLogger.action(getContext(), MetricsProto.MetricsEvent.ACTION_APP_ANR,
+                    msg.what);
+
+            switch (msg.what) {
+                case FORCE_CLOSE:
+                    // Kill the application.
+                    mService.killAppAtUsersRequest(mProc);
+                    break;
+                case WAIT_AND_REPORT:
+                case WAIT:
+                    // Continue waiting for the application.
+                    synchronized (mService) {
+                        ProcessRecord app = mProc;
+                        final ProcessErrorStateRecord errState = app.mErrorState;
+
+                        if (msg.what == WAIT_AND_REPORT) {
+                            appErrorIntent = mService.mAppErrors.createAppErrorIntentLOSP(app,
+                                    System.currentTimeMillis(), null);
+                        }
+
+                        synchronized (mService.mProcLock) {
+                            errState.setNotResponding(false);
+                            errState.setNotRespondingReport(null);
+                            errState.getDialogController().clearAnrDialogs();
+                        }
+                        mService.mServices.scheduleServiceTimeoutLocked(app);
+                    }
+                    break;
+            }
+
+            if (appErrorIntent != null) {
+                try {
+                    getContext().startActivity(appErrorIntent);
+                } catch (ActivityNotFoundException e) {
+                    Slog.w(TAG, "bug report receiver dissappeared", e);
+                }
+            }
+
+            dismiss();
+        }
+    };    
+}
+
+class ActivityManagerService {
+    void killAppAtUsersRequest(ProcessRecord app) {
+        synchronized (this) {
+            mAppErrors.killAppAtUserRequestLocked(app);
+        }
+    }    
+}
+
+class AppErrors {
+    void killAppAtUserRequestLocked(ProcessRecord app) {
+        ErrorDialogController controller = app.mErrorState.getDialogController();
+
+        int reasonCode = ApplicationExitInfo.REASON_ANR;
+        int subReason = ApplicationExitInfo.SUBREASON_UNKNOWN;
+        synchronized (mProcLock) {
+            if (controller.hasDebugWaitingDialog()) {
+                reasonCode = ApplicationExitInfo.REASON_OTHER;
+                subReason = ApplicationExitInfo.SUBREASON_WAIT_FOR_DEBUGGER;
+            }
+            controller.clearAllErrorDialogs();
+            killAppImmediateLSP(app, reasonCode, subReason,
+                    "user-terminated", "user request after error");
+        }
+    }
+    
+    private void killAppImmediateLSP(ProcessRecord app, int reasonCode, int subReason,
+            String reason, String killReason) {
+        final ProcessErrorStateRecord errState = app.mErrorState;
+        errState.setCrashing(false);
+        errState.setCrashingReport(null);
+        errState.setNotResponding(false);
+        errState.setNotRespondingReport(null);
+        final int pid = errState.mApp.getPid();
+        if (pid > 0 && pid != MY_PID) {
+            synchronized (mBadProcessLock) {
+                handleAppCrashLSPB(app, reason,
+                        null /*shortMsg*/, null /*longMsg*/, null /*stackTrace*/, null /*data*/);
+            }
+            app.killLocked(killReason, reasonCode, subReason, true);
+        }
+    }     
+}
+
+class ProcessRecord {
+    void killLocked(String reason, @Reason int reasonCode, @SubReason int subReason,
+            boolean noisy) {
+        if (!mKilledByAm) {
+            Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "kill");
+            if (mService != null && (noisy || info.uid == mService.mCurOomAdjUid)) {
+                mService.reportUidInfoMessageLocked(TAG,
+                        "Killing " + toShortString() + " (adj " + mState.getSetAdj()
+                        + "): " + reason, info.uid);
+            }
+            if (mPid > 0) {
+                mService.mProcessList.noteAppKill(this, reasonCode, subReason, reason);
+                EventLog.writeEvent(EventLogTags.AM_KILL,
+                        userId, mPid, processName, mState.getSetAdj(), reason);
+                Process.killProcessQuiet(mPid);
+                ProcessList.killProcessGroup(uid, mPid);
+            } else {
+                mPendingStart = false;
+            }
+            if (!mPersistent) {
+                synchronized (mProcLock) {
+                    mKilled = true;
+                    mKilledByAm = true;
+                    mKillTime = SystemClock.uptimeMillis();
+                }
+            }
+            Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
+        }
+    }    
+}
+
+class Process {
+    public static final int SIGNAL_KILL = 9;
+    public static final void killProcessQuiet(int pid) {
+        sendSignalQuiet(pid, SIGNAL_KILL);
+    }    
+}
+
+void android_os_Process_sendSignalQuiet(JNIEnv* env, jobject clazz, jint pid, jint sig)
+{
+    if (pid > 0) {
+        kill(pid, sig);
+    }
+}
+```
+
 # 参考
 
 1. [Linux对内存的管理, 以及page fault的概念](https://www.jianshu.com/p/f9b8c139c2ed)
