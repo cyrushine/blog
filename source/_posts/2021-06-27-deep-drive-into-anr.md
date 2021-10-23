@@ -1900,7 +1900,8 @@ dump process 时分为 `java process` 和 `native process`，此章节将讨论 
 跟着下面的代码一路跟踪下去最终会来到 `debuggerd_trigger_dump`，大概过一遍发现此方法并没有实现 dump java process 逻辑，那它都干了些什么：
 
 1. 创建一条 [管道](https://man7.org/linux/man-pages/man7/pipe.7.html)：`pipe_read` - `pipe_write`
-2. 创建一个 unix domain socket 连接到 `/dev/socket/tombstoned_intercept` 并将需要被 dump 的进程的 `pid` 和 `pipe_write` 发送过去，再发送 `initial` 和 `status` 指令确保 `debuggerd` 正常工作（`debuggerd` 将会把 java process dump 写入到 `pipe_write` 里）
+2. 创建一个 unix domain socket 连接到 `/dev/socket/tombstoned_intercept` 并将需要被 dump 的进程的 `pid`、`dumpType` 和 `pipe_write` 发送过去（将 `pipe_write` 注册到 `debuggerd.tombstoned`）
+3. 给 `pid` 进程发送信号 `SIGQUIT`，进程里的 `Signal Catcher` 线程被唤醒进行 process dump 操作，并从 `debuggerd.tombstoned` 拿到 `pipe_write` 将 dump 写入
 3. 在一个 `while(true)` 循环里等待 `pipe_read` 直到可读/有数据（[`poll`](https://man7.org/linux/man-pages/man2/poll.2.html)，参考 [网络 IO 演变发展过程和模型介绍](../../../../2021/05/11/nonblocking-io/)），将数据写入日志文件，这里的数据就是 process dump 的内容；同时上面有讲过 dump 是有时间上限的，所以循环里还要时刻检查是否还有剩余时间
 
 > man pipe.7
@@ -2403,7 +2404,7 @@ public:
 };
 ```
 
-#### dump java process
+#### process dump & thread dump
 
 APP 在收到信号 `SIGQUIT(3)` 后，`Signal Catcher` 线程会将有关 VM 的信息 dump 出来，如下面的代码所示，是不是跟 ANR Traces 日志里的内容很相似？这样我们就可以看着代码一点点地分析出日志里各段的含义
 
@@ -2607,11 +2608,98 @@ DALVIK THREADS (16):
 
 // Thread::Dump
 "main"(线程名) [daemon(如果是 daemon thread)] prio=5(优先级) tid=1(线程 ID) Sleeping(可以是：NEW, RUNNABLE, TIMED_WAITTING|SLEEPING, WAITTING, BLOCKED 和 TERMINATED，参考 art::ThreadState)
-  | group="main"(线程组) sCount=1() dsCount=0 flags=1 obj=0x72313478 self=0xb400007f542bbc00
-  | sysTid=27750 nice=-10 cgrp=default sched=0/0 handle=0x7f559584f8
-  | state=S schedstat=( 439366137 82406360 402 ) utm=36 stm=7 core=0 HZ=100
-  | stack=0x7ffd85d000-0x7ffd85f000 stackSize=8192KB
-  | held mutexes=
+  | group="main"(线程组) 
+  
+  /**
+   * Thread::tls32_::suspend_count, A non-zero value is used to tell the current thread to enter a safe point at the next poll.
+   * 
+   * save point 是 JVM 里的一个概念，可以认为是一个函数，被 JVM 安插在各个地方：循环末尾、函数执行前/后、抛出异常时... 
+   * 那它有什么用呢？比如 GC/dump 时需要 Stop-The-World 吧，debug 时打断点/单步调试需要中断线程的执行吧，
+   * 那怎么才能让正在执行 CPU 指令的 java 线程暂停呢？靠的就是安插在各处的 save point 去检查某个指示线程是否可以继续执行的标识
+   * 
+   * 在 SafePoint 保存了其他位置没有的一些当前线程的运行信息供其他线程读取，包括：线程上下文的任何信息、对象或者非对象的内部指针等等
+   * 我们一般这么理解 SafePoint，就是线程只有运行到了 SafePoint 的位置，他的一切状态信息才是确定的，也只有这个时候才知道这个线程用了哪些内存，没有用哪些
+   * 并且只有线程处于 SafePoint 位置，这时候对 JVM 的堆栈信息进行修改，例如回收某一部分不用的内存，线程才会感知到
+   * 之后继续运行，每个线程都有一份自己的内存使用快照，这时候其他线程对于内存使用的修改，线程就不知道了，只有再进行到 SafePoint 的时候才会感知
+   * 
+   * 也就是说当 sCount 非零时会进入 save point，非零时会跳过 save point
+   * 从 ANR Trace 看只有 Signal Catcher 的 sCount 才会为零，猜测 process dump 是需要中断除 Signal Catcher 之外其他线程的执行，只留 Signal Catcher 进行 thread dump 操作
+   */
+  sCount=1 
+  
+  /**
+   * Thread::tls32_::debug_suspend_count
+   * How much of 'suspend_count_' is by request of the debugger, used to set things right when the debugger detaches. Must be <= suspend_count_.
+   * debugger 可以修改 suspend_count（打断点？）但在此之前需要把 suspend_count 的值备份在这个字段，以便退出 debug 的时候可以恢复
+   *
+   */
+  dsCount=0 
+  
+  /**
+   * Thread::tls32_::state_and_flags::as_struct::flags, bitmap field
+   * 
+   * enum ThreadFlag {
+   *   kSuspendRequest         = 1,  // If set implies that suspend_count_ > 0 and the Thread should enter the safepoint handler.
+   *   kCheckpointRequest      = 2,  // Request that the thread do some checkpoint work and then continue.
+   *   kEmptyCheckpointRequest = 4,  // Request that the thread do empty checkpoint and then continue.
+   *   kActiveSuspendBarrier   = 8,  // Register that at least 1 suspend barrier needs to be passed.
+   * };
+   */
+  flags=1 
+  
+  obj=0x72313478 (Thread::tlsPtr_::opeer, Our managed peer (an instance of java.lang.Thread)，应该是此线程对应的 java thread object 地址)
+  self=0xb400007f542bbc00 (reinterpret_cast<const void*>(thread), native art::Thread 对象地址)
+  sysTid=27750 (此线程在宿主系统上的 ID, ps -A -T) 
+  nice=-10 (thread nice value，含义类似于 process nice value，可以动态调整的线程优先级)
+  cgrp=default (执行此线程的 cpu 的 cpu group，来自于 /proc/self/task/[tid]/cgroup)
+  
+  /**
+   * 左边的数字来自 sched_getscheduler(tid)，cpu scheduling policy，有以下值：
+   * 
+   * non-real-time
+   * SCHED_NORMAL/SCHED_OTHER = 0   the standard round-robin time-sharing policy
+   * SCHED_BATCH              = 3   for "batch" style execution of processes
+   * SCHED_IDLE               = 5   for running very low priority background jobs
+   * 
+   * real-time
+   * SCHED_FIFO               = 1   a first-in, first-out policy
+   * SCHED_RR                 = 2   a round-robin policy
+   *
+   * 右边的数字来自于 sched_getparam, scheduling parameters，跟上面的 scheduling policy 配合使用
+   *
+   * 这两个都属于 cpu 调度相关，详见 man sched.7
+   */
+  sched=0/0 
+
+  handle=0x7f559584f8 (Thread::tlsPtr_::pthread_self, 底层的 pthread_t 地址)
+
+  /**
+   * 来自 /proc/[pid]/task/[tid]/schedstat，分别是 CPU 上执行的时间、线程的等待时间和线程执行的时间片
+   */
+  schedstat=( 439366137 82406360 402 )
+
+  /**
+   * 来自 /proc/[pid]/task/[tid]/stat，里面的字段跟 /proc/[pid]/stat 类似
+   * state=S(SLEEPING) 线程状态为休眠中
+   * utm(utime) 线程运行在用户态的时间
+   * stm(stime) 线程运行在内核态的时间
+   * core(task_cpu) 运行在哪个 CPU 上
+   */
+  state=S  utm=36 stm=7 core=0 
+  HZ=100 (sysconf(_SC_CLK_TCK)，每秒种的内核时钟滴答数)
+
+  /**
+   * Thread::tlsPtr_::stack_begin - Thread::tlsPtr_::stack_end
+   * 方法栈的开始地址、结束地址和栈大小
+   */
+  stack=0x7ffd85d000-0x7ffd85f000 stackSize=8192KB
+  
+  /**
+   * 此线程锁持有的锁类型，定义在 art/runtime/base/locks.h，有：
+   * LockLevel::kLoggingLock, LockLevel::kSwapMutexesLock, ...
+   */
+  held mutexes=
+
   at java.lang.Thread.sleep(Native method)
   - sleeping on <0x0bd69ce3> (a java.lang.Object)
   at java.lang.Thread.sleep(Thread.java:442)
@@ -2730,9 +2818,146 @@ static void DumpCmdLine(std::ostream& os) {
 }
 ```
 
+#### 将 dump 内容输出到 debuggerd.tombstoned
+
+上一章节构造了 dump 字符串，下面我们来看看它被输出到哪里：
+
+1. 通过 unix domain socket 连接到 `/dev/socket/tombstoned_java_trace` (`ANDROID_SOCKET_NAMESPACE_RESERVED` + `kTombstonedJavaTraceSocketName`，看名字像是一个叫 `debuggerd.tombstoned` 的服务)
+2. 将 `pid`、`dumpType` 等参数发送过去，返回一个 output fd (这个 fd 其实就是上面介绍过的 `debuggerd_trigger_dump` 里管道的 write fd，它被注册到 `debuggerd.tombstoned`)
+3. 把 dump 字符串写入 output fd
+
+```cpp
+void SignalCatcher::Output(const std::string& s) {
+  ScopedThreadStateChange tsc(Thread::Current(), kWaitingForSignalCatcherOutput);
+  palette_status_t status = PaletteWriteCrashThreadStacks(s.data(), s.size());
+  if (status == PALETTE_STATUS_OK) {
+    LOG(INFO) << "Wrote stack traces to tombstoned";
+  } else {
+    CHECK(status == PALETTE_STATUS_FAILED_CHECK_LOG);
+    LOG(ERROR) << "Failed to write stack traces to tombstoned";
+  }
+}
+
+// system/libartpalette/palette_android.cc
+palette_status_t PaletteWriteCrashThreadStacks(/*in*/ const char* stacks, size_t stacks_len) {
+    android::base::unique_fd tombstone_fd;
+    android::base::unique_fd output_fd;
+
+    if (!tombstoned_connect(getpid(), &tombstone_fd, &output_fd, kDebuggerdJavaBacktrace)) {
+        // Failure here could be due to file descriptor resource exhaustion
+        // so write the stack trace message to the log in case it helps
+        // debug that.
+        LOG(INFO) << std::string_view(stacks, stacks_len);
+        // tombstoned_connect() logs failure reason.
+        return PALETTE_STATUS_FAILED_CHECK_LOG;
+    }
+
+    palette_status_t status = PALETTE_STATUS_OK;
+    if (!android::base::WriteFully(output_fd, stacks, stacks_len)) {
+        PLOG(ERROR) << "Failed to write tombstoned output";
+        TEMP_FAILURE_RETRY(ftruncate(output_fd, 0));
+        status = PALETTE_STATUS_FAILED_CHECK_LOG;
+    }
+
+    if (TEMP_FAILURE_RETRY(fdatasync(output_fd)) == -1 && errno != EINVAL) {
+        // Ignore EINVAL so we don't report failure if we just tried to flush a pipe
+        // or socket.
+        if (status == PALETTE_STATUS_OK) {
+            PLOG(ERROR) << "Failed to fsync tombstoned output";
+            status = PALETTE_STATUS_FAILED_CHECK_LOG;
+        }
+        TEMP_FAILURE_RETRY(ftruncate(output_fd, 0));
+        TEMP_FAILURE_RETRY(fdatasync(output_fd));
+    }
+
+    if (close(output_fd.release()) == -1 && errno != EINTR) {
+        if (status == PALETTE_STATUS_OK) {
+            PLOG(ERROR) << "Failed to close tombstoned output";
+            status = PALETTE_STATUS_FAILED_CHECK_LOG;
+        }
+    }
+
+    if (!tombstoned_notify_completion(tombstone_fd)) {
+        // tombstoned_notify_completion() logs failure.
+        status = PALETTE_STATUS_FAILED_CHECK_LOG;
+    }
+
+    return status;
+}
+
+// system/core/debuggerd/tombstoned/tombstoned_client.cpp
+bool tombstoned_connect(pid_t pid, unique_fd* tombstoned_socket, unique_fd* text_output_fd,
+                        unique_fd* proto_output_fd, DebuggerdDumpType dump_type) {
+  unique_fd sockfd(
+      socket_local_client((dump_type != kDebuggerdJavaBacktrace ? kTombstonedCrashSocketName
+                                                                : kTombstonedJavaTraceSocketName),
+                          ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_SEQPACKET));
+  if (sockfd == -1) {
+    async_safe_format_log(ANDROID_LOG_ERROR, "libc", "failed to connect to tombstoned: %s",
+                          strerror(errno));
+    return false;
+  }
+
+  TombstonedCrashPacket packet = {};
+  packet.packet_type = CrashPacketType::kDumpRequest;
+  packet.packet.dump_request.pid = pid;
+  packet.packet.dump_request.dump_type = dump_type;
+  if (TEMP_FAILURE_RETRY(write(sockfd, &packet, sizeof(packet))) != sizeof(packet)) {
+    async_safe_format_log(ANDROID_LOG_ERROR, "libc", "failed to write DumpRequest packet: %s",
+                          strerror(errno));
+    return false;
+  }
+
+  unique_fd tmp_output_fd, tmp_proto_fd;
+  ssize_t rc = -1;
+
+  if (dump_type == kDebuggerdTombstoneProto) {
+    rc = ReceiveFileDescriptors(sockfd, &packet, sizeof(packet), &tmp_output_fd, &tmp_proto_fd);
+  } else {
+    rc = ReceiveFileDescriptors(sockfd, &packet, sizeof(packet), &tmp_output_fd);
+  }
+
+  if (rc == -1) {
+    async_safe_format_log(ANDROID_LOG_ERROR, "libc",
+                          "failed to read response to DumpRequest packet: %s", strerror(errno));
+    return false;
+  } else if (rc != sizeof(packet)) {
+    async_safe_format_log(
+        ANDROID_LOG_ERROR, "libc",
+        "received DumpRequest response packet of incorrect length (expected %zu, got %zd)",
+        sizeof(packet), rc);
+    return false;
+  }
+
+  // Make the fd O_APPEND so that our output is guaranteed to be at the end of a file.
+  // (This also makes selinux rules consistent, because selinux distinguishes between writing to
+  // a regular fd, and writing to an fd with O_APPEND).
+  int flags = fcntl(tmp_output_fd.get(), F_GETFL);
+  if (fcntl(tmp_output_fd.get(), F_SETFL, flags | O_APPEND) != 0) {
+    async_safe_format_log(ANDROID_LOG_WARN, "libc", "failed to set output fd flags: %s",
+                          strerror(errno));
+  }
+
+  *tombstoned_socket = std::move(sockfd);
+  *text_output_fd = std::move(tmp_output_fd);
+  if (proto_output_fd) {
+    *proto_output_fd = std::move(tmp_proto_fd);
+  }
+  return true;
+}
+```
+
 ## dumpNativeBacktraceToFileTimeout
 
+最终还是来到 `debuggerd_trigger_dump`，只不过此时 `dump_type` 是 `kDebuggerdNativeBacktrace`
 
+```
+Debug.dumpNativeBacktraceToFileTimeout(pid, file, timeoutSecs)
+android_os_Debug_dumpNativeBacktraceToFileTimeout
+dumpTraces(JNIEnv* env, jint pid, jstring fileName, jint timeoutSecs, DebuggerdDumpType dumpType)
+dump_backtrace_to_file_timeout(pid_t tid, DebuggerdDumpType dump_type, int timeout_secs, int fd)
+debuggerd_trigger_dump(pid_t tid, DebuggerdDumpType dump_type, unsigned int timeout_ms, unique_fd output_fd)
+```
 
 # 参考
 
@@ -2741,3 +2966,4 @@ static void DumpCmdLine(std::ostream& os) {
 3. [Android Developer ANRs](https://developer.android.com/topic/performance/vitals/anr)
 4. [Android Developer Bug Reports](https://developer.android.com/studio/debug/bug-report)
 5. [微信Android客户端的ANR监控方案](https://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=2649288031&idx=1&sn=91c94e16460a4685a9c0c8e1b9c362a6)
+6. [每日一面 - 什么是 Safepoint？](https://www.jianshu.com/p/6058e5c6332a)
