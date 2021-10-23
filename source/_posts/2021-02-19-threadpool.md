@@ -517,3 +517,7 @@ public static class CallerRunsPolicy implements RejectedExecutionHandler {
     }
 }        
 ```
+
+## 参考
+
+1. [Java线程池实现原理及其在美团业务中的实践](https://mp.weixin.qq.com/s/baYuX8aCwQ9PP6k7TDl2Ww)
