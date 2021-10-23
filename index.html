@@ -184,6 +184,59 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/07/10/deep-drive-into-anr/" target="_self">
+          深入 ANR：产生的根源、处理流程和日志文件
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/07/10/deep-drive-into-anr/" target="_self">
+          
+          
+            
+          
+          overview在 阅读源码系列：ANR 是怎么产生的 聊过不及时消费 input event 会产生 ANR：
+
+InputReaderThread 不断地从 /dev/input 读取 input event 并放入 InputDispatcher.mInboundQueue 等待分发
+InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送队列里
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-07-10 04:00" pubdate>
+              2021-07-10
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/Framework/">Framework</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/anr/">anr</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/07/05/mp4-structure/" target="_self">
           MP4 文件结构浅析
         </a>
@@ -299,59 +352,6 @@ Log
               <a href="/tags/log/">log</a>
             
               <a href="/tags/logcat/">logcat</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/06/27/deep-drive-into-anr/" target="_self">
-          深入 ANR：产生的根源、处理流程和日志文件
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/06/27/deep-drive-into-anr/" target="_self">
-          
-          
-            
-          
-          overview在 阅读源码系列：ANR 是怎么产生的 聊过不及时消费 input event 会产生 ANR：
-
-InputReaderThread 不断地从 /dev/input 读取 input event 并放入 InputDispatcher.mInboundQueue 等待分发
-InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送队列里
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-06-27 04:00" pubdate>
-              2021-06-27
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/categories/Framework/">Framework</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/anr/">anr</a>
             
           </div>
         

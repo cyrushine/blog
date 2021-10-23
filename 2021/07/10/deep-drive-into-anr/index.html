@@ -179,8 +179,8 @@
   
     <span class="post-meta">
       <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-06-27 04:00" pubdate>
-        2021年6月27日
+      <time datetime="2021-07-10 04:00" pubdate>
+        2021年7月10日
       </time>
     </span>
   
@@ -275,7 +275,7 @@
 <p>The fourth field consists of two numbers separated by a slash (/).  The first of these is the number of currently  runnable  kernel  scheduling entities (processes, threads).  The value after the slash is the number of kernel scheduling entities that currently exist on the system.  </p>
 <p>The fifth field is the PID of the process that was most recently created on the system.</p>
 </blockquote>
-<p>在绿联 6812（4 x <a href="mailto:&#65;&#x35;&#51;&#64;&#x31;&#46;&#x35;&#71;">&#65;&#x35;&#51;&#64;&#x31;&#46;&#x35;&#71;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
+<p>在绿联 6812（4 x <a href="mailto:&#65;&#x35;&#51;&#x40;&#49;&#46;&#x35;&#71;">&#65;&#x35;&#51;&#x40;&#49;&#46;&#x35;&#71;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
 <ul>
 <li>在过去的 1, 5, 15 分钟内 CPU 的平均负载是 13.31, 13.74, 13.81</li>
 <li>当前有 1167 个进程，其中有 2 个正在运行</li>
@@ -304,10 +304,10 @@
 <li>full 这一行，代表所有的非 idle 任务同时被阻塞的时间占比，这期间 cpu 被完全浪费，会带来严重的性能问题</li>
 </ul>
 <p>我们以 IO 的 some 和 full 来举例说明，假设在 60 秒的时间段内，系统有两个 task，在 60 秒的周期内的运行情况如下图所示：</p>
-<p><img src="../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.jpg" srcset="/image/loading.gif" lazyload alt="proc_pressure_io_1"></p>
+<p><img src="../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.png" srcset="/image/loading.gif" lazyload alt="proc_pressure_io_1"></p>
 <p>红色阴影部分表示任务由于等待 IO 资源而进入阻塞状态。Task A 和 Task B 同时阻塞的部分为 full，占比 16.66%；至少有一个任务阻塞（仅 Task B 阻塞的部分也计算入内）的部分为 some，占比 50%</p>
 <p>some 和 full 都是在某一时间段内阻塞时间占比的总和，阻塞时间不一定连续，如下图所示：</p>
-<p><img src="../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.jpg" srcset="/image/loading.gif" lazyload alt="proc_pressure_io_2"></p>
+<p><img src="../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.png" srcset="/image/loading.gif" lazyload alt="proc_pressure_io_2"></p>
 <p>IO 和 memory 都有 some 和 full 两个维度，那是因为的确有可能系统中的所有任务都阻塞在 IO 或者 memory 资源，同时 CPU 进入 idle 状态</p>
 <p>但是 CPU 资源不可能出现这个情况：不可能全部的 runnable 的任务都等待 CPU 资源，至少有一个 runnable 任务会被调度器选中占有 CPU 资源，因此 CPU 资源没有 full 维度的 PSI 信息呈现</p>
 <p>通过这些阻塞占比数据，我们可以看到短期以及中长期一段时间内各种资源的压力情况，可以较精确的确定时延抖动原因，并制定对应的负载管理策略</p>
@@ -756,18 +756,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/06/28/logan/">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">日志库 Logan</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/06/22/xcrash/">
-                        <span class="hidden-mobile">崩溃日志收集库 xCrash 浅析</span>
+                      <a href="/2021/07/05/mp4-structure/">
+                        <span class="hidden-mobile">MP4 文件结构浅析</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
