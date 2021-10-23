@@ -1,6 +1,6 @@
 ---
 title: 深入 ANR：产生的根源、处理流程和日志文件
-date: 2021-06-27 12:00:00 +0800
+date: 2021-07-10 12:00:00 +0800
 categories: [Framework]
 tags: [anr]
 ---
@@ -387,13 +387,13 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503
 
 我们以 IO 的 some 和 full 来举例说明，假设在 60 秒的时间段内，系统有两个 task，在 60 秒的周期内的运行情况如下图所示：
 
-![proc_pressure_io_1](../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.jpg)
+![proc_pressure_io_1](../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.png)
 
 红色阴影部分表示任务由于等待 IO 资源而进入阻塞状态。Task A 和 Task B 同时阻塞的部分为 full，占比 16.66%；至少有一个任务阻塞（仅 Task B 阻塞的部分也计算入内）的部分为 some，占比 50%
 
 some 和 full 都是在某一时间段内阻塞时间占比的总和，阻塞时间不一定连续，如下图所示：
 
-![proc_pressure_io_2](../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.jpg)
+![proc_pressure_io_2](../../../../image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.png)
 
 IO 和 memory 都有 some 和 full 两个维度，那是因为的确有可能系统中的所有任务都阻塞在 IO 或者 memory 资源，同时 CPU 进入 idle 状态
 
