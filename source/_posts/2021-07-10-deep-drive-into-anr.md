@@ -1900,7 +1900,7 @@ jintArray android_os_Process_getPidsForCommands(JNIEnv* env, jobject clazz,
 }
 ```
 
-## dumpJavaTracesTombstoned
+## dump java traces
 
 dump process 时分为 `java process` 和 `native process`，此章节将讨论 dump java process
 
@@ -2279,10 +2279,6 @@ int socket(int domain, int type, int protocol)
 
 Unix Domain Socket 与网络 socket 编程最明显的不同在于地址格式不同，用结构体 `sockaddr_un` 表示，网络编程的地址是 `ip:port` 而 Unix Domain Socket 的地址是一个 socket 类型的文件在文件系统中的路径，这个文件在 `bind` 调用时创建，如果该文件已存在则 `bind` 错误返回，`close` 后需要自己主动删除
 
-### debuggerd
-
-上面说到 `debuggerd_trigger_dump` 并不包含 java process dump 逻辑而是通过 Unix Domain Socket 从 `/dev/socket/tombstoned_intercept` 拿到 dump 内容，这个函数实现在 `/system/core/debuggerd/client/debuggerd_client.cpp`，从路径上看似乎有个 `debuggerd` 进程的存在
-
 ### SignalCatcher & SIGQUIT
 
 如下图所示，`zygote` fork 出 system server 和 app process 后会创建一个叫 `Signal Catcher` 的 native thread 并将其绑定到 VM，它的 routine 是 ` SignalCatcher::Run`，main loop 是等待并响应信号 `SIGQUIT` 和 `SIGUSR1`
@@ -2411,7 +2407,7 @@ public:
 };
 ```
 
-#### process dump & thread dump
+### proces/thread dump
 
 APP 在收到信号 `SIGQUIT(3)` 后，`Signal Catcher` 线程会将有关 VM 的信息 dump 出来，如下面的代码所示，是不是跟 ANR Traces 日志里的内容很相似？这样我们就可以看着代码一点点地分析出日志里各段的含义
 
@@ -2825,7 +2821,7 @@ static void DumpCmdLine(std::ostream& os) {
 }
 ```
 
-#### 将 dump 内容输出到 debuggerd.tombstoned
+### debuggerd.tombstoned
 
 上一章节构造了 dump 字符串，下面我们来看看它被输出到哪里：
 
@@ -2954,7 +2950,7 @@ bool tombstoned_connect(pid_t pid, unique_fd* tombstoned_socket, unique_fd* text
 }
 ```
 
-## dumpNativeBacktraceToFileTimeout
+## dump native traces
 
 最终还是来到 `debuggerd_trigger_dump`，只不过此时 `dump_type` 是 `kDebuggerdNativeBacktrace`
 
