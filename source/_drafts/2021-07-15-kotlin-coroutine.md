@@ -164,6 +164,8 @@ public inline fun <T> AtomicRef<T>.loop(action: (T) -> Unit): Nothing {
 
 至此知道了 `block` 是被放到了任务队列里，那是谁在执行任务队列里的任务呢？这就不得不说起 `runBlocking`
 
+`runBlocking` 通过 `BlockingCoroutine.joinBlocking` 不断地执行任务队列里的任务（`EventLoopBase.processNextEvent`）直到队列为空，因此它是 `blocking method`；第一个加入到任务队列的是 runBlocking block，所以 `Hello World!` 示例里会先输出 `Hello` 然后执行第二个 coroutine 输出 `World!`
+
 ```kotlin
 public fun <T> runBlocking(context: CoroutineContext = EmptyCoroutineContext, block: suspend CoroutineScope.() -> T): T {
     contract {
@@ -217,4 +219,65 @@ private class BlockingCoroutine {
 }
 ```
 
+## 总结
 
+`launch` 把 block 放入任务队列等待执行，类似于 `ExecutorService.submit` 和 `Handler.post`，同时说明 `协程` 本质上就是对任务的调度，底层是线程/线程池 + 任务队列
+
+# Dispatcher
+
+首先要了解下 `CoroutineContext` 这个概念，跟 Android 上 `Context` 的意义是一样的，就是代表了一系列 coroutine API 的 `上下文`，本质上是一个 `Map`，通过 `CoroutineContext[key] = value` 存取
+
+其中有一个非常重要的组件：`CoroutineContext[ContinuationInterceptor]`，负责分发/调度 coroutine
+
+```kotlin
+public interface CoroutineContext {
+    /**
+     * Returns the element with the given [key] from this context or `null`.
+     */
+    public operator fun <E : Element> get(key: Key<E>): E?
+}
+
+public interface ContinuationInterceptor : CoroutineContext.Element {
+    /**
+     * The key that defines *the* context interceptor.
+     */
+    companion object Key : CoroutineContext.Key<ContinuationInterceptor>
+}
+```
+
+
+
+```kotlin
+public fun CoroutineScope.launch(
+    context: CoroutineContext = EmptyCoroutineContext,
+    start: CoroutineStart = CoroutineStart.DEFAULT,
+    block: suspend CoroutineScope.() -> Unit
+): Job {
+    val newContext = newCoroutineContext(context)
+    val coroutine = if (start.isLazy)
+        LazyStandaloneCoroutine(newContext, block) else
+        StandaloneCoroutine(newContext, active = true)
+    coroutine.start(start, coroutine, block)
+    return coroutine
+}
+
+public actual fun CoroutineScope.newCoroutineContext(context: CoroutineContext): CoroutineContext {
+    val combined = coroutineContext + context
+    val debug = if (DEBUG) combined + CoroutineId(COROUTINE_ID.incrementAndGet()) else combined
+    return if (combined !== Dispatchers.Default && combined[ContinuationInterceptor] == null)
+        debug + Dispatchers.Default else debug
+}
+
+AbstractCoroutine.start                            // 创建 StandaloneCoroutine/LazyStandaloneCoroutine
+CoroutineStart.invoke(block, receiver, completion) // CoroutineStart.DEFAULT
+startCoroutineCancellable(receiver, completion, onCancellation)
+    createCoroutineUnintercepted       // 此方法定义在 kotlin-stdlib 包的 /kotlin/coroutines/intrinsics/IntrinsicsJvm.kt 文件里
+        BaseContinuationImpl.create(value = null, completion = coroutine) // 如上面反编译出来的代码所示，重新创建一个 block 的实例
+    ContinuationImpl.intercepted       // 包装为 DispatchedContinuation（dispatcher 是 BlockingEventLoop）
+        BlockingEventLoop.interceptContinuation
+    Continuation.resumeCancellableWith // 将 block 放入任务队列
+        DispatchedContinuation.resumeCancellableWith
+        BlockingEventLoop.dispatch
+            BlockingEventLoop.enqueue
+```
+context[ContinuationInterceptor]
