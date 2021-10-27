@@ -1,14 +1,6 @@
-# coroutine vs thread
+# launch
 
-`thread {...}` 创建一个新线程执行 block 并立刻返回，它是 non-blocking 的，`CoroutineScope.launch` 也一样不过它创建的是 `Continuation/Job`
-
-```kotlin
-CoroutineScope.launch
-AbstractCoroutine.start // StandaloneCoroutine
-CoroutineStart.invoke(block, receiver, completion) // CoroutineStart.DEFAULT
-startCoroutineCancellable(receiver, completion, onCancellation)
-
-```
+从 kotlin coroutines 的 [Hello World!](https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.kt) 看起
 
 ```kotlin
 // https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.kt
@@ -21,9 +13,9 @@ fun main() = runBlocking { // this: CoroutineScope
 }
 ```
 
-decompile by [bytecode-viewer](https://github.com/Konloch/bytecode-viewer)
+需要先了解的是 `launch` 的参数 `block: suspend CoroutineScope.() -> Unit` 被编译为继承自 `SuspendLamda` 和 `Function2<CoroutineScope, Continuation>`，如下面的代码所示（decompile by [bytecode-viewer](https://github.com/Konloch/bytecode-viewer)）
 
-lamda 参数 `block: suspend CoroutineScope.() -> Unit` 被编译为继承自 `SuspendLamda` 和 `Function2<CoroutineScope, Continuation>`
+`SuspendLambda` 的继承关系如下：`SuspendLambda -> ContinuationImpl -> BaseContinuationImpl -> Continuation`，所以 `block` 在库代码里一般称为 `continuation`
 
 ```java
 final class Example_basic_01Kt$main$1 extends SuspendLambda implements Function2 {
@@ -107,5 +99,122 @@ final class Example_basic_01Kt$main$1$1 extends SuspendLambda implements Functio
       return ((Example_basic_01Kt$main$1$1)this.create(p1, p2)).invokeSuspend(Unit.INSTANCE);
    }
 }
-
 ```
+
+然后一路跟踪下去看看 `launch` 做了什么
+
+```kotlin
+CoroutineScope.launch                              // return Job (实际上是 StandaloneCoroutine/LazyStandaloneCoroutine)
+AbstractCoroutine.start                            // 创建 StandaloneCoroutine/LazyStandaloneCoroutine
+CoroutineStart.invoke(block, receiver, completion) // CoroutineStart.DEFAULT
+startCoroutineCancellable(receiver, completion, onCancellation)
+    createCoroutineUnintercepted       // 此方法定义在 kotlin-stdlib 包的 /kotlin/coroutines/intrinsics/IntrinsicsJvm.kt 文件里
+        BaseContinuationImpl.create(value = null, completion = coroutine) // 如上面反编译出来的代码所示，重新创建一个 block 的实例
+    ContinuationImpl.intercepted       // 包装为 DispatchedContinuation（dispatcher 是 BlockingEventLoop）
+        BlockingEventLoop.interceptContinuation
+    Continuation.resumeCancellableWith // 将 block 放入任务队列
+        DispatchedContinuation.resumeCancellableWith
+        BlockingEventLoop.dispatch
+            BlockingEventLoop.enqueue
+
+class EventLoopImplBase {
+    public fun enqueue(task: Runnable) {
+        if (enqueueImpl(task)) {
+            unpark()
+        } else {
+            DefaultExecutor.enqueue(task)
+        }
+    }
+
+    // _queue 是 Atomic<Any?>，当任务队列里只有一个任务时 _queue 持有此任务的引用，当任务队列里有多个任务时，_queue 是 Queue<Runnable>
+    private fun enqueueImpl(task: Runnable): Boolean {
+        _queue.loop { queue ->
+            if (isCompleted) return false // fail fast if already completed, may still add, but queues will close
+            when (queue) {
+                null -> if (_queue.compareAndSet(null, task)) return true
+                is Queue<*> -> {
+                    when ((queue as Queue<Runnable>).addLast(task)) {
+                        Queue.ADD_SUCCESS -> return true
+                        Queue.ADD_CLOSED -> return false
+                        Queue.ADD_FROZEN -> _queue.compareAndSet(queue, queue.next())
+                    }
+                }
+                else -> when {
+                    queue === CLOSED_EMPTY -> return false
+                    else -> {
+                        // update to full-blown queue to add one more
+                        val newQueue = Queue<Runnable>(Queue.INITIAL_CAPACITY, singleConsumer = true)
+                        newQueue.addLast(queue as Runnable)
+                        newQueue.addLast(task)
+                        if (_queue.compareAndSet(queue, newQueue)) return true
+                    }
+                }
+            }
+        }
+    }
+}    
+
+// Infinite loop that reads this atomic variable and performs the specified action on its value.
+public inline fun <T> AtomicRef<T>.loop(action: (T) -> Unit): Nothing {
+    while (true) {
+        action(value)
+    }
+}
+```
+
+至此知道了 `block` 是被放到了任务队列里，那是谁在执行任务队列里的任务呢？这就不得不说起 `runBlocking`
+
+```kotlin
+public fun <T> runBlocking(context: CoroutineContext = EmptyCoroutineContext, block: suspend CoroutineScope.() -> T): T {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+    val currentThread = Thread.currentThread()
+    val contextInterceptor = context[ContinuationInterceptor]
+    val eventLoop: EventLoop?
+    val newContext: CoroutineContext
+    if (contextInterceptor == null) {
+        // create or use private event loop if no dispatcher is specified
+        eventLoop = ThreadLocalEventLoop.eventLoop
+        newContext = GlobalScope.newCoroutineContext(context + eventLoop)
+    } else {
+        // See if context's interceptor is an event loop that we shall use (to support TestContext)
+        // or take an existing thread-local event loop if present to avoid blocking it (but don't create one)
+        eventLoop = (contextInterceptor as? EventLoop)?.takeIf { it.shouldBeProcessedFromContext() }
+            ?: ThreadLocalEventLoop.currentOrNull()
+        newContext = GlobalScope.newCoroutineContext(context)
+    }
+    val coroutine = BlockingCoroutine<T>(newContext, currentThread, eventLoop)
+    coroutine.start(CoroutineStart.DEFAULT, coroutine, block)
+    return coroutine.joinBlocking()
+}
+
+private class BlockingCoroutine {
+    fun joinBlocking(): T {
+        registerTimeLoopThread()
+        try {
+            eventLoop?.incrementUseCount()
+            try {
+                while (true) {
+                    @Suppress("DEPRECATION")
+                    if (Thread.interrupted()) throw InterruptedException().also { cancelCoroutine(it) }
+                    val parkNanos = eventLoop?.processNextEvent() ?: Long.MAX_VALUE
+                    // note: process next even may loose unpark flag, so check if completed before parking
+                    if (isCompleted) break
+                    parkNanos(this, parkNanos)
+                }
+            } finally { // paranoia
+                eventLoop?.decrementUseCount()
+            }
+        } finally { // paranoia
+            unregisterTimeLoopThread()
+        }
+        // now return result
+        val state = this.state.unboxState()
+        (state as? CompletedExceptionally)?.let { throw it.cause }
+        return state as T
+    }
+}
+```
+
+
