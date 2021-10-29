@@ -184,6 +184,54 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/05/21/mmap/" target="_self">
+          【转】mmap 和零拷贝
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/05/21/mmap/" target="_self">
+          
+          
+            
+          
+          平时在面试中你肯定会经常碰见的问题就是：RocketMQ 为什么快？Kafka 为什么快？什么是 mmap？
+这一类的问题都逃不过的一个点就是 零拷贝，虽然还有一些其他的原因，但是今天我们的话题主要就是零拷贝。
+传统 IO在开始谈零拷贝之前，首先要对传统的 IO 方式有一个概念。基于传统的 IO 方式，底层实际上通过调用 read() 和 write() 来实现。
+通过 read() 把数据从硬盘
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-21 04:00" pubdate>
+              2021-05-21
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mmap/">mmap</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98%EF%BC%8C%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80/">内存，虚拟地址</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/05/11/nonblocking-io/" target="_self">
           【转】网络 IO 演变发展过程和模型介绍
         </a>
@@ -715,59 +763,6 @@ GC 时机
               <a href="/tags/JUC/">JUC</a>
             
               <a href="/tags/%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8/">线程安全</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/30/https/" target="_self">
-          什么是 https ？
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/30/https/" target="_self">
-          
-          
-            
-          
-          https = http + tls
-tcp 三次握手建立连接后，再进行 tls 握手/协商得到一个秘钥，然后双方使用这个秘钥加密（对称加密）明文的 http 为密文后再发送，同样双方收到密文后也用这个秘钥解密得到明文
-对称加密 使用同一秘钥加密和解密，性能高，http 明文就是通过对称加密后才进行传输的，对称加密算法有：DES、3DES、AES 等；但秘钥交换是个问题，所以需要非对称加密的帮助
-
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-30 04:00" pubdate>
-              2021-03-30
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-category"></i>
-            
-              <a href="/categories/%E7%BD%91%E7%BB%9C/">网络</a>
-            
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/https/">https</a>
             
           </div>
         
