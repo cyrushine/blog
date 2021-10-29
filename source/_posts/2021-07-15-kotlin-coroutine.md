@@ -1,3 +1,10 @@
+---
+title: 深入分析 Kotlin Coroutines 是如何实现的
+date: 2021-07-15 12:00:00 +0800
+categories: [Kotlin]
+tags: [kotlin, coroutine, 协程]
+---
+
 # launch - 启动协程
 
 从 kotlin coroutines 的 [Hello World!](https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.kt) 看起
@@ -223,7 +230,7 @@ private class BlockingCoroutine {
 
 `launch` 把 block 放入任务队列等待执行，类似于 `ExecutorService.submit` 和 `Handler.post`，同时说明 `协程` 本质上就是对任务的调度，底层是线程/线程池 + 任务队列
 
-# Dispatcher / Interceptor - 任务调度
+# Dispatcher - 任务调度
 
 首先要了解下 `CoroutineContext` 这个概念，跟 Android 上 `Context` 的意义是一样的，就是代表了一系列 coroutine API 的 `上下文`，本质上是一个 `Map`，通过 `CoroutineContext[key] = value` 存取
 
@@ -1065,14 +1072,242 @@ lbl49:
 
 ### 总结
 
-coroutine 本质是任务队列，而 `delay` 本质是重新调度（重新入队），通过引入成员属性 `label` 以及将代码段用 `switch` 分段，即可实现在重新调度时跳转到指定 `代码行` 而不重复执行前面的代码
+coroutine 本质是任务队列，而 `delay` 本质是重新调度（重新入队至 `EventLoopImplBase._delay`），通过引入成员属性 `label`，以及将各个代码段用 `switch` 分段，即可实现在重新调度时跳转到指定 `代码行` 而不重复执行前面的代码
+
+## HandlerContext
+
+`Dispatchers.Main` 在 Android 上是底层为单线程/主线程的 `HandlerContext(Looper.getMainLooper().asHandler(async = true))`，它实现了 `Delay`，通过 `Handler.postDelayed` 实现重新调度
+
+```kotlin
+internal class HandlerContext private constructor(
+    private val handler: Handler,
+    private val name: String?,
+    private val invokeImmediately: Boolean
+) : HandlerDispatcher(), Delay {
+
+    override fun scheduleResumeAfterDelay(timeMillis: Long, continuation: CancellableContinuation<Unit>) {
+        val block = Runnable {
+            with(continuation) { resumeUndispatched(Unit) }
+        }
+        if (handler.postDelayed(block, timeMillis.coerceAtMost(MAX_DELAY))) {
+            continuation.invokeOnCancellation { handler.removeCallbacks(block) }
+        } else {
+            cancelOnRejection(continuation.context, block)
+        }
+    }    
+}
+```
 
 ## DefaultDelay
 
-`Dispatchers.Default` 和 `Dispatcher.IO` 并没有实现 `Delay` 接口，所以由 `DefaultDelay` 来实现 `non-blocking` 阻塞
+`Dispatchers.Default` 和 `Dispatcher.IO` 并没有实现 `Delay` 接口，如上面反编译后的 `getDelay` 所示，是由 `DefaultDelay` 来实现的
+
+`EventLoopImplBase` 在上一章节介绍过，它实现了 `Delay` 接口，`EventLoopImplBase.scheduleResumeAfterDelay` 会将任务放入 `EventLoopImplBase._delay` 任务队列，也就是说这两个调度器上的 delay task 实际上是被放入别人的（`DefaultDelay`） delay queue 里
 
 ```kotlin
 internal actual val DefaultDelay: Delay = DefaultExecutor
 
 internal actual object DefaultExecutor : EventLoopImplBase(), Runnable
+```
+
+那这些 delay task 不就被改变了 Dispatcher，跑到 `DefaultDelay/DefaultExecutor` 里执行了吗？我们从 `Delay.scheduleResumeAfterDelay` 看下去：
+
+* task 被加入到 `_delay` 任务队列，然后唤醒对应的线程 `DefaultExecutor.run`
+* `DefaultExecutor` 将 `_delay` 里第一个到执行时间点的 task 转移到任务队列 `_queue` 并执行
+
+而任务队列里的 `Runnable` 实际上是 `DispatchedContinuation`
+
+```kotlin
+internal abstract class EventLoopImplBase: EventLoopImplPlatform(), Delay {
+    public override fun scheduleResumeAfterDelay(timeMillis: Long, continuation: CancellableContinuation<Unit>) {
+        val timeNanos = delayToNanos(timeMillis)
+        if (timeNanos < MAX_DELAY_NS) {
+            val now = nanoTime()
+            DelayedResumeTask(now + timeNanos, continuation).also { task ->
+                continuation.disposeOnCancellation(task)
+                schedule(now, task)
+            }
+        }
+    }
+
+    public fun schedule(now: Long, delayedTask: DelayedTask) {
+        when (scheduleImpl(now, delayedTask)) {
+            SCHEDULE_OK -> if (shouldUnpark(delayedTask)) unpark()
+            SCHEDULE_COMPLETED -> reschedule(now, delayedTask)
+            SCHEDULE_DISPOSED -> {} // do nothing -- task was already disposed
+            else -> error("unexpected result")
+        }
+    }
+
+    private fun shouldUnpark(task: DelayedTask): Boolean = _delayed.value?.peek() === task    
+}
+
+internal actual abstract class EventLoopImplPlatform: EventLoop() {
+    protected abstract val thread: Thread
+
+    protected actual fun unpark() {
+        val thread = thread // atomic read
+        if (Thread.currentThread() !== thread)
+            unpark(thread)
+    }
+}
+
+internal actual object DefaultExecutor: EventLoopImplBase(), Delay {
+    override fun run() {
+        ThreadLocalEventLoop.setEventLoop(this)
+        registerTimeLoopThread()
+        try {
+            var shutdownNanos = Long.MAX_VALUE
+            if (!notifyStartup()) return
+            while (true) {
+                Thread.interrupted() // just reset interruption flag
+                var parkNanos = processNextEvent()
+                if (parkNanos == Long.MAX_VALUE) {
+                    // nothing to do, initialize shutdown timeout
+                    val now = nanoTime()
+                    if (shutdownNanos == Long.MAX_VALUE) shutdownNanos = now + KEEP_ALIVE_NANOS
+                    val tillShutdown = shutdownNanos - now
+                    if (tillShutdown <= 0) return // shut thread down
+                    parkNanos = parkNanos.coerceAtMost(tillShutdown)
+                } else
+                    shutdownNanos = Long.MAX_VALUE
+                if (parkNanos > 0) {
+                    // check if shutdown was requested and bail out in this case
+                    if (isShutdownRequested) return
+                    parkNanos(this, parkNanos)
+                }
+            }
+        } finally {
+            _thread = null // this thread is dead
+            acknowledgeShutdownIfNeeded()
+            unregisterTimeLoopThread()
+            // recheck if queues are empty after _thread reference was set to null (!!!)
+            if (!isEmpty) thread // recreate thread if it is needed
+        }
+    }    
+}
+
+internal abstract class EventLoopImplBase: EventLoopImplPlatform(), Delay {
+    override fun processNextEvent(): Long {
+        // unconfined events take priority
+        if (processUnconfinedEvent()) return 0
+        // queue all delayed tasks that are due to be executed
+        val delayed = _delayed.value
+        if (delayed != null && !delayed.isEmpty) {
+            val now = nanoTime()
+            while (true) {
+                // make sure that moving from delayed to queue removes from delayed only after it is added to queue
+                // to make sure that 'isEmpty' and `nextTime` that check both of them
+                // do not transiently report that both delayed and queue are empty during move
+                delayed.removeFirstIf {
+                    if (it.timeToExecute(now)) {
+                        enqueueImpl(it)
+                    } else
+                        false
+                } ?: break // quit loop when nothing more to remove or enqueueImpl returns false on "isComplete"
+            }
+        }
+        // then process one event from queue
+        val task = dequeue()
+        if (task != null) {
+            task.run()
+            return 0
+        }
+        return nextTime
+    }     
+}
+```
+
+上面曾经说过 block 会经过重重包装，其中一层就是 `DispatchedContinuation`，它也是一个 `Runnable`（被 `DefaultExecutor` 执行）：`SchedulerTask.run` ->  `DispatchedContinuation.resumeWith` -> `CoroutineDispatcher.dispatch`
+
+也就说 `DispatchedContinuation` = `CoroutineDispatcher` + `Continuation`，它被执行时是将任务交由对应的 Dispatcher 执行而不是由当前的线程执行（正如它的名字描述的那样），同时也实现了一个很重要的概念：`线程切换`
+
+```kotlin
+internal class DispatchedContinuation<in T>(
+    @JvmField val dispatcher: CoroutineDispatcher,
+    @JvmField val continuation: Continuation<T>
+) : DispatchedTask<T>(MODE_UNINITIALIZED), CoroutineStackFrame, Continuation<T> by continuation
+
+internal abstract class DispatchedTask<in T>(
+    @JvmField public var resumeMode: Int
+) : SchedulerTask() {
+    public final override fun run() {
+        assert { resumeMode != MODE_UNINITIALIZED } // should have been set before dispatching
+        val taskContext = this.taskContext
+        var fatalException: Throwable? = null
+        try {
+            val delegate = delegate as DispatchedContinuation<T>
+            val continuation = delegate.continuation
+            withContinuationContext(continuation, delegate.countOrElement) {
+                val context = continuation.context
+                val state = takeState() // NOTE: Must take state in any case, even if cancelled
+                val exception = getExceptionalResult(state)
+                /*
+                 * Check whether continuation was originally resumed with an exception.
+                 * If so, it dominates cancellation, otherwise the original exception
+                 * will be silently lost.
+                 */
+                val job = if (exception == null && resumeMode.isCancellableMode) context[Job] else null
+                if (job != null && !job.isActive) {
+                    val cause = job.getCancellationException()
+                    cancelCompletedResult(state, cause)
+                    continuation.resumeWithStackTrace(cause)
+                } else {
+                    if (exception != null) {
+                        continuation.resumeWithException(exception)
+                    } else {
+                        continuation.resume(getSuccessfulResult(state))
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            // This instead of runCatching to have nicer stacktrace and debug experience
+            fatalException = e
+        } finally {
+            val result = runCatching { taskContext.afterTask() }
+            handleFatalException(fatalException, result.exceptionOrNull())
+        }
+    }    
+}
+
+public inline fun <T> Continuation<T>.resume(value: T): Unit =
+    resumeWith(Result.success(value))
+
+class DispatchedContinuation {
+    override fun resumeWith(result: Result<T>) {
+        val context = continuation.context
+        val state = result.toState()
+        if (dispatcher.isDispatchNeeded(context)) {
+            _state = state
+            resumeMode = MODE_ATOMIC
+            dispatcher.dispatch(context, this)
+        } else {
+            executeUnconfined(state, MODE_ATOMIC) {
+                withCoroutineContext(this.context, countOrElement) {
+                    continuation.resumeWith(result)
+                }
+            }
+        }
+    }    
+}    
+```
+
+# 其他
+
+coroutine API 很多都需要上下文 context，但作为参数传来穿去总是麻烦，于是有了 `CoroutineScope` 用以承载上下文：
+
+* `runBlocking` - 用当前线程作为调度器，会阻塞代码的执行直到所有协程都执行完毕
+* `CoroutineScope(EmptyCoroutineContext|Dispatchers.Main|Dispatchers.IO|...)` - 构造 scope，使用指定的上下文/调度器，如果上下文里不包含调度器则使用默认的 `Dispatchers.Default`
+
+```kotlin
+public interface CoroutineScope {
+    /**
+     * The context of this scope.
+     * Context is encapsulated by the scope and used for implementation of coroutine builders that are extensions on the scope.
+     * Accessing this property in general code is not recommended for any purposes except accessing the [Job] instance for advanced usages.
+     *
+     * By convention, should contain an instance of a [job][Job] to enforce structured concurrency.
+     */
+    public val coroutineContext: CoroutineContext
+}
 ```
