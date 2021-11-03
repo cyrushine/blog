@@ -1,7 +1,6 @@
 ---
 title: 一文搞懂事件分发，手势冲突和滑动冲突
 date: 2020-10-04 12:00:00 +0800
-categories: [Android, Framework]
 tags: [TouchEvent, Motion, NestedScrolling]
 ---
 

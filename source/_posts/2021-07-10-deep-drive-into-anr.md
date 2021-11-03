@@ -1,7 +1,6 @@
 ---
 title: 深入 ANR：产生的根源、处理流程和日志文件
 date: 2021-07-10 12:00:00 +0800
-categories: [Framework]
 tags: [anr]
 ---
 

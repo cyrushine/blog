@@ -1,7 +1,6 @@
 ---
 title: Matrix - ResourcesCanary 浅析
 date: 2021-04-23 12:00:00 +0800
-categories: [android, APM]
 tags: [内存优化，OOM, APM]
 ---
 

@@ -1,7 +1,6 @@
 ---
 title: 图解 Glide
 date: 2020-10-31 12:00:00 +0800
-categories: [Android, Library]
 tags: [Glide]
 ---
 

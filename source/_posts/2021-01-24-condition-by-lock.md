@@ -1,7 +1,6 @@
 ---
 title: Lock（三）利用 Lock 实现 Condition
 date: 2021-01-24 12:00:00 +0800
-categories: [Android, Art]
 tags: [Lock, Condition]
 ---
 

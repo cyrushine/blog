@@ -1,7 +1,6 @@
 ---
 title: Application 是如何被创建和初始化的？
 date: 2021-03-02 12:00:00 +0800
-categories: [Android, Framework]
 tags: [Application, AMS, Zygote]
 ---
 

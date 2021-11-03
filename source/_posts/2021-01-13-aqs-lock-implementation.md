@@ -1,7 +1,6 @@
 ---
 title: Lock（二）AQS 源码分析以及 Lock 的实现
 date: 2021-01-13 12:00:00 +0800
-categories: [Android, Art]
 tags: [Lock, AQS]
 ---
 

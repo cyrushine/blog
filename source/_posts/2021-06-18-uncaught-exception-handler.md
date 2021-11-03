@@ -1,7 +1,6 @@
 ---
 title: Uncaught Exception Handling
 date: 2021-06-18 12:00:00 +0800
-categories: [Framework]
 tags: [uncaught exception, exception, 崩溃, 崩溃日志, crash]
 ---
 

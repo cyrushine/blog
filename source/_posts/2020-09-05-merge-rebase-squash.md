@@ -1,7 +1,6 @@
 ---
 title: git 的 merge, rebase 和 squash
 date: 2020-09-05 12:00:00 +0800
-categories: [Git]
 tags: [git]
 ---
 

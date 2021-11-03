@@ -1,7 +1,6 @@
 ---
 title: 解析 Tinker 是如何实现热修复的
 date: 2021-03-12 12:00:00 +0800
-categories: [Android, Library]
 tags: [hotfix]
 ---
 

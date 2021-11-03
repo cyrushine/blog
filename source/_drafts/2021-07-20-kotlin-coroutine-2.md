@@ -1,7 +1,6 @@
 ---
 title: 深入分析 Kotlin Coroutines 是如何实现的（二）
 date: 2021-07-20 12:00:00 +0800
-categories: [Kotlin]
 tags: [kotlin, coroutine, 协程]
 ---
 

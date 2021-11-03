@@ -1,7 +1,6 @@
 ---
 title: Matrix - TraceCanary 浅析
 date: 2021-04-26 12:00:00 +0800
-categories: [android, APM]
 tags: [APM, 性能优化]
 ---
 

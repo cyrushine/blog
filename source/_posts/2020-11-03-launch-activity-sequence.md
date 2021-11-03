@@ -1,7 +1,6 @@
 ---
 title: Activity 启动流程时序图
 date: 2020-11-03 12:00:00 +0800
-categories: [Android, Framework]
 tags: [Activity]
 ---
 

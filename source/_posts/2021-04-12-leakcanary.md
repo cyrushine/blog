@@ -1,7 +1,6 @@
 ---
 title: LeakCanary 浅析
 date: 2021-04-12 12:00:00 +0800
-categories: [android, 内存]
 tags: [LeakCanary, 内存优化，OOM]
 ---
 

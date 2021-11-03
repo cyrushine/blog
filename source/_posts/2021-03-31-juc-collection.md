@@ -1,7 +1,6 @@
 ---
 title: JUC 下一些线程安全的容器
 date: 2021-03-31 12:00:00 +0800
-categories: [JDK, JUC]
 tags: [JUC, 线程安全]
 ---
 

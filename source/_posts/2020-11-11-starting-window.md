@@ -1,7 +1,6 @@
 ---
 title: starting window 和 windowDisablePreview
 date: 2020-11-11 12:00:00 +0800
-categories: [Android, Framework]
 tags: [windowDisablePreview, starting window]
 ---
 

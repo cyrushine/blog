@@ -1,7 +1,6 @@
 ---
 title: 面试官家常之Handler、MessageQueue 和 Looper
 date: 2020-09-27 12:00:00 +0800
-categories: [Android, Framework]
 tags: [Handler, Looper]
 ---
 

@@ -1,7 +1,6 @@
 ---
 title: Android 图形栈（二）ui thread 
 date: 2020-12-13 12:00:00 +0800
-categories: [Android, Framework]
 tags: [vsync, ui thread]
 ---
 

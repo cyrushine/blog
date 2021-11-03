@@ -1,7 +1,6 @@
 ---
 title: 线程池 ThreadPool 的实现
 date: 2021-02-19 12:00:00 +0800
-categories: [Android, Art]
 tags: [threadpool]
 ---
 

@@ -1,7 +1,6 @@
 ---
 title: Lock（五）Condition 的语言实现：Object.wait 和 Object.notify
 date: 2021-02-11 12:00:00 +0800
-categories: [Android, Art]
 tags: [wait, notify]
 ---
 

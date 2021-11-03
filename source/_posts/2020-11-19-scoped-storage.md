@@ -1,7 +1,6 @@
 ---
 title: Scoped Storage（沙盒）
 date: 2020-11-19 12:00:00 +0800
-categories: [Android, Feature]
 tags: [Scoped Storage]
 ---
 

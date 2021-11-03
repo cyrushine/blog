@@ -1,7 +1,6 @@
 ---
 title: Android 图形栈（三）render thread
 date: 2020-12-27 12:00:00 +0800
-categories: [Android, Framework]
 tags: [vsync, render thread]
 ---
 

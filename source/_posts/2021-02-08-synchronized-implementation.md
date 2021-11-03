@@ -1,7 +1,6 @@
 ---
 title: Lock（四）synchronized 的语言实现
 date: 2021-02-08 12:00:00 +0800
-categories: [Android, Art]
 tags: [synchronized]
 ---
 

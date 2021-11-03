@@ -1,7 +1,6 @@
 ---
 title: 老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）
 date: 2021-05-28 12:00:00 +0800
-categories: [Android, VM]
 tags: [Dalvik, ART, JVM, VM]
 ---
 

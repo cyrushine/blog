@@ -1,7 +1,6 @@
 ---
 title: 【转】网络 IO 演变发展过程和模型介绍
 date: 2021-05-11 12:00:00 +0800
-categories: []
 tags: [epoll, select, poll]
 ---
 
