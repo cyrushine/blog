@@ -304,7 +304,7 @@ html {
 }
 html,
 body {
-  font-family: PingFangSC,"Microsoft Yahei";
+  font-family: LXGW WenKai, PingFangSC, Microsoft Yahei;
 }
 html,
 body,
@@ -937,7 +937,7 @@ img[lazyload] {
 .markdown-body {
   font-size: 1rem;
   margin-bottom: 2rem;
-  font-family: PingFangSC,"Microsoft Yahei";
+  font-family: LXGW WenKai, PingFangSC, Microsoft Yahei;
   color: var(--post-text-color);
 }
 .markdown-body h1,
