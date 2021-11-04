@@ -4,9 +4,9 @@ date: 2021-07-20 12:00:00 +0800
 tags: [kotlin, coroutine, 协程]
 ---
 
-# async / await - 结构化并发编程 (Structured Concurrency)
+# async / await
 
-`async` 和 `await` 是一对较为现代的 API 用以实现结构化并发编程，如下面代码所示，虽然 `runBlocking` 底层是单个线程，但是 `delay` 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO
+`async` 和 `await` 是一对较为现代的 API 用以实现 **结构化并发编程 (Structured Concurrency)**，如下面代码所示，虽然 `runBlocking` 底层是单个线程，但是 `delay` 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO
 
 `job1`、`job2` 和 `job3` 三个任务并发执行，不需要编写任何线程同步代码如 `Condition.await` 、`Condition.signal`、`CountDownLatch` 等即可获得任务结果并计算它们之和，从输出 `measureTimeMillis: 961` 可以确认三个任务是并发执行的，`result: 2453` 正确地输出了任务结果之和说明求和这一行代码是在三个任务都执行完毕并返回计算结果后执行的
 
