@@ -382,3 +382,151 @@ public enum class CoroutineStart {
 
 # withContext - 线程切换
 
+如下代码所示，使用 `withContext` 将执行线程从 main 切换至 worker，但不影响代码的执行顺序
+
+```kotlin
+fun main() = runBlocking {
+    withContext(Dispatchers.IO) {
+        delay(1000)
+        println("jumping to Dispatchers.IO, ${Thread.currentThread().name}")
+    }
+    println("finish main func, ${Thread.currentThread().name}")
+}
+
+// output:
+// jumping to Dispatchers.IO, DefaultDispatcher-worker-1
+// finish main func, main
+```
+
+在了解了协程的本质是任务调度/线程调度，以及 `delay`、`async`、`await` 等操作的实现逻辑后，我们很容易能猜测出 `withContext` 的逻辑：
+
+1. 添加成员属性 `label` 用以将代码分段：`withContext` 前的代码为片段 0，之后的代码为片段 1
+2. `withContext` 将 `runBlocking` 添加为 block 的 completion handler，并将 block 放入 `Dispatchers.IO` 的任务队列，返回 `COROUTINE_SUSPENDED` 中断 `runBlocking` 的执行
+3. `withContext` 得到调度，执行完毕后恢复 `runBlocking` 的执行
+
+show me the code 看看是不是如上面说的那样，用 Bytecode Viewer 反编译得到如下代码，正如上面说的 main 代码块从线程切换为边界，切分为两个代码块，`case 0` 将被 `withContext` 的返回值中断，重新调度时进入 `case 1`
+
+```java
+static final class Example_basic_01Kt.main.1
+extends SuspendLambda
+implements Function2<CoroutineScope, Continuation<? super Unit>, Object> {
+    int label;
+
+    Example_basic_01Kt.main.1(Continuation<? super Example_basic_01Kt.main.1> $completion) {
+    }
+
+    /*
+     * Unable to fully structure code
+     */
+    @Nullable
+    public final Object invokeSuspend(@NotNull Object var1_1) {
+        var4_2 = IntrinsicsKt.getCOROUTINE_SUSPENDED();
+        switch (this.label) {
+            case 0: {
+                ResultKt.throwOnFailure((Object)var1_1);
+                this.label = 1;
+                v0 = BuildersKt.withContext((CoroutineContext)((CoroutineContext)Dispatchers.getIO()), (Function2)((Function2)new /* Unavailable Anonymous Inner Class!! */), (Continuation)((Continuation)this));
+                if (v0 == var4_2) {
+                    return var4_2;
+                }
+                ** GOTO lbl13
+            }
+            case 1: {
+                ResultKt.throwOnFailure((Object)$result);
+                v0 = $result;
+lbl13:
+                // 2 sources
+
+                var2_3 = Intrinsics.stringPlus((String)"finish main func, ", (Object)Thread.currentThread().getName());
+                var3_4 = false;
+                System.out.println((Object)var2_3);
+                return Unit.INSTANCE;
+            }
+        }
+        throw new IllegalStateException("call to 'resume' before 'invoke' with coroutine");
+    }
+
+    @NotNull
+    public final Continuation<Unit> create(@Nullable Object value, @NotNull Continuation<?> $completion) {
+        return (Continuation)new /* invalid duplicate definition of identical inner class */;
+    }
+
+    @Nullable
+    public final Object invoke(@NotNull CoroutineScope p1, @Nullable Continuation<? super Unit> p2) {
+        return (this.create(p1, p2)).invokeSuspend(Unit.INSTANCE);
+    }
+}
+```
+
+`withContext` 跟 `launch` 和 `async` 差不多，将当前环境的和参数提供的 `CoroutineContext` 合并并用它作为 block context，当前 `Continuation`(也就是 runBlocking block) 作为 block 的 completion handler
+
+`withContext` 将 block 包装为 `DispatchedCoroutine`，它没有执行过（`Continuation.resumeWith`）所以 `DispatchedCoroutine.trySuspend` 返回 true，导致 `withContext` 返回 `COROUTINE_SUSPENDED` 从而中断 main block 的执行，跟上面的猜想一致
+
+```kotlin
+public suspend fun <T> withContext(
+    context: CoroutineContext,
+    block: suspend CoroutineScope.() -> T
+): T {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+    return suspendCoroutineUninterceptedOrReturn sc@ { uCont ->
+        // compute new context
+        val oldContext = uCont.context
+        val newContext = oldContext + context
+        // always check for cancellation of new context
+        newContext.ensureActive()
+        // FAST PATH #1 -- new context is the same as the old one
+        if (newContext === oldContext) {
+            val coroutine = ScopeCoroutine(newContext, uCont)
+            return@sc coroutine.startUndispatchedOrReturn(coroutine, block)
+        }
+        // FAST PATH #2 -- the new dispatcher is the same as the old one (something else changed)
+        // `equals` is used by design (see equals implementation is wrapper context like ExecutorCoroutineDispatcher)
+        if (newContext[ContinuationInterceptor] == oldContext[ContinuationInterceptor]) {
+            val coroutine = UndispatchedCoroutine(newContext, uCont)
+            // There are changes in the context, so this thread needs to be updated
+            withCoroutineContext(newContext, null) {
+                return@sc coroutine.startUndispatchedOrReturn(coroutine, block)
+            }
+        }
+        // SLOW PATH -- use new dispatcher
+        val coroutine = DispatchedCoroutine(newContext, uCont)
+        block.startCoroutineCancellable(coroutine, coroutine)
+        coroutine.getResult()
+    }
+}
+
+internal class DispatchedCoroutine<in T>(
+    context: CoroutineContext,
+    uCont: Continuation<T>
+) : ScopeCoroutine<T>(context, uCont) {
+    fun getResult(): Any? {
+        if (trySuspend()) return COROUTINE_SUSPENDED
+        // otherwise, onCompletionInternal was already invoked & invoked tryResume, and the result is in the state
+        val state = this.state.unboxState()
+        if (state is CompletedExceptionally) throw state.cause
+        @Suppress("UNCHECKED_CAST")
+        return state as T
+    }
+}
+
+internal class DispatchedCoroutine<in T>(
+    context: CoroutineContext,
+    uCont: Continuation<T>
+) : ScopeCoroutine<T>(context, uCont) {
+    // this is copy-and-paste of a decision state machine inside AbstractionContinuation
+    // todo: we may some-how abstract it via inline class
+    private val _decision = atomic(UNDECIDED)
+
+    private fun trySuspend(): Boolean {
+        _decision.loop { decision ->
+            when (decision) {
+                UNDECIDED -> if (this._decision.compareAndSet(UNDECIDED, SUSPENDED)) return true
+                RESUMED -> return false
+                else -> error("Already suspended")
+            }
+        }
+    }
+}
+```
