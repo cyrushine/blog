@@ -33,3 +33,7 @@ code {
     padding-left: 3%;
     padding-right: 3%;
 }
+
+.markdown-body {
+    line-height: 1.6;
+}
