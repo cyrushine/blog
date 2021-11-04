@@ -1,7 +1,7 @@
 @font-face {
     font-family: "LXGW WenKai";
     font-style: normal;
-    font-weight: 300;
+    font-weight: 400;
     font-display: swap;
     src: local("LXGW WenKai"),
          url("/fonts/wenkai/LXGWWenKai-Regular.woff2") format("woff2");
@@ -10,7 +10,7 @@
 @font-face {
     font-family: "LXGW WenKai";
     font-style: normal;
-    font-weight: 400;
+    font-weight: 700;
     font-display: swap;
     src: local("LXGW WenKai Bold"),
          url("/fonts/wenkai/LXGWWenKai-Bold.woff2") format("woff2");
@@ -19,7 +19,7 @@
 @font-face {
     font-family: "LXGW WenKai";
     font-style: normal;
-    font-weight: 700;
+    font-weight: 300;
     font-display: swap;
     src: local("LXGW WenKai Light"),
          url("/fonts/wenkai/LXGWWenKai-Light.woff2") format("woff2");

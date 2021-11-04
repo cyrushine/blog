@@ -186,7 +186,7 @@ color:
 # 主题字体配置
 # Font
 font:
-  font_size: 15px
+  font_size: 16px
   font_family: LXGW WenKai,PingFangSC,Microsoft Yahei
   code_font_size: 85%
 
