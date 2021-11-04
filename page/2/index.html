@@ -172,6 +172,56 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
+          老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
+          
+          
+            
+          
+          DalvikDalvik HeapDalvik 的堆空间分为 Zygote Heap 和 Active Heap
+Android 系统的第一个 Dalvik 虚拟机是由 Zygote 进程创建的。应用程序进程是由 Zygote 进程 fork 出来的。也就是说应用程序进程使用了一种 写时拷贝技术（COW）来复制了 Zygote 进程的地址空间。这意味着一开始的时候，应用程序进程和 Zygote 进
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-28 04:00" pubdate>
+              2021-05-28
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ART/">ART</a>
+            
+              <a href="/tags/Dalvik/">Dalvik</a>
+            
+              <a href="/tags/JVM/">JVM</a>
+            
+              <a href="/tags/VM/">VM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/05/21/mmap/" target="_self">
           【转】mmap 和零拷贝
         </a>
@@ -635,52 +685,6 @@ GC 时机
               <a href="/tags/HashMap/">HashMap</a>
             
               <a href="/tags/%E7%BA%A2%E9%BB%91%E6%A0%91/">红黑树</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/31/juc-collection/" target="_self">
-          JUC 下一些线程安全的容器
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/31/juc-collection/" target="_self">
-          
-          
-            
-          
-          写时复制（Copy On Write）CopyOnWriteArrayList使用 写时复制 实现的线程安全版 ArrayList，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组
-12345678910public boolean add(E e) &#123;    synchronized (lock) &#123;   
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-31 04:00" pubdate>
-              2021-03-31
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/JUC/">JUC</a>
-            
-              <a href="/tags/%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8/">线程安全</a>
             
           </div>
         

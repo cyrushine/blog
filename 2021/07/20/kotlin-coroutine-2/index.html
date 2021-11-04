@@ -1,0 +1,480 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+  <title>深入分析 Kotlin Coroutines 是如何实现的（二） - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="深入分析 Kotlin Coroutines 是如何实现的（二）">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-07-20 04:00" pubdate>
+        2021年7月20日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      3.2k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      52
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">深入分析 Kotlin Coroutines 是如何实现的（二）</h1>
+            
+            <div class="markdown-body">
+              <h1 id="async-await-结构化并发编程-Structured-Concurrency"><a href="#async-await-结构化并发编程-Structured-Concurrency" class="headerlink" title="async / await - 结构化并发编程 (Structured Concurrency)"></a>async / await - 结构化并发编程 (Structured Concurrency)</h1><p><code>async</code> 和 <code>await</code> 是一对较为现代的 API 用以实现结构化并发编程，如下面代码所示，虽然 <code>runBlocking</code> 底层是单个线程，但是 <code>delay</code> 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO</p>
+<p><code>job1</code>、<code>job2</code> 和 <code>job3</code> 三个任务并发执行，不需要编写任何线程同步代码如 <code>Condition.await</code> 、<code>Condition.signal</code>、<code>CountDownLatch</code> 等即可获得任务结果并计算它们之和，从输出 <code>measureTimeMillis: 961</code> 可以确认三个任务是并发执行的，<code>result: 2453</code> 正确地输出了任务结果之和说明求和这一行代码是在三个任务都执行完毕并返回计算结果后执行的</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;<br>    <span class="hljs-keyword">val</span> values = (<span class="hljs-number">500L</span>..<span class="hljs-number">1000L</span>)<br><br>    <span class="hljs-keyword">val</span> cost = measureTimeMillis &#123;<br>        <span class="hljs-keyword">val</span> job1 = async &#123;<br>            <span class="hljs-keyword">val</span> value = values.random()<br>            println(<span class="hljs-string">&quot;job1 delay: <span class="hljs-variable">$value</span>&quot;</span>)<br>            delay(value)<br>            value<br>        &#125;<br><br>        <span class="hljs-keyword">val</span> job2 = async &#123;<br>            <span class="hljs-keyword">val</span> value = values.random()<br>            println(<span class="hljs-string">&quot;job2 delay: <span class="hljs-variable">$value</span>&quot;</span>)<br>            delay(value)<br>            value<br>        &#125;<br><br>        <span class="hljs-keyword">val</span> job3 = async &#123;<br>            <span class="hljs-keyword">val</span> value = values.random()<br>            println(<span class="hljs-string">&quot;job3 delay: <span class="hljs-variable">$value</span>&quot;</span>)<br>            delay(value)<br>            value<br>        &#125;<br><br>        println(<span class="hljs-string">&quot;result: <span class="hljs-subst">$&#123;job3.await() + job2.await() + job1.await()&#125;</span>&quot;</span>)<br>    &#125;<br>    println(<span class="hljs-string">&quot;measureTimeMillis: <span class="hljs-variable">$cost</span>&quot;</span>)<br>&#125;<br><br><span class="hljs-comment">// output:</span><br><span class="hljs-comment">// job1 delay: 758</span><br><span class="hljs-comment">// job2 delay: 822</span><br><span class="hljs-comment">// job3 delay: 873</span><br><span class="hljs-comment">// result: 2453</span><br><span class="hljs-comment">// measureTimeMillis: 961</span><br></code></pre></div></td></tr></table></figure>
+
+<p>从 <code>async</code> 的实现可以看到它跟 <a href="../../../../2021/07/15/kotlin-coroutine/">上篇文章</a> 介绍到的 <code>launch</code> 基本相同，那也就说 <code>async</code> 同样是创建协程/任务 -&gt; 放入任务队列 -&gt; 等待调度</p>
+<p>跟踪 <code>await</code> 调用栈：<code>DeferredCoroutine.await</code> -&gt; <code>JobSupport.awaitInternal</code> -&gt; <code>JobSupport.awaitSuspend</code> -&gt; <code>CancellableContinuationImpl.getResult</code>，在这里分为两条路：</p>
+<ol>
+<li>如果协程已经执行完毕得到计算结果（比如在多线程环境下），计算结果存储在 <code>CancellableContinuationImpl.state</code>，<code>trySuspend</code> 返回 false，<code>getResult</code> 返回计算所得的结果</li>
+<li>协程尚未完成，比如上面的例子，被 <code>delay</code> 中断执行而放入任务队列重新调度，<code>trySuspend</code> 返回 true，<code>getResult</code> 返回 <code>COROUTINE_SUSPENDED</code></li>
+</ol>
+<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> CoroutineScope.<span class="hljs-title">async</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    context: <span class="hljs-type">CoroutineContext</span> = EmptyCoroutineContext,</span></span><br><span class="hljs-params"><span class="hljs-function">    start: <span class="hljs-type">CoroutineStart</span> = CoroutineStart.DEFAULT,</span></span><br><span class="hljs-params"><span class="hljs-function">    block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span></span></span><br><span class="hljs-params"><span class="hljs-function">)</span></span>: Deferred&lt;T&gt; &#123;<br>    <span class="hljs-keyword">val</span> newContext = newCoroutineContext(context)<br>    <span class="hljs-keyword">val</span> coroutine = <span class="hljs-keyword">if</span> (start.isLazy)<br>        LazyDeferredCoroutine(newContext, block) <span class="hljs-keyword">else</span><br>        DeferredCoroutine&lt;T&gt;(newContext, active = <span class="hljs-literal">true</span>)<br>    coroutine.start(start, coroutine, block)<br>    <span class="hljs-keyword">return</span> coroutine<br>&#125;<br><br><span class="hljs-keyword">private</span> <span class="hljs-keyword">open</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DeferredCoroutine</span>&lt;<span class="hljs-type">T</span>&gt;</span>(<br>    parentContext: CoroutineContext,<br>    active: <span class="hljs-built_in">Boolean</span><br>) : AbstractCoroutine&lt;T&gt;(parentContext, <span class="hljs-literal">true</span>, active = active), Deferred&lt;T&gt;, SelectClause1&lt;T&gt; &#123;<br>    <span class="hljs-keyword">override</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">await</span><span class="hljs-params">()</span></span>: T = awaitInternal() <span class="hljs-keyword">as</span> T<br>&#125;<br><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">open</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JobSupport</span> <span class="hljs-keyword">constructor</span></span>(active: <span class="hljs-built_in">Boolean</span>) : Job, ChildJob, ParentJob, SelectClause0 &#123;<br>    <span class="hljs-keyword">internal</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">awaitInternal</span><span class="hljs-params">()</span></span>: Any? &#123;<br>        <span class="hljs-comment">// fast-path -- check state (avoid extra object creation)</span><br>        <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123; <span class="hljs-comment">// lock-free loop on state</span><br>            <span class="hljs-keyword">val</span> state = <span class="hljs-keyword">this</span>.state<br>            <span class="hljs-keyword">if</span> (state !<span class="hljs-keyword">is</span> Incomplete) &#123;<br>                <span class="hljs-comment">// already complete -- just return result</span><br>                <span class="hljs-keyword">if</span> (state <span class="hljs-keyword">is</span> CompletedExceptionally) &#123; <span class="hljs-comment">// Slow path to recover stacktrace</span><br>                    recoverAndThrow(state.cause)<br>                &#125;<br>                <span class="hljs-keyword">return</span> state.unboxState()<br><br>            &#125;<br>            <span class="hljs-keyword">if</span> (startInternal(state) &gt;= <span class="hljs-number">0</span>) <span class="hljs-keyword">break</span> <span class="hljs-comment">// break unless needs to retry</span><br>        &#125;<br>        <span class="hljs-keyword">return</span> awaitSuspend() <span class="hljs-comment">// slow-path</span><br>    &#125;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">awaitSuspend</span><span class="hljs-params">()</span></span>: Any? = suspendCoroutineUninterceptedOrReturn &#123; uCont -&gt;<br>        <span class="hljs-comment">/*</span><br><span class="hljs-comment">         * Custom code here, so that parent coroutine that is using await</span><br><span class="hljs-comment">         * on its child deferred (async) coroutine would throw the exception that this child had</span><br><span class="hljs-comment">         * thrown and not a JobCancellationException.</span><br><span class="hljs-comment">         */</span><br>        <span class="hljs-keyword">val</span> cont = AwaitContinuation(uCont.intercepted(), <span class="hljs-keyword">this</span>)<br>        <span class="hljs-comment">// we are mimicking suspendCancellableCoroutine here and call initCancellability, too.</span><br>        cont.initCancellability()<br>        cont.disposeOnCancellation(invokeOnCompletion(ResumeAwaitOnCompletion(cont).asHandler))<br>        cont.getResult()<br>    &#125;    <br>&#125;    <br><br><span class="hljs-keyword">internal</span> <span class="hljs-keyword">open</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CancellableContinuationImpl</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(<br>    <span class="hljs-keyword">final</span> <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> delegate: Continuation&lt;T&gt;,<br>    resumeMode: <span class="hljs-built_in">Int</span><br>) : DispatchedTask&lt;T&gt;(resumeMode), CancellableContinuation&lt;T&gt;, CoroutineStackFrame &#123;<br>    <span class="hljs-keyword">internal</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getResult</span><span class="hljs-params">()</span></span>: Any? &#123;<br>        <span class="hljs-keyword">val</span> isReusable = isReusable()<br>        <span class="hljs-comment">// trySuspend may fail either if &#x27;block&#x27; has resumed/cancelled a continuation</span><br>        <span class="hljs-comment">// or we got async cancellation from parent.</span><br>        <span class="hljs-keyword">if</span> (trySuspend()) &#123;<br>            <span class="hljs-comment">/*</span><br><span class="hljs-comment">             * Invariant: parentHandle is `null` *only* for reusable continuations.</span><br><span class="hljs-comment">             * We were neither resumed nor cancelled, time to suspend.</span><br><span class="hljs-comment">             * But first we have to install parent cancellation handle (if we didn&#x27;t yet),</span><br><span class="hljs-comment">             * so CC could be properly resumed on parent cancellation.</span><br><span class="hljs-comment">             *</span><br><span class="hljs-comment">             * This read has benign data-race with write of &#x27;NonDisposableHandle&#x27;</span><br><span class="hljs-comment">             * in &#x27;detachChildIfNotReusable&#x27;.</span><br><span class="hljs-comment">             */</span><br>            <span class="hljs-keyword">if</span> (parentHandle == <span class="hljs-literal">null</span>) &#123;<br>                installParentHandle()<br>            &#125;<br>            <span class="hljs-comment">/*</span><br><span class="hljs-comment">             * Release the continuation after installing the handle (if needed).</span><br><span class="hljs-comment">             * If we were successful, then do nothing, it&#x27;s ok to reuse the instance now.</span><br><span class="hljs-comment">             * Otherwise, dispose the handle by ourselves.</span><br><span class="hljs-comment">            */</span><br>            <span class="hljs-keyword">if</span> (isReusable) &#123;<br>                releaseClaimedReusableContinuation()<br>            &#125;<br>            <span class="hljs-keyword">return</span> COROUTINE_SUSPENDED<br>        &#125;<br>        <span class="hljs-comment">// otherwise, onCompletionInternal was already invoked &amp; invoked tryResume, and the result is in the state</span><br>        <span class="hljs-keyword">if</span> (isReusable) &#123;<br>            <span class="hljs-comment">// release claimed reusable continuation for the future reuse</span><br>            releaseClaimedReusableContinuation()<br>        &#125;<br>        <span class="hljs-keyword">val</span> state = <span class="hljs-keyword">this</span>.state<br>        <span class="hljs-keyword">if</span> (state <span class="hljs-keyword">is</span> CompletedExceptionally) <span class="hljs-keyword">throw</span> recoverStackTrace(state.cause, <span class="hljs-keyword">this</span>)<br>        <span class="hljs-comment">// if the parent job was already cancelled, then throw the corresponding cancellation exception</span><br>        <span class="hljs-comment">// otherwise, there is a race if suspendCancellableCoroutine &#123; cont -&gt; ... &#125; does cont.resume(...)</span><br>        <span class="hljs-comment">// before the block returns. This getResult would return a result as opposed to cancellation</span><br>        <span class="hljs-comment">// exception that should have happened if the continuation is dispatched for execution later.</span><br>        <span class="hljs-keyword">if</span> (resumeMode.isCancellableMode) &#123;<br>            <span class="hljs-keyword">val</span> job = context[Job]<br>            <span class="hljs-keyword">if</span> (job != <span class="hljs-literal">null</span> &amp;&amp; !job.isActive) &#123;<br>                <span class="hljs-keyword">val</span> cause = job.getCancellationException()<br>                cancelCompletedResult(state, cause)<br>                <span class="hljs-keyword">throw</span> recoverStackTrace(cause, <span class="hljs-keyword">this</span>)<br>            &#125;<br>        &#125;<br>        <span class="hljs-keyword">return</span> getSuccessfulResult(state)<br>    &#125;<br><br>    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">getSuccessfulResult</span><span class="hljs-params">(state: <span class="hljs-type">Any</span>?)</span></span>: T =<br>        <span class="hljs-keyword">when</span> (state) &#123;<br>            <span class="hljs-keyword">is</span> CompletedContinuation -&gt; state.result <span class="hljs-keyword">as</span> T<br>            <span class="hljs-keyword">else</span> -&gt; state <span class="hljs-keyword">as</span> T<br>        &#125;    <br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>await</code> 的返回值会直接影响代码的执行流程，为了使反编译后的代码清晰点，我将上面的例子删除掉多余的代码如下：</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;<br>    <span class="hljs-keyword">val</span> values = (<span class="hljs-number">500L</span>..<span class="hljs-number">1000L</span>)<br><br>    <span class="hljs-keyword">val</span> job1 = async &#123;<br>        <span class="hljs-keyword">val</span> value = values.random()<br>        println(<span class="hljs-string">&quot;job1 delay: <span class="hljs-variable">$value</span>&quot;</span>)<br>        delay(value)<br>        value<br>    &#125;<br><br>    <span class="hljs-keyword">val</span> job2 = async &#123;<br>        <span class="hljs-keyword">val</span> value = values.random()<br>        println(<span class="hljs-string">&quot;job2 delay: <span class="hljs-variable">$value</span>&quot;</span>)<br>        delay(value)<br>        value<br>    &#125;<br><br>    <span class="hljs-keyword">val</span> job3 = async &#123;<br>        <span class="hljs-keyword">val</span> value = values.random()<br>        println(<span class="hljs-string">&quot;job3 delay: <span class="hljs-variable">$value</span>&quot;</span>)<br>        delay(value)<br>        value<br>    &#125;<br>    println(<span class="hljs-string">&quot;result: <span class="hljs-subst">$&#123;job3.await() + job2.await() + job1.await()&#125;</span>&quot;</span>)<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>将其反编译（decompile by <a target="_blank" rel="noopener" href="https://github.com/Konloch/bytecode-viewer">bytecode-viewer</a> using CFR）可以看到：</p>
+<ul>
+<li>初始代码段 <code>case 0</code> 创建了三个异步协程然后执行其中一个 <code>await</code></li>
+<li><code>case 1</code> 和 <code>case 2</code> 分别对应其余的两个 <code>await</code>，<code>case 3</code> 对应求和操作</li>
+<li>从 <code>label</code> 的赋值操作看，四个 case 必须从 0 执行到 3，不能跳级</li>
+<li>如果 <code>await</code> 返回计算结果则继续执行代码，进入下一个 case</li>
+<li>如果 <code>await</code> 返回 <code>COROUTINE_SUSPENDED</code> 则中断代码执行直接返回（case 不变）</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span><br><span class="hljs-class"><span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span></span><br><span class="hljs-class"><span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span>&lt;<span class="hljs-title">CoroutineScope</span>, <span class="hljs-title">Continuation</span>&lt;? <span class="hljs-title">super</span> <span class="hljs-title">Unit</span>&gt;, <span class="hljs-title">Object</span>&gt; </span>&#123;<br>    Object L$<span class="hljs-number">1</span>;<br>    Object L$<span class="hljs-number">2</span>;<br>    <span class="hljs-keyword">long</span> J$<span class="hljs-number">0</span>;<br>    <span class="hljs-keyword">int</span> label;<br>    <span class="hljs-keyword">private</span> <span class="hljs-comment">/* synthetic */</span> Object L$<span class="hljs-number">0</span>;<br><br>    Example_basic_01Kt.main<span class="hljs-number">.1</span>(Continuation&lt;? <span class="hljs-keyword">super</span> Example_basic_01Kt.main<span class="hljs-number">.1</span>&gt; $completion) &#123;<br>    &#125;<br><br>    <span class="hljs-comment">/*</span><br><span class="hljs-comment">     * Unable to fully structure code</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invokeSuspend</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Object var1_1)</span> </span>&#123;<br>        var13_2 = IntrinsicsKt.getCOROUTINE_SUSPENDED();<br>        <span class="hljs-keyword">switch</span> (<span class="hljs-keyword">this</span>.label) &#123;<br>            <span class="hljs-keyword">case</span> <span class="hljs-number">0</span>: &#123;<br>                ResultKt.throwOnFailure((Object)var1_1);<br>                $<span class="hljs-keyword">this</span>$runBlocking = (CoroutineScope)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;<br>                values = <span class="hljs-keyword">new</span> LongRange(<span class="hljs-number">500L</span>, <span class="hljs-number">1000L</span>);<br>                job1 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-keyword">this</span>$runBlocking, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-keyword">int</span>)<span class="hljs-number">3</span>, <span class="hljs-keyword">null</span>);<br>                job2 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-keyword">this</span>$runBlocking, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-keyword">int</span>)<span class="hljs-number">3</span>, <span class="hljs-keyword">null</span>);<br>                job3 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-keyword">this</span>$runBlocking, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-keyword">int</span>)<span class="hljs-number">3</span>, <span class="hljs-keyword">null</span>);<br>                var9_8 = <span class="hljs-string">&quot;result: &quot;</span>;<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span> = job1;<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span> = job2;<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">2</span> = var9_8;<br>                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">1</span>;<br>                v0 = job3.await((Continuation)<span class="hljs-keyword">this</span>);<br>                <span class="hljs-keyword">if</span> (v0 == var13_2) &#123;<br>                    <span class="hljs-keyword">return</span> var13_2;<br>                &#125;<br>                ** GOTO lbl25<br>            &#125;<br>            <span class="hljs-keyword">case</span> <span class="hljs-number">1</span>: &#123;<br>                var9_8 = (String)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">2</span>;<br>                job2 = (Deferred)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span>;<br>                job1 = (Deferred)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;<br>                ResultKt.throwOnFailure((Object)$result);<br>                v0 = $result;<br>lbl25:<br>                <span class="hljs-comment">// 2 sources</span><br><br>                var10_9 = v0;<br>                var10_10 = ((Number)var10_9).longValue();<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span> = job1;<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span> = var9_8;<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">2</span> = <span class="hljs-keyword">null</span>;<br>                <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span> = var10_10;<br>                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">2</span>;<br>                v1 = job2.await((Continuation)<span class="hljs-keyword">this</span>);<br>                <span class="hljs-keyword">if</span> (v1 == var13_2) &#123;<br>                    <span class="hljs-keyword">return</span> var13_2;<br>                &#125;<br>                ** GOTO lbl42<br>            &#125;<br>            <span class="hljs-keyword">case</span> <span class="hljs-number">2</span>: &#123;<br>                var10_10 = <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span>;<br>                var9_8 = (String)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span>;<br>                job1 = (Deferred)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;<br>                ResultKt.throwOnFailure((Object)$result);<br>                v1 = $result;<br>lbl42:<br>                <span class="hljs-comment">// 2 sources</span><br><br>                var12_11 = v1;<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span> = var9_8;<br>                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span> = <span class="hljs-keyword">null</span>;<br>                <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span> = var10_10 += ((Number)var12_11).longValue();<br>                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">3</span>;<br>                v2 = job1.await((Continuation)<span class="hljs-keyword">this</span>);<br>                <span class="hljs-keyword">if</span> (v2 == var13_2) &#123;<br>                    <span class="hljs-keyword">return</span> var13_2;<br>                &#125;<br>                ** GOTO lbl56<br>            &#125;<br>            <span class="hljs-keyword">case</span> <span class="hljs-number">3</span>: &#123;<br>                var10_10 = <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span>;<br>                var9_8 = (String)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;<br>                ResultKt.throwOnFailure((Object)$result);<br>                v2 = $result;<br>lbl56:<br>                <span class="hljs-comment">// 2 sources</span><br><br>                var12_11 = v2;<br>                var7_12 = Intrinsics.stringPlus((String)var9_8, (Object)Boxing.boxLong((<span class="hljs-keyword">long</span>)(var10_10 + ((Number)var12_11).longValue())));<br>                var8_13 = <span class="hljs-keyword">false</span>;<br>                System.out.println((Object)var7_12);<br>                <span class="hljs-keyword">return</span> Unit.INSTANCE;<br>            &#125;<br>        &#125;<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalStateException(<span class="hljs-string">&quot;call to &#x27;resume&#x27; before &#x27;invoke&#x27; with coroutine&quot;</span>);<br>    &#125;<br><br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Continuation&lt;Unit&gt; <span class="hljs-title">create</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> Object value, <span class="hljs-meta">@NotNull</span> Continuation&lt;?&gt; $completion)</span> </span>&#123;<br>        Function2&lt;CoroutineScope, Continuation&lt;? <span class="hljs-keyword">super</span> Unit&gt;, Object&gt; function2 = <span class="hljs-keyword">new</span> <span class="hljs-comment">/* invalid duplicate definition of identical inner class */</span>;<br>        function2.L$<span class="hljs-number">0</span> = value;<br>        <span class="hljs-keyword">return</span> (Continuation)function2;<br>    &#125;<br><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invoke</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> CoroutineScope p1, <span class="hljs-meta">@Nullable</span> Continuation&lt;? <span class="hljs-keyword">super</span> Unit&gt; p2)</span> </span>&#123;<br>        <span class="hljs-keyword">return</span> (<span class="hljs-keyword">this</span>.create(p1, p2)).invokeSuspend(Unit.INSTANCE);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>结合上面的内容，将 <code>async</code> / <code>await</code> 这对 API 的执行流程解释下：</p>
+<ol>
+<li>三个 <code>async</code> 将会创建三个协程：<code>job1</code>、<code>job2</code> 和 <code>job3</code> 并放入任务队列进行调度，假设当前的 Dispatcher 是线程池那么三个协程将创建三个线程并发执行</li>
+<li>假设在求和前 <code>job1</code> 和 <code>job3</code> 执行完毕（计算结果作为 <code>CompletedContinuation</code> 存储在 <code>CancellableContinuationImpl.state</code>）</li>
+<li><code>case 0</code> 从 <code>job3.await</code> 取得计算结果并进入 <code>case 1</code>，<code>job2.await</code> 返回 <code>COROUTINE_SUSPENDED</code> 导致代码执行中断并返回，此时 <code>label = 2</code></li>
+<li>为啥不是 <code>case 1</code> 呢？不是得从 <code>job2.await</code> 获取计算结果吗？并不需要，下次 <code>Example_basic_01Kt.main.1</code> 被调度时 <code>job2</code> 的计算结果将会作为参数从 <code>invokeSuspend</code> 传入</li>
+<li>进入 <code>case 2</code>，<code>job3.await</code> 返回计算结果</li>
+<li>进入 <code>case 3</code>，执行求和并打印出来</li>
+</ol>
+<p>现在只剩下一个问题：<code>await</code> 返回 <code>COROUTINE_SUSPENDED</code> 导致流程中断后 <code>Example_basic_01Kt.main.1</code> 啥时候被再次调度？如下代码所示</p>
+<ul>
+<li><code>uCont</code> 实际上是 <code>CoroutineStart.DEFAULT.invoke(block, receiver, completion)</code> 参数里的 <code>completion</code>，也就是 <code>Example_basic_01Kt.main.1</code> 这个 <code>Continuation</code></li>
+<li><code>invokeOnCompletion</code> 给 <code>async</code> 创建的任务添加了一个回调，当任务执行完毕时调用（返回非 <code>COROUTINE_SUSPENDED</code> 值）</li>
+<li><code>ResumeAwaitOnCompletion</code> 顾名思义就是恢复任务，重新调度被 <code>await</code> 中断的 <code>Continuation</code></li>
+<li>在这里就是 <code>Example_basic_01Kt.main.1</code> 由于 <code>job2</code> 没有完成而被中断，当 <code>job2</code> 完成后重新将 <code>Example_basic_01Kt.main.1</code> 放入任务队列进行调度，并且将 <code>job2</code> 的计算结果作为参数</li>
+</ul>
+<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// DeferredCoroutine.await</span><br><span class="hljs-comment">// JobSupport.awaitInternal</span><br><span class="hljs-keyword">private</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">awaitSuspend</span><span class="hljs-params">()</span></span>: Any? = suspendCoroutineUninterceptedOrReturn &#123; uCont -&gt;<br>    <span class="hljs-comment">/*</span><br><span class="hljs-comment">     * Custom code here, so that parent coroutine that is using await</span><br><span class="hljs-comment">     * on its child deferred (async) coroutine would throw the exception that this child had</span><br><span class="hljs-comment">     * thrown and not a JobCancellationException.</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">val</span> cont = AwaitContinuation(uCont.intercepted(), <span class="hljs-keyword">this</span>)<br>    <span class="hljs-comment">// we are mimicking suspendCancellableCoroutine here and call initCancellability, too.</span><br>    cont.initCancellability()<br>    cont.disposeOnCancellation(invokeOnCompletion(ResumeAwaitOnCompletion(cont).asHandler))<br>    cont.getResult()<br>&#125;<br><br><span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ResumeAwaitOnCompletion</span>&lt;<span class="hljs-type">T</span>&gt;</span>(<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> continuation: CancellableContinuationImpl&lt;T&gt;<br>) : JobNode() &#123;<br>    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">invoke</span><span class="hljs-params">(cause: <span class="hljs-type">Throwable</span>?)</span></span> &#123;<br>        <span class="hljs-keyword">val</span> state = job.state<br>        assert &#123; state !<span class="hljs-keyword">is</span> Incomplete &#125;<br>        <span class="hljs-keyword">if</span> (state <span class="hljs-keyword">is</span> CompletedExceptionally) &#123;<br>            <span class="hljs-comment">// Resume with with the corresponding exception to preserve it</span><br>            continuation.resumeWithException(state.cause)<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-comment">// Resuming with value in a cancellable way (AwaitContinuation is configured for this mode).</span><br>            <span class="hljs-meta">@Suppress(<span class="hljs-meta-string">&quot;UNCHECKED_CAST&quot;</span>)</span><br>            continuation.resume(state.unboxState() <span class="hljs-keyword">as</span> T)<br>        &#125;<br>    &#125;<br>&#125;<br><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">enum</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CoroutineStart</span> </span>&#123;<br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;R, T&gt;</span> <span class="hljs-title">invoke</span><span class="hljs-params">(block: <span class="hljs-type">suspend</span> <span class="hljs-type">R</span>.() -&gt; <span class="hljs-type">T</span>, receiver: <span class="hljs-type">R</span>, completion: <span class="hljs-type">Continuation</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span>: <span class="hljs-built_in">Unit</span> =<br>        <span class="hljs-keyword">when</span> (<span class="hljs-keyword">this</span>) &#123;<br>            DEFAULT -&gt; block.startCoroutineCancellable(receiver, completion)<br>            ATOMIC -&gt; block.startCoroutine(receiver, completion)<br>            UNDISPATCHED -&gt; block.startCoroutineUndispatched(receiver, completion)<br>            LAZY -&gt; <span class="hljs-built_in">Unit</span> <span class="hljs-comment">// will start lazily</span><br>        &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h1 id="withContext-线程切换"><a href="#withContext-线程切换" class="headerlink" title="withContext - 线程切换"></a>withContext - 线程切换</h1><p>如下代码所示，使用 <code>withContext</code> 将执行线程从 main 切换至 worker，但不影响代码的执行顺序</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;<br>    withContext(Dispatchers.IO) &#123;<br>        delay(<span class="hljs-number">1000</span>)<br>        println(<span class="hljs-string">&quot;jumping to Dispatchers.IO, <span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)<br>    &#125;<br>    println(<span class="hljs-string">&quot;finish main func, <span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)<br>&#125;<br><br><span class="hljs-comment">// output:</span><br><span class="hljs-comment">// jumping to Dispatchers.IO, DefaultDispatcher-worker-1</span><br><span class="hljs-comment">// finish main func, main</span><br></code></pre></div></td></tr></table></figure>
+
+<p>在了解了协程的本质是任务调度/线程调度，以及 <code>delay</code>、<code>async</code>、<code>await</code> 等操作的实现逻辑后，我们很容易能猜测出 <code>withContext</code> 的逻辑：</p>
+<ol>
+<li>添加成员属性 <code>label</code> 用以将代码分段：<code>withContext</code> 前的代码为片段 0，之后的代码为片段 1</li>
+<li><code>withContext</code> 将 <code>runBlocking</code> 添加为 block 的 completion handler，并将 block 放入 <code>Dispatchers.IO</code> 的任务队列，返回 <code>COROUTINE_SUSPENDED</code> 中断 <code>runBlocking</code> 的执行</li>
+<li><code>withContext</code> 得到调度，执行完毕后恢复 <code>runBlocking</code> 的执行</li>
+</ol>
+<p>show me the code 看看是不是如上面说的那样，用 Bytecode Viewer 反编译得到如下代码，正如上面说的 main 代码块从线程切换为边界，切分为两个代码块，<code>case 0</code> 将被 <code>withContext</code> 的返回值中断，重新调度时进入 <code>case 1</code></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span><br><span class="hljs-class"><span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span></span><br><span class="hljs-class"><span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span>&lt;<span class="hljs-title">CoroutineScope</span>, <span class="hljs-title">Continuation</span>&lt;? <span class="hljs-title">super</span> <span class="hljs-title">Unit</span>&gt;, <span class="hljs-title">Object</span>&gt; </span>&#123;<br>    <span class="hljs-keyword">int</span> label;<br><br>    Example_basic_01Kt.main<span class="hljs-number">.1</span>(Continuation&lt;? <span class="hljs-keyword">super</span> Example_basic_01Kt.main<span class="hljs-number">.1</span>&gt; $completion) &#123;<br>    &#125;<br><br>    <span class="hljs-comment">/*</span><br><span class="hljs-comment">     * Unable to fully structure code</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invokeSuspend</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Object var1_1)</span> </span>&#123;<br>        var4_2 = IntrinsicsKt.getCOROUTINE_SUSPENDED();<br>        <span class="hljs-keyword">switch</span> (<span class="hljs-keyword">this</span>.label) &#123;<br>            <span class="hljs-keyword">case</span> <span class="hljs-number">0</span>: &#123;<br>                ResultKt.throwOnFailure((Object)var1_1);<br>                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">1</span>;<br>                v0 = BuildersKt.withContext((CoroutineContext)((CoroutineContext)Dispatchers.getIO()), (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (Continuation)((Continuation)<span class="hljs-keyword">this</span>));<br>                <span class="hljs-keyword">if</span> (v0 == var4_2) &#123;<br>                    <span class="hljs-keyword">return</span> var4_2;<br>                &#125;<br>                ** GOTO lbl13<br>            &#125;<br>            <span class="hljs-keyword">case</span> <span class="hljs-number">1</span>: &#123;<br>                ResultKt.throwOnFailure((Object)$result);<br>                v0 = $result;<br>lbl13:<br>                <span class="hljs-comment">// 2 sources</span><br><br>                var2_3 = Intrinsics.stringPlus((String)<span class="hljs-string">&quot;finish main func, &quot;</span>, (Object)Thread.currentThread().getName());<br>                var3_4 = <span class="hljs-keyword">false</span>;<br>                System.out.println((Object)var2_3);<br>                <span class="hljs-keyword">return</span> Unit.INSTANCE;<br>            &#125;<br>        &#125;<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalStateException(<span class="hljs-string">&quot;call to &#x27;resume&#x27; before &#x27;invoke&#x27; with coroutine&quot;</span>);<br>    &#125;<br><br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Continuation&lt;Unit&gt; <span class="hljs-title">create</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> Object value, <span class="hljs-meta">@NotNull</span> Continuation&lt;?&gt; $completion)</span> </span>&#123;<br>        <span class="hljs-keyword">return</span> (Continuation)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* invalid duplicate definition of identical inner class */</span>;<br>    &#125;<br><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invoke</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> CoroutineScope p1, <span class="hljs-meta">@Nullable</span> Continuation&lt;? <span class="hljs-keyword">super</span> Unit&gt; p2)</span> </span>&#123;<br>        <span class="hljs-keyword">return</span> (<span class="hljs-keyword">this</span>.create(p1, p2)).invokeSuspend(Unit.INSTANCE);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p><code>withContext</code> 跟 <code>launch</code> 和 <code>async</code> 差不多，将当前环境的和参数提供的 <code>CoroutineContext</code> 合并并用它作为 block context，当前 <code>Continuation</code>(也就是 runBlocking block) 作为 block 的 completion handler</p>
+<p><code>withContext</code> 将 block 包装为 <code>DispatchedCoroutine</code>，它没有执行过（<code>Continuation.resumeWith</code>）所以 <code>DispatchedCoroutine.trySuspend</code> 返回 true，导致 <code>withContext</code> 返回 <code>COROUTINE_SUSPENDED</code> 从而中断 main block 的执行，跟上面的猜想一致</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">withContext</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    context: <span class="hljs-type">CoroutineContext</span>,</span></span><br><span class="hljs-params"><span class="hljs-function">    block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span></span></span><br><span class="hljs-params"><span class="hljs-function">)</span></span>: T &#123;<br>    contract &#123;<br>        callsInPlace(block, InvocationKind.EXACTLY_ONCE)<br>    &#125;<br>    <span class="hljs-keyword">return</span> suspendCoroutineUninterceptedOrReturn <span class="hljs-symbol">sc@</span> &#123; uCont -&gt;<br>        <span class="hljs-comment">// compute new context</span><br>        <span class="hljs-keyword">val</span> oldContext = uCont.context<br>        <span class="hljs-keyword">val</span> newContext = oldContext + context<br>        <span class="hljs-comment">// always check for cancellation of new context</span><br>        newContext.ensureActive()<br>        <span class="hljs-comment">// FAST PATH #1 -- new context is the same as the old one</span><br>        <span class="hljs-keyword">if</span> (newContext === oldContext) &#123;<br>            <span class="hljs-keyword">val</span> coroutine = ScopeCoroutine(newContext, uCont)<br>            <span class="hljs-keyword">return</span><span class="hljs-symbol">@sc</span> coroutine.startUndispatchedOrReturn(coroutine, block)<br>        &#125;<br>        <span class="hljs-comment">// FAST PATH #2 -- the new dispatcher is the same as the old one (something else changed)</span><br>        <span class="hljs-comment">// `equals` is used by design (see equals implementation is wrapper context like ExecutorCoroutineDispatcher)</span><br>        <span class="hljs-keyword">if</span> (newContext[ContinuationInterceptor] == oldContext[ContinuationInterceptor]) &#123;<br>            <span class="hljs-keyword">val</span> coroutine = UndispatchedCoroutine(newContext, uCont)<br>            <span class="hljs-comment">// There are changes in the context, so this thread needs to be updated</span><br>            withCoroutineContext(newContext, <span class="hljs-literal">null</span>) &#123;<br>                <span class="hljs-keyword">return</span><span class="hljs-symbol">@sc</span> coroutine.startUndispatchedOrReturn(coroutine, block)<br>            &#125;<br>        &#125;<br>        <span class="hljs-comment">// SLOW PATH -- use new dispatcher</span><br>        <span class="hljs-keyword">val</span> coroutine = DispatchedCoroutine(newContext, uCont)<br>        block.startCoroutineCancellable(coroutine, coroutine)<br>        coroutine.getResult()<br>    &#125;<br>&#125;<br><br><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedCoroutine</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(<br>    context: CoroutineContext,<br>    uCont: Continuation&lt;T&gt;<br>) : ScopeCoroutine&lt;T&gt;(context, uCont) &#123;<br>    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getResult</span><span class="hljs-params">()</span></span>: Any? &#123;<br>        <span class="hljs-keyword">if</span> (trySuspend()) <span class="hljs-keyword">return</span> COROUTINE_SUSPENDED<br>        <span class="hljs-comment">// otherwise, onCompletionInternal was already invoked &amp; invoked tryResume, and the result is in the state</span><br>        <span class="hljs-keyword">val</span> state = <span class="hljs-keyword">this</span>.state.unboxState()<br>        <span class="hljs-keyword">if</span> (state <span class="hljs-keyword">is</span> CompletedExceptionally) <span class="hljs-keyword">throw</span> state.cause<br>        <span class="hljs-meta">@Suppress(<span class="hljs-meta-string">&quot;UNCHECKED_CAST&quot;</span>)</span><br>        <span class="hljs-keyword">return</span> state <span class="hljs-keyword">as</span> T<br>    &#125;<br>&#125;<br><br><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedCoroutine</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(<br>    context: CoroutineContext,<br>    uCont: Continuation&lt;T&gt;<br>) : ScopeCoroutine&lt;T&gt;(context, uCont) &#123;<br>    <span class="hljs-comment">// this is copy-and-paste of a decision state machine inside AbstractionContinuation</span><br>    <span class="hljs-comment">// todo: we may some-how abstract it via inline class</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> _decision = atomic(UNDECIDED)<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">trySuspend</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Boolean</span> &#123;<br>        _decision.loop &#123; decision -&gt;<br>            <span class="hljs-keyword">when</span> (decision) &#123;<br>                UNDECIDED -&gt; <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._decision.compareAndSet(UNDECIDED, SUSPENDED)) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span><br>                RESUMED -&gt; <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span><br>                <span class="hljs-keyword">else</span> -&gt; error(<span class="hljs-string">&quot;Already suspended&quot;</span>)<br>            &#125;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/kotlin/">kotlin</a>
+                    
+                      <a class="hover-with-bg" href="/tags/coroutine/">coroutine</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%8D%8F%E7%A8%8B/">协程</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/07/15/kotlin-coroutine/">
+                        <span class="hidden-mobile">深入分析 Kotlin Coroutines 是如何实现的</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
