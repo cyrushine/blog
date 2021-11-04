@@ -187,7 +187,7 @@ color:
 # Font
 font:
   font_size: 15px
-  font_family: LXGW WenKai, PingFangSC, Microsoft Yahei
+  font_family: LXGW WenKai,PingFangSC,Microsoft Yahei
   code_font_size: 85%
 
 # 指定自定义 .js 文件路径，支持列表；路径是相对 source 目录，如 /js/custom.js 对应存放目录 source/js/custom.js
