@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -125,11 +125,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -184,7 +179,9 @@
             
           
           写时复制（Copy On Write）CopyOnWriteArrayList使用 写时复制 实现的线程安全版 ArrayList，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组
-12345678910public boolean add(E e) &#123;    synchronized (lock) &#123;   
+public boolean add(E e) &#123;
+    synchronized (lock) &#123;
+        Obje
         </a>
       </p>
 
@@ -373,7 +370,7 @@ client 收到补丁包后，在后台给 V1.apk 打上 patch1.apk 得到 V2.apk�
           时序图从 startActivity 开始，比如打开一个 app 的首页，当 app 未启动时就会走创建 Application 这条路
 
 AMS 承担的工作其中的转折点在 resumeTopActivityInnerLocked，发现 app process 不存在，走启动 app process 的流程
-12345678910111213141516171819private boolean 
+private boolean ActivityStack.resumeTopActivi
         </a>
       </p>
 
@@ -517,7 +514,7 @@ ConditionVariable对 futex/mutex 的封装，宏 ART
           monitor 指令在 Lock（二）AQS 源码分析以及 Lock 的实现 这篇文章里介绍了基于 AQS 的 Lock，它是双向链表的排队队列和系统调用 futex 实现的
 其实 java 语言规范里自带了 Lock 的实现：synchronized 关键字，下面看看 ART 是怎么实现它的
 先写一个使用了 synchronized 的测试方法
-1234567891011121314151617
+package com.example.myapp
         </a>
       </p>
 
@@ -567,7 +564,11 @@ signal，唤醒阻塞在这个 Condition 上的一个或全部线程
 
 利用条件变量前需要先获得锁
 所以 Condition 的所有方法都需要加锁
-12345lock.lock();// ...condition.await();// ...lock.unlo
+lock.lock();
+// ...
+condition.await();
+// ...
+lock.unloc
         </a>
       </p>
 

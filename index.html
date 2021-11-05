@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -125,11 +125,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -232,7 +227,8 @@ job1、job2 和 job3 三个任务并发执行，不需要编写任何线程同�
             
           
           launch - 启动协程从 kotlin coroutines 的 Hello World! 看起
-12345678// https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.ktfun main() = runBlockin
+// https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.kt
+fun main() = runBlocking &#123
         </a>
       </p>
 
@@ -326,7 +322,7 @@ InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送�
             
           
           概述mp4 文件由一个个连续的 box 组成
-1mp4 = box + box + box + ...
+mp4 = box + box + box + ...
 
 box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：
 
@@ -334,7 +330,7 @@ moov - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息
 mdat - 保存了 H264 NALU
 
 本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念
-chunk
+chunk一
         </a>
       </p>
 
@@ -502,7 +498,12 @@ Java Crash捕获 Java Crash 用的是 DefaultUncaughtExceptionHandler，相关�
             
           
           Process.killProcess(pid)最终执行系统调用 kill
-123456789class Process &#123;    public static final int SIGNAL_KILL = 9;    public static final void killProcess(int pid) &#123;        sendSignal(pid, SIGNAL_KI
+class Process &#123;
+    public static final int SIGNAL_KILL = 9;
+
+    public static final void killProcess(int pid) &#123;
+        sendSignal(pid, SIGNAL_KILL);
+
         </a>
       </p>
 

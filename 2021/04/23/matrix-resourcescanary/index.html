@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -223,7 +218,44 @@
             
             <div class="markdown-body">
               <h2 id="Activity-的泄漏检测"><a href="#Activity-的泄漏检测" class="headerlink" title="Activity 的泄漏检测"></a><code>Activity</code> 的泄漏检测</h2><p>跟 <a target="_blank" rel="noopener" href="https://github.com/square/leakcanary">LeakCanary</a> 一样，使用 <code>ActivityLifecycleCallbacks</code> 监听 <code>Activity.onDestroy()</code> 事件，从而收集到已销毁的 <code>Activity</code> 对象</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ResourcePlugin</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Plugin</span> </span>&#123;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;<br>        <span class="hljs-keyword">super</span>.start();<br>        <span class="hljs-keyword">if</span> (!isSupported()) &#123;<br>            MatrixLog.e(TAG, <span class="hljs-string">&quot;ResourcePlugin start, ResourcePlugin is not supported, just return&quot;</span>);<br>            <span class="hljs-keyword">return</span>;<br>        &#125;<br>        mWatcher.start();<br>    &#125;    <br>&#125;<br><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityRefWatcher</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FilePublisher</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Watcher</span> </span>&#123;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Application.ActivityLifecycleCallbacks mRemovedActivityMonitor = <span class="hljs-keyword">new</span> ActivityLifeCycleCallbacksAdapter() &#123;<br>        <span class="hljs-meta">@Override</span><br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onActivityDestroyed</span><span class="hljs-params">(Activity activity)</span> </span>&#123;<br>            pushDestroyedActivityInfo(activity);<br>            mHandler.postDelayed(<span class="hljs-keyword">new</span> Runnable() &#123;<br>                <span class="hljs-meta">@Override</span><br>                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>                    triggerGc();<br>                &#125;<br>            &#125;, <span class="hljs-number">2000</span>);<br>        &#125;<br>    &#125;;<br><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;<br>        stopDetect();<br>        <span class="hljs-keyword">final</span> Application app = mResourcePlugin.getApplication();<br>        <span class="hljs-keyword">if</span> (app != <span class="hljs-keyword">null</span>) &#123;<br>            app.registerActivityLifecycleCallbacks(mRemovedActivityMonitor);<br>            scheduleDetectProcedure();<br>            MatrixLog.i(TAG, <span class="hljs-string">&quot;watcher is started.&quot;</span>);<br>        &#125;<br>    &#125;    <br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ResourcePlugin</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Plugin</span> </span>&#123;
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">super</span>.start();
+        <span class="hljs-keyword">if</span> (!isSupported()) &#123;
+            MatrixLog.e(TAG, <span class="hljs-string">&quot;ResourcePlugin start, ResourcePlugin is not supported, just return&quot;</span>);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+        mWatcher.start();
+    &#125;    
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityRefWatcher</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FilePublisher</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Watcher</span> </span>&#123;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Application.ActivityLifecycleCallbacks mRemovedActivityMonitor = <span class="hljs-keyword">new</span> ActivityLifeCycleCallbacksAdapter() &#123;
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onActivityDestroyed</span><span class="hljs-params">(Activity activity)</span> </span>&#123;
+            pushDestroyedActivityInfo(activity);
+            mHandler.postDelayed(<span class="hljs-keyword">new</span> Runnable() &#123;
+                <span class="hljs-meta">@Override</span>
+                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+                    triggerGc();
+                &#125;
+            &#125;, <span class="hljs-number">2000</span>);
+        &#125;
+    &#125;;
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;
+        stopDetect();
+        <span class="hljs-keyword">final</span> Application app = mResourcePlugin.getApplication();
+        <span class="hljs-keyword">if</span> (app != <span class="hljs-keyword">null</span>) &#123;
+            app.registerActivityLifecycleCallbacks(mRemovedActivityMonitor);
+            scheduleDetectProcedure();
+            MatrixLog.i(TAG, <span class="hljs-string">&quot;watcher is started.&quot;</span>);
+        &#125;
+    &#125;    
+&#125;</code></pre></div>
 
 <p>跟 <code>LeakCanary</code> 不同的是，<code>ResourceCanary</code> 并没有采用 <code>WeakReference</code> + <code>ReferenceQueue</code> 的组合来监控 GC，而是用 <code>WeakReference</code> 软引用 <code>Activity</code> 并放在 <code>ConcurrentLinkedQueue</code> 里，然后专门开一个子线程监控并处理队列，开发者的解释是：</p>
 <blockquote>
@@ -242,14 +274,129 @@
 <li>对已判断为泄漏的 <code>Activity</code>，记录其类名，避免重复提示该 <code>Activity</code> 已泄漏</li>
 </ol>
 </blockquote>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityRefWatcher</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FilePublisher</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Watcher</span> </span>&#123;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ConcurrentLinkedQueue&lt;DestroyedActivityInfo&gt; mDestroyedActivityInfos;<br><br>    <span class="hljs-comment">// 处理上面的队列</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> RetryableTask mScanDestroyedActivitiesTask = <span class="hljs-keyword">new</span> RetryableTask() &#123;<br>        <span class="hljs-meta">@Override</span><br>        <span class="hljs-function"><span class="hljs-keyword">public</span> Status <span class="hljs-title">execute</span><span class="hljs-params">()</span> </span>&#123;<br>            <span class="hljs-comment">// ...</span><br>        &#125;<br>    &#125;;    <br><br>    <span class="hljs-comment">// 销毁的 Activity 被放到上面的队列里</span><br>    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">pushDestroyedActivityInfo</span><span class="hljs-params">(Activity activity)</span> </span>&#123;<br>        <span class="hljs-keyword">final</span> String activityName = activity.getClass().getName();<br>        <span class="hljs-keyword">if</span> ((mDumpHprofMode == ResourceConfig.DumpMode.NO_DUMP || mDumpHprofMode == ResourceConfig.DumpMode.AUTO_DUMP)<br>                &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()<br>                &amp;&amp; isPublished(activityName)) &#123;<br>            MatrixLog.i(TAG, <span class="hljs-string">&quot;activity leak with name %s had published, just ignore&quot;</span>, activityName);<br>            <span class="hljs-keyword">return</span>;<br>        &#125;<br>        <span class="hljs-keyword">final</span> UUID uuid = UUID.randomUUID();<br>        <span class="hljs-keyword">final</span> StringBuilder keyBuilder = <span class="hljs-keyword">new</span> StringBuilder();<br>        keyBuilder.append(ACTIVITY_REFKEY_PREFIX).append(activityName)<br>                .append(<span class="hljs-string">&#x27;_&#x27;</span>).append(Long.toHexString(uuid.getMostSignificantBits())).append(Long.toHexString(uuid.getLeastSignificantBits()));<br>        <span class="hljs-keyword">final</span> String key = keyBuilder.toString();<br>        <span class="hljs-keyword">final</span> DestroyedActivityInfo destroyedActivityInfo<br>                = <span class="hljs-keyword">new</span> DestroyedActivityInfo(key, activity, activityName);<br>        mDestroyedActivityInfos.add(destroyedActivityInfo);<br>        <span class="hljs-keyword">synchronized</span> (mDestroyedActivityInfos) &#123;<br>            mDestroyedActivityInfos.notifyAll();<br>        &#125;<br>        MatrixLog.d(TAG, <span class="hljs-string">&quot;mDestroyedActivityInfos add %s&quot;</span>, activityName);<br>    &#125;    <br><br>    <span class="hljs-comment">// 在子线程里处理 Activity 队列</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;<br>        stopDetect();<br>        <span class="hljs-keyword">final</span> Application app = mResourcePlugin.getApplication();<br>        <span class="hljs-keyword">if</span> (app != <span class="hljs-keyword">null</span>) &#123;<br>            app.registerActivityLifecycleCallbacks(mRemovedActivityMonitor);<br>            scheduleDetectProcedure();<br>            MatrixLog.i(TAG, <span class="hljs-string">&quot;watcher is started.&quot;</span>);<br>        &#125;<br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">scheduleDetectProcedure</span><span class="hljs-params">()</span> </span>&#123;<br>        mDetectExecutor.executeInBackground(mScanDestroyedActivitiesTask);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityRefWatcher</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FilePublisher</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Watcher</span> </span>&#123;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ConcurrentLinkedQueue&lt;DestroyedActivityInfo&gt; mDestroyedActivityInfos;
+
+    <span class="hljs-comment">// 处理上面的队列</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> RetryableTask mScanDestroyedActivitiesTask = <span class="hljs-keyword">new</span> RetryableTask() &#123;
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-function"><span class="hljs-keyword">public</span> Status <span class="hljs-title">execute</span><span class="hljs-params">()</span> </span>&#123;
+            <span class="hljs-comment">// ...</span>
+        &#125;
+    &#125;;    
+
+    <span class="hljs-comment">// 销毁的 Activity 被放到上面的队列里</span>
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">pushDestroyedActivityInfo</span><span class="hljs-params">(Activity activity)</span> </span>&#123;
+        <span class="hljs-keyword">final</span> String activityName = activity.getClass().getName();
+        <span class="hljs-keyword">if</span> ((mDumpHprofMode == ResourceConfig.DumpMode.NO_DUMP || mDumpHprofMode == ResourceConfig.DumpMode.AUTO_DUMP)
+                &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()
+                &amp;&amp; isPublished(activityName)) &#123;
+            MatrixLog.i(TAG, <span class="hljs-string">&quot;activity leak with name %s had published, just ignore&quot;</span>, activityName);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+        <span class="hljs-keyword">final</span> UUID uuid = UUID.randomUUID();
+        <span class="hljs-keyword">final</span> StringBuilder keyBuilder = <span class="hljs-keyword">new</span> StringBuilder();
+        keyBuilder.append(ACTIVITY_REFKEY_PREFIX).append(activityName)
+                .append(<span class="hljs-string">&#x27;_&#x27;</span>).append(Long.toHexString(uuid.getMostSignificantBits())).append(Long.toHexString(uuid.getLeastSignificantBits()));
+        <span class="hljs-keyword">final</span> String key = keyBuilder.toString();
+        <span class="hljs-keyword">final</span> DestroyedActivityInfo destroyedActivityInfo
+                = <span class="hljs-keyword">new</span> DestroyedActivityInfo(key, activity, activityName);
+        mDestroyedActivityInfos.add(destroyedActivityInfo);
+        <span class="hljs-keyword">synchronized</span> (mDestroyedActivityInfos) &#123;
+            mDestroyedActivityInfos.notifyAll();
+        &#125;
+        MatrixLog.d(TAG, <span class="hljs-string">&quot;mDestroyedActivityInfos add %s&quot;</span>, activityName);
+    &#125;    
+
+    <span class="hljs-comment">// 在子线程里处理 Activity 队列</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;
+        stopDetect();
+        <span class="hljs-keyword">final</span> Application app = mResourcePlugin.getApplication();
+        <span class="hljs-keyword">if</span> (app != <span class="hljs-keyword">null</span>) &#123;
+            app.registerActivityLifecycleCallbacks(mRemovedActivityMonitor);
+            scheduleDetectProcedure();
+            MatrixLog.i(TAG, <span class="hljs-string">&quot;watcher is started.&quot;</span>);
+        &#125;
+    &#125;
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">scheduleDetectProcedure</span><span class="hljs-params">()</span> </span>&#123;
+        mDetectExecutor.executeInBackground(mScanDestroyedActivitiesTask);
+    &#125;
+&#125;</code></pre></div>
 
 <p><code>LeakCanary</code> 每当一个 <code>Activity</code> 销毁时就放一个延时 5s 的检查任务，而 <code>ResourceCanary</code> 检测规则较为宽松：</p>
 <ol>
 <li>默认每隔 1min 检查一次 <code>mDestroyedActivityInfos</code></li>
 <li>规定在检查次数 <code>mMaxRedetectTimes</code> 以下不判定为泄漏</li>
 </ol>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> Status <span class="hljs-title">execute</span><span class="hljs-params">()</span> </span>&#123;<br>    <span class="hljs-comment">// If destroyed activity list is empty, just wait to save power.</span><br>    <span class="hljs-keyword">if</span> (mDestroyedActivityInfos.isEmpty()) &#123;<br>        MatrixLog.i(TAG, <span class="hljs-string">&quot;DestroyedActivityInfo is empty! wait...&quot;</span>);<br>        <span class="hljs-keyword">synchronized</span> (mDestroyedActivityInfos) &#123;<br>            <span class="hljs-keyword">try</span> &#123;<br>                mDestroyedActivityInfos.wait();<br>            &#125; <span class="hljs-keyword">catch</span> (Throwable ignored) &#123;<br>                <span class="hljs-comment">// Ignored.</span><br>            &#125;<br>        &#125;<br>        MatrixLog.i(TAG, <span class="hljs-string">&quot;DestroyedActivityInfo is NOT empty! resume check&quot;</span>);<br>        <span class="hljs-keyword">return</span> Status.RETRY;<br>    &#125;<br>    <span class="hljs-comment">// Fake leaks will be generated when debugger is attached.</span><br>    <span class="hljs-keyword">if</span> (Debug.isDebuggerConnected() &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()) &#123;<br>        MatrixLog.w(TAG, <span class="hljs-string">&quot;debugger is connected, to avoid fake result, detection was delayed.&quot;</span>);<br>        <span class="hljs-keyword">return</span> Status.RETRY;<br>    &#125;<br><span class="hljs-comment">//          final WeakReference&lt;Object[]&gt; sentinelRef = new WeakReference&lt;&gt;(new Object[1024 * 1024]); // alloc big object</span><br>    triggerGc();<br>    triggerGc();<br>    triggerGc();<br><span class="hljs-comment">//          if (sentinelRef.get() != null) &#123;</span><br><span class="hljs-comment">//              // System ignored our gc request, we will retry later.</span><br><span class="hljs-comment">//              MatrixLog.d(TAG, &quot;system ignore our gc request, wait for next detection.&quot;);</span><br><span class="hljs-comment">//              return Status.RETRY;</span><br><span class="hljs-comment">//          &#125;</span><br>    <span class="hljs-keyword">final</span> Iterator&lt;DestroyedActivityInfo&gt; infoIt = mDestroyedActivityInfos.iterator();<br>    <span class="hljs-keyword">while</span> (infoIt.hasNext()) &#123;<br>        <span class="hljs-keyword">final</span> DestroyedActivityInfo destroyedActivityInfo = infoIt.next();<br>        <span class="hljs-keyword">if</span> ((mDumpHprofMode == ResourceConfig.DumpMode.NO_DUMP || mDumpHprofMode == ResourceConfig.DumpMode.AUTO_DUMP)<br>                &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()<br>                &amp;&amp; isPublished(destroyedActivityInfo.mActivityName)) &#123;<br>            MatrixLog.v(TAG, <span class="hljs-string">&quot;activity with key [%s] was already published.&quot;</span>, destroyedActivityInfo.mActivityName);<br>            infoIt.remove();<br>            <span class="hljs-keyword">continue</span>;<br>        &#125;<br>        triggerGc();<br>        <span class="hljs-keyword">if</span> (destroyedActivityInfo.mActivityRef.get() == <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-comment">// The activity was recycled by a gc triggered outside.</span><br>            MatrixLog.v(TAG, <span class="hljs-string">&quot;activity with key [%s] was already recycled.&quot;</span>, destroyedActivityInfo.mKey);<br>            infoIt.remove();<br>            <span class="hljs-keyword">continue</span>;<br>        &#125;<br>        ++destroyedActivityInfo.mDetectedCount;<br>        <span class="hljs-keyword">if</span> (destroyedActivityInfo.mDetectedCount &lt; mMaxRedetectTimes<br>                &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()) &#123;<br>            <span class="hljs-comment">// Although the sentinel tell us the activity should have been recycled,</span><br>            <span class="hljs-comment">// system may still ignore it, so try again until we reach max retry times.</span><br>            MatrixLog.i(TAG, <span class="hljs-string">&quot;activity with key [%s] should be recycled but actually still exists in %s times, wait for next detectiontoconfirm.&quot;</span>,<br>                    destroyedActivityInfo.mKey, destroyedActivityInfo.mDetectedCount);<br>            triggerGc();<br>            <span class="hljs-keyword">continue</span>;<br>        &#125;<br>        MatrixLog.i(TAG, <span class="hljs-string">&quot;activity with key [%s] was suspected to be a leaked instance. mode[%s]&quot;</span>, destroyedActivityInfo.mKey,mDumpHprofMode;<br>        <span class="hljs-keyword">if</span> (mLeakProcessor == <span class="hljs-keyword">null</span>) &#123;<br>            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException(<span class="hljs-string">&quot;LeakProcessor not found!!!&quot;</span>);<br>        &#125;<br>        triggerGc();<br>        <span class="hljs-keyword">if</span> (mLeakProcessor.process(destroyedActivityInfo)) &#123;<br>            MatrixLog.i(TAG, <span class="hljs-string">&quot;the leaked activity [%s] with key [%s] has been processed. stop polling&quot;</span>, destroyedActivityInfomActivityName,destroyedActivityInfo.mKey);<br>            infoIt.remove();<br>        &#125;<br>    &#125;<br>    triggerGc();<br>    <span class="hljs-keyword">return</span> Status.RETRY;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> Status <span class="hljs-title">execute</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-comment">// If destroyed activity list is empty, just wait to save power.</span>
+    <span class="hljs-keyword">if</span> (mDestroyedActivityInfos.isEmpty()) &#123;
+        MatrixLog.i(TAG, <span class="hljs-string">&quot;DestroyedActivityInfo is empty! wait...&quot;</span>);
+        <span class="hljs-keyword">synchronized</span> (mDestroyedActivityInfos) &#123;
+            <span class="hljs-keyword">try</span> &#123;
+                mDestroyedActivityInfos.wait();
+            &#125; <span class="hljs-keyword">catch</span> (Throwable ignored) &#123;
+                <span class="hljs-comment">// Ignored.</span>
+            &#125;
+        &#125;
+        MatrixLog.i(TAG, <span class="hljs-string">&quot;DestroyedActivityInfo is NOT empty! resume check&quot;</span>);
+        <span class="hljs-keyword">return</span> Status.RETRY;
+    &#125;
+    <span class="hljs-comment">// Fake leaks will be generated when debugger is attached.</span>
+    <span class="hljs-keyword">if</span> (Debug.isDebuggerConnected() &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()) &#123;
+        MatrixLog.w(TAG, <span class="hljs-string">&quot;debugger is connected, to avoid fake result, detection was delayed.&quot;</span>);
+        <span class="hljs-keyword">return</span> Status.RETRY;
+    &#125;
+<span class="hljs-comment">//          final WeakReference&lt;Object[]&gt; sentinelRef = new WeakReference&lt;&gt;(new Object[1024 * 1024]); // alloc big object</span>
+    triggerGc();
+    triggerGc();
+    triggerGc();
+<span class="hljs-comment">//          if (sentinelRef.get() != null) &#123;</span>
+<span class="hljs-comment">//              // System ignored our gc request, we will retry later.</span>
+<span class="hljs-comment">//              MatrixLog.d(TAG, &quot;system ignore our gc request, wait for next detection.&quot;);</span>
+<span class="hljs-comment">//              return Status.RETRY;</span>
+<span class="hljs-comment">//          &#125;</span>
+    <span class="hljs-keyword">final</span> Iterator&lt;DestroyedActivityInfo&gt; infoIt = mDestroyedActivityInfos.iterator();
+    <span class="hljs-keyword">while</span> (infoIt.hasNext()) &#123;
+        <span class="hljs-keyword">final</span> DestroyedActivityInfo destroyedActivityInfo = infoIt.next();
+        <span class="hljs-keyword">if</span> ((mDumpHprofMode == ResourceConfig.DumpMode.NO_DUMP || mDumpHprofMode == ResourceConfig.DumpMode.AUTO_DUMP)
+                &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()
+                &amp;&amp; isPublished(destroyedActivityInfo.mActivityName)) &#123;
+            MatrixLog.v(TAG, <span class="hljs-string">&quot;activity with key [%s] was already published.&quot;</span>, destroyedActivityInfo.mActivityName);
+            infoIt.remove();
+            <span class="hljs-keyword">continue</span>;
+        &#125;
+        triggerGc();
+        <span class="hljs-keyword">if</span> (destroyedActivityInfo.mActivityRef.get() == <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-comment">// The activity was recycled by a gc triggered outside.</span>
+            MatrixLog.v(TAG, <span class="hljs-string">&quot;activity with key [%s] was already recycled.&quot;</span>, destroyedActivityInfo.mKey);
+            infoIt.remove();
+            <span class="hljs-keyword">continue</span>;
+        &#125;
+        ++destroyedActivityInfo.mDetectedCount;
+        <span class="hljs-keyword">if</span> (destroyedActivityInfo.mDetectedCount &lt; mMaxRedetectTimes
+                &amp;&amp; !mResourcePlugin.getConfig().getDetectDebugger()) &#123;
+            <span class="hljs-comment">// Although the sentinel tell us the activity should have been recycled,</span>
+            <span class="hljs-comment">// system may still ignore it, so try again until we reach max retry times.</span>
+            MatrixLog.i(TAG, <span class="hljs-string">&quot;activity with key [%s] should be recycled but actually still exists in %s times, wait for next detectiontoconfirm.&quot;</span>,
+                    destroyedActivityInfo.mKey, destroyedActivityInfo.mDetectedCount);
+            triggerGc();
+            <span class="hljs-keyword">continue</span>;
+        &#125;
+        MatrixLog.i(TAG, <span class="hljs-string">&quot;activity with key [%s] was suspected to be a leaked instance. mode[%s]&quot;</span>, destroyedActivityInfo.mKey,mDumpHprofMode;
+        <span class="hljs-keyword">if</span> (mLeakProcessor == <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException(<span class="hljs-string">&quot;LeakProcessor not found!!!&quot;</span>);
+        &#125;
+        triggerGc();
+        <span class="hljs-keyword">if</span> (mLeakProcessor.process(destroyedActivityInfo)) &#123;
+            MatrixLog.i(TAG, <span class="hljs-string">&quot;the leaked activity [%s] with key [%s] has been processed. stop polling&quot;</span>, destroyedActivityInfomActivityName,destroyedActivityInfo.mKey);
+            infoIt.remove();
+        &#125;
+    &#125;
+    triggerGc();
+    <span class="hljs-keyword">return</span> Status.RETRY;
+&#125;</code></pre></div>
 
 <h2 id="heap-dump-并分析-hprof-文件"><a href="#heap-dump-并分析-hprof-文件" class="headerlink" title="heap dump 并分析 hprof 文件"></a>heap dump 并分析 hprof 文件</h2><p>这个阶段 <code>ResourcesCanary</code> 的逻辑跟 <code>LeakCanary</code> 几乎是一模一样的，估计是 copy 代码过来的，只不过 <code>ResourcesCanary</code> 用的还是 <a target="_blank" rel="noopener" href="https://github.com/square/haha">haha</a> 而最新的 <code>LeakCanary</code> 已经使用 <code>Shark</code> 了</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>对比 <code>LeakCanary</code>，<code>ResourcesCanary</code> 的优点是提出了子线程检查泄漏对象的思路，缺点是检测对象太单一，只有 <code>Activity</code>（重复 <code>Bitmap</code> 检测感觉并不可靠），而且没有抽象出通用的泄漏检测逻辑（<code>LeakCanary</code> 抽象出 <code>ObjectWatcher</code>）</p>

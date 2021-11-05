@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -223,7 +218,7 @@
             
             <div class="markdown-body">
               <h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p><code>mp4</code> 文件由一个个连续的 <code>box</code> 组成</p>
-<figure class="highlight gauss"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs gauss">mp4 = <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + ...<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs gauss">mp4 = <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + ...</code></pre></div>
 
 <p>box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：</p>
 <ol>
@@ -232,13 +227,14 @@
 </ol>
 <p>本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念</p>
 <h1 id="chunk"><a href="#chunk" class="headerlink" title="chunk"></a>chunk</h1><p>一个 mp4 文件可以包含多个 <code>track</code>（视频、音频和字幕），而每个 track 则由多个 <code>chunk</code> 组成</p>
-<figure class="highlight ini"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs ini"><span class="hljs-attr">mp4</span> = video track + audio track + subtitle track + ...<br><span class="hljs-attr">track</span> = chunk + chunk + chunk + ...<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs ini"><span class="hljs-attr">mp4</span> = video track + audio track + subtitle track + ...
+<span class="hljs-attr">track</span> = chunk + chunk + chunk + ...</code></pre></div>
 
 <p><code>Stco Box</code> 描述了一个 track 有多少个 chunk 以及每个 chunk 在 mp4 文件里的偏移量，这样就具有了快速定位（<code>seek</code>）chunk 的能力</p>
 <p>比如下图说明 track 有 486 个 chunk，每个 chunk 在文件里的偏移量都记录在后面的表里</p>
 <p><img src="../../../../image/2021-07-05-mp4-structure/stco.webp" srcset="/image/loading.gif" lazyload alt="stco box"></p>
 <h1 id="sample"><a href="#sample" class="headerlink" title="sample"></a>sample</h1><p><code>sample</code>（采样）相当于一帧，解码的过程就是计算出一帧帧的图像，每个 chunk 包含多个 <code>sample</code></p>
-<figure class="highlight glsl"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs glsl">chunk = <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + ...<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs glsl">chunk = <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + ...</code></pre></div>
 
 <p>具体哪个 chunk 包含哪几个 sample 由 <code>Stsc Box</code> 描述： <code>stsc = entry count + (first chunk + samples per chunk + sample description index)</code>，如下图，它是这么描述的：</p>
 <ol>

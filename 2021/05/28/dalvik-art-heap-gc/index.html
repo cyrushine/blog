@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -140,11 +140,6 @@
                 class="iconfont icon-search"></i>&nbsp;</a>
           </li>
         
-        
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
         
       </ul>
     </div>
@@ -270,10 +265,36 @@
 <p>但是 Dalvik 虚拟机又希望能够动态地调整堆的可用最大值，于是就出现了一个称为 <strong>增长上限</strong> 的值，我们可以认为它是堆大小的 <strong>软限制</strong>，而前面所描述的最大值是堆大小的 <strong>硬限制</strong>。它主要是用来限制 <code>Active Heap</code> 无节制地增长到最大值的，而是要根据预先设定的 <code>堆目标利用率</code> 来控制 <code>Active Heap</code> 有节奏地增长到最大值。这样可以更有效地使用堆内存。想象一下，如果我们一开始 <code>Active Heap</code> 的大小设置为最大值，那么就很有可能造成已分配的内存分布在一个很大的范围。这样随着 Dalvik 虚拟机不断地运行，<code>Active Heap</code> 的内存碎片就会越来越来重。相反，如果我们施加一个 <code>Soft Limit</code>，那可以尽量地控制已分配的内存都位于较紧凑的范围内，可以有效地减少碎片</p>
 <p>后三个用来确保每次 GC 之后，堆已用内存和空闲内存有一个合适的比例，这样可以尽量地减少 GC 的次数。举个例子说，堆的利用率为 <code>U</code>，最小空闲值为 <code>MinFree</code> 字节，最大空闲值为 <code>MaxFree</code> 字节。假设在某一次 GC 之后，存活对象占用内存的大小为 <code>LiveSize</code>。那么这时候堆的理想大小应该为 <code>(LiveSize / U)</code>，且 <code>(LiveSize + MinFree)</code> &lt;= <code>(LiveSize / U)</code> &lt;= <code>(LiveSize + MaxFree)</code></p>
 <h3 id="4-Type-Of-GC"><a href="#4-Type-Of-GC" class="headerlink" title="4 Type Of GC"></a>4 Type Of GC</h3><p>Davlik 虚拟机定义了四种类型的 GC</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/* Not enough space for an &quot;ordinary&quot; Object to be allocated. */</span>  <br><span class="hljs-comment">/* 在堆上分配对象时内存不足 */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_FOR_MALLOC;  <br>  <br><span class="hljs-comment">/* Automatic GC triggered by exceeding a heap occupancy threshold. */</span>  <br><span class="hljs-comment">/* 在已分配内存达到一定量之后触发 */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_CONCURRENT;  <br>  <br><span class="hljs-comment">/* Explicit GC via Runtime.gc(), VMRuntime.gc(), or SIGUSR1. */</span>  <br><span class="hljs-comment">/* 应用程序调用 System.gc、VMRuntime.gc接口或者收到 SIGUSR1 信号时触发 */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_EXPLICIT;  <br>  <br><span class="hljs-comment">/* Final attempt to reclaim memory before throwing an OOM. */</span>  <br><span class="hljs-comment">/* 在准备抛 OOM 异常之前进行的最后努力而触发的 GC */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_BEFORE_OOM;  <br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/* Not enough space for an &quot;ordinary&quot; Object to be allocated. */</span>  
+<span class="hljs-comment">/* 在堆上分配对象时内存不足 */</span>
+<span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_FOR_MALLOC;  
+  
+<span class="hljs-comment">/* Automatic GC triggered by exceeding a heap occupancy threshold. */</span>  
+<span class="hljs-comment">/* 在已分配内存达到一定量之后触发 */</span>
+<span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_CONCURRENT;  
+  
+<span class="hljs-comment">/* Explicit GC via Runtime.gc(), VMRuntime.gc(), or SIGUSR1. */</span>  
+<span class="hljs-comment">/* 应用程序调用 System.gc、VMRuntime.gc接口或者收到 SIGUSR1 信号时触发 */</span>
+<span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_EXPLICIT;  
+  
+<span class="hljs-comment">/* Final attempt to reclaim memory before throwing an OOM. */</span>  
+<span class="hljs-comment">/* 在准备抛 OOM 异常之前进行的最后努力而触发的 GC */</span>
+<span class="hljs-keyword">extern</span> <span class="hljs-keyword">const</span> GcSpec *GC_BEFORE_OOM;</code></pre></div>
 
 <p>每种 GC 通过成员属性控制 GC 细节</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">GcSpec</span> &#123;</span>  <br>  <span class="hljs-comment">/* If true, only the application heap is threatened. */</span>  <br>  <span class="hljs-comment">/* true - 仅仅回收 Active Heap，false - 同时回收 Active Heap 和 Zygote Heap */</span><br>  <span class="hljs-keyword">bool</span> isPartial;  <br>  <span class="hljs-comment">/* If true, the trace is run concurrently with the mutator. */</span>  <br>  <span class="hljs-comment">/* true - 执行并行 GC，false - 执行非并行 GC */</span><br>  <span class="hljs-keyword">bool</span> isConcurrent;  <br>  <span class="hljs-comment">/* Toggles for the soft reference clearing policy. */</span>  <br>  <span class="hljs-comment">/* true - 不回收软引用，false - 回收软引用引 */</span><br>  <span class="hljs-keyword">bool</span> doPreserve;  <br>  <span class="hljs-comment">/* A name for this garbage collection mode. */</span>  <br>  <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *reason;  <br>&#125;;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">GcSpec</span> &#123;</span>  
+  <span class="hljs-comment">/* If true, only the application heap is threatened. */</span>  
+  <span class="hljs-comment">/* true - 仅仅回收 Active Heap，false - 同时回收 Active Heap 和 Zygote Heap */</span>
+  <span class="hljs-keyword">bool</span> isPartial;  
+  <span class="hljs-comment">/* If true, the trace is run concurrently with the mutator. */</span>  
+  <span class="hljs-comment">/* true - 执行并行 GC，false - 执行非并行 GC */</span>
+  <span class="hljs-keyword">bool</span> isConcurrent;  
+  <span class="hljs-comment">/* Toggles for the soft reference clearing policy. */</span>  
+  <span class="hljs-comment">/* true - 不回收软引用，false - 回收软引用引 */</span>
+  <span class="hljs-keyword">bool</span> doPreserve;  
+  <span class="hljs-comment">/* A name for this garbage collection mode. */</span>  
+  <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *reason;  
+&#125;;</code></pre></div>
 
 <p><code>GC_FOR_MALLOC</code>、<code>GC_CONCURRENT</code> 和 <code>GC_BEFORE_OOM</code> 三种类型的 GC 都是在分配对象的过程触发的：</p>
 <ol>
@@ -402,7 +423,19 @@
 </tr>
 </tbody></table>
 <p>Space 有以下三种回收策略</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// See Space::GetGcRetentionPolicy.  </span><br><span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">GcRetentionPolicy</span> &#123;</span>  <br>  <span class="hljs-comment">// Objects are retained forever with this policy for a space.  </span><br>  <span class="hljs-comment">// 永远不会进行垃圾回收的 Space，例如 Image Space</span><br>  kGcRetentionPolicyNeverCollect,  <br>  <span class="hljs-comment">// Every GC cycle will attempt to collect objects in this space.  </span><br>  <span class="hljs-comment">// 每一次 GC 都会尝试回收垃圾的 Space，例如 Allocation Space</span><br>  kGcRetentionPolicyAlwaysCollect,  <br>  <span class="hljs-comment">// Objects will be considered for collection only in &quot;full&quot; GC cycles, ie faster partial  </span><br>  <span class="hljs-comment">// collections won&#x27;t scan these areas such as the Zygote.  </span><br>  <span class="hljs-comment">// 只有执行类型为 kGcTypeFull 的 GC 才会进行垃圾回收的 Space，例如 Zygote Space</span><br>  kGcRetentionPolicyFullCollect,  <br>&#125;;  <br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// See Space::GetGcRetentionPolicy.  </span>
+<span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">GcRetentionPolicy</span> &#123;</span>  
+  <span class="hljs-comment">// Objects are retained forever with this policy for a space.  </span>
+  <span class="hljs-comment">// 永远不会进行垃圾回收的 Space，例如 Image Space</span>
+  kGcRetentionPolicyNeverCollect,  
+  <span class="hljs-comment">// Every GC cycle will attempt to collect objects in this space.  </span>
+  <span class="hljs-comment">// 每一次 GC 都会尝试回收垃圾的 Space，例如 Allocation Space</span>
+  kGcRetentionPolicyAlwaysCollect,  
+  <span class="hljs-comment">// Objects will be considered for collection only in &quot;full&quot; GC cycles, ie faster partial  </span>
+  <span class="hljs-comment">// collections won&#x27;t scan these areas such as the Zygote.  </span>
+  <span class="hljs-comment">// 只有执行类型为 kGcTypeFull 的 GC 才会进行垃圾回收的 Space，例如 Zygote Space</span>
+  kGcRetentionPolicyFullCollect,  
+&#125;;</code></pre></div>
 
 
 <h3 id="在堆上分配对象"><a href="#在堆上分配对象" class="headerlink" title="在堆上分配对象"></a>在堆上分配对象</h3><p>流程跟 Dalvik 差不多：</p>
@@ -414,11 +447,35 @@
 <li>成功地在堆上分配到一个对象之后，就会检查 <code>Active Heap</code> 当前已经分配的内存，如果大于阀值（<code>Heap-&gt;concurrent_start_bytes_</code>）就会唤醒 GC 线程进行 <code>GC_CONCURRENT</code>。这个阀值是一个比指定的 <strong>堆最小空闲内存</strong> 小 128K 的数值，也就是说当堆的 <strong>空闲内不足</strong> 时就会触发 <code>GC_CONCURRENT</code></li>
 </ol>
 <h3 id="ART-GC"><a href="#ART-GC" class="headerlink" title="ART GC"></a>ART GC</h3><p>ART 有以下三种 GC Collector </p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// The type of collection to be performed. The ordering of the enum matters, it is used to  </span><br><span class="hljs-comment">// determine which GCs are run first.  </span><br><span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">GcType</span> &#123;</span>  <br>  <span class="hljs-comment">// Placeholder for when no GC has been performed.  </span><br>  kGcTypeNone,  <br>  <span class="hljs-comment">// Sticky mark bits GC that attempts to only free objects allocated since the last GC.  </span><br>  <span class="hljs-comment">// StickyMarkSweep 类型的垃圾收集器，用来收集上次 GC 以来分配的对象</span><br>  kGcTypeSticky,  <br>  <span class="hljs-comment">// Partial GC that marks the application heap but not the Zygote.  </span><br>  <span class="hljs-comment">// PartialMarkSweep 类型的垃圾收集器，用来收集在 Allocation Space 上分配的对象</span><br>  kGcTypePartial,  <br>  <span class="hljs-comment">// Full GC that marks and frees in both the application and Zygote heap.  </span><br>  <span class="hljs-comment">// MarkSweep 类型的垃圾收集器，用来收集在 Zygote Space 和 Allocation Space 上分配的对象</span><br>  kGcTypeFull,  <br>  <span class="hljs-comment">// Number of different GC types.  </span><br>  kGcTypeMax,  <br>&#125;;  <br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// The type of collection to be performed. The ordering of the enum matters, it is used to  </span>
+<span class="hljs-comment">// determine which GCs are run first.  </span>
+<span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">GcType</span> &#123;</span>  
+  <span class="hljs-comment">// Placeholder for when no GC has been performed.  </span>
+  kGcTypeNone,  
+  <span class="hljs-comment">// Sticky mark bits GC that attempts to only free objects allocated since the last GC.  </span>
+  <span class="hljs-comment">// StickyMarkSweep 类型的垃圾收集器，用来收集上次 GC 以来分配的对象</span>
+  kGcTypeSticky,  
+  <span class="hljs-comment">// Partial GC that marks the application heap but not the Zygote.  </span>
+  <span class="hljs-comment">// PartialMarkSweep 类型的垃圾收集器，用来收集在 Allocation Space 上分配的对象</span>
+  kGcTypePartial,  
+  <span class="hljs-comment">// Full GC that marks and frees in both the application and Zygote heap.  </span>
+  <span class="hljs-comment">// MarkSweep 类型的垃圾收集器，用来收集在 Zygote Space 和 Allocation Space 上分配的对象</span>
+  kGcTypeFull,  
+  <span class="hljs-comment">// Number of different GC types.  </span>
+  kGcTypeMax,  
+&#125;;</code></pre></div>
 
 <p>ART 比 Dalvik 多了一个称 <code>Mod Union Table</code> 的概念。<code>Mod Union Table</code> 是与 <code>Card Table</code> 配合使用的，用来记录在一次 GC 过程中，不会被回收的 Space 对象对会被回收的 Space 对象引用。例如，<code>Image Space</code> 对象对 <code>Zygote Space</code> 和 <code>Allocation Space</code> 对象的引用，以及 <code>Zygote Space</code> 对象对 <code>Allocation Space</code> 对象的引用。</p>
 <h3 id="五个守护线程"><a href="#五个守护线程" class="headerlink" title="五个守护线程"></a>五个守护线程</h3><p><code>java.lang.Daemons</code> 类在加载的时候，会启动五个与堆或者 GC 相关的守护线程</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Daemons</span> </span>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;  <br>        ReferenceQueueDaemon.INSTANCE.start();  <br>        FinalizerDaemon.INSTANCE.start();  <br>        FinalizerWatchdogDaemon.INSTANCE.start();  <br>        HeapTrimmerDaemon.INSTANCE.start();  <br>        GCDaemon.INSTANCE.start();  <br>    &#125;<br>&#125; <br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Daemons</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">start</span><span class="hljs-params">()</span> </span>&#123;  
+        ReferenceQueueDaemon.INSTANCE.start();  
+        FinalizerDaemon.INSTANCE.start();  
+        FinalizerWatchdogDaemon.INSTANCE.start();  
+        HeapTrimmerDaemon.INSTANCE.start();  
+        GCDaemon.INSTANCE.start();  
+    &#125;
+&#125;</code></pre></div>
 
 <table>
 <thead>
@@ -500,10 +557,100 @@
 <h3 id="Foreground-GC-和-Background-GC"><a href="#Foreground-GC-和-Background-GC" class="headerlink" title="Foreground GC 和 Background GC"></a>Foreground GC 和 Background GC</h3><p>ART 既支持 <code>Mark-Sweep GC</code> 又支持 <code>Compacting GC</code>。其中 <code>Mark-Sweep GC</code> 执行效率更高但是存在内存碎片问题，而 <code>Compacting GC</code> 执行效率较低但是不存在内存碎片问题。ART 通过引入 <code>Foreground GC</code> 和 <code>Background GC</code> 的概念来对这两种 GC 进行扬长避短，分别用 <code>-Xgc</code> 和 <code>-XX:BackgroundGC</code> 指定</p>
 <p>顾名思义，<code>Foreground GC</code> 就是应用程序在前台运行时执行的 GC，<code>Background GC</code> 就是应用程序在后台运行时执行的 GC。应用程序在前台运行时，响应性是最重要的，因此也要求执行的GC是高效的。相反，应用程序在后台运行时，响应性不是最重要的，这时候就适合用来解决堆的内存碎片问题。因此，<code>Mark-Sweep GC</code> 适合作为 <code>Foreground GC</code> 而 <code>Compacting GC</code> 适合作为 <code>Background GC</code></p>
 <p><code>AMS</code> 清楚地知道应用程序当前是在前台运行还是后台运行，所以由它负责触发切换前后台 GC 的操作</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">ApplicationThread.scheduleLaunchActivity<br><br>ApplicationThread.updateProcessState(<span class="hljs-keyword">int</span> processState, <span class="hljs-keyword">boolean</span> fromIpc) &#123;  <br>    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;  <br>        <span class="hljs-keyword">if</span> (mLastProcessState != processState) &#123;  <br>            mLastProcessState = processState;  <br>            <span class="hljs-comment">// 用户可感知/用户不可感知</span><br>            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> DALVIK_PROCESS_STATE_JANK_PERCEPTIBLE = <span class="hljs-number">0</span>;  <br>            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> DALVIK_PROCESS_STATE_JANK_IMPERCEPTIBLE = <span class="hljs-number">1</span>;  <br>            <span class="hljs-keyword">int</span> dalvikProcessState = DALVIK_PROCESS_STATE_JANK_IMPERCEPTIBLE;  <br>            <br>            <span class="hljs-comment">// &lt;= PROCESS_STATE_IMPORTANT_FOREGROUND 表示前台进程，用户可见可交互</span><br>            <span class="hljs-keyword">if</span> (processState &lt;= ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND) &#123;  <br>                dalvikProcessState = DALVIK_PROCESS_STATE_JANK_PERCEPTIBLE;  <br>            &#125;  <br>            VMRuntime.getRuntime().updateProcessState(dalvikProcessState);  <br>            ......  <br>        &#125;  <br>    &#125;  <br>&#125; <br><br><span class="hljs-comment">// AMS 定义了 14 种进程的状态，越小越重要</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityManager</span> </span>&#123;  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is a persistent system process. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_PERSISTENT = <span class="hljs-number">0</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is a persistent system process and is doing UI. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_PERSISTENT_UI = <span class="hljs-number">1</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is hosting the current top activities.  Note that this covers </span><br><span class="hljs-comment">     * all activities that are visible to the user. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_TOP = <span class="hljs-number">2</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is important to the user, and something they are aware of. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_IMPORTANT_FOREGROUND = <span class="hljs-number">3</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is important to the user, but not something they are aware of. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_IMPORTANT_BACKGROUND = <span class="hljs-number">4</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background running a backup/restore operation. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_BACKUP = <span class="hljs-number">5</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background, but it can&#x27;t restore its state so we want </span><br><span class="hljs-comment">     * to try to avoid killing it. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_HEAVY_WEIGHT = <span class="hljs-number">6</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background running a service.  Unlike oom_adj, this level </span><br><span class="hljs-comment">     * is used for both the normal running in background state and the executing </span><br><span class="hljs-comment">     * operations state. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_SERVICE = <span class="hljs-number">7</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background running a receiver.   Note that from the </span><br><span class="hljs-comment">     * perspective of oom_adj receivers run at a higher foreground level, but for our </span><br><span class="hljs-comment">     * prioritization here that is not necessary and putting them below services means </span><br><span class="hljs-comment">     * many fewer changes in some process states as they receive broadcasts. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_RECEIVER = <span class="hljs-number">8</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background but hosts the home activity. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_HOME = <span class="hljs-number">9</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background but hosts the last shown activity. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_LAST_ACTIVITY = <span class="hljs-number">10</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is being cached for later use and contains activities. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_CACHED_ACTIVITY = <span class="hljs-number">11</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is being cached for later use and is a client of another cached </span><br><span class="hljs-comment">     * process that contains activities. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_CACHED_ACTIVITY_CLIENT = <span class="hljs-number">12</span>;  <br>  <br>    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is being cached for later use and is empty. */</span>  <br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_CACHED_EMPTY = <span class="hljs-number">13</span>;  <br>&#125;  <br><br>VMRuntime.updateProcessState(<span class="hljs-keyword">int</span> state)<br><br>VMRuntime_updateProcessState(JNIEnv* env, jobject, jint process_state)<br><br>Heap::UpdateProcessState(ProcessState process_state)<br><br>Heap::RequestCollectorTransition(CollectorType desired_collector_type, uint64_t delta_time)<br><br>Heap::SignalHeapTrimDaemon(Thread* self)<br><br>Daemons.requestHeapTrim()<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java">ApplicationThread.scheduleLaunchActivity
+
+ApplicationThread.updateProcessState(<span class="hljs-keyword">int</span> processState, <span class="hljs-keyword">boolean</span> fromIpc) &#123;  
+    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;  
+        <span class="hljs-keyword">if</span> (mLastProcessState != processState) &#123;  
+            mLastProcessState = processState;  
+            <span class="hljs-comment">// 用户可感知/用户不可感知</span>
+            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> DALVIK_PROCESS_STATE_JANK_PERCEPTIBLE = <span class="hljs-number">0</span>;  
+            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> DALVIK_PROCESS_STATE_JANK_IMPERCEPTIBLE = <span class="hljs-number">1</span>;  
+            <span class="hljs-keyword">int</span> dalvikProcessState = DALVIK_PROCESS_STATE_JANK_IMPERCEPTIBLE;  
+            
+            <span class="hljs-comment">// &lt;= PROCESS_STATE_IMPORTANT_FOREGROUND 表示前台进程，用户可见可交互</span>
+            <span class="hljs-keyword">if</span> (processState &lt;= ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND) &#123;  
+                dalvikProcessState = DALVIK_PROCESS_STATE_JANK_PERCEPTIBLE;  
+            &#125;  
+            VMRuntime.getRuntime().updateProcessState(dalvikProcessState);  
+            ......  
+        &#125;  
+    &#125;  
+&#125; 
+
+<span class="hljs-comment">// AMS 定义了 14 种进程的状态，越小越重要</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityManager</span> </span>&#123;  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is a persistent system process. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_PERSISTENT = <span class="hljs-number">0</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is a persistent system process and is doing UI. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_PERSISTENT_UI = <span class="hljs-number">1</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is hosting the current top activities.  Note that this covers </span>
+<span class="hljs-comment">     * all activities that are visible to the user. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_TOP = <span class="hljs-number">2</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is important to the user, and something they are aware of. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_IMPORTANT_FOREGROUND = <span class="hljs-number">3</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is important to the user, but not something they are aware of. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_IMPORTANT_BACKGROUND = <span class="hljs-number">4</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background running a backup/restore operation. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_BACKUP = <span class="hljs-number">5</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background, but it can&#x27;t restore its state so we want </span>
+<span class="hljs-comment">     * to try to avoid killing it. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_HEAVY_WEIGHT = <span class="hljs-number">6</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background running a service.  Unlike oom_adj, this level </span>
+<span class="hljs-comment">     * is used for both the normal running in background state and the executing </span>
+<span class="hljs-comment">     * operations state. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_SERVICE = <span class="hljs-number">7</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background running a receiver.   Note that from the </span>
+<span class="hljs-comment">     * perspective of oom_adj receivers run at a higher foreground level, but for our </span>
+<span class="hljs-comment">     * prioritization here that is not necessary and putting them below services means </span>
+<span class="hljs-comment">     * many fewer changes in some process states as they receive broadcasts. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_RECEIVER = <span class="hljs-number">8</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background but hosts the home activity. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_HOME = <span class="hljs-number">9</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is in the background but hosts the last shown activity. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_LAST_ACTIVITY = <span class="hljs-number">10</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is being cached for later use and contains activities. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_CACHED_ACTIVITY = <span class="hljs-number">11</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is being cached for later use and is a client of another cached </span>
+<span class="hljs-comment">     * process that contains activities. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_CACHED_ACTIVITY_CLIENT = <span class="hljs-number">12</span>;  
+  
+    <span class="hljs-comment">/** <span class="hljs-doctag">@hide</span> Process is being cached for later use and is empty. */</span>  
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> PROCESS_STATE_CACHED_EMPTY = <span class="hljs-number">13</span>;  
+&#125;  
+
+VMRuntime.updateProcessState(<span class="hljs-keyword">int</span> state)
+
+VMRuntime_updateProcessState(JNIEnv* env, jobject, jint process_state)
+
+Heap::UpdateProcessState(ProcessState process_state)
+
+Heap::RequestCollectorTransition(CollectorType desired_collector_type, uint64_t delta_time)
+
+Heap::SignalHeapTrimDaemon(Thread* self)
+
+Daemons.requestHeapTrim()</code></pre></div>
 
 <p>上面说过 ART 启动后加载 <code>java.lang.Daemons</code> 时，会启动五个守护线程，其中有一个是 <code>HeapTrimmerDaemon</code> 负责压缩堆内存，其实它也负责切换 GC，并且在过程中根据情况有可能在切换 GC 前执行一次 <code>compacting</code></p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Daemons</span> </span>&#123;  <br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">requestHeapTrim</span><span class="hljs-params">()</span> </span>&#123;  <br>        <span class="hljs-keyword">synchronized</span> (HeapTrimmerDaemon.INSTANCE) &#123;  <br>            HeapTrimmerDaemon.INSTANCE.notify();  <br>        &#125;  <br>    &#125;<br>&#125; <br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Daemons</span> </span>&#123;  
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">requestHeapTrim</span><span class="hljs-params">()</span> </span>&#123;  
+        <span class="hljs-keyword">synchronized</span> (HeapTrimmerDaemon.INSTANCE) &#123;  
+            HeapTrimmerDaemon.INSTANCE.notify();  
+        &#125;  
+    &#125;
+&#125;</code></pre></div>
 
 
 <h4 id="切换至-Semi-Space-GC"><a href="#切换至-Semi-Space-GC" class="headerlink" title="切换至 Semi-Space GC"></a>切换至 Semi-Space GC</h4><p>这时候原来的 GC 只能为 <code>Mark-Sweep GC</code> 或者 <code>Concurrent Mark-Sweep GC</code>，此时 ART 堆由 <code>Image Space</code>、<code>Zygote Space</code>、<code>Non Moving Space</code>、<code>Main Space</code>、<code>Main Backup Space</code> 和 <code>Large Object Space</code> 组成。要做的是将 <code>Main Space</code> 上的存活对象移动至一个新创建的 <code>Bump Pointer Space</code> 上去，也就是说这时候的 Source Space 为 <code>Main Space</code>，而 Target Space 为 <code>Bump Pointer Space</code>。</p>

@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -125,11 +125,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -233,7 +228,11 @@ MotionEvent 里定义的 ACTION_XXX 还不少有 10 多个，看起来情况很�
           
           MessageQueue 是个单向链表，按 Message.when 自然序排
 它有类似于「生产者 - 消费者」模型的阻塞队列：没有 Message 时，阻塞直到新 Message 入队；否则阻塞到下一个 Message.when
-123456789101112131415161718192021222324252627282930// 这里会阻塞nativePollOnce(ptr, nextP
+// 这里会阻塞
+nativePollOnce(ptr, nextPollTimeoutMillis);
+
+synchronized (this) &#123;
+   
         </a>
       </p>
 

@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -245,28 +240,367 @@
 </ol>
 <p>但是要从各个 Android 版本的 so 文件里准确找到这些函数（符号）是有难度的</p>
 <p>寻找 <code>SuspendVMEv</code> 和 <code>ResumeVMEv</code> 的地址</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 自己实现 dlopen dlsym dlclose 以兼容各 Android 版本</span><br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">initForkVMSymbols</span><span class="hljs-params">()</span> </span>&#123;<br>  <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);<br>  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>  &#125;<br><br>  suspendVM = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)())kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art3Dbg9SuspendVMEv&quot;</span>);<br>  <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art3Dbg9SuspendVMEv unsupported!&quot;</span>);<br>  &#125;<br><br>  resumeVM = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)())kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art3Dbg8ResumeVMEv&quot;</span>);<br>  <span class="hljs-keyword">if</span> (resumeVM == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art3Dbg8ResumeVMEv unsupported!&quot;</span>);<br>  &#125;<br><br>  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose</span>(libHandle);<br>  <span class="hljs-keyword">return</span> suspendVM != <span class="hljs-literal">nullptr</span> &amp;&amp; resumeVM != <span class="hljs-literal">nullptr</span>;<br>&#125;<br><br><span class="hljs-function">JNIEXPORT <span class="hljs-keyword">void</span> *<span class="hljs-title">DlFcn::dlopen</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *lib_name, <span class="hljs-keyword">int</span> flags)</span> </span>&#123;<br>  <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;dlopen %s&quot;</span>, lib_name);<br>  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, init_api);<br>  <span class="hljs-keyword">if</span> (android_api_ &lt; __ANDROID_API_N__) &#123;                         <span class="hljs-comment">// N 以下打开 libart.so 查找符号</span><br>    <span class="hljs-keyword">return</span> ::<span class="hljs-built_in">dlopen</span>(lib_name, flags);<br>  &#125;<br>  <span class="hljs-keyword">if</span> (android_api_ &gt; __ANDROID_API_N__) &#123;<br>    <span class="hljs-keyword">void</span> *handle = ::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libdl.so&quot;</span>, RTLD_NOW);<br>    <span class="hljs-built_in">CHECKP</span>(handle)<br>    <span class="hljs-keyword">auto</span> __loader_dlopen = <span class="hljs-keyword">reinterpret_cast</span>&lt;__loader_dlopen_fn&gt;(::<span class="hljs-built_in">dlsym</span>(handle, <span class="hljs-string">&quot;__loader_dlopen&quot;</span>));<br>    <span class="hljs-built_in">CHECKP</span>(__loader_dlopen)<br>    <span class="hljs-keyword">if</span> (android_api_ &lt; __ANDROID_API_Q__) &#123;                       <span class="hljs-comment">// Q 以下用 __loader_dlopen 查找符号</span><br>      <span class="hljs-keyword">return</span> __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)dlerror);<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>      handle = __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)dlerror); <span class="hljs-comment">// 其他情况，从 /proc/self/maps 拿到进程的内存布局，找到 mmap 进内存的 libart.so，根据 elf 文件结构解析里面的符号</span><br>      <span class="hljs-keyword">if</span> (handle == <span class="hljs-literal">nullptr</span>) &#123;<br>        <span class="hljs-comment">// Android Q added &quot;runtime&quot; namespace</span><br>        dl_iterate_data data&#123;&#125;;<br>        data.info_.dlpi_name = lib_name;<br>        <span class="hljs-built_in">dl_iterate_phdr_wrapper</span>(dl_iterate_callback, &amp;data);<br>        <span class="hljs-built_in">CHECKP</span>(data.info_.dlpi_addr &gt; <span class="hljs-number">0</span>)<br>        handle = __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)data.info_.dlpi_addr);<br>      &#125;<br>      <span class="hljs-keyword">return</span> handle;<br>    &#125;<br>  &#125;<br>  <span class="hljs-comment">// __ANDROID_API_N__</span><br>  <span class="hljs-keyword">auto</span> *data = <span class="hljs-keyword">new</span> <span class="hljs-built_in">dl_iterate_data</span>();<br>  data-&gt;info_.dlpi_name = lib_name;<br>  <span class="hljs-built_in">dl_iterate_phdr_wrapper</span>(dl_iterate_callback, data);<br>  <span class="hljs-keyword">return</span> data;<br>&#125;<br><br><span class="hljs-function">JNIEXPORT <span class="hljs-keyword">void</span> *<span class="hljs-title">DlFcn::dlsym</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *handle, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *name)</span> </span>&#123;<br>  <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;dlsym %s&quot;</span>, name);<br>  <span class="hljs-built_in">CHECKP</span>(handle)<br>  <span class="hljs-keyword">if</span> (android_api_ != __ANDROID_API_N__) &#123;                  <span class="hljs-comment">// 用 dlopen 打开则用 dlsym 查找符号</span><br>    <span class="hljs-keyword">return</span> ::<span class="hljs-built_in">dlsym</span>(handle, name);<br>  &#125;<br>  <span class="hljs-comment">// __ANDROID_API_N__</span><br>  <span class="hljs-keyword">auto</span> *data = (dl_iterate_data *)handle;                   <span class="hljs-comment">// 否则遍历 elf 里的符号列表查找</span><br>  <span class="hljs-built_in">ElfW</span>(Addr) dlpi_addr = data-&gt;info_.dlpi_addr;<br>  <span class="hljs-function"><span class="hljs-keyword">const</span> <span class="hljs-title">ElfW</span><span class="hljs-params">(Phdr)</span> *dlpi_phdr </span>= data-&gt;info_.dlpi_phdr;<br>  <span class="hljs-built_in">ElfW</span>(Half) dlpi_phnum = data-&gt;info_.dlpi_phnum;<br>  <span class="hljs-comment">// preserved for parse .symtab</span><br>  <span class="hljs-built_in">ElfW</span>(Addr) elf_base_addr;<br><br>  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; dlpi_phnum; ++i) &#123;<br>    <span class="hljs-keyword">if</span> (dlpi_phdr[i].p_type == PT_LOAD &amp;&amp; dlpi_phdr[i].p_offset == <span class="hljs-number">0</span>) &#123;<br>      elf_base_addr = dlpi_addr + dlpi_phdr[i].p_vaddr;<br>      <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;PT_LOAD dlpi_addr %p p_vaddr %p elf_base_addr %p&quot;</span>, dlpi_addr, dlpi_phdr[i].p_vaddr,<br>            elf_base_addr);<br>    &#125;<br>    <span class="hljs-keyword">if</span> (dlpi_phdr[i].p_type == PT_DYNAMIC) &#123;<br>      <span class="hljs-built_in">ElfW</span>(Dyn) *dyn = (<span class="hljs-built_in">ElfW</span>(Dyn) *)(dlpi_addr + dlpi_phdr[i].p_vaddr);<br>      <span class="hljs-built_in">ElfW</span>(Dyn) *dyn_end = dyn + (dlpi_phdr[i].p_memsz / <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-built_in">ElfW</span>(Dyn)));<br>      <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *strtab;<br>      <span class="hljs-built_in">ElfW</span>(Sym) * symtab;<br>      <span class="hljs-keyword">bool</span> is_use_gnu_hash = <span class="hljs-literal">false</span>;<br>      <span class="hljs-comment">// for ELF hash</span><br>      <span class="hljs-keyword">size_t</span> nbucket_;<br>      <span class="hljs-keyword">size_t</span> nchain_;<br>      <span class="hljs-keyword">uint32_t</span> *bucket_;<br>      <span class="hljs-keyword">uint32_t</span> *chain_;<br>      <span class="hljs-comment">// for GNU hash</span><br>      <span class="hljs-keyword">size_t</span> gnu_nbucket_;<br>      <span class="hljs-keyword">uint32_t</span> *gnu_bucket_;<br>      <span class="hljs-keyword">uint32_t</span> *gnu_chain_;<br>      <span class="hljs-keyword">uint32_t</span> gnu_maskwords_;<br>      <span class="hljs-keyword">uint32_t</span> gnu_shift2_;<br>      <span class="hljs-built_in">ElfW</span>(Addr) * gnu_bloom_filter_;<br>      <span class="hljs-comment">// ELF parse</span><br>      <span class="hljs-keyword">for</span> (; dyn &lt; dyn_end; dyn++) &#123;<br>        <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (dyn-&gt;d_tag) &#123;<br>        <span class="hljs-keyword">case</span> DT_NULL:<br>          <span class="hljs-comment">// the end of the dynamic-section</span><br>          dyn = dyn_end;<br>          <span class="hljs-keyword">break</span>;<br>        <span class="hljs-keyword">case</span> DT_STRTAB: &#123;<br>          <span class="hljs-built_in">ElfW</span>(Addr) strtab_addr = dlpi_addr + dyn-&gt;d_un.d_ptr;<br>          strtab = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *&gt;(strtab_addr);<br>          <span class="hljs-built_in">CHECKP</span>(strtab_addr &gt;= dlpi_addr)<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">case</span> DT_SYMTAB: &#123;<br>          <span class="hljs-built_in">ElfW</span>(Addr) symtab_addr = dlpi_addr + dyn-&gt;d_un.d_ptr;<br>          symtab = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-built_in">ElfW</span>(Sym) *&gt;(symtab_addr);<br>          <span class="hljs-built_in">CHECKP</span>(symtab_addr &gt;= dlpi_addr)<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">case</span> DT_HASH: &#123;<br>          <span class="hljs-comment">// ignore DT_HASH when ELF contains DT_GNU_HASH hash table</span><br>          <span class="hljs-keyword">if</span> (is_use_gnu_hash) &#123;<br>            <span class="hljs-keyword">continue</span>;<br>          &#125;<br>          nbucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">0</span>];<br>          nchain_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">1</span>];<br>          bucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">8</span>);<br>          chain_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">8</span> + nbucket_ * <span class="hljs-number">4</span>);<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">case</span> DT_GNU_HASH: &#123;<br>          gnu_nbucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">0</span>];<br>          <span class="hljs-comment">// skip symndx</span><br>          gnu_maskwords_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">2</span>];<br>          gnu_shift2_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">3</span>];<br><br>          gnu_bloom_filter_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-built_in">ElfW</span>(Addr) *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">16</span>);<br>          gnu_bucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(gnu_bloom_filter_ + gnu_maskwords_);<br>          <span class="hljs-comment">// amend chain for symndx = header[1]</span><br>          gnu_chain_ = gnu_bucket_ + gnu_nbucket_ -<br>                       <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">1</span>];<br>          --gnu_maskwords_;<br><br>          is_use_gnu_hash = <span class="hljs-literal">true</span>;<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>        <span class="hljs-keyword">default</span>:<br>          <span class="hljs-keyword">break</span>;<br>        &#125;<br>      &#125;<br>      <span class="hljs-comment">// lookup symbol</span><br>      <span class="hljs-keyword">if</span> (is_use_gnu_hash) &#123;<br>        <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;lookup use gnu hash&quot;</span>);<br>        <span class="hljs-keyword">uint32_t</span> hash = <span class="hljs-built_in">elf_gnu_hash</span>((<span class="hljs-keyword">uint8_t</span> *)name);<br>        <span class="hljs-keyword">constexpr</span> <span class="hljs-keyword">uint32_t</span> kBloomMaskBits = <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-built_in">ElfW</span>(Addr)) * <span class="hljs-number">8</span>;<br>        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> word_num = (hash / kBloomMaskBits) &amp; gnu_maskwords_;<br>        <span class="hljs-function"><span class="hljs-keyword">const</span> <span class="hljs-title">ElfW</span><span class="hljs-params">(Addr)</span> bloom_word </span>= gnu_bloom_filter_[word_num];<br>        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> h1 = hash % kBloomMaskBits;<br>        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> h2 = (hash &gt;&gt; gnu_shift2_) % kBloomMaskBits;<br>        <span class="hljs-comment">// test against bloom filter</span><br>        <span class="hljs-built_in">CHECKP</span>((<span class="hljs-number">1</span> &amp; (bloom_word &gt;&gt; h1) &amp; (bloom_word &gt;&gt; h2)) != <span class="hljs-number">0</span>)<br>        <span class="hljs-comment">// bloom test says &quot;probably yes&quot;...</span><br>        <span class="hljs-keyword">uint32_t</span> n = gnu_bucket_[hash % gnu_nbucket_];<br><br>        <span class="hljs-keyword">do</span> &#123;<br>          <span class="hljs-built_in">ElfW</span>(Sym) *s = symtab + n;<br>          <span class="hljs-keyword">if</span> (((gnu_chain_[n] ^ hash) &gt;&gt; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span> &amp;&amp; <span class="hljs-built_in">strcmp</span>(strtab + s-&gt;st_name, name) == <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;find %s %p&quot;</span>, name, dlpi_addr + s-&gt;st_value);<br>            <span class="hljs-keyword">return</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">void</span> *&gt;(dlpi_addr + s-&gt;st_value);<br>          &#125;<br>        &#125; <span class="hljs-keyword">while</span> ((gnu_chain_[n++] &amp; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span>);<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;lookup use elf hash&quot;</span>);<br>        <span class="hljs-keyword">uint32_t</span> hash = <span class="hljs-built_in">elf_hash</span>((<span class="hljs-keyword">uint8_t</span> *)name);<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">uint32_t</span> n = bucket_[hash % nbucket_]; n != <span class="hljs-number">0</span>; n = chain_[n]) &#123;<br>          <span class="hljs-built_in">ElfW</span>(Sym) *s = symtab + n;<br>          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strcmp</span>(strtab + s-&gt;st_name, name) == <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;find %s %p&quot;</span>, name, dlpi_addr + s-&gt;st_value);<br>            <span class="hljs-keyword">return</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">void</span> *&gt;(dlpi_addr + s-&gt;st_value);<br>          &#125;<br>        &#125;<br>      &#125;<br>    &#125;<br>  &#125;<br>  <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 自己实现 dlopen dlsym dlclose 以兼容各 Android 版本</span>
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">initForkVMSymbols</span><span class="hljs-params">()</span> </span>&#123;
+  <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);
+  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  &#125;
+
+  suspendVM = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)())kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art3Dbg9SuspendVMEv&quot;</span>);
+  <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art3Dbg9SuspendVMEv unsupported!&quot;</span>);
+  &#125;
+
+  resumeVM = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)())kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art3Dbg8ResumeVMEv&quot;</span>);
+  <span class="hljs-keyword">if</span> (resumeVM == <span class="hljs-literal">nullptr</span>) &#123;
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art3Dbg8ResumeVMEv unsupported!&quot;</span>);
+  &#125;
+
+  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose</span>(libHandle);
+  <span class="hljs-keyword">return</span> suspendVM != <span class="hljs-literal">nullptr</span> &amp;&amp; resumeVM != <span class="hljs-literal">nullptr</span>;
+&#125;
+
+<span class="hljs-function">JNIEXPORT <span class="hljs-keyword">void</span> *<span class="hljs-title">DlFcn::dlopen</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *lib_name, <span class="hljs-keyword">int</span> flags)</span> </span>&#123;
+  <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;dlopen %s&quot;</span>, lib_name);
+  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, init_api);
+  <span class="hljs-keyword">if</span> (android_api_ &lt; __ANDROID_API_N__) &#123;                         <span class="hljs-comment">// N 以下打开 libart.so 查找符号</span>
+    <span class="hljs-keyword">return</span> ::<span class="hljs-built_in">dlopen</span>(lib_name, flags);
+  &#125;
+  <span class="hljs-keyword">if</span> (android_api_ &gt; __ANDROID_API_N__) &#123;
+    <span class="hljs-keyword">void</span> *handle = ::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libdl.so&quot;</span>, RTLD_NOW);
+    <span class="hljs-built_in">CHECKP</span>(handle)
+    <span class="hljs-keyword">auto</span> __loader_dlopen = <span class="hljs-keyword">reinterpret_cast</span>&lt;__loader_dlopen_fn&gt;(::<span class="hljs-built_in">dlsym</span>(handle, <span class="hljs-string">&quot;__loader_dlopen&quot;</span>));
+    <span class="hljs-built_in">CHECKP</span>(__loader_dlopen)
+    <span class="hljs-keyword">if</span> (android_api_ &lt; __ANDROID_API_Q__) &#123;                       <span class="hljs-comment">// Q 以下用 __loader_dlopen 查找符号</span>
+      <span class="hljs-keyword">return</span> __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)dlerror);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      handle = __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)dlerror); <span class="hljs-comment">// 其他情况，从 /proc/self/maps 拿到进程的内存布局，找到 mmap 进内存的 libart.so，根据 elf 文件结构解析里面的符号</span>
+      <span class="hljs-keyword">if</span> (handle == <span class="hljs-literal">nullptr</span>) &#123;
+        <span class="hljs-comment">// Android Q added &quot;runtime&quot; namespace</span>
+        dl_iterate_data data&#123;&#125;;
+        data.info_.dlpi_name = lib_name;
+        <span class="hljs-built_in">dl_iterate_phdr_wrapper</span>(dl_iterate_callback, &amp;data);
+        <span class="hljs-built_in">CHECKP</span>(data.info_.dlpi_addr &gt; <span class="hljs-number">0</span>)
+        handle = __loader_dlopen(lib_name, flags, (<span class="hljs-keyword">void</span> *)data.info_.dlpi_addr);
+      &#125;
+      <span class="hljs-keyword">return</span> handle;
+    &#125;
+  &#125;
+  <span class="hljs-comment">// __ANDROID_API_N__</span>
+  <span class="hljs-keyword">auto</span> *data = <span class="hljs-keyword">new</span> <span class="hljs-built_in">dl_iterate_data</span>();
+  data-&gt;info_.dlpi_name = lib_name;
+  <span class="hljs-built_in">dl_iterate_phdr_wrapper</span>(dl_iterate_callback, data);
+  <span class="hljs-keyword">return</span> data;
+&#125;
+
+<span class="hljs-function">JNIEXPORT <span class="hljs-keyword">void</span> *<span class="hljs-title">DlFcn::dlsym</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *handle, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *name)</span> </span>&#123;
+  <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;dlsym %s&quot;</span>, name);
+  <span class="hljs-built_in">CHECKP</span>(handle)
+  <span class="hljs-keyword">if</span> (android_api_ != __ANDROID_API_N__) &#123;                  <span class="hljs-comment">// 用 dlopen 打开则用 dlsym 查找符号</span>
+    <span class="hljs-keyword">return</span> ::<span class="hljs-built_in">dlsym</span>(handle, name);
+  &#125;
+  <span class="hljs-comment">// __ANDROID_API_N__</span>
+  <span class="hljs-keyword">auto</span> *data = (dl_iterate_data *)handle;                   <span class="hljs-comment">// 否则遍历 elf 里的符号列表查找</span>
+  <span class="hljs-built_in">ElfW</span>(Addr) dlpi_addr = data-&gt;info_.dlpi_addr;
+  <span class="hljs-function"><span class="hljs-keyword">const</span> <span class="hljs-title">ElfW</span><span class="hljs-params">(Phdr)</span> *dlpi_phdr </span>= data-&gt;info_.dlpi_phdr;
+  <span class="hljs-built_in">ElfW</span>(Half) dlpi_phnum = data-&gt;info_.dlpi_phnum;
+  <span class="hljs-comment">// preserved for parse .symtab</span>
+  <span class="hljs-built_in">ElfW</span>(Addr) elf_base_addr;
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; dlpi_phnum; ++i) &#123;
+    <span class="hljs-keyword">if</span> (dlpi_phdr[i].p_type == PT_LOAD &amp;&amp; dlpi_phdr[i].p_offset == <span class="hljs-number">0</span>) &#123;
+      elf_base_addr = dlpi_addr + dlpi_phdr[i].p_vaddr;
+      <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;PT_LOAD dlpi_addr %p p_vaddr %p elf_base_addr %p&quot;</span>, dlpi_addr, dlpi_phdr[i].p_vaddr,
+            elf_base_addr);
+    &#125;
+    <span class="hljs-keyword">if</span> (dlpi_phdr[i].p_type == PT_DYNAMIC) &#123;
+      <span class="hljs-built_in">ElfW</span>(Dyn) *dyn = (<span class="hljs-built_in">ElfW</span>(Dyn) *)(dlpi_addr + dlpi_phdr[i].p_vaddr);
+      <span class="hljs-built_in">ElfW</span>(Dyn) *dyn_end = dyn + (dlpi_phdr[i].p_memsz / <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-built_in">ElfW</span>(Dyn)));
+      <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *strtab;
+      <span class="hljs-built_in">ElfW</span>(Sym) * symtab;
+      <span class="hljs-keyword">bool</span> is_use_gnu_hash = <span class="hljs-literal">false</span>;
+      <span class="hljs-comment">// for ELF hash</span>
+      <span class="hljs-keyword">size_t</span> nbucket_;
+      <span class="hljs-keyword">size_t</span> nchain_;
+      <span class="hljs-keyword">uint32_t</span> *bucket_;
+      <span class="hljs-keyword">uint32_t</span> *chain_;
+      <span class="hljs-comment">// for GNU hash</span>
+      <span class="hljs-keyword">size_t</span> gnu_nbucket_;
+      <span class="hljs-keyword">uint32_t</span> *gnu_bucket_;
+      <span class="hljs-keyword">uint32_t</span> *gnu_chain_;
+      <span class="hljs-keyword">uint32_t</span> gnu_maskwords_;
+      <span class="hljs-keyword">uint32_t</span> gnu_shift2_;
+      <span class="hljs-built_in">ElfW</span>(Addr) * gnu_bloom_filter_;
+      <span class="hljs-comment">// ELF parse</span>
+      <span class="hljs-keyword">for</span> (; dyn &lt; dyn_end; dyn++) &#123;
+        <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (dyn-&gt;d_tag) &#123;
+        <span class="hljs-keyword">case</span> DT_NULL:
+          <span class="hljs-comment">// the end of the dynamic-section</span>
+          dyn = dyn_end;
+          <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> DT_STRTAB: &#123;
+          <span class="hljs-built_in">ElfW</span>(Addr) strtab_addr = dlpi_addr + dyn-&gt;d_un.d_ptr;
+          strtab = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *&gt;(strtab_addr);
+          <span class="hljs-built_in">CHECKP</span>(strtab_addr &gt;= dlpi_addr)
+          <span class="hljs-keyword">break</span>;
+        &#125;
+        <span class="hljs-keyword">case</span> DT_SYMTAB: &#123;
+          <span class="hljs-built_in">ElfW</span>(Addr) symtab_addr = dlpi_addr + dyn-&gt;d_un.d_ptr;
+          symtab = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-built_in">ElfW</span>(Sym) *&gt;(symtab_addr);
+          <span class="hljs-built_in">CHECKP</span>(symtab_addr &gt;= dlpi_addr)
+          <span class="hljs-keyword">break</span>;
+        &#125;
+        <span class="hljs-keyword">case</span> DT_HASH: &#123;
+          <span class="hljs-comment">// ignore DT_HASH when ELF contains DT_GNU_HASH hash table</span>
+          <span class="hljs-keyword">if</span> (is_use_gnu_hash) &#123;
+            <span class="hljs-keyword">continue</span>;
+          &#125;
+          nbucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">0</span>];
+          nchain_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">1</span>];
+          bucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">8</span>);
+          chain_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">8</span> + nbucket_ * <span class="hljs-number">4</span>);
+          <span class="hljs-keyword">break</span>;
+        &#125;
+        <span class="hljs-keyword">case</span> DT_GNU_HASH: &#123;
+          gnu_nbucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">0</span>];
+          <span class="hljs-comment">// skip symndx</span>
+          gnu_maskwords_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">2</span>];
+          gnu_shift2_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">3</span>];
+
+          gnu_bloom_filter_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-built_in">ElfW</span>(Addr) *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr + <span class="hljs-number">16</span>);
+          gnu_bucket_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(gnu_bloom_filter_ + gnu_maskwords_);
+          <span class="hljs-comment">// amend chain for symndx = header[1]</span>
+          gnu_chain_ = gnu_bucket_ + gnu_nbucket_ -
+                       <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">uint32_t</span> *&gt;(dlpi_addr + dyn-&gt;d_un.d_ptr)[<span class="hljs-number">1</span>];
+          --gnu_maskwords_;
+
+          is_use_gnu_hash = <span class="hljs-literal">true</span>;
+          <span class="hljs-keyword">break</span>;
+        &#125;
+        <span class="hljs-keyword">default</span>:
+          <span class="hljs-keyword">break</span>;
+        &#125;
+      &#125;
+      <span class="hljs-comment">// lookup symbol</span>
+      <span class="hljs-keyword">if</span> (is_use_gnu_hash) &#123;
+        <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;lookup use gnu hash&quot;</span>);
+        <span class="hljs-keyword">uint32_t</span> hash = <span class="hljs-built_in">elf_gnu_hash</span>((<span class="hljs-keyword">uint8_t</span> *)name);
+        <span class="hljs-keyword">constexpr</span> <span class="hljs-keyword">uint32_t</span> kBloomMaskBits = <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-built_in">ElfW</span>(Addr)) * <span class="hljs-number">8</span>;
+        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> word_num = (hash / kBloomMaskBits) &amp; gnu_maskwords_;
+        <span class="hljs-function"><span class="hljs-keyword">const</span> <span class="hljs-title">ElfW</span><span class="hljs-params">(Addr)</span> bloom_word </span>= gnu_bloom_filter_[word_num];
+        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> h1 = hash % kBloomMaskBits;
+        <span class="hljs-keyword">const</span> <span class="hljs-keyword">uint32_t</span> h2 = (hash &gt;&gt; gnu_shift2_) % kBloomMaskBits;
+        <span class="hljs-comment">// test against bloom filter</span>
+        <span class="hljs-built_in">CHECKP</span>((<span class="hljs-number">1</span> &amp; (bloom_word &gt;&gt; h1) &amp; (bloom_word &gt;&gt; h2)) != <span class="hljs-number">0</span>)
+        <span class="hljs-comment">// bloom test says &quot;probably yes&quot;...</span>
+        <span class="hljs-keyword">uint32_t</span> n = gnu_bucket_[hash % gnu_nbucket_];
+
+        <span class="hljs-keyword">do</span> &#123;
+          <span class="hljs-built_in">ElfW</span>(Sym) *s = symtab + n;
+          <span class="hljs-keyword">if</span> (((gnu_chain_[n] ^ hash) &gt;&gt; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span> &amp;&amp; <span class="hljs-built_in">strcmp</span>(strtab + s-&gt;st_name, name) == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;find %s %p&quot;</span>, name, dlpi_addr + s-&gt;st_value);
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">void</span> *&gt;(dlpi_addr + s-&gt;st_value);
+          &#125;
+        &#125; <span class="hljs-keyword">while</span> ((gnu_chain_[n++] &amp; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span>);
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;lookup use elf hash&quot;</span>);
+        <span class="hljs-keyword">uint32_t</span> hash = <span class="hljs-built_in">elf_hash</span>((<span class="hljs-keyword">uint8_t</span> *)name);
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">uint32_t</span> n = bucket_[hash % nbucket_]; n != <span class="hljs-number">0</span>; n = chain_[n]) &#123;
+          <span class="hljs-built_in">ElfW</span>(Sym) *s = symtab + n;
+          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strcmp</span>(strtab + s-&gt;st_name, name) == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-built_in">ALOGD</span>(<span class="hljs-string">&quot;find %s %p&quot;</span>, name, dlpi_addr + s-&gt;st_value);
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">void</span> *&gt;(dlpi_addr + s-&gt;st_value);
+          &#125;
+        &#125;
+      &#125;
+    &#125;
+  &#125;
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;
+&#125;</code></pre></div>
 
 <p>查找 <code>ScopedSuspendAll</code> 的构造函数和析构函数</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;<br>  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);<br>  <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// For above android 11</span><br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initDumpHprofSymbols</span><span class="hljs-params">()</span> </span>&#123;<br>  <span class="hljs-comment">// Parse .dynsym(GLOBAL)</span><br>  <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);<br>  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span>;<br>  &#125;<br>  ScopedSuspendAllConstructor = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *, <span class="hljs-keyword">bool</span>))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(<br>      libHandle, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllC1EPKcb&quot;</span>);<br>  <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllC1EPKcb unsupported!&quot;</span>);<br>  &#125;<br><br>  ScopedSuspendAllDestructor =<br>      (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllD1Ev&quot;</span>);<br>  <span class="hljs-keyword">if</span> (ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllD1Ev unsupported!&quot;</span>);<br>  &#125;<br><br>  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose</span>(libHandle);<br>  <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
+  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);
+  <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// For above android 11</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initDumpHprofSymbols</span><span class="hljs-params">()</span> </span>&#123;
+  <span class="hljs-comment">// Parse .dynsym(GLOBAL)</span>
+  <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);
+  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;
+    <span class="hljs-keyword">return</span>;
+  &#125;
+  ScopedSuspendAllConstructor = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *, <span class="hljs-keyword">bool</span>))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(
+      libHandle, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllC1EPKcb&quot;</span>);
+  <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span>) &#123;
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllC1EPKcb unsupported!&quot;</span>);
+  &#125;
+
+  ScopedSuspendAllDestructor =
+      (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym</span>(libHandle, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllD1Ev&quot;</span>);
+  <span class="hljs-keyword">if</span> (ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span>) &#123;
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art16ScopedSuspendAllD1Ev unsupported!&quot;</span>);
+  &#125;
+
+  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose</span>(libHandle);
+  <span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
 
 <h2 id="fork"><a href="#fork" class="headerlink" title="fork"></a>fork</h2><p>使用系统调用 <code>fork</code> 创建子进程</p>
 <ol>
 <li>子进程返回 0，dump hprof 后退出进程</li>
 <li>父进程返回子进程 pid，首先恢复 JVM，然后利用 <code>waitpid</code> 阻塞直到子进程完成 dump hprof，然后处理 hprof</li>
 </ol>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;<br>  <span class="hljs-meta">@Override</span><br>  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;<br>    <span class="hljs-comment">// ...</span><br>    <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;<br>    <span class="hljs-keyword">try</span> &#123;<br>      <span class="hljs-keyword">int</span> pid = trySuspendVMThenFork();<br>      <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">0</span>) &#123;                       <span class="hljs-comment">// 子进程</span><br>        Debug.dumpHprofData(path);<br>        KLog.i(TAG, <span class="hljs-string">&quot;notifyDumped:&quot;</span> + dumpRes);<br>        <span class="hljs-comment">//System.exit(0);</span><br>        exitProcess();<br>      &#125; <span class="hljs-keyword">else</span> &#123;                              <span class="hljs-comment">// 父进程</span><br>        resumeVM();<br>        dumpRes = waitDumping(pid);<br>        KLog.i(TAG, <span class="hljs-string">&quot;hprof pid:&quot;</span> + pid + <span class="hljs-string">&quot; dumped: &quot;</span> + path);<br>      &#125;<br><br>    &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;<br>      e.printStackTrace();<br>      KLog.e(TAG, <span class="hljs-string">&quot;dump failed caused by IOException!&quot;</span>);<br>    &#125;<br>    <span class="hljs-keyword">return</span> dumpRes;<br>  &#125;    <br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">int</span> pid = trySuspendVMThenFork();
+      <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">0</span>) &#123;                       <span class="hljs-comment">// 子进程</span>
+        Debug.dumpHprofData(path);
+        KLog.i(TAG, <span class="hljs-string">&quot;notifyDumped:&quot;</span> + dumpRes);
+        <span class="hljs-comment">//System.exit(0);</span>
+        exitProcess();
+      &#125; <span class="hljs-keyword">else</span> &#123;                              <span class="hljs-comment">// 父进程</span>
+        resumeVM();
+        dumpRes = waitDumping(pid);
+        KLog.i(TAG, <span class="hljs-string">&quot;hprof pid:&quot;</span> + pid + <span class="hljs-string">&quot; dumped: &quot;</span> + path);
+      &#125;
 
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jint JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_trySuspendVMThenFork</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jobject jObject)</span> </span>&#123;<br>  <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-built_in">initForkVMSymbols</span>();<br>  &#125;<br>  <span class="hljs-keyword">if</span> (suspendVM != <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-built_in">suspendVM</span>();<br>  &#125;<br>  <span class="hljs-keyword">return</span> fork();    <span class="hljs-comment">// 用系统调用 fork 创建子进程</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+    &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;
+      e.printStackTrace();
+      KLog.e(TAG, <span class="hljs-string">&quot;dump failed caused by IOException!&quot;</span>);
+    &#125;
+    <span class="hljs-keyword">return</span> dumpRes;
+  &#125;    
+&#125;</code></pre></div>
+
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jint JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_trySuspendVMThenFork</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jobject jObject)</span> </span>&#123;
+  <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;
+    <span class="hljs-built_in">initForkVMSymbols</span>();
+  &#125;
+  <span class="hljs-keyword">if</span> (suspendVM != <span class="hljs-literal">nullptr</span>) &#123;
+    <span class="hljs-built_in">suspendVM</span>();
+  &#125;
+  <span class="hljs-keyword">return</span> fork();    <span class="hljs-comment">// 用系统调用 fork 创建子进程</span>
+&#125;</code></pre></div>
 
 <p>Android 11 的情况下也是利用系统调用 <code>fork</code> 出子进程</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;<br>  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);<br>  <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span> || ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span> ||<br>      HprofConstructor == <span class="hljs-literal">nullptr</span> || HprofDestructor == <span class="hljs-literal">nullptr</span> || Dump == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span> JNI_FALSE;<br>  &#125;<br>  <span class="hljs-built_in">ScopedSuspendAllConstructor</span>(gSSAHandle, LOG_TAG, <span class="hljs-literal">true</span>);<br>  <span class="hljs-keyword">pid_t</span> pid = fork();<br>  <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">-1</span>) &#123;<br>    <span class="hljs-comment">// Fork error.</span><br>    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, <span class="hljs-string">&quot;failed to fork!&quot;</span>);<br>    <span class="hljs-keyword">return</span> JNI_FALSE;<br>  &#125;<br>  <span class="hljs-keyword">if</span> (pid != <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-comment">// Parent</span><br>    <span class="hljs-built_in">ScopedSuspendAllDestructor</span>(gSSAHandle);<br><br>    <span class="hljs-keyword">int</span> stat_loc;<br>    <span class="hljs-keyword">for</span> (;;) &#123;<br>      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">waitpid</span>(pid, &amp;stat_loc, <span class="hljs-number">0</span>) != <span class="hljs-number">-1</span> || errno != EINTR) &#123;<br>        <span class="hljs-keyword">break</span>;<br>      &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> JNI_TRUE;<br>  &#125;<br>  <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
+  <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);
+  <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span> || ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span> ||
+      HprofConstructor == <span class="hljs-literal">nullptr</span> || HprofDestructor == <span class="hljs-literal">nullptr</span> || Dump == <span class="hljs-literal">nullptr</span>) &#123;
+    <span class="hljs-keyword">return</span> JNI_FALSE;
+  &#125;
+  <span class="hljs-built_in">ScopedSuspendAllConstructor</span>(gSSAHandle, LOG_TAG, <span class="hljs-literal">true</span>);
+  <span class="hljs-keyword">pid_t</span> pid = fork();
+  <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">-1</span>) &#123;
+    <span class="hljs-comment">// Fork error.</span>
+    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, <span class="hljs-string">&quot;failed to fork!&quot;</span>);
+    <span class="hljs-keyword">return</span> JNI_FALSE;
+  &#125;
+  <span class="hljs-keyword">if</span> (pid != <span class="hljs-number">0</span>) &#123;
+    <span class="hljs-comment">// Parent</span>
+    <span class="hljs-built_in">ScopedSuspendAllDestructor</span>(gSSAHandle);
+
+    <span class="hljs-keyword">int</span> stat_loc;
+    <span class="hljs-keyword">for</span> (;;) &#123;
+      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">waitpid</span>(pid, &amp;stat_loc, <span class="hljs-number">0</span>) != <span class="hljs-number">-1</span> || errno != EINTR) &#123;
+        <span class="hljs-keyword">break</span>;
+      &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> JNI_TRUE;
+  &#125;
+  <span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
 
 <h2 id="处理-hprof"><a href="#处理-hprof" class="headerlink" title="处理 hprof"></a>处理 hprof</h2><p>子进程用 <code>Debug.dumpHprofData</code> 生成 hprof 文件后结束，父进程拿到 hprof 后开个新进程，在 <code>Service</code> 里用 <code>LeakCanary.Shark</code> 解析</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;<br>  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;<br>    <span class="hljs-comment">//...</span><br>    <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;<br>    <span class="hljs-keyword">try</span> &#123;<br>      <span class="hljs-keyword">int</span> pid = trySuspendVMThenFork();<br>      <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">0</span>) &#123;                   <span class="hljs-comment">// 子进程 dump hprof 后退出</span><br>        Debug.dumpHprofData(path);<br>        KLog.i(TAG, <span class="hljs-string">&quot;notifyDumped:&quot;</span> + dumpRes);<br>        exitProcess();<br>      &#125; <span class="hljs-keyword">else</span> &#123;                          <span class="hljs-comment">// 父进程等待 dump hprof 完成</span><br>        resumeVM();<br>        dumpRes = waitDumping(pid);<br>        KLog.i(TAG, <span class="hljs-string">&quot;hprof pid:&quot;</span> + pid + <span class="hljs-string">&quot; dumped: &quot;</span> + path);<br>      &#125;<br><br>    &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;<br>      e.printStackTrace();<br>      KLog.e(TAG, <span class="hljs-string">&quot;dump failed caused by IOException!&quot;</span>);<br>    &#125;<br>    <span class="hljs-keyword">return</span> dumpRes;<br>  &#125;    <br>&#125;<br><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HeapAnalyzeService</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">IntentService</span> </span>&#123;     <span class="hljs-comment">// 在 HeapAnalyzeService 里解析 hprof</span><br>  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">runAnalysis</span><span class="hljs-params">(Application application,</span></span><br><span class="hljs-params"><span class="hljs-function">      HeapAnalysisListener heapAnalysisListener)</span> </span>&#123;<br>    KLog.i(TAG, <span class="hljs-string">&quot;runAnalysis startService&quot;</span>);<br>    Intent intent = <span class="hljs-keyword">new</span> Intent(application, HeapAnalyzeService.class);<br>    IPCReceiver ipcReceiver = buildAnalysisReceiver(heapAnalysisListener);<br>    intent.putExtra(KConstants.ServiceIntent.RECEIVER, ipcReceiver);<br>    KHeapFile heapFile = KHeapFile.getKHeapFile();<br>    intent.putExtra(KConstants.ServiceIntent.HEAP_FILE, heapFile);<br>    application.startService(intent);<br>  &#125;    <br>&#125;<br><br><span class="hljs-comment">// HeapAnalyzeService 在另一个进程，防止解析 hprof 时 OOM 影响 APP</span><br><span class="hljs-comment">// &lt;service</span><br><span class="hljs-comment">//       android:name=&quot;.analysis.HeapAnalyzeService&quot;</span><br><span class="hljs-comment">//       android:process=&quot;:heap_analysis&quot; /&gt;</span><br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;
+    <span class="hljs-comment">//...</span>
+    <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">int</span> pid = trySuspendVMThenFork();
+      <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">0</span>) &#123;                   <span class="hljs-comment">// 子进程 dump hprof 后退出</span>
+        Debug.dumpHprofData(path);
+        KLog.i(TAG, <span class="hljs-string">&quot;notifyDumped:&quot;</span> + dumpRes);
+        exitProcess();
+      &#125; <span class="hljs-keyword">else</span> &#123;                          <span class="hljs-comment">// 父进程等待 dump hprof 完成</span>
+        resumeVM();
+        dumpRes = waitDumping(pid);
+        KLog.i(TAG, <span class="hljs-string">&quot;hprof pid:&quot;</span> + pid + <span class="hljs-string">&quot; dumped: &quot;</span> + path);
+      &#125;
+
+    &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;
+      e.printStackTrace();
+      KLog.e(TAG, <span class="hljs-string">&quot;dump failed caused by IOException!&quot;</span>);
+    &#125;
+    <span class="hljs-keyword">return</span> dumpRes;
+  &#125;    
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HeapAnalyzeService</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">IntentService</span> </span>&#123;     <span class="hljs-comment">// 在 HeapAnalyzeService 里解析 hprof</span>
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">runAnalysis</span><span class="hljs-params">(Application application,</span></span>
+<span class="hljs-params"><span class="hljs-function">      HeapAnalysisListener heapAnalysisListener)</span> </span>&#123;
+    KLog.i(TAG, <span class="hljs-string">&quot;runAnalysis startService&quot;</span>);
+    Intent intent = <span class="hljs-keyword">new</span> Intent(application, HeapAnalyzeService.class);
+    IPCReceiver ipcReceiver = buildAnalysisReceiver(heapAnalysisListener);
+    intent.putExtra(KConstants.ServiceIntent.RECEIVER, ipcReceiver);
+    KHeapFile heapFile = KHeapFile.getKHeapFile();
+    intent.putExtra(KConstants.ServiceIntent.HEAP_FILE, heapFile);
+    application.startService(intent);
+  &#125;    
+&#125;
+
+<span class="hljs-comment">// HeapAnalyzeService 在另一个进程，防止解析 hprof 时 OOM 影响 APP</span>
+<span class="hljs-comment">// &lt;service</span>
+<span class="hljs-comment">//       android:name=&quot;.analysis.HeapAnalyzeService&quot;</span>
+<span class="hljs-comment">//       android:process=&quot;:heap_analysis&quot; /&gt;</span></code></pre></div>
 
 <p>Android 11 则是查找类 <code>Hprof</code> 的构造/析构函数和 <code>dump</code> 函数，在 native 层进行 dump hprof，后续依然是在 java 层开个新进程解析</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;<br>  <span class="hljs-comment">// ... 直接在 native 层 dump hprof</span><br>  <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *filename = env-&gt;<span class="hljs-built_in">GetStringUTFChars</span>(file_name, <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-built_in">HprofConstructor</span>(gHprofHandle, filename, <span class="hljs-number">-1</span>, <span class="hljs-literal">false</span>);<br>  <span class="hljs-built_in">Dump</span>(gHprofHandle);<br>  <span class="hljs-built_in">HprofDestructor</span>(gHprofHandle);<br>  env-&gt;<span class="hljs-built_in">ReleaseStringUTFChars</span>(file_name, filename);<br>  _exit(<span class="hljs-number">0</span>);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initDumpHprofSymbols</span><span class="hljs-params">()</span> </span>&#123; <span class="hljs-comment">// 查找 Hprof 类的相关函数</span><br>  <span class="hljs-comment">//...</span><br>  libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen_elf</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);<br>  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-keyword">return</span>;<br>  &#125;<br>  HprofConstructor = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *, <span class="hljs-keyword">int</span>, <span class="hljs-keyword">bool</span>))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(<br>      libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5HprofC2EPKcib&quot;</span>);<br>  <span class="hljs-keyword">if</span> (HprofConstructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5HprofC2EPKcib unsupported!&quot;</span>);<br>  &#125;<br><br>  HprofDestructor =<br>      (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5HprofD0Ev&quot;</span>);<br>  <span class="hljs-keyword">if</span> (HprofDestructor == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5HprofD0Ev unsupported!&quot;</span>);<br>  &#125;<br><br>  Dump = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5Hprof4DumpEv&quot;</span>);<br>  <span class="hljs-keyword">if</span> (Dump == <span class="hljs-literal">nullptr</span>) &#123;<br>    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5Hprof4DumpEv unsupported!&quot;</span>);<br>  &#125;<br><br>  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose_elf</span>(libHandle);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
+  <span class="hljs-comment">// ... 直接在 native 层 dump hprof</span>
+  <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *filename = env-&gt;<span class="hljs-built_in">GetStringUTFChars</span>(file_name, <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-built_in">HprofConstructor</span>(gHprofHandle, filename, <span class="hljs-number">-1</span>, <span class="hljs-literal">false</span>);
+  <span class="hljs-built_in">Dump</span>(gHprofHandle);
+  <span class="hljs-built_in">HprofDestructor</span>(gHprofHandle);
+  env-&gt;<span class="hljs-built_in">ReleaseStringUTFChars</span>(file_name, filename);
+  _exit(<span class="hljs-number">0</span>);
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initDumpHprofSymbols</span><span class="hljs-params">()</span> </span>&#123; <span class="hljs-comment">// 查找 Hprof 类的相关函数</span>
+  <span class="hljs-comment">//...</span>
+  libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen_elf</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);
+  <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;
+    <span class="hljs-keyword">return</span>;
+  &#125;
+  HprofConstructor = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *, <span class="hljs-keyword">int</span>, <span class="hljs-keyword">bool</span>))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(
+      libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5HprofC2EPKcib&quot;</span>);
+  <span class="hljs-keyword">if</span> (HprofConstructor == <span class="hljs-literal">nullptr</span>) &#123;
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5HprofC2EPKcib unsupported!&quot;</span>);
+  &#125;
+
+  HprofDestructor =
+      (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5HprofD0Ev&quot;</span>);
+  <span class="hljs-keyword">if</span> (HprofDestructor == <span class="hljs-literal">nullptr</span>) &#123;
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5HprofD0Ev unsupported!&quot;</span>);
+  &#125;
+
+  Dump = (<span class="hljs-built_in"><span class="hljs-keyword">void</span></span> (*)(<span class="hljs-keyword">void</span> *))kwai::linker::DlFcn::<span class="hljs-built_in">dlsym_elf</span>(libHandle, <span class="hljs-string">&quot;_ZN3art5hprof5Hprof4DumpEv&quot;</span>);
+  <span class="hljs-keyword">if</span> (Dump == <span class="hljs-literal">nullptr</span>) &#123;
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, <span class="hljs-string">&quot;_ZN3art5hprof5Hprof4DumpEv unsupported!&quot;</span>);
+  &#125;
+
+  kwai::linker::DlFcn::<span class="hljs-built_in">dlclose_elf</span>(libHandle);
+&#125;</code></pre></div>
 
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
 <li><a target="_blank" rel="noopener" href="https://github.com/KwaiAppTeam/KOOM">KOOM</a></li>

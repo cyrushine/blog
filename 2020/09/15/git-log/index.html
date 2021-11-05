@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -140,11 +140,6 @@
                 class="iconfont icon-search"></i>&nbsp;</a>
           </li>
         
-        
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
         
       </ul>
     </div>
@@ -424,7 +419,10 @@
 </li>
 </ol>
 <h2 id="最后干货，你会喜欢的"><a href="#最后干货，你会喜欢的" class="headerlink" title="最后干货，你会喜欢的~"></a>最后干货，你会喜欢的~</h2><p>下面第一条的效果是这样：<br><img src="../../../../image/2020-09-15-git-log/2.png" srcset="/image/loading.gif" lazyload alt="2.png"></p>
-<figure class="highlight bash"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs bash">git config --global alias.lm  <span class="hljs-string">&quot;log --no-merges --color --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --author=&#x27;你的名字！自己修改！&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br>git config --global alias.lms  <span class="hljs-string">&quot;log --no-merges --color --stat --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --author=&#x27;你的名字！自己修改！&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br>git config --global [alias.ls](http://alias.ls/) <span class="hljs-string">&quot;log --no-merges --color --graph --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br>git config --global alias.lss <span class="hljs-string">&quot;log --no-merges --color --stat --graph --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span><br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs bash">git config --global alias.lm  <span class="hljs-string">&quot;log --no-merges --color --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --author=&#x27;你的名字！自己修改！&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span>
+git config --global alias.lms  <span class="hljs-string">&quot;log --no-merges --color --stat --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --author=&#x27;你的名字！自己修改！&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span>
+git config --global [alias.ls](http://alias.ls/) <span class="hljs-string">&quot;log --no-merges --color --graph --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span>
+git config --global alias.lss <span class="hljs-string">&quot;log --no-merges --color --stat --graph --date=format:&#x27;%Y-%m-%d %H:%M:%S&#x27; --pretty=format:&#x27;%Cred%h%Creset -%C(yellow)%d%Cblue %s %Cgreen(%cd) %C(bold blue)&lt;%an&gt;%Creset&#x27; --abbrev-commit&quot;</span></code></pre></div>
 
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
 <li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/bellkosmos/p/5923439.html">git log命令全解析，打log还能这么随心所欲！</a></li>

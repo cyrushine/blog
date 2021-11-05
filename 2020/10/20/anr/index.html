@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -238,18 +233,83 @@
 </li>
 </ol>
 <p>这里需要补充下 Native Looper 不同于 Java Looper 的地方：提供了监听文件描述符的机制</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * @param fd       需要监听的文件描述符</span><br><span class="hljs-comment"> * @param ident    表示为当前发生事件的标识符，必须 &gt;= 0，或者为 POLL_CALLBACK(-2) 如果指定了 callback</span><br><span class="hljs-comment"> * @param events   表示为要监听的文件类型，默认是 EVENT_INPUT</span><br><span class="hljs-comment"> * @param callback 当有事件发生时，会回调该 callback 函数</span><br><span class="hljs-comment"> * @param data</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * 主要做了两件事：</span><br><span class="hljs-comment"> * 1，把输入参数构造成 Request，添加到 mRequests</span><br><span class="hljs-comment"> * 2，将 fd 添加到 epoll</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">addFd</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> ident, <span class="hljs-keyword">int</span> events, Looper_callbackFunc callback, <span class="hljs-keyword">void</span>* data)</span></span>;<br><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">addFd</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> ident, <span class="hljs-keyword">int</span> events, <span class="hljs-keyword">const</span> sp&lt;LooperCallback&gt;&amp; callback, <span class="hljs-keyword">void</span>* data)</span></span>;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * @param fd       需要监听的文件描述符</span>
+<span class="hljs-comment"> * @param ident    表示为当前发生事件的标识符，必须 &gt;= 0，或者为 POLL_CALLBACK(-2) 如果指定了 callback</span>
+<span class="hljs-comment"> * @param events   表示为要监听的文件类型，默认是 EVENT_INPUT</span>
+<span class="hljs-comment"> * @param callback 当有事件发生时，会回调该 callback 函数</span>
+<span class="hljs-comment"> * @param data</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * 主要做了两件事：</span>
+<span class="hljs-comment"> * 1，把输入参数构造成 Request，添加到 mRequests</span>
+<span class="hljs-comment"> * 2，将 fd 添加到 epoll</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">addFd</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> ident, <span class="hljs-keyword">int</span> events, Looper_callbackFunc callback, <span class="hljs-keyword">void</span>* data)</span></span>;
+<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">addFd</span><span class="hljs-params">(<span class="hljs-keyword">int</span> fd, <span class="hljs-keyword">int</span> ident, <span class="hljs-keyword">int</span> events, <span class="hljs-keyword">const</span> sp&lt;LooperCallback&gt;&amp; callback, <span class="hljs-keyword">void</span>* data)</span></span>;</code></pre></div>
 
 <p>它有两种使用方式：</p>
 <ul>
 <li>指定 callback 来处理事件 : 当该文件描述符上有事件到来时，该 callback 会被执行；调用 <code>Looper.wake()</code> 也会触发 callback 执行</li>
 </ul>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce() -&gt; pollInner()</span><br><br><span class="hljs-keyword">int</span> eventCount = <span class="hljs-built_in">epoll_wait</span>(mEpollFd.<span class="hljs-built_in">get</span>(), eventItems, EPOLL_MAX_EVENTS, timeoutMillis)<br><span class="hljs-comment">// ...</span><br><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; eventCount; i++) &#123;<br>    <span class="hljs-keyword">int</span> fd = eventItems[i].data.fd;<br>    <span class="hljs-keyword">uint32_t</span> epollEvents = eventItems[i].events;<br>    <span class="hljs-keyword">if</span> (fd == mWakeEventFd.<span class="hljs-built_in">get</span>()) &#123;<br>        <span class="hljs-comment">// ...</span><br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-keyword">ssize_t</span> requestIndex = mRequests.<span class="hljs-built_in">indexOfKey</span>(fd);<br>        <span class="hljs-keyword">if</span> (requestIndex &gt;= <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-comment">// ...</span><br>            <span class="hljs-built_in">pushResponse</span>(events, mRequests.<span class="hljs-built_in">valueAt</span>(requestIndex));<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-comment">// ...</span><br>        &#125;<br>    &#125;<br>&#125;<br><span class="hljs-comment">// ...</span><br><span class="hljs-keyword">for</span> (<span class="hljs-keyword">size_t</span> i = <span class="hljs-number">0</span>; i &lt; mResponses.<span class="hljs-built_in">size</span>(); i++) &#123;<br>    Response&amp; response = mResponses.<span class="hljs-built_in">editItemAt</span>(i);<br>    <span class="hljs-keyword">if</span> (response.request.ident == POLL_CALLBACK) &#123;<br>        <span class="hljs-keyword">int</span> fd = response.request.fd;<br>        <span class="hljs-keyword">int</span> events = response.events;<br>        <span class="hljs-keyword">void</span>* data = response.request.data;<br>        <span class="hljs-keyword">int</span> callbackResult = response.request.callback-&gt;<span class="hljs-built_in">handleEvent</span>(fd, events, data);<br>        <span class="hljs-keyword">if</span> (callbackResult == <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-built_in">removeFd</span>(fd, response.request.seq);<br>        &#125;<br>        <span class="hljs-comment">// Clear the callback reference in the response structure promptly because we</span><br>        <span class="hljs-comment">// will not clear the response vector itself until the next poll.</span><br>        response.request.callback.<span class="hljs-built_in">clear</span>();<br>        result = POLL_CALLBACK;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce() -&gt; pollInner()</span>
+
+<span class="hljs-keyword">int</span> eventCount = <span class="hljs-built_in">epoll_wait</span>(mEpollFd.<span class="hljs-built_in">get</span>(), eventItems, EPOLL_MAX_EVENTS, timeoutMillis)
+<span class="hljs-comment">// ...</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; eventCount; i++) &#123;
+    <span class="hljs-keyword">int</span> fd = eventItems[i].data.fd;
+    <span class="hljs-keyword">uint32_t</span> epollEvents = eventItems[i].events;
+    <span class="hljs-keyword">if</span> (fd == mWakeEventFd.<span class="hljs-built_in">get</span>()) &#123;
+        <span class="hljs-comment">// ...</span>
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">ssize_t</span> requestIndex = mRequests.<span class="hljs-built_in">indexOfKey</span>(fd);
+        <span class="hljs-keyword">if</span> (requestIndex &gt;= <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-comment">// ...</span>
+            <span class="hljs-built_in">pushResponse</span>(events, mRequests.<span class="hljs-built_in">valueAt</span>(requestIndex));
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-comment">// ...</span>
+        &#125;
+    &#125;
+&#125;
+<span class="hljs-comment">// ...</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">size_t</span> i = <span class="hljs-number">0</span>; i &lt; mResponses.<span class="hljs-built_in">size</span>(); i++) &#123;
+    Response&amp; response = mResponses.<span class="hljs-built_in">editItemAt</span>(i);
+    <span class="hljs-keyword">if</span> (response.request.ident == POLL_CALLBACK) &#123;
+        <span class="hljs-keyword">int</span> fd = response.request.fd;
+        <span class="hljs-keyword">int</span> events = response.events;
+        <span class="hljs-keyword">void</span>* data = response.request.data;
+        <span class="hljs-keyword">int</span> callbackResult = response.request.callback-&gt;<span class="hljs-built_in">handleEvent</span>(fd, events, data);
+        <span class="hljs-keyword">if</span> (callbackResult == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-built_in">removeFd</span>(fd, response.request.seq);
+        &#125;
+        <span class="hljs-comment">// Clear the callback reference in the response structure promptly because we</span>
+        <span class="hljs-comment">// will not clear the response vector itself until the next poll.</span>
+        response.request.callback.<span class="hljs-built_in">clear</span>();
+        result = POLL_CALLBACK;
+    &#125;
+&#125;</code></pre></div>
 
 <ul>
 <li>通过指定的 ident 来处理事件：当该文件描述符有数据到来时，<code>pollOnce()</code> 会返回一个 ident，调用者会判断该 ident 是否等于自己需要处理的事件 ident，如果是的话，则开始处理事件</li>
 </ul>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce()</span><br><br><span class="hljs-keyword">for</span> (;;) &#123;<br>    <span class="hljs-keyword">while</span> (mResponseIndex &lt; mResponses.<span class="hljs-built_in">size</span>()) &#123;<br>        <span class="hljs-keyword">const</span> Response&amp; response = mResponses.<span class="hljs-built_in">itemAt</span>(mResponseIndex++);<br>        <span class="hljs-keyword">int</span> ident = response.request.ident;<br>        <span class="hljs-keyword">if</span> (ident &gt;= <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-keyword">int</span> fd = response.request.fd;<br>            <span class="hljs-keyword">int</span> events = response.events;<br>            <span class="hljs-keyword">void</span>* data = response.request.data;<br>            <span class="hljs-keyword">if</span> (outFd != <span class="hljs-literal">nullptr</span>) *outFd = fd;<br>            <span class="hljs-keyword">if</span> (outEvents != <span class="hljs-literal">nullptr</span>) *outEvents = events;<br>            <span class="hljs-keyword">if</span> (outData != <span class="hljs-literal">nullptr</span>) *outData = data;<br>            <span class="hljs-keyword">return</span> ident;<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce()</span>
+
+<span class="hljs-keyword">for</span> (;;) &#123;
+    <span class="hljs-keyword">while</span> (mResponseIndex &lt; mResponses.<span class="hljs-built_in">size</span>()) &#123;
+        <span class="hljs-keyword">const</span> Response&amp; response = mResponses.<span class="hljs-built_in">itemAt</span>(mResponseIndex++);
+        <span class="hljs-keyword">int</span> ident = response.request.ident;
+        <span class="hljs-keyword">if</span> (ident &gt;= <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">int</span> fd = response.request.fd;
+            <span class="hljs-keyword">int</span> events = response.events;
+            <span class="hljs-keyword">void</span>* data = response.request.data;
+            <span class="hljs-keyword">if</span> (outFd != <span class="hljs-literal">nullptr</span>) *outFd = fd;
+            <span class="hljs-keyword">if</span> (outEvents != <span class="hljs-literal">nullptr</span>) *outEvents = events;
+            <span class="hljs-keyword">if</span> (outData != <span class="hljs-literal">nullptr</span>) *outData = data;
+            <span class="hljs-keyword">return</span> ident;
+        &#125;
+    &#125;
+    <span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
 
 <h2 id="ui-如何接收和处理-input"><a href="#ui-如何接收和处理-input" class="headerlink" title="ui 如何接收和处理 input"></a>ui 如何接收和处理 input</h2><p>在分析事件分发的逻辑之前，我们先看看 ui 线程是怎么接收 input 事件的</p>
 <p><img src="../../../../image/2020-10-20-anr/input_channel.png" srcset="/image/loading.gif" lazyload alt="input_channel.png"></p>
@@ -272,7 +332,31 @@
 <p>产生 ANR 的逻辑就在 <code>dispatchKeyLocked</code>（分发一个 input event 的过程）</p>
 <p><img src="../../../../image/2020-10-20-anr/anr.jpg" srcset="/image/loading.gif" lazyload alt="anr.jpg"></p>
 <p>1，<code>findFocusedWindowTargetsLocked</code> 找到 input event 的分发 window 对象，然后 <code>checkWindowReadyForMoreInputLocked</code> 检查 widnow 是否可以接收 input event，这里截取一段检查逻辑：</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// outboundQueue 不为空说明此 window 仍有 input event 未发送，waitQueue 不为空说明有 input event 在消费中（未收到消费完成的响应）</span><br><span class="hljs-comment">// 也就是说 input event 必须是按顺序分发和消费的，不能乱序</span><br><span class="hljs-keyword">if</span> (eventEntry-&gt;type == EventEntry::TYPE_KEY) &#123;<br>    <span class="hljs-keyword">if</span> (!connection-&gt;outboundQueue.<span class="hljs-built_in">isEmpty</span>() || !connection-&gt;waitQueue.<span class="hljs-built_in">isEmpty</span>()) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-built_in">StringPrintf</span>(<span class="hljs-string">&quot;Waiting to send key event because the %s window has not &quot;</span><br>                            <span class="hljs-string">&quot;finished processing all of the input events that were previously &quot;</span><br>                            <span class="hljs-string">&quot;delivered to it.  Outbound queue length: %d.  Wait queue length: &quot;</span><br>                            <span class="hljs-string">&quot;%d.&quot;</span>,<br>                            targetType, connection-&gt;outboundQueue.<span class="hljs-built_in">count</span>(),<br>                            connection-&gt;waitQueue.<span class="hljs-built_in">count</span>());<br>    &#125;<br>&#125; <span class="hljs-keyword">else</span> &#123;<br>    <span class="hljs-keyword">if</span> (!connection-&gt;waitQueue.<span class="hljs-built_in">isEmpty</span>() &amp;&amp;<br>        currentTime &gt;= connection-&gt;waitQueue.head-&gt;deliveryTime + STREAM_AHEAD_EVENT_TIMEOUT) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-built_in">StringPrintf</span>(<span class="hljs-string">&quot;Waiting to send non-key event because the %s window has not &quot;</span><br>                            <span class="hljs-string">&quot;finished processing certain input events that were delivered to &quot;</span><br>                            <span class="hljs-string">&quot;it over &quot;</span><br>                            <span class="hljs-string">&quot;%0.1fms ago.  Wait queue length: %d.  Wait queue head age: &quot;</span><br>                            <span class="hljs-string">&quot;%0.1fms.&quot;</span>,<br>                            targetType, STREAM_AHEAD_EVENT_TIMEOUT * <span class="hljs-number">0.000001f</span>,<br>                            connection-&gt;waitQueue.<span class="hljs-built_in">count</span>(),<br>                            (currentTime - connection-&gt;waitQueue.head-&gt;deliveryTime) *<br>                                    <span class="hljs-number">0.000001f</span>);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// outboundQueue 不为空说明此 window 仍有 input event 未发送，waitQueue 不为空说明有 input event 在消费中（未收到消费完成的响应）</span>
+<span class="hljs-comment">// 也就是说 input event 必须是按顺序分发和消费的，不能乱序</span>
+<span class="hljs-keyword">if</span> (eventEntry-&gt;type == EventEntry::TYPE_KEY) &#123;
+    <span class="hljs-keyword">if</span> (!connection-&gt;outboundQueue.<span class="hljs-built_in">isEmpty</span>() || !connection-&gt;waitQueue.<span class="hljs-built_in">isEmpty</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">StringPrintf</span>(<span class="hljs-string">&quot;Waiting to send key event because the %s window has not &quot;</span>
+                            <span class="hljs-string">&quot;finished processing all of the input events that were previously &quot;</span>
+                            <span class="hljs-string">&quot;delivered to it.  Outbound queue length: %d.  Wait queue length: &quot;</span>
+                            <span class="hljs-string">&quot;%d.&quot;</span>,
+                            targetType, connection-&gt;outboundQueue.<span class="hljs-built_in">count</span>(),
+                            connection-&gt;waitQueue.<span class="hljs-built_in">count</span>());
+    &#125;
+&#125; <span class="hljs-keyword">else</span> &#123;
+    <span class="hljs-keyword">if</span> (!connection-&gt;waitQueue.<span class="hljs-built_in">isEmpty</span>() &amp;&amp;
+        currentTime &gt;= connection-&gt;waitQueue.head-&gt;deliveryTime + STREAM_AHEAD_EVENT_TIMEOUT) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">StringPrintf</span>(<span class="hljs-string">&quot;Waiting to send non-key event because the %s window has not &quot;</span>
+                            <span class="hljs-string">&quot;finished processing certain input events that were delivered to &quot;</span>
+                            <span class="hljs-string">&quot;it over &quot;</span>
+                            <span class="hljs-string">&quot;%0.1fms ago.  Wait queue length: %d.  Wait queue head age: &quot;</span>
+                            <span class="hljs-string">&quot;%0.1fms.&quot;</span>,
+                            targetType, STREAM_AHEAD_EVENT_TIMEOUT * <span class="hljs-number">0.000001f</span>,
+                            connection-&gt;waitQueue.<span class="hljs-built_in">count</span>(),
+                            (currentTime - connection-&gt;waitQueue.head-&gt;deliveryTime) *
+                                    <span class="hljs-number">0.000001f</span>);
+    &#125;
+&#125;</code></pre></div>
 
 <p>2，最后走到 <code>AppErrors.handleShowAnrUi</code> 里就是弹出 ANR dialog 的地方</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ol>

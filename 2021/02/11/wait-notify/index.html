@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -225,7 +220,74 @@
               <p>在 <a href="../../../../2021/01/24/condition-by-lock/">Lock（三）利用 Lock 实现 Condition</a> 我们介绍了如何用 <code>Lock</code> 来实现 <code>Condition</code>，而 <code>Condition</code> 对标的是 <code>Object.wait</code> 和 <code>Object.notify</code></p>
 <p>我们来看看 ART 是怎么实现 wait/notify 的（最好先了解下 <a href="../../../../2021/02/08/synchronized-implementation/">synchronized 的基础知识</a>）</p>
 <h2 id="ConditionVariable"><a href="#ConditionVariable" class="headerlink" title="ConditionVariable"></a>ConditionVariable</h2><p>对 futex/mutex 的封装，宏 <code>ART_USE_FUTEXES</code> 决定底层是使用 futex 还是 mutex；它不是「条件变量」，<code>Monitor</code> 才是（而且它还包含 Lock 的角色）</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::Wait</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  guard_.<span class="hljs-built_in">CheckSafeToWait</span>(self);<br>  <span class="hljs-built_in">WaitHoldingLocks</span>(self);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::WaitHoldingLocks</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self == <span class="hljs-literal">nullptr</span> || self == Thread::<span class="hljs-built_in">Current</span>());<br>  guard_.<span class="hljs-built_in">AssertExclusiveHeld</span>(self);<br>  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> old_recursion_count = guard_.recursion_count_;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>  num_waiters_++;<br>  <span class="hljs-comment">// Ensure the Mutex is contended so that requeued threads are awoken.</span><br>  guard_.<span class="hljs-built_in">increment_contenders</span>();<br>  guard_.recursion_count_ = <span class="hljs-number">1</span>;<br>  <span class="hljs-keyword">int32_t</span> cur_sequence = sequence_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>  guard_.<span class="hljs-built_in">ExclusiveUnlock</span>(self);<br>  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">futex</span>(sequence_.<span class="hljs-built_in">Address</span>(), FUTEX_WAIT_PRIVATE, cur_sequence, <span class="hljs-literal">nullptr</span>, <span class="hljs-literal">nullptr</span>, <span class="hljs-number">0</span>) != <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-comment">// Futex failed, check it is an expected error.</span><br>    <span class="hljs-comment">// EAGAIN == EWOULDBLK, so we let the caller try again.</span><br>    <span class="hljs-comment">// EINTR implies a signal was sent to this thread.</span><br>    <span class="hljs-keyword">if</span> ((errno != EINTR) &amp;&amp; (errno != EAGAIN)) &#123;<br>      <span class="hljs-built_in">PLOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;futex wait failed for &quot;</span> &lt;&lt; name_;<br>    &#125;<br>  &#125;<br>  <span class="hljs-built_in">SleepIfRuntimeDeleted</span>(self);<br>  guard_.<span class="hljs-built_in">ExclusiveLock</span>(self);<br>  <span class="hljs-built_in">CHECK_GT</span>(num_waiters_, <span class="hljs-number">0</span>);<br>  num_waiters_--;<br>  <span class="hljs-comment">// We awoke and so no longer require awakes from the guard_&#x27;s unlock.</span><br>  <span class="hljs-built_in">CHECK_GT</span>(guard_.<span class="hljs-built_in">get_contenders</span>(), <span class="hljs-number">0</span>);<br>  guard_.<span class="hljs-built_in">decrement_contenders</span>();<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br>  <span class="hljs-keyword">pid_t</span> old_owner = guard_.<span class="hljs-built_in">GetExclusiveOwnerTid</span>();<br>  guard_.exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-number">0</span> <span class="hljs-comment">/* pid */</span>, std::memory_order_relaxed);<br>  guard_.recursion_count_ = <span class="hljs-number">0</span>;<br>  <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_cond_wait, (&amp;cond_, &amp;guard_.mutex_));<br>  guard_.exclusive_owner_.<span class="hljs-built_in">store</span>(old_owner, std::memory_order_relaxed);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>  guard_.recursion_count_ = old_recursion_count;<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::Signal</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self == <span class="hljs-literal">nullptr</span> || self == Thread::<span class="hljs-built_in">Current</span>());<br>  guard_.<span class="hljs-built_in">AssertExclusiveHeld</span>(self);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>  <span class="hljs-built_in">RequeueWaiters</span>(<span class="hljs-number">1</span>);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br>  <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_cond_signal, (&amp;cond_));<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::RequeueWaiters</span><span class="hljs-params">(<span class="hljs-keyword">int32_t</span> count)</span> </span>&#123;<br>  <span class="hljs-keyword">if</span> (num_waiters_ &gt; <span class="hljs-number">0</span>) &#123;<br>    sequence_++;  <span class="hljs-comment">// Indicate a signal occurred.</span><br>    <span class="hljs-comment">// Move waiters from the condition variable&#x27;s futex to the guard&#x27;s futex,</span><br>    <span class="hljs-comment">// so that they will be woken up when the mutex is released.</span><br>    <span class="hljs-keyword">bool</span> done = <span class="hljs-built_in">futex</span>(sequence_.<span class="hljs-built_in">Address</span>(),<br>                      FUTEX_REQUEUE_PRIVATE,<br>                      <span class="hljs-comment">/* Threads to wake */</span> <span class="hljs-number">0</span>,<br>                      <span class="hljs-comment">/* Threads to requeue*/</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">const</span> timespec*&gt;(count),<br>                      guard_.state_and_contenders_.<span class="hljs-built_in">Address</span>(),<br>                      <span class="hljs-number">0</span>) != <span class="hljs-number">-1</span>;<br>    <span class="hljs-keyword">if</span> (!done &amp;&amp; errno != EAGAIN &amp;&amp; errno != EINTR) &#123;<br>      <span class="hljs-built_in">PLOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;futex requeue failed for &quot;</span> &lt;&lt; name_;<br>    &#125;<br>  &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::Wait</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  guard_.<span class="hljs-built_in">CheckSafeToWait</span>(self);
+  <span class="hljs-built_in">WaitHoldingLocks</span>(self);
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::WaitHoldingLocks</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self == <span class="hljs-literal">nullptr</span> || self == Thread::<span class="hljs-built_in">Current</span>());
+  guard_.<span class="hljs-built_in">AssertExclusiveHeld</span>(self);
+  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> old_recursion_count = guard_.recursion_count_;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+  num_waiters_++;
+  <span class="hljs-comment">// Ensure the Mutex is contended so that requeued threads are awoken.</span>
+  guard_.<span class="hljs-built_in">increment_contenders</span>();
+  guard_.recursion_count_ = <span class="hljs-number">1</span>;
+  <span class="hljs-keyword">int32_t</span> cur_sequence = sequence_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+  guard_.<span class="hljs-built_in">ExclusiveUnlock</span>(self);
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">futex</span>(sequence_.<span class="hljs-built_in">Address</span>(), FUTEX_WAIT_PRIVATE, cur_sequence, <span class="hljs-literal">nullptr</span>, <span class="hljs-literal">nullptr</span>, <span class="hljs-number">0</span>) != <span class="hljs-number">0</span>) &#123;
+    <span class="hljs-comment">// Futex failed, check it is an expected error.</span>
+    <span class="hljs-comment">// EAGAIN == EWOULDBLK, so we let the caller try again.</span>
+    <span class="hljs-comment">// EINTR implies a signal was sent to this thread.</span>
+    <span class="hljs-keyword">if</span> ((errno != EINTR) &amp;&amp; (errno != EAGAIN)) &#123;
+      <span class="hljs-built_in">PLOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;futex wait failed for &quot;</span> &lt;&lt; name_;
+    &#125;
+  &#125;
+  <span class="hljs-built_in">SleepIfRuntimeDeleted</span>(self);
+  guard_.<span class="hljs-built_in">ExclusiveLock</span>(self);
+  <span class="hljs-built_in">CHECK_GT</span>(num_waiters_, <span class="hljs-number">0</span>);
+  num_waiters_--;
+  <span class="hljs-comment">// We awoke and so no longer require awakes from the guard_&#x27;s unlock.</span>
+  <span class="hljs-built_in">CHECK_GT</span>(guard_.<span class="hljs-built_in">get_contenders</span>(), <span class="hljs-number">0</span>);
+  guard_.<span class="hljs-built_in">decrement_contenders</span>();
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+  <span class="hljs-keyword">pid_t</span> old_owner = guard_.<span class="hljs-built_in">GetExclusiveOwnerTid</span>();
+  guard_.exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-number">0</span> <span class="hljs-comment">/* pid */</span>, std::memory_order_relaxed);
+  guard_.recursion_count_ = <span class="hljs-number">0</span>;
+  <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_cond_wait, (&amp;cond_, &amp;guard_.mutex_));
+  guard_.exclusive_owner_.<span class="hljs-built_in">store</span>(old_owner, std::memory_order_relaxed);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+  guard_.recursion_count_ = old_recursion_count;
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::Signal</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self == <span class="hljs-literal">nullptr</span> || self == Thread::<span class="hljs-built_in">Current</span>());
+  guard_.<span class="hljs-built_in">AssertExclusiveHeld</span>(self);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+  <span class="hljs-built_in">RequeueWaiters</span>(<span class="hljs-number">1</span>);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+  <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_cond_signal, (&amp;cond_));
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::RequeueWaiters</span><span class="hljs-params">(<span class="hljs-keyword">int32_t</span> count)</span> </span>&#123;
+  <span class="hljs-keyword">if</span> (num_waiters_ &gt; <span class="hljs-number">0</span>) &#123;
+    sequence_++;  <span class="hljs-comment">// Indicate a signal occurred.</span>
+    <span class="hljs-comment">// Move waiters from the condition variable&#x27;s futex to the guard&#x27;s futex,</span>
+    <span class="hljs-comment">// so that they will be woken up when the mutex is released.</span>
+    <span class="hljs-keyword">bool</span> done = <span class="hljs-built_in">futex</span>(sequence_.<span class="hljs-built_in">Address</span>(),
+                      FUTEX_REQUEUE_PRIVATE,
+                      <span class="hljs-comment">/* Threads to wake */</span> <span class="hljs-number">0</span>,
+                      <span class="hljs-comment">/* Threads to requeue*/</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">const</span> timespec*&gt;(count),
+                      guard_.state_and_contenders_.<span class="hljs-built_in">Address</span>(),
+                      <span class="hljs-number">0</span>) != <span class="hljs-number">-1</span>;
+    <span class="hljs-keyword">if</span> (!done &amp;&amp; errno != EAGAIN &amp;&amp; errno != EINTR) &#123;
+      <span class="hljs-built_in">PLOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;futex requeue failed for &quot;</span> &lt;&lt; name_;
+    &#125;
+  &#125;
+&#125;</code></pre></div>
 
 <h2 id="Monitor"><a href="#Monitor" class="headerlink" title="Monitor"></a>Monitor</h2><p>从逻辑上实现了「条件变量」，对应 Condition；它有两条单向链表的排队队列：</p>
 <ul>
@@ -235,17 +297,315 @@
 <p><code>Thread</code> 有个成员变量充当 next 指针：<code>Thread::GetWaitNext()</code> 和 <code>Thread::SetWaitNext(Thread* next)</code></p>
 <p>await 是把线程添加到 wait set 队尾，notify 是把 wait set 队头转移为 wake set 队头，然后在退出临界区（释放锁）时唤醒 wake set 队头</p>
 <p>同时 <code>Thread::wait_monitor_</code> 标识线程在哪个 <code>Monitor</code> 上挂起</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Monitor</span> &#123;</span><br>  <span class="hljs-comment">// Threads currently waiting on this monitor.</span><br>  <span class="hljs-function">Thread* wait_set_ <span class="hljs-title">GUARDED_BY</span><span class="hljs-params">(monitor_lock_)</span></span>;<br>  <span class="hljs-comment">// Threads that were waiting on this monitor, but are now contending on it.</span><br>  <span class="hljs-function">Thread* wake_set_ <span class="hljs-title">GUARDED_BY</span><span class="hljs-params">(monitor_lock_)</span></span>;<br>&#125;<br><br><span class="hljs-comment">// 将新挂起的线程添加到 wait set 队尾</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::AppendToWaitSet</span><span class="hljs-params">(Thread* thread)</span> </span>&#123;<br>  <span class="hljs-comment">// Not checking that the owner is equal to this thread, since we&#x27;ve released</span><br>  <span class="hljs-comment">// the monitor by the time this method is called.</span><br>  <span class="hljs-built_in">DCHECK</span>(thread != <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-built_in">DCHECK</span>(thread-&gt;<span class="hljs-built_in">GetWaitNext</span>() == <span class="hljs-literal">nullptr</span>) &lt;&lt; thread-&gt;<span class="hljs-built_in">GetWaitNext</span>();<br>  <span class="hljs-keyword">if</span> (wait_set_ == <span class="hljs-literal">nullptr</span>) &#123;<br>    wait_set_ = thread;<br>    <span class="hljs-keyword">return</span>;<br>  &#125;<br><br>  <span class="hljs-comment">// push_back.</span><br>  Thread* t = wait_set_;<br>  <span class="hljs-keyword">while</span> (t-&gt;<span class="hljs-built_in">GetWaitNext</span>() != <span class="hljs-literal">nullptr</span>) &#123;<br>    t = t-&gt;<span class="hljs-built_in">GetWaitNext</span>();<br>  &#125;<br>  t-&gt;<span class="hljs-built_in">SetWaitNext</span>(thread);<br>&#125;<br><br><span class="hljs-comment">// notify 并没有唤醒线程，而是把 wait set 的队头转移到 wake set 队头</span><br><span class="hljs-comment">// 实际上是在释放锁时唤醒 wake set 队头</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Notify</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-comment">// Make sure that we hold the lock.</span><br>  <span class="hljs-keyword">if</span> (owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) != self) &#123;<br>    <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);<br>    <span class="hljs-keyword">return</span>;<br>  &#125;<br>  <span class="hljs-comment">// Move one thread from waiters to wake set</span><br>  Thread* to_move = wait_set_;<br>  <span class="hljs-keyword">if</span> (to_move != <span class="hljs-literal">nullptr</span>) &#123;<br>    wait_set_ = to_move-&gt;<span class="hljs-built_in">GetWaitNext</span>();<br>    to_move-&gt;<span class="hljs-built_in">SetWaitNext</span>(wake_set_);<br>    wake_set_ = to_move;<br>  &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Monitor</span> &#123;</span>
+  <span class="hljs-comment">// Threads currently waiting on this monitor.</span>
+  <span class="hljs-function">Thread* wait_set_ <span class="hljs-title">GUARDED_BY</span><span class="hljs-params">(monitor_lock_)</span></span>;
+  <span class="hljs-comment">// Threads that were waiting on this monitor, but are now contending on it.</span>
+  <span class="hljs-function">Thread* wake_set_ <span class="hljs-title">GUARDED_BY</span><span class="hljs-params">(monitor_lock_)</span></span>;
+&#125;
 
-<h2 id="Object-wait"><a href="#Object-wait" class="headerlink" title="Object.wait"></a>Object.wait</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> Object.wait() <span class="hljs-keyword">throws</span> InterruptedException &#123;<br>    wait(<span class="hljs-number">0</span>);<br>&#125;<br><span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout) <span class="hljs-keyword">throws</span> InterruptedException &#123;<br>    wait(timeout, <span class="hljs-number">0</span>);<br>&#125;<br><span class="hljs-keyword">native</span> <span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout, <span class="hljs-keyword">int</span> nanos) <span class="hljs-keyword">throws</span> InterruptedException;<br></code></pre></div></td></tr></table></figure>
+<span class="hljs-comment">// 将新挂起的线程添加到 wait set 队尾</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::AppendToWaitSet</span><span class="hljs-params">(Thread* thread)</span> </span>&#123;
+  <span class="hljs-comment">// Not checking that the owner is equal to this thread, since we&#x27;ve released</span>
+  <span class="hljs-comment">// the monitor by the time this method is called.</span>
+  <span class="hljs-built_in">DCHECK</span>(thread != <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-built_in">DCHECK</span>(thread-&gt;<span class="hljs-built_in">GetWaitNext</span>() == <span class="hljs-literal">nullptr</span>) &lt;&lt; thread-&gt;<span class="hljs-built_in">GetWaitNext</span>();
+  <span class="hljs-keyword">if</span> (wait_set_ == <span class="hljs-literal">nullptr</span>) &#123;
+    wait_set_ = thread;
+    <span class="hljs-keyword">return</span>;
+  &#125;
 
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/native/java_lang_Object.cc</span><br><br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_waitJI</span><span class="hljs-params">(JNIEnv* env, jobject java_this, jlong ms, jint ns)</span> </span>&#123;<br>  <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;<br>  soa.Decode&lt;mirror::Object&gt;(java_this)-&gt;<span class="hljs-built_in">Wait</span>(soa.<span class="hljs-built_in">Self</span>(), ms, ns);<br>&#125;<br><span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object::Wait</span><span class="hljs-params">(Thread* self, <span class="hljs-keyword">int64_t</span> ms, <span class="hljs-keyword">int32_t</span> ns)</span> </span>&#123;<br>  Monitor::<span class="hljs-built_in">Wait</span>(self, <span class="hljs-keyword">this</span>, ms, ns, <span class="hljs-literal">true</span>, kTimedWaiting);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Wait</span><span class="hljs-params">(Thread* self,</span></span><br><span class="hljs-params"><span class="hljs-function">                   ObjPtr&lt;mirror::Object&gt; obj,</span></span><br><span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">int64_t</span> ms,</span></span><br><span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">int32_t</span> ns,</span></span><br><span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">bool</span> interruptShouldThrow,</span></span><br><span class="hljs-params"><span class="hljs-function">                   ThreadState why)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-built_in">DCHECK</span>(obj != <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-function">StackHandleScope&lt;1&gt; <span class="hljs-title">hs</span><span class="hljs-params">(self)</span></span>;<br>  <span class="hljs-function">Handle&lt;mirror::Object&gt; <span class="hljs-title">h_obj</span><span class="hljs-params">(hs.NewHandle(obj))</span></span>;<br><br>  <span class="hljs-comment">// 将锁膨胀为 fat lock</span><br>  LockWord lock_word = h_obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);<br>  <span class="hljs-keyword">while</span> (lock_word.<span class="hljs-built_in">GetState</span>() != LockWord::kFatLocked) &#123;<br>    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;<br>      <span class="hljs-keyword">case</span> LockWord::kHashCode:<br><br>      <span class="hljs-comment">// wait/notify 必须先用 synchronized 获取此对象上的锁</span><br>      <span class="hljs-comment">// 否则抛出 java 异常</span><br>      <span class="hljs-keyword">case</span> LockWord::kUnlocked:<br>        <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before wait()&quot;</span>);<br>        <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span><br><br>      <span class="hljs-comment">// 同上，必须获得此对象锁；此时对象锁被别的线程持有，抛出 java 异常</span><br>      <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;<br>        <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();<br>        <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();<br>        <span class="hljs-keyword">if</span> (owner_thread_id != thread_id) &#123;<br>          <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before wait()&quot;</span>);<br>          <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span><br>        &#125; <span class="hljs-keyword">else</span> &#123;<br><br>          <span class="hljs-comment">// 将 thin lock（偏向锁）膨胀为 fat lock（重量级锁），同时创建一个监视器 Monitor</span><br>          <span class="hljs-comment">// We own the lock, inflate to enqueue ourself on the Monitor. May fail spuriously so</span><br>          <span class="hljs-comment">// re-load.</span><br>          <span class="hljs-built_in">Inflate</span>(self, self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-number">0</span>);<br>          lock_word = h_obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);<br>        &#125;<br>        <span class="hljs-keyword">break</span>;<br>      &#125;<br><br>      <span class="hljs-comment">// 已经是 fat lock 了</span><br>      <span class="hljs-keyword">case</span> LockWord::kFatLocked:  <span class="hljs-comment">// Unreachable given the loop condition above. Fall-through.</span><br>      <span class="hljs-keyword">default</span>: &#123;<br>        <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();<br>        <span class="hljs-built_in">UNREACHABLE</span>();<br>      &#125;<br>    &#125;<br>  &#125;<br><br>  <span class="hljs-comment">// 必须膨胀为 fat lock，它才有 Monitor</span><br>  Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();<br>  mon-&gt;<span class="hljs-built_in">Wait</span>(self, ms, ns, interruptShouldThrow, why);<br>&#125;<br><br><span class="hljs-comment">// 在监视器上挂起</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Wait</span><span class="hljs-params">(Thread* self, <span class="hljs-keyword">int64_t</span> ms, <span class="hljs-keyword">int32_t</span> ns,</span></span><br><span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">bool</span> interruptShouldThrow, ThreadState why)</span> </span>&#123;<br>  <span class="hljs-comment">/*</span><br><span class="hljs-comment">   * Release our hold - we need to let it go even if we&#x27;re a few levels</span><br><span class="hljs-comment">   * deep in a recursive lock, and we need to restore that later.</span><br><span class="hljs-comment">   */</span><br>  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> prev_lock_count = lock_count_;<br>  lock_count_ = <span class="hljs-number">0</span>;<br><br>  <span class="hljs-comment">// 挂起线程前需要释放锁</span><br>  <span class="hljs-comment">// 将线程添加到 wait set 队尾，释放锁，wake set 不为空则唤醒第一个（队头开始）</span><br>  <span class="hljs-keyword">bool</span> was_interrupted = <span class="hljs-literal">false</span>;<br>  <span class="hljs-keyword">bool</span> timed_out = <span class="hljs-literal">false</span>;<br>  owner_.<span class="hljs-built_in">store</span>(<span class="hljs-literal">nullptr</span>, std::memory_order_relaxed);<br>  num_waiters_.<span class="hljs-built_in">fetch_add</span>(<span class="hljs-number">1</span>, std::memory_order_relaxed);<br>  &#123;<br>    <span class="hljs-function">ScopedThreadSuspension <span class="hljs-title">sts</span><span class="hljs-params">(self, why)</span></span>;<br>    <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(self, *self-&gt;GetWaitMutex())</span></span>;<br>    <span class="hljs-built_in">AppendToWaitSet</span>(self);<br>    self-&gt;<span class="hljs-built_in">SetWaitMonitor</span>(<span class="hljs-keyword">this</span>);<br>    <span class="hljs-built_in">SignalWaiterAndReleaseMonitorLock</span>(self);<br>    <span class="hljs-comment">// Handle the case where the thread was interrupted before we called wait().</span><br>    <span class="hljs-keyword">if</span> (self-&gt;<span class="hljs-built_in">IsInterrupted</span>()) &#123;<br>      was_interrupted = <span class="hljs-literal">true</span>;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br><br>      <span class="hljs-comment">// 然后将线程在它的成员变量 Thread.wait_cond_ 上挂起</span><br>      <span class="hljs-comment">// Wait for a notification or a timeout to occur.</span><br>      <span class="hljs-keyword">if</span> (why == kWaiting) &#123;<br>        self-&gt;<span class="hljs-built_in">GetWaitConditionVariable</span>()-&gt;<span class="hljs-built_in">Wait</span>(self);<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-built_in">DCHECK</span>(why == kTimedWaiting || why == kSleeping) &lt;&lt; why;<br>        timed_out = self-&gt;<span class="hljs-built_in">GetWaitConditionVariable</span>()-&gt;<span class="hljs-built_in">TimedWait</span>(self, ms, ns);<br>      &#125;<br>      was_interrupted = self-&gt;<span class="hljs-built_in">IsInterrupted</span>();<br>    &#125;<br>  &#125;<br><br>  <span class="hljs-comment">// 线程被唤醒后，要将线程上的监视器置空，并重新获得锁</span><br>  &#123;<br>    <span class="hljs-comment">// We reset the thread&#x27;s wait_monitor_ field after transitioning back to runnable so</span><br>    <span class="hljs-comment">// that a thread in a waiting/sleeping state has a non-null wait_monitor_ for debugging</span><br>    <span class="hljs-comment">// and diagnostic purposes. (If you reset this earlier, stack dumps will claim that threads</span><br>    <span class="hljs-comment">// are waiting on &quot;null&quot;.)</span><br>    <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(self, *self-&gt;GetWaitMutex())</span></span>;<br>    <span class="hljs-built_in">DCHECK</span>(self-&gt;<span class="hljs-built_in">GetWaitMonitor</span>() != <span class="hljs-literal">nullptr</span>);<br>    self-&gt;<span class="hljs-built_in">SetWaitMonitor</span>(<span class="hljs-literal">nullptr</span>);<br>  &#125;<br>  Lock&lt;LockReason::kForWait&gt;(self);<br>  lock_count_ = prev_lock_count;<br>  <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));<br>  self-&gt;<span class="hljs-built_in">GetWaitMutex</span>()-&gt;<span class="hljs-built_in">AssertNotHeld</span>(self);<br>  num_waiters_.<span class="hljs-built_in">fetch_sub</span>(<span class="hljs-number">1</span>, std::memory_order_relaxed);<br>  <span class="hljs-built_in">RemoveFromWaitSet</span>(self);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+  <span class="hljs-comment">// push_back.</span>
+  Thread* t = wait_set_;
+  <span class="hljs-keyword">while</span> (t-&gt;<span class="hljs-built_in">GetWaitNext</span>() != <span class="hljs-literal">nullptr</span>) &#123;
+    t = t-&gt;<span class="hljs-built_in">GetWaitNext</span>();
+  &#125;
+  t-&gt;<span class="hljs-built_in">SetWaitNext</span>(thread);
+&#125;
+
+<span class="hljs-comment">// notify 并没有唤醒线程，而是把 wait set 的队头转移到 wake set 队头</span>
+<span class="hljs-comment">// 实际上是在释放锁时唤醒 wake set 队头</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Notify</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-comment">// Make sure that we hold the lock.</span>
+  <span class="hljs-keyword">if</span> (owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) != self) &#123;
+    <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);
+    <span class="hljs-keyword">return</span>;
+  &#125;
+  <span class="hljs-comment">// Move one thread from waiters to wake set</span>
+  Thread* to_move = wait_set_;
+  <span class="hljs-keyword">if</span> (to_move != <span class="hljs-literal">nullptr</span>) &#123;
+    wait_set_ = to_move-&gt;<span class="hljs-built_in">GetWaitNext</span>();
+    to_move-&gt;<span class="hljs-built_in">SetWaitNext</span>(wake_set_);
+    wake_set_ = to_move;
+  &#125;
+&#125;</code></pre></div>
+
+<h2 id="Object-wait"><a href="#Object-wait" class="headerlink" title="Object.wait"></a>Object.wait</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> Object.wait() <span class="hljs-keyword">throws</span> InterruptedException &#123;
+    wait(<span class="hljs-number">0</span>);
+&#125;
+<span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout) <span class="hljs-keyword">throws</span> InterruptedException &#123;
+    wait(timeout, <span class="hljs-number">0</span>);
+&#125;
+<span class="hljs-keyword">native</span> <span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout, <span class="hljs-keyword">int</span> nanos) <span class="hljs-keyword">throws</span> InterruptedException;</code></pre></div>
+
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/native/java_lang_Object.cc</span>
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_waitJI</span><span class="hljs-params">(JNIEnv* env, jobject java_this, jlong ms, jint ns)</span> </span>&#123;
+  <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
+  soa.Decode&lt;mirror::Object&gt;(java_this)-&gt;<span class="hljs-built_in">Wait</span>(soa.<span class="hljs-built_in">Self</span>(), ms, ns);
+&#125;
+<span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object::Wait</span><span class="hljs-params">(Thread* self, <span class="hljs-keyword">int64_t</span> ms, <span class="hljs-keyword">int32_t</span> ns)</span> </span>&#123;
+  Monitor::<span class="hljs-built_in">Wait</span>(self, <span class="hljs-keyword">this</span>, ms, ns, <span class="hljs-literal">true</span>, kTimedWaiting);
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Wait</span><span class="hljs-params">(Thread* self,</span></span>
+<span class="hljs-params"><span class="hljs-function">                   ObjPtr&lt;mirror::Object&gt; obj,</span></span>
+<span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">int64_t</span> ms,</span></span>
+<span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">int32_t</span> ns,</span></span>
+<span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">bool</span> interruptShouldThrow,</span></span>
+<span class="hljs-params"><span class="hljs-function">                   ThreadState why)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-built_in">DCHECK</span>(obj != <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-function">StackHandleScope&lt;1&gt; <span class="hljs-title">hs</span><span class="hljs-params">(self)</span></span>;
+  <span class="hljs-function">Handle&lt;mirror::Object&gt; <span class="hljs-title">h_obj</span><span class="hljs-params">(hs.NewHandle(obj))</span></span>;
+
+  <span class="hljs-comment">// 将锁膨胀为 fat lock</span>
+  LockWord lock_word = h_obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);
+  <span class="hljs-keyword">while</span> (lock_word.<span class="hljs-built_in">GetState</span>() != LockWord::kFatLocked) &#123;
+    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;
+      <span class="hljs-keyword">case</span> LockWord::kHashCode:
+
+      <span class="hljs-comment">// wait/notify 必须先用 synchronized 获取此对象上的锁</span>
+      <span class="hljs-comment">// 否则抛出 java 异常</span>
+      <span class="hljs-keyword">case</span> LockWord::kUnlocked:
+        <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before wait()&quot;</span>);
+        <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span>
+
+      <span class="hljs-comment">// 同上，必须获得此对象锁；此时对象锁被别的线程持有，抛出 java 异常</span>
+      <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;
+        <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();
+        <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();
+        <span class="hljs-keyword">if</span> (owner_thread_id != thread_id) &#123;
+          <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before wait()&quot;</span>);
+          <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span>
+        &#125; <span class="hljs-keyword">else</span> &#123;
+
+          <span class="hljs-comment">// 将 thin lock（偏向锁）膨胀为 fat lock（重量级锁），同时创建一个监视器 Monitor</span>
+          <span class="hljs-comment">// We own the lock, inflate to enqueue ourself on the Monitor. May fail spuriously so</span>
+          <span class="hljs-comment">// re-load.</span>
+          <span class="hljs-built_in">Inflate</span>(self, self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-number">0</span>);
+          lock_word = h_obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);
+        &#125;
+        <span class="hljs-keyword">break</span>;
+      &#125;
+
+      <span class="hljs-comment">// 已经是 fat lock 了</span>
+      <span class="hljs-keyword">case</span> LockWord::kFatLocked:  <span class="hljs-comment">// Unreachable given the loop condition above. Fall-through.</span>
+      <span class="hljs-keyword">default</span>: &#123;
+        <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();
+        <span class="hljs-built_in">UNREACHABLE</span>();
+      &#125;
+    &#125;
+  &#125;
+
+  <span class="hljs-comment">// 必须膨胀为 fat lock，它才有 Monitor</span>
+  Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();
+  mon-&gt;<span class="hljs-built_in">Wait</span>(self, ms, ns, interruptShouldThrow, why);
+&#125;
+
+<span class="hljs-comment">// 在监视器上挂起</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Wait</span><span class="hljs-params">(Thread* self, <span class="hljs-keyword">int64_t</span> ms, <span class="hljs-keyword">int32_t</span> ns,</span></span>
+<span class="hljs-params"><span class="hljs-function">                   <span class="hljs-keyword">bool</span> interruptShouldThrow, ThreadState why)</span> </span>&#123;
+  <span class="hljs-comment">/*</span>
+<span class="hljs-comment">   * Release our hold - we need to let it go even if we&#x27;re a few levels</span>
+<span class="hljs-comment">   * deep in a recursive lock, and we need to restore that later.</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> prev_lock_count = lock_count_;
+  lock_count_ = <span class="hljs-number">0</span>;
+
+  <span class="hljs-comment">// 挂起线程前需要释放锁</span>
+  <span class="hljs-comment">// 将线程添加到 wait set 队尾，释放锁，wake set 不为空则唤醒第一个（队头开始）</span>
+  <span class="hljs-keyword">bool</span> was_interrupted = <span class="hljs-literal">false</span>;
+  <span class="hljs-keyword">bool</span> timed_out = <span class="hljs-literal">false</span>;
+  owner_.<span class="hljs-built_in">store</span>(<span class="hljs-literal">nullptr</span>, std::memory_order_relaxed);
+  num_waiters_.<span class="hljs-built_in">fetch_add</span>(<span class="hljs-number">1</span>, std::memory_order_relaxed);
+  &#123;
+    <span class="hljs-function">ScopedThreadSuspension <span class="hljs-title">sts</span><span class="hljs-params">(self, why)</span></span>;
+    <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(self, *self-&gt;GetWaitMutex())</span></span>;
+    <span class="hljs-built_in">AppendToWaitSet</span>(self);
+    self-&gt;<span class="hljs-built_in">SetWaitMonitor</span>(<span class="hljs-keyword">this</span>);
+    <span class="hljs-built_in">SignalWaiterAndReleaseMonitorLock</span>(self);
+    <span class="hljs-comment">// Handle the case where the thread was interrupted before we called wait().</span>
+    <span class="hljs-keyword">if</span> (self-&gt;<span class="hljs-built_in">IsInterrupted</span>()) &#123;
+      was_interrupted = <span class="hljs-literal">true</span>;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+
+      <span class="hljs-comment">// 然后将线程在它的成员变量 Thread.wait_cond_ 上挂起</span>
+      <span class="hljs-comment">// Wait for a notification or a timeout to occur.</span>
+      <span class="hljs-keyword">if</span> (why == kWaiting) &#123;
+        self-&gt;<span class="hljs-built_in">GetWaitConditionVariable</span>()-&gt;<span class="hljs-built_in">Wait</span>(self);
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-built_in">DCHECK</span>(why == kTimedWaiting || why == kSleeping) &lt;&lt; why;
+        timed_out = self-&gt;<span class="hljs-built_in">GetWaitConditionVariable</span>()-&gt;<span class="hljs-built_in">TimedWait</span>(self, ms, ns);
+      &#125;
+      was_interrupted = self-&gt;<span class="hljs-built_in">IsInterrupted</span>();
+    &#125;
+  &#125;
+
+  <span class="hljs-comment">// 线程被唤醒后，要将线程上的监视器置空，并重新获得锁</span>
+  &#123;
+    <span class="hljs-comment">// We reset the thread&#x27;s wait_monitor_ field after transitioning back to runnable so</span>
+    <span class="hljs-comment">// that a thread in a waiting/sleeping state has a non-null wait_monitor_ for debugging</span>
+    <span class="hljs-comment">// and diagnostic purposes. (If you reset this earlier, stack dumps will claim that threads</span>
+    <span class="hljs-comment">// are waiting on &quot;null&quot;.)</span>
+    <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(self, *self-&gt;GetWaitMutex())</span></span>;
+    <span class="hljs-built_in">DCHECK</span>(self-&gt;<span class="hljs-built_in">GetWaitMonitor</span>() != <span class="hljs-literal">nullptr</span>);
+    self-&gt;<span class="hljs-built_in">SetWaitMonitor</span>(<span class="hljs-literal">nullptr</span>);
+  &#125;
+  Lock&lt;LockReason::kForWait&gt;(self);
+  lock_count_ = prev_lock_count;
+  <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));
+  self-&gt;<span class="hljs-built_in">GetWaitMutex</span>()-&gt;<span class="hljs-built_in">AssertNotHeld</span>(self);
+  num_waiters_.<span class="hljs-built_in">fetch_sub</span>(<span class="hljs-number">1</span>, std::memory_order_relaxed);
+  <span class="hljs-built_in">RemoveFromWaitSet</span>(self);
+&#125;</code></pre></div>
 
 <h2 id="Object-notify"><a href="#Object-notify" class="headerlink" title="Object.notify"></a>Object.notify</h2><p>把挂起的线程从 wait set 转移到 wake set</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_notify</span><span class="hljs-params">(JNIEnv* env, jobject java_this)</span> </span>&#123;<br>  <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;<br>  soa.Decode&lt;mirror::Object&gt;(java_this)-&gt;<span class="hljs-built_in">Notify</span>(soa.<span class="hljs-built_in">Self</span>());<br>&#125;<br><span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object::Notify</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  Monitor::<span class="hljs-built_in">Notify</span>(self, <span class="hljs-keyword">this</span>);<br>&#125;<br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Notify</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj)</span></span><br><span class="hljs-function">      <span class="hljs-title">REQUIRES_SHARED</span><span class="hljs-params">(Locks::mutator_lock_)</span> </span>&#123;<br>    <span class="hljs-built_in">DoNotify</span>(self, obj, <span class="hljs-literal">false</span>);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::DoNotify</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj, <span class="hljs-keyword">bool</span> notify_all)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-built_in">DCHECK</span>(obj != <span class="hljs-literal">nullptr</span>);<br>  LockWord lock_word = obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);<br>  <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;<br>    <span class="hljs-keyword">case</span> LockWord::kHashCode:<br>      <span class="hljs-comment">// Fall-through.</span><br>    <span class="hljs-keyword">case</span> LockWord::kUnlocked:<br>      <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);<br>      <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span><br>    <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;<br>      <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();<br>      <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();<br>      <span class="hljs-keyword">if</span> (owner_thread_id != thread_id) &#123;<br>        <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);<br>        <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span><br>      &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// We own the lock but there&#x27;s no Monitor and therefore no waiters.</span><br>        <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Success.</span><br>      &#125;<br>    &#125;<br>    <span class="hljs-keyword">case</span> LockWord::kFatLocked: &#123;<br>      Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();<br>      <span class="hljs-keyword">if</span> (notify_all) &#123;<br>        mon-&gt;<span class="hljs-built_in">NotifyAll</span>(self);<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br>        mon-&gt;<span class="hljs-built_in">Notify</span>(self);<br>      &#125;<br>      <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Success.</span><br>    &#125;<br>    <span class="hljs-keyword">default</span>: &#123;<br>      <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();<br>      <span class="hljs-built_in">UNREACHABLE</span>();<br>    &#125;<br>  &#125;<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Notify</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-comment">// Make sure that we hold the lock.</span><br>  <span class="hljs-keyword">if</span> (owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) != self) &#123;<br>    <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);<br>    <span class="hljs-keyword">return</span>;<br>  &#125;<br>  <span class="hljs-comment">// Move one thread from waiters to wake set</span><br>  Thread* to_move = wait_set_;<br>  <span class="hljs-keyword">if</span> (to_move != <span class="hljs-literal">nullptr</span>) &#123;<br>    wait_set_ = to_move-&gt;<span class="hljs-built_in">GetWaitNext</span>();<br>    to_move-&gt;<span class="hljs-built_in">SetWaitNext</span>(wake_set_);<br>    wake_set_ = to_move;<br>  &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_notify</span><span class="hljs-params">(JNIEnv* env, jobject java_this)</span> </span>&#123;
+  <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
+  soa.Decode&lt;mirror::Object&gt;(java_this)-&gt;<span class="hljs-built_in">Notify</span>(soa.<span class="hljs-built_in">Self</span>());
+&#125;
+<span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object::Notify</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  Monitor::<span class="hljs-built_in">Notify</span>(self, <span class="hljs-keyword">this</span>);
+&#125;
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Notify</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj)</span></span>
+<span class="hljs-function">      <span class="hljs-title">REQUIRES_SHARED</span><span class="hljs-params">(Locks::mutator_lock_)</span> </span>&#123;
+    <span class="hljs-built_in">DoNotify</span>(self, obj, <span class="hljs-literal">false</span>);
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::DoNotify</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj, <span class="hljs-keyword">bool</span> notify_all)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-built_in">DCHECK</span>(obj != <span class="hljs-literal">nullptr</span>);
+  LockWord lock_word = obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);
+  <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;
+    <span class="hljs-keyword">case</span> LockWord::kHashCode:
+      <span class="hljs-comment">// Fall-through.</span>
+    <span class="hljs-keyword">case</span> LockWord::kUnlocked:
+      <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);
+      <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span>
+    <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;
+      <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();
+      <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();
+      <span class="hljs-keyword">if</span> (owner_thread_id != thread_id) &#123;
+        <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);
+        <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Failure.</span>
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-comment">// We own the lock but there&#x27;s no Monitor and therefore no waiters.</span>
+        <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Success.</span>
+      &#125;
+    &#125;
+    <span class="hljs-keyword">case</span> LockWord::kFatLocked: &#123;
+      Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();
+      <span class="hljs-keyword">if</span> (notify_all) &#123;
+        mon-&gt;<span class="hljs-built_in">NotifyAll</span>(self);
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        mon-&gt;<span class="hljs-built_in">Notify</span>(self);
+      &#125;
+      <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Success.</span>
+    &#125;
+    <span class="hljs-keyword">default</span>: &#123;
+      <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();
+      <span class="hljs-built_in">UNREACHABLE</span>();
+    &#125;
+  &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Notify</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-comment">// Make sure that we hold the lock.</span>
+  <span class="hljs-keyword">if</span> (owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) != self) &#123;
+    <span class="hljs-built_in">ThrowIllegalMonitorStateExceptionF</span>(<span class="hljs-string">&quot;object not locked by thread before notify()&quot;</span>);
+    <span class="hljs-keyword">return</span>;
+  &#125;
+  <span class="hljs-comment">// Move one thread from waiters to wake set</span>
+  Thread* to_move = wait_set_;
+  <span class="hljs-keyword">if</span> (to_move != <span class="hljs-literal">nullptr</span>) &#123;
+    wait_set_ = to_move-&gt;<span class="hljs-built_in">GetWaitNext</span>();
+    to_move-&gt;<span class="hljs-built_in">SetWaitNext</span>(wake_set_);
+    wake_set_ = to_move;
+  &#125;
+&#125;</code></pre></div>
 
 <p>调用 notify 前需要先获得它的对象锁，notify 把线程转移到 wake set，释放锁时会唤醒线程（从而让线程能够重新获得锁）</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);<br>  Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>  <span class="hljs-keyword">if</span> (owner == self) &#123;<br>    <span class="hljs-comment">// We own the monitor, so nobody else can be in here.</span><br>    <span class="hljs-built_in">CheckLockOwnerRequest</span>(self);<br>    <span class="hljs-built_in">AtraceMonitorUnlock</span>();<br>    <span class="hljs-keyword">if</span> (lock_count_ == <span class="hljs-number">0</span>) &#123;<br>      owner_.<span class="hljs-built_in">store</span>(<span class="hljs-literal">nullptr</span>, std::memory_order_relaxed);<br>      <span class="hljs-built_in">SignalWaiterAndReleaseMonitorLock</span>(self);<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>      --lock_count_;<br>      <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));<br>      <span class="hljs-built_in">DCHECK_EQ</span>(owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed), self);<br>      <span class="hljs-comment">// Keep monitor_lock_, but pretend we released it.</span><br>      <span class="hljs-built_in">FakeUnlockMonitorLock</span>();<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br>  &#125;<br>  <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::SignalWaiterAndReleaseMonitorLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-comment">// We want to release the monitor and signal up to one thread that was waiting</span><br>  <span class="hljs-comment">// but has since been notified.</span><br>  <span class="hljs-built_in">DCHECK_EQ</span>(lock_count_, <span class="hljs-number">0u</span>);<br>  <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));<br>  <span class="hljs-keyword">while</span> (wake_set_ != <span class="hljs-literal">nullptr</span>) &#123;<br>    <span class="hljs-comment">// No risk of waking ourselves here; since monitor_lock_ is not released until we&#x27;re ready to</span><br>    <span class="hljs-comment">// return, notify can&#x27;t move the current thread from wait_set_ to wake_set_ until this</span><br>    <span class="hljs-comment">// method is done checking wake_set_.</span><br>    Thread* thread = wake_set_;<br>    wake_set_ = thread-&gt;<span class="hljs-built_in">GetWaitNext</span>();<br>    thread-&gt;<span class="hljs-built_in">SetWaitNext</span>(<span class="hljs-literal">nullptr</span>);<br>    <span class="hljs-built_in">DCHECK</span>(owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) == <span class="hljs-literal">nullptr</span>);<br><br>    <span class="hljs-comment">// Check to see if the thread is still waiting.</span><br>    &#123;<br>      <span class="hljs-comment">// In the case of wait(), we&#x27;ll be acquiring another thread&#x27;s GetWaitMutex with</span><br>      <span class="hljs-comment">// self&#x27;s GetWaitMutex held. This does not risk deadlock, because we only acquire this lock</span><br>      <span class="hljs-comment">// for threads in the wake_set_. A thread can only enter wake_set_ from Notify or NotifyAll,</span><br>      <span class="hljs-comment">// and those hold monitor_lock_. Thus, the threads whose wait mutexes we acquire here must</span><br>      <span class="hljs-comment">// have already been released from wait(), since we have not released monitor_lock_ until</span><br>      <span class="hljs-comment">// after we&#x27;ve chosen our thread to wake, so there is no risk of the following lock ordering</span><br>      <span class="hljs-comment">// leading to deadlock:</span><br>      <span class="hljs-comment">// Thread 1 waits</span><br>      <span class="hljs-comment">// Thread 2 waits</span><br>      <span class="hljs-comment">// Thread 3 moves threads 1 and 2 from wait_set_ to wake_set_</span><br>      <span class="hljs-comment">// Thread 1 enters this block, and attempts to acquire Thread 2&#x27;s GetWaitMutex to wake it</span><br>      <span class="hljs-comment">// Thread 2 enters this block, and attempts to acquire Thread 1&#x27;s GetWaitMutex to wake it</span><br>      <span class="hljs-comment">//</span><br>      <span class="hljs-comment">// Since monitor_lock_ is not released until the thread-to-be-woken-up&#x27;s GetWaitMutex is</span><br>      <span class="hljs-comment">// acquired, two threads cannot attempt to acquire each other&#x27;s GetWaitMutex while holding</span><br>      <span class="hljs-comment">// their own and cause deadlock.</span><br>      <span class="hljs-function">MutexLock <span class="hljs-title">wait_mu</span><span class="hljs-params">(self, *thread-&gt;GetWaitMutex())</span></span>;<br>      <span class="hljs-keyword">if</span> (thread-&gt;<span class="hljs-built_in">GetWaitMonitor</span>() != <span class="hljs-literal">nullptr</span>) &#123;<br>        <span class="hljs-comment">// Release the lock, so that a potentially awakened thread will not</span><br>        <span class="hljs-comment">// immediately contend on it. The lock ordering here is:</span><br>        <span class="hljs-comment">// monitor_lock_, self-&gt;GetWaitMutex, thread-&gt;GetWaitMutex</span><br>        monitor_lock_.<span class="hljs-built_in">Unlock</span>(self);  <span class="hljs-comment">// Releases contenders.</span><br>        thread-&gt;<span class="hljs-built_in">GetWaitConditionVariable</span>()-&gt;<span class="hljs-built_in">Signal</span>(self);<br>        <span class="hljs-keyword">return</span>;<br>      &#125;<br>    &#125;<br>  &#125;<br>  monitor_lock_.<span class="hljs-built_in">Unlock</span>(self);<br>  <span class="hljs-built_in">DCHECK</span>(!monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
+  Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+  <span class="hljs-keyword">if</span> (owner == self) &#123;
+    <span class="hljs-comment">// We own the monitor, so nobody else can be in here.</span>
+    <span class="hljs-built_in">CheckLockOwnerRequest</span>(self);
+    <span class="hljs-built_in">AtraceMonitorUnlock</span>();
+    <span class="hljs-keyword">if</span> (lock_count_ == <span class="hljs-number">0</span>) &#123;
+      owner_.<span class="hljs-built_in">store</span>(<span class="hljs-literal">nullptr</span>, std::memory_order_relaxed);
+      <span class="hljs-built_in">SignalWaiterAndReleaseMonitorLock</span>(self);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      --lock_count_;
+      <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));
+      <span class="hljs-built_in">DCHECK_EQ</span>(owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed), self);
+      <span class="hljs-comment">// Keep monitor_lock_, but pretend we released it.</span>
+      <span class="hljs-built_in">FakeUnlockMonitorLock</span>();
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  &#125;
+  <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::SignalWaiterAndReleaseMonitorLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-comment">// We want to release the monitor and signal up to one thread that was waiting</span>
+  <span class="hljs-comment">// but has since been notified.</span>
+  <span class="hljs-built_in">DCHECK_EQ</span>(lock_count_, <span class="hljs-number">0u</span>);
+  <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));
+  <span class="hljs-keyword">while</span> (wake_set_ != <span class="hljs-literal">nullptr</span>) &#123;
+    <span class="hljs-comment">// No risk of waking ourselves here; since monitor_lock_ is not released until we&#x27;re ready to</span>
+    <span class="hljs-comment">// return, notify can&#x27;t move the current thread from wait_set_ to wake_set_ until this</span>
+    <span class="hljs-comment">// method is done checking wake_set_.</span>
+    Thread* thread = wake_set_;
+    wake_set_ = thread-&gt;<span class="hljs-built_in">GetWaitNext</span>();
+    thread-&gt;<span class="hljs-built_in">SetWaitNext</span>(<span class="hljs-literal">nullptr</span>);
+    <span class="hljs-built_in">DCHECK</span>(owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) == <span class="hljs-literal">nullptr</span>);
+
+    <span class="hljs-comment">// Check to see if the thread is still waiting.</span>
+    &#123;
+      <span class="hljs-comment">// In the case of wait(), we&#x27;ll be acquiring another thread&#x27;s GetWaitMutex with</span>
+      <span class="hljs-comment">// self&#x27;s GetWaitMutex held. This does not risk deadlock, because we only acquire this lock</span>
+      <span class="hljs-comment">// for threads in the wake_set_. A thread can only enter wake_set_ from Notify or NotifyAll,</span>
+      <span class="hljs-comment">// and those hold monitor_lock_. Thus, the threads whose wait mutexes we acquire here must</span>
+      <span class="hljs-comment">// have already been released from wait(), since we have not released monitor_lock_ until</span>
+      <span class="hljs-comment">// after we&#x27;ve chosen our thread to wake, so there is no risk of the following lock ordering</span>
+      <span class="hljs-comment">// leading to deadlock:</span>
+      <span class="hljs-comment">// Thread 1 waits</span>
+      <span class="hljs-comment">// Thread 2 waits</span>
+      <span class="hljs-comment">// Thread 3 moves threads 1 and 2 from wait_set_ to wake_set_</span>
+      <span class="hljs-comment">// Thread 1 enters this block, and attempts to acquire Thread 2&#x27;s GetWaitMutex to wake it</span>
+      <span class="hljs-comment">// Thread 2 enters this block, and attempts to acquire Thread 1&#x27;s GetWaitMutex to wake it</span>
+      <span class="hljs-comment">//</span>
+      <span class="hljs-comment">// Since monitor_lock_ is not released until the thread-to-be-woken-up&#x27;s GetWaitMutex is</span>
+      <span class="hljs-comment">// acquired, two threads cannot attempt to acquire each other&#x27;s GetWaitMutex while holding</span>
+      <span class="hljs-comment">// their own and cause deadlock.</span>
+      <span class="hljs-function">MutexLock <span class="hljs-title">wait_mu</span><span class="hljs-params">(self, *thread-&gt;GetWaitMutex())</span></span>;
+      <span class="hljs-keyword">if</span> (thread-&gt;<span class="hljs-built_in">GetWaitMonitor</span>() != <span class="hljs-literal">nullptr</span>) &#123;
+        <span class="hljs-comment">// Release the lock, so that a potentially awakened thread will not</span>
+        <span class="hljs-comment">// immediately contend on it. The lock ordering here is:</span>
+        <span class="hljs-comment">// monitor_lock_, self-&gt;GetWaitMutex, thread-&gt;GetWaitMutex</span>
+        monitor_lock_.<span class="hljs-built_in">Unlock</span>(self);  <span class="hljs-comment">// Releases contenders.</span>
+        thread-&gt;<span class="hljs-built_in">GetWaitConditionVariable</span>()-&gt;<span class="hljs-built_in">Signal</span>(self);
+        <span class="hljs-keyword">return</span>;
+      &#125;
+    &#125;
+  &#125;
+  monitor_lock_.<span class="hljs-built_in">Unlock</span>(self);
+  <span class="hljs-built_in">DCHECK</span>(!monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));
+&#125;</code></pre></div>
 
 <h2 id="总结下"><a href="#总结下" class="headerlink" title="总结下"></a>总结下</h2><ul>
 <li>与 JCU.Condition 不同，对象监视器 Monitor 并没有把「条件变量」这部分功能抽离出来，它既是 Lock 又是 Condition</li>

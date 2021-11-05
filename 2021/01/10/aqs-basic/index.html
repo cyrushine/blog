@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -179,7 +174,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      784 字
+      783 字
     </span>
   
 
@@ -223,7 +218,19 @@
             
             <div class="markdown-body">
               <h2 id="自旋锁（Spin-Lock）"><a href="#自旋锁（Spin-Lock）" class="headerlink" title="自旋锁（Spin Lock）"></a>自旋锁（Spin Lock）</h2><p>获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码/逻辑，那就是自旋锁；比如下面的 <code>lock()</code></p>
-<figure class="highlight kotlin"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 一个简单的自旋锁的实现</span><br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SpinLock</span> </span>&#123;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> cas = AtomicReference&lt;Thread&gt;()<br><br>    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span></span> &#123;<br>        <span class="hljs-keyword">while</span> (!cas.compareAndSet(<span class="hljs-literal">null</span>, Thread.currentThread())) &#123;&#125;<br>    &#125;<br><br>    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">unlock</span><span class="hljs-params">()</span></span> &#123;<br>        cas.compareAndSet(Thread.currentThread(), <span class="hljs-literal">null</span>)<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 一个简单的自旋锁的实现</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SpinLock</span> </span>&#123;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> cas = AtomicReference&lt;Thread&gt;()
+
+    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span></span> &#123;
+        <span class="hljs-keyword">while</span> (!cas.compareAndSet(<span class="hljs-literal">null</span>, Thread.currentThread())) &#123;&#125;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">unlock</span><span class="hljs-params">()</span></span> &#123;
+        cas.compareAndSet(Thread.currentThread(), <span class="hljs-literal">null</span>)
+    &#125;
+&#125;</code></pre></div>
 
 <h2 id="MCS-锁"><a href="#MCS-锁" class="headerlink" title="MCS 锁"></a>MCS 锁</h2><p>上面的自旋锁容易出现「饥饿」问题，因为所有线程同时争抢一个锁，如果一直有线程加入到争抢的过程中来，那么可能会出现某一个或多个线程总是抢不到锁的情况</p>
 <p>而 MCS 在自旋的基础上，引入了「排队」的概念（基于链表）</p>

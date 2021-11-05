@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -140,11 +140,6 @@
                 class="iconfont icon-search"></i>&nbsp;</a>
           </li>
         
-        
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
         
       </ul>
     </div>
@@ -254,7 +249,26 @@
 <li>resource cache 会增大磁盘缓存起码一倍；比如上述的 bitmap bytes 比压缩格式的 jpg 要大</li>
 <li>是否有 resource cache 受几个条件的影响</li>
 </ul>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">DiskCacheStrategy<br>	NONE      - 没有磁盘缓存<br>	DATA      - 只缓存 data cache<br>	RESOURCE  - 只缓存 resource cache<br>	ALL       - 都缓存<br>	AUTOMATIC - 自动<br><br><span class="hljs-comment">// 看下 AUTOMATIC 的情况</span><br><span class="hljs-comment">// data cache，只缓存网络资源，不缓存 asset file，local disk file 等本地资源</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isDataCacheable</span><span class="hljs-params">(DataSource dataSource)</span> </span>&#123;<br>    <span class="hljs-keyword">return</span> dataSource == DataSource.REMOTE;<br>&#125;<br><br><span class="hljs-comment">// resource cache 只缓存 asset file，local disk file 等本地资源</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isResourceCacheable</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">        <span class="hljs-keyword">boolean</span> isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy)</span> </span>&#123;<br>    <span class="hljs-keyword">return</span> ((isFromAlternateCacheKey &amp;&amp; dataSource == DataSource.DATA_DISK_CACHE)<br>            || dataSource == DataSource.LOCAL)<br>            &amp;&amp; encodeStrategy == EncodeStrategy.TRANSFORMED;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java">DiskCacheStrategy
+	NONE      - 没有磁盘缓存
+	DATA      - 只缓存 data cache
+	RESOURCE  - 只缓存 resource cache
+	ALL       - 都缓存
+	AUTOMATIC - 自动
+
+<span class="hljs-comment">// 看下 AUTOMATIC 的情况</span>
+<span class="hljs-comment">// data cache，只缓存网络资源，不缓存 asset file，local disk file 等本地资源</span>
+<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isDataCacheable</span><span class="hljs-params">(DataSource dataSource)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> dataSource == DataSource.REMOTE;
+&#125;
+
+<span class="hljs-comment">// resource cache 只缓存 asset file，local disk file 等本地资源</span>
+<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isResourceCacheable</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">        <span class="hljs-keyword">boolean</span> isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> ((isFromAlternateCacheKey &amp;&amp; dataSource == DataSource.DATA_DISK_CACHE)
+            || dataSource == DataSource.LOCAL)
+            &amp;&amp; encodeStrategy == EncodeStrategy.TRANSFORMED;
+&#125;</code></pre></div>
 
 <p><img src="../../../../image/2020-10-31-how-glide-work/glide_disk_cache.jpg" srcset="/image/loading.gif" lazyload alt="glide_disk_cache.jpg"></p>
 <h2 id="池化"><a href="#池化" class="headerlink" title="池化"></a>池化</h2><p>使用池化技术（<code>ArrayPool</code> 和 <code>BitmapPool</code>）降低内存抖动</p>
@@ -271,7 +285,8 @@
 <li>fetch source 阶段是线程池</li>
 </ul>
 <h2 id="加载路径"><a href="#加载路径" class="headerlink" title="加载路径"></a>加载路径</h2><p>加载路径把 model - dataClass - resourceClass - transcodeClass 串联起来</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// url string 是 model，类型是 String；transcodeClass 是 Drawable.class，最终的目标类型；此时的 resourceClass 是 Object.class</span><br>GlideApp.with(<span class="hljs-keyword">this</span>).as(Drawable.class).load(url).into(photoView);<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// url string 是 model，类型是 String；transcodeClass 是 Drawable.class，最终的目标类型；此时的 resourceClass 是 Object.class</span>
+GlideApp.with(<span class="hljs-keyword">this</span>).as(Drawable.class).load(url).into(photoView);</code></pre></div>
 
 <ol>
 <li>通过 <code>ModelLoaderRegistry</code> 知道 model 能使用哪些 <code>ModelLoader</code>，能加载到 jvm 里成为哪些 dataClass；string url 的话，适用于 <code>StringLoader</code>，能加载为 <code>InputStream</code> 和 <code>ParcelFileDescriptor</code>；如果有多个 loader 可以用，则使用 <code>MultiModelLoader</code>，它专门用来包裹多个 loader，因为对于一个 model 可能会有多个 loader 可以处理它；对于 <code>MultiXXX</code>，内部都有个属性 <code>currentIndex</code> 指定使用哪个实例（一般情况下就是第 0 个了，除非有代码设置过 <code>currentIndex</code>）；loader 在注册表中的位置可以通过 append、prepend 调整</li>

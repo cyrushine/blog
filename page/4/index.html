@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -125,11 +125,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -184,7 +179,7 @@
             
           
           AQS 是 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 的基础，它们紧密地结合在一块，分析 AQS 除了要明晰排队队列的操作，还要结合 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 看看是怎么利用排队队列实现锁和信号量的
-AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表12345
+AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表publi
         </a>
       </p>
 
@@ -230,7 +225,13 @@ AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表12345
             
           
           自旋锁（Spin Lock）获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码/逻辑，那就是自旋锁；比如下面的 lock()
-12345678910111213// 一个简单的自旋锁的实现class SpinLock &#123;    private val cas = AtomicReference&lt;Thread&gt;()    fun lock() &#12
+// 一个简单的自旋锁的实现
+class SpinLock &#123;
+
+    private val cas = AtomicReference&lt;Thread&gt;()
+
+    fun lock() &#123;
+        w
         </a>
       </p>
 

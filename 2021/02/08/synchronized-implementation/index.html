@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -225,14 +220,73 @@
               <h2 id="monitor-指令"><a href="#monitor-指令" class="headerlink" title="monitor 指令"></a>monitor 指令</h2><p>在 <a href="../../../../2021/01/13/aqs-lock-implementation/">Lock（二）AQS 源码分析以及 Lock 的实现</a> 这篇文章里介绍了基于 AQS 的 <code>Lock</code>，它是双向链表的排队队列和系统调用 <code>futex</code> 实现的</p>
 <p>其实 java 语言规范里自带了 Lock 的实现：<code>synchronized</code> 关键字，下面看看 ART 是怎么实现它的</p>
 <p>先写一个使用了 <code>synchronized</code> 的测试方法</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">package</span> com.example.myapplication;<br><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Hello</span> </span>&#123;<br><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Object lock = <span class="hljs-keyword">new</span> Object();<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">say</span><span class="hljs-params">(String msg)</span> </span>&#123;<br>        <span class="hljs-keyword">synchronized</span>(lock) &#123;<br>            System.out.println(msg != <span class="hljs-keyword">null</span> ? msg : <span class="hljs-string">&quot;null&quot;</span>);<br>        &#125;<br>    &#125;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>&#123;<br>        Hello instance = <span class="hljs-keyword">new</span> Hello();<br>        instance.say(<span class="hljs-string">&quot;Hello World&quot;</span>);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">package</span> com.example.myapplication;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Hello</span> </span>&#123;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Object lock = <span class="hljs-keyword">new</span> Object();
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">say</span><span class="hljs-params">(String msg)</span> </span>&#123;
+        <span class="hljs-keyword">synchronized</span>(lock) &#123;
+            System.out.println(msg != <span class="hljs-keyword">null</span> ? msg : <span class="hljs-string">&quot;null&quot;</span>);
+        &#125;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>&#123;
+        Hello instance = <span class="hljs-keyword">new</span> Hello();
+        instance.say(<span class="hljs-string">&quot;Hello World&quot;</span>);
+    &#125;
+&#125;</code></pre></div>
 
 <p>编译打包出 apk 文件，解压出其中的 classes.dex，并用 <code>baksmali</code> 转换成 smali 指令</p>
-<figure class="highlight bash"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs bash">java -jar baksmali-2.4.0.jar disassemble classes.dex<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs bash">java -jar baksmali-2.4.0.jar disassemble classes.dex</code></pre></div>
 
 <p><code>Hello.say(String)</code> 对应的 smali 代码是这样的</p>
 <p><code>synchronized</code> 代码块被两条指令包裹：<code>monitor-enter</code> 和 <code>monitor-exit</code></p>
-<figure class="highlight bash"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs bash">.method public say(Ljava/lang/String;)V<br>    .registers 5<br>    .param p1, <span class="hljs-string">&quot;msg&quot;</span>    <span class="hljs-comment"># Ljava/lang/String;</span><br><br>    .line 8<br>		<span class="hljs-comment"># 本地变量寄存器 v0 被赋予 Hello.lock</span><br>    iget-object v0, p0, Lcom/example/myapplication/Hello;-&gt;lock:Ljava/lang/Object;<br><br>		<span class="hljs-comment"># 重点</span><br>    monitor-enter v0<br><br>    .line 9<br>    :try_start_3<br>    sget-object v1, Ljava/lang/System;-&gt;out:Ljava/io/PrintStream;<br><br>    if-eqz p1, :cond_9<br><br>    move-object v2, p1<br><br>    goto :goto_b<br><br>    :cond_9<br>    const-string v2, <span class="hljs-string">&quot;null&quot;</span><br><br>    :goto_b<br>    invoke-virtual &#123;v1, v2&#125;, Ljava/io/PrintStream;-&gt;println(Ljava/lang/String;)V<br><br>    .line 10<br>		<span class="hljs-comment"># 重点</span><br>    monitor-exit v0<br><br>    .line 11<br>    return-void<br><br>    .line 10<br>    :catchall_10<br>    move-exception v1<br><br>    monitor-exit v0<br>    :try_end_12<br>    .catchall &#123;:try_start_3 .. :try_end_12&#125; :catchall_10<br><br>    throw v1<br>.end method<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs bash">.method public say(Ljava/lang/String;)V
+    .registers 5
+    .param p1, <span class="hljs-string">&quot;msg&quot;</span>    <span class="hljs-comment"># Ljava/lang/String;</span>
+
+    .line 8
+		<span class="hljs-comment"># 本地变量寄存器 v0 被赋予 Hello.lock</span>
+    iget-object v0, p0, Lcom/example/myapplication/Hello;-&gt;lock:Ljava/lang/Object;
+
+		<span class="hljs-comment"># 重点</span>
+    monitor-enter v0
+
+    .line 9
+    :try_start_3
+    sget-object v1, Ljava/lang/System;-&gt;out:Ljava/io/PrintStream;
+
+    if-eqz p1, :cond_9
+
+    move-object v2, p1
+
+    goto :goto_b
+
+    :cond_9
+    const-string v2, <span class="hljs-string">&quot;null&quot;</span>
+
+    :goto_b
+    invoke-virtual &#123;v1, v2&#125;, Ljava/io/PrintStream;-&gt;println(Ljava/lang/String;)V
+
+    .line 10
+		<span class="hljs-comment"># 重点</span>
+    monitor-exit v0
+
+    .line 11
+    return-void
+
+    .line 10
+    :catchall_10
+    move-exception v1
+
+    monitor-exit v0
+    :try_end_12
+    .catchall &#123;:try_start_3 .. :try_end_12&#125; :catchall_10
+
+    throw v1
+.end method</code></pre></div>
 
 <h2 id="对象锁的概念"><a href="#对象锁的概念" class="headerlink" title="对象锁的概念"></a>对象锁的概念</h2><p>在进一步分析代码之前，先要了解下 java 对象锁的一些背景知识（from <a target="_blank" rel="noopener" href="https://blog.csdn.net/fan1865221/article/details/96338419">JAVA锁的膨胀过程</a>）</p>
 <p>java 对象锁会有一个膨胀加码的过程：无锁 → 偏向锁 → 轻量级锁 → 重量级锁</p>
@@ -244,24 +298,548 @@
 </ul>
 <h2 id="LockWord"><a href="#LockWord" class="headerlink" title="LockWord"></a>LockWord</h2><p>先了解一个结构<code>LockWord</code> ，它其实是一个 <code>uint32_t</code>，低 16 bits 保存持有锁的 thread id，后续 12 bits 保存锁的个数</p>
 <p>它是 <code>Object</code> 的成员变量 <code>monitor_</code>，所以每个 java 对象都可以作为锁使用</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> LockWord <span class="hljs-title">FromThinLockId</span><span class="hljs-params">(<span class="hljs-keyword">uint32_t</span> thread_id, <span class="hljs-keyword">uint32_t</span> count, <span class="hljs-keyword">uint32_t</span> gc_state)</span> </span>&#123;<br>    <span class="hljs-built_in">CHECK_LE</span>(thread_id, <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kThinLockMaxOwner));<br>    <span class="hljs-built_in">CHECK_LE</span>(count, <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kThinLockMaxCount));<br>    <span class="hljs-comment">// DCHECK_EQ(gc_bits &amp; kGCStateMaskToggled, 0U);</span><br>    <span class="hljs-keyword">return</span> <span class="hljs-built_in">LockWord</span>((thread_id &lt;&lt; kThinLockOwnerShift) |<br>                    (count &lt;&lt; kThinLockCountShift) |<br>                    (gc_state &lt;&lt; kGCStateShift) |<br>                    (kStateThinOrUnlocked &lt;&lt; kStateShift));<br>&#125;<br><br><span class="hljs-comment">// C++ mirror of java.lang.Object</span><br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MANAGED</span> <span class="hljs-title">LOCKABLE</span> <span class="hljs-title">Object</span> &#123;</span><br>	<span class="hljs-comment">// Monitor and hash code information.</span><br>	<span class="hljs-keyword">uint32_t</span> monitor_;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> LockWord <span class="hljs-title">FromThinLockId</span><span class="hljs-params">(<span class="hljs-keyword">uint32_t</span> thread_id, <span class="hljs-keyword">uint32_t</span> count, <span class="hljs-keyword">uint32_t</span> gc_state)</span> </span>&#123;
+    <span class="hljs-built_in">CHECK_LE</span>(thread_id, <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kThinLockMaxOwner));
+    <span class="hljs-built_in">CHECK_LE</span>(count, <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kThinLockMaxCount));
+    <span class="hljs-comment">// DCHECK_EQ(gc_bits &amp; kGCStateMaskToggled, 0U);</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">LockWord</span>((thread_id &lt;&lt; kThinLockOwnerShift) |
+                    (count &lt;&lt; kThinLockCountShift) |
+                    (gc_state &lt;&lt; kGCStateShift) |
+                    (kStateThinOrUnlocked &lt;&lt; kStateShift));
+&#125;
+
+<span class="hljs-comment">// C++ mirror of java.lang.Object</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MANAGED</span> <span class="hljs-title">LOCKABLE</span> <span class="hljs-title">Object</span> &#123;</span>
+	<span class="hljs-comment">// Monitor and hash code information.</span>
+	<span class="hljs-keyword">uint32_t</span> monitor_;
+&#125;</code></pre></div>
 
 <h2 id="Mutex"><a href="#Mutex" class="headerlink" title="Mutex"></a>Mutex</h2><p>ART 使用 <code>Mutex</code> 作为互斥量的实现（lock &amp; unlock），它根据宏 <code>ART_USE_FUTEXES</code> 决定是使用 <code>futex</code> 还是 <code>mutex</code></p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span><br><br><span class="hljs-comment">// 获取排它锁</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Mutex::ExclusiveLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-keyword">if</span> (!recursive_ || !<span class="hljs-built_in">IsExclusiveHeld</span>(self)) &#123;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>    <span class="hljs-keyword">bool</span> done = <span class="hljs-literal">false</span>;<br>    <span class="hljs-keyword">do</span> &#123;<br>      <span class="hljs-comment">// Mutex::state_and_contenders_ 是 AtomicInteger</span><br>      <span class="hljs-comment">// 最低 1 bit 表示互斥量是否被持有（1 - 持有，0 - 未持有），其余高位的 bits 表示在此互斥量上挂起的线程数量</span><br>      <span class="hljs-keyword">int32_t</span> cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>      <span class="hljs-comment">// 锁没有被取走，立刻获得锁（cas）</span><br>      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>((cur_state &amp; kHeldMask) == <span class="hljs-number">0</span>) <span class="hljs-comment">/* lock not held */</span>) &#123;<br>        done = state_and_contenders_.<span class="hljs-built_in">CompareAndSetWeakAcquire</span>(cur_state, cur_state | kHeldMask);<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br><br>        <span class="hljs-comment">// 否则将挂起线程的数量加一，并用 futex 挂起当前线程</span><br>        ScopedContentionRecorder <span class="hljs-built_in">scr</span>(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">SafeGetTid</span>(self), <span class="hljs-built_in">GetExclusiveOwnerTid</span>());<br>        <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">WaitBrieflyFor</span>(&amp;state_and_contenders_, self, [](<span class="hljs-keyword">int32_t</span> v) &#123; <span class="hljs-built_in"><span class="hljs-keyword">return</span></span> (v &amp; kHeldMask) == <span class="hljs-number">0</span>; &#125;)) &#123;<br>          <span class="hljs-comment">// Increment contender count. We can&#x27;t create enough threads for this to overflow.</span><br>          <span class="hljs-built_in">increment_contenders</span>();<br>          <span class="hljs-comment">// Make cur_state again reflect the expected value of state_and_contenders.</span><br>          cur_state += kContenderIncrement;<br>          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">UNLIKELY</span>(should_respond_to_empty_checkpoint_request_)) &#123;<br>            self-&gt;<span class="hljs-built_in">CheckEmptyCheckpointFromMutex</span>();<br>          &#125;<br>          <span class="hljs-keyword">do</span> &#123;<br>            <span class="hljs-keyword">if</span> (<span class="hljs-built_in">futex</span>(state_and_contenders_.<span class="hljs-built_in">Address</span>(), FUTEX_WAIT_PRIVATE, cur_state, <span class="hljs-literal">nullptr</span>, <span class="hljs-literal">nullptr</span>, <span class="hljs-number">0</span>) != <span class="hljs-number">0</span>) &#123;<br>              <span class="hljs-keyword">if</span> ((errno != EAGAIN) &amp;&amp; (errno != EINTR)) &#123;<br>                <span class="hljs-built_in">PLOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;futex wait failed for &quot;</span> &lt;&lt; name_;<br>              &#125;<br>            &#125;<br>            <span class="hljs-built_in">SleepIfRuntimeDeleted</span>(self);<br>            <span class="hljs-comment">// Retry until not held. In heavy contention situations we otherwise get redundant</span><br>            <span class="hljs-comment">// futex wakeups as a result of repeatedly decrementing and incrementing contenders.</span><br>            cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>          &#125; <span class="hljs-keyword">while</span> ((cur_state &amp; kHeldMask) != <span class="hljs-number">0</span>);<br>          <span class="hljs-built_in">decrement_contenders</span>();<br>        &#125;<br>      &#125;<br>    &#125; <span class="hljs-keyword">while</span> (!done);<br>    <span class="hljs-comment">// Confirm that lock is now held.</span><br>    <span class="hljs-built_in">DCHECK_NE</span>(state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) &amp; kHeldMask, <span class="hljs-number">0</span>);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br><br>    <span class="hljs-comment">// 使用 pthread_mutex_lock 加锁</span><br>    <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_mutex_lock, (&amp;mutex_));<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br><br>    <span class="hljs-comment">// exclusive_owner_ 记下获得排他锁的 thread id</span><br>    exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-built_in">SafeGetTid</span>(self), std::memory_order_relaxed);<br>    <span class="hljs-built_in">RegisterAsLocked</span>(self);<br>  &#125;<br>  recursion_count_++;<br>&#125;<br><br><span class="hljs-comment">// tryLock 方法</span><br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Mutex::ExclusiveTryLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-keyword">if</span> (!recursive_ || !<span class="hljs-built_in">IsExclusiveHeld</span>(self)) &#123;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>    <span class="hljs-keyword">bool</span> done = <span class="hljs-literal">false</span>;<br>    <span class="hljs-keyword">do</span> &#123;<br><br>      <span class="hljs-comment">// 使用 futex 的情况下，利用一个 AtomicInteger 的最低 1 bit 表示锁有没被借出，一个 cas 操作即可</span><br>      <span class="hljs-keyword">int32_t</span> cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>      <span class="hljs-keyword">if</span> ((cur_state &amp; kHeldMask) == <span class="hljs-number">0</span>) &#123;<br>        <span class="hljs-comment">// Change state to held and impose load/store ordering appropriate for lock acquisition.</span><br>        done = state_and_contenders_.<span class="hljs-built_in">CompareAndSetWeakAcquire</span>(cur_state, cur_state | kHeldMask);<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>      &#125;<br>    &#125; <span class="hljs-keyword">while</span> (!done);<br>    <span class="hljs-built_in">DCHECK_NE</span>(state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) &amp; kHeldMask, <span class="hljs-number">0</span>);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br><br>    <span class="hljs-comment">// mutex</span><br>    <span class="hljs-keyword">int</span> result = <span class="hljs-built_in">pthread_mutex_trylock</span>(&amp;mutex_);<br>    <span class="hljs-comment">// ...</span><br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br><br>    <span class="hljs-comment">// exclusive_owner_ 记下获得锁的 thread id</span><br>    <span class="hljs-built_in">DCHECK_EQ</span>(<span class="hljs-built_in">GetExclusiveOwnerTid</span>(), <span class="hljs-number">0</span>);<br>    exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-built_in">SafeGetTid</span>(self), std::memory_order_relaxed);<br>    <span class="hljs-built_in">RegisterAsLocked</span>(self);<br>  &#125;<br>  recursion_count_++;<br>  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br>&#125;<br><br><span class="hljs-comment">// 也是 tryLock 方法，特别的是它会自旋一小会</span><br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Mutex::ExclusiveTryLockWithSpinning</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-comment">// Spin a small number of times, since this affects our ability to respond to suspension</span><br>  <span class="hljs-comment">// requests. We spin repeatedly only if the mutex repeatedly becomes available and unavailable</span><br>  <span class="hljs-comment">// in rapid succession, and then we will typically not spin for the maximal period.</span><br>  <span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span> kMaxSpins = <span class="hljs-number">5</span>;<br>  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; kMaxSpins; ++i) &#123;<br>    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ExclusiveTryLock</span>(self)) &#123;<br>      <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br>    &#125;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">WaitBrieflyFor</span>(&amp;state_and_contenders_, self,<br>            [](<span class="hljs-keyword">int32_t</span> v) &#123; <span class="hljs-built_in"><span class="hljs-keyword">return</span></span> (v &amp; kHeldMask) == <span class="hljs-number">0</span>; &#125;)) &#123;<br>      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>    &#125;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>  &#125;<br>  <span class="hljs-keyword">return</span> <span class="hljs-built_in">ExclusiveTryLock</span>(self);<br>&#125;<br><br><span class="hljs-comment">// 释放排它锁</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Mutex::ExclusiveUnlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  recursion_count_--;<br>  <span class="hljs-keyword">if</span> (!recursive_ || recursion_count_ == <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">RegisterAsUnlocked</span>(self);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>    <span class="hljs-keyword">bool</span> done = <span class="hljs-literal">false</span>;<br>    <span class="hljs-keyword">do</span> &#123;<br><br>      <span class="hljs-comment">// 使用 cas 将 state_and_contenders_ 最低 1 bit 置零（表示锁没被借出）</span><br>      <span class="hljs-keyword">int32_t</span> cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>((cur_state &amp; kHeldMask) != <span class="hljs-number">0</span>)) &#123;<br>        <span class="hljs-comment">// We&#x27;re no longer the owner.</span><br>        exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-number">0</span> <span class="hljs-comment">/* pid */</span>, std::memory_order_relaxed);<br>        <span class="hljs-comment">// Change state to not held and impose load/store ordering appropriate for lock release.</span><br>        <span class="hljs-keyword">uint32_t</span> new_state = cur_state &amp; ~kHeldMask;  <span class="hljs-comment">// Same number of contenders.</span><br>        done = state_and_contenders_.<span class="hljs-built_in">CompareAndSetWeakRelease</span>(cur_state, new_state);<br><br>        <span class="hljs-comment">// state_and_contenders_ 不为零表示仍有线程在锁上挂起，用 futex 让系统唤醒其中一个</span><br>        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>(done)) &#123;  <span class="hljs-comment">// Spurious fail or waiters changed ?</span><br>          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">UNLIKELY</span>(new_state != <span class="hljs-number">0</span>) <span class="hljs-comment">/* have contenders */</span>) &#123;<br>            <span class="hljs-built_in">futex</span>(state_and_contenders_.<span class="hljs-built_in">Address</span>(), FUTEX_WAKE_PRIVATE, kWakeOne,<br>                  <span class="hljs-literal">nullptr</span>, <span class="hljs-literal">nullptr</span>, <span class="hljs-number">0</span>);<br>          &#125;<br>          <span class="hljs-comment">// We only do a futex wait after incrementing contenders and verifying the lock was</span><br>          <span class="hljs-comment">// still held. If we didn&#x27;t see waiters, then there couldn&#x27;t have been any futexes</span><br>          <span class="hljs-comment">// waiting on this lock when we did the CAS. New arrivals after that cannot wait for us,</span><br>          <span class="hljs-comment">// since the futex wait call would see the lock available and immediately return.</span><br>        &#125;<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// 异常情况...</span><br>      &#125;<br>    &#125; <span class="hljs-keyword">while</span> (!done);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br><br>    <span class="hljs-comment">// mutex</span><br>    exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-number">0</span> <span class="hljs-comment">/* pid */</span>, std::memory_order_relaxed);<br>    <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_mutex_unlock, (&amp;mutex_));<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>  &#125;<br>&#125;<br><br><span class="hljs-comment">// Unlock 等同于 ExclusiveUnlock</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Unlock</span><span class="hljs-params">(Thread* self)</span> <span class="hljs-title">RELEASE</span><span class="hljs-params">()</span> </span>&#123;  <span class="hljs-built_in">ExclusiveUnlock</span>(self); &#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
+
+<span class="hljs-comment">// 获取排它锁</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Mutex::ExclusiveLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-keyword">if</span> (!recursive_ || !<span class="hljs-built_in">IsExclusiveHeld</span>(self)) &#123;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+    <span class="hljs-keyword">bool</span> done = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">do</span> &#123;
+      <span class="hljs-comment">// Mutex::state_and_contenders_ 是 AtomicInteger</span>
+      <span class="hljs-comment">// 最低 1 bit 表示互斥量是否被持有（1 - 持有，0 - 未持有），其余高位的 bits 表示在此互斥量上挂起的线程数量</span>
+      <span class="hljs-keyword">int32_t</span> cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+      <span class="hljs-comment">// 锁没有被取走，立刻获得锁（cas）</span>
+      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>((cur_state &amp; kHeldMask) == <span class="hljs-number">0</span>) <span class="hljs-comment">/* lock not held */</span>) &#123;
+        done = state_and_contenders_.<span class="hljs-built_in">CompareAndSetWeakAcquire</span>(cur_state, cur_state | kHeldMask);
+      &#125; <span class="hljs-keyword">else</span> &#123;
+
+        <span class="hljs-comment">// 否则将挂起线程的数量加一，并用 futex 挂起当前线程</span>
+        ScopedContentionRecorder <span class="hljs-built_in">scr</span>(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">SafeGetTid</span>(self), <span class="hljs-built_in">GetExclusiveOwnerTid</span>());
+        <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">WaitBrieflyFor</span>(&amp;state_and_contenders_, self, [](<span class="hljs-keyword">int32_t</span> v) &#123; <span class="hljs-built_in"><span class="hljs-keyword">return</span></span> (v &amp; kHeldMask) == <span class="hljs-number">0</span>; &#125;)) &#123;
+          <span class="hljs-comment">// Increment contender count. We can&#x27;t create enough threads for this to overflow.</span>
+          <span class="hljs-built_in">increment_contenders</span>();
+          <span class="hljs-comment">// Make cur_state again reflect the expected value of state_and_contenders.</span>
+          cur_state += kContenderIncrement;
+          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">UNLIKELY</span>(should_respond_to_empty_checkpoint_request_)) &#123;
+            self-&gt;<span class="hljs-built_in">CheckEmptyCheckpointFromMutex</span>();
+          &#125;
+          <span class="hljs-keyword">do</span> &#123;
+            <span class="hljs-keyword">if</span> (<span class="hljs-built_in">futex</span>(state_and_contenders_.<span class="hljs-built_in">Address</span>(), FUTEX_WAIT_PRIVATE, cur_state, <span class="hljs-literal">nullptr</span>, <span class="hljs-literal">nullptr</span>, <span class="hljs-number">0</span>) != <span class="hljs-number">0</span>) &#123;
+              <span class="hljs-keyword">if</span> ((errno != EAGAIN) &amp;&amp; (errno != EINTR)) &#123;
+                <span class="hljs-built_in">PLOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;futex wait failed for &quot;</span> &lt;&lt; name_;
+              &#125;
+            &#125;
+            <span class="hljs-built_in">SleepIfRuntimeDeleted</span>(self);
+            <span class="hljs-comment">// Retry until not held. In heavy contention situations we otherwise get redundant</span>
+            <span class="hljs-comment">// futex wakeups as a result of repeatedly decrementing and incrementing contenders.</span>
+            cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+          &#125; <span class="hljs-keyword">while</span> ((cur_state &amp; kHeldMask) != <span class="hljs-number">0</span>);
+          <span class="hljs-built_in">decrement_contenders</span>();
+        &#125;
+      &#125;
+    &#125; <span class="hljs-keyword">while</span> (!done);
+    <span class="hljs-comment">// Confirm that lock is now held.</span>
+    <span class="hljs-built_in">DCHECK_NE</span>(state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) &amp; kHeldMask, <span class="hljs-number">0</span>);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+
+    <span class="hljs-comment">// 使用 pthread_mutex_lock 加锁</span>
+    <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_mutex_lock, (&amp;mutex_));
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+
+    <span class="hljs-comment">// exclusive_owner_ 记下获得排他锁的 thread id</span>
+    exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-built_in">SafeGetTid</span>(self), std::memory_order_relaxed);
+    <span class="hljs-built_in">RegisterAsLocked</span>(self);
+  &#125;
+  recursion_count_++;
+&#125;
+
+<span class="hljs-comment">// tryLock 方法</span>
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Mutex::ExclusiveTryLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-keyword">if</span> (!recursive_ || !<span class="hljs-built_in">IsExclusiveHeld</span>(self)) &#123;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+    <span class="hljs-keyword">bool</span> done = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">do</span> &#123;
+
+      <span class="hljs-comment">// 使用 futex 的情况下，利用一个 AtomicInteger 的最低 1 bit 表示锁有没被借出，一个 cas 操作即可</span>
+      <span class="hljs-keyword">int32_t</span> cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+      <span class="hljs-keyword">if</span> ((cur_state &amp; kHeldMask) == <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-comment">// Change state to held and impose load/store ordering appropriate for lock acquisition.</span>
+        done = state_and_contenders_.<span class="hljs-built_in">CompareAndSetWeakAcquire</span>(cur_state, cur_state | kHeldMask);
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      &#125;
+    &#125; <span class="hljs-keyword">while</span> (!done);
+    <span class="hljs-built_in">DCHECK_NE</span>(state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed) &amp; kHeldMask, <span class="hljs-number">0</span>);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+
+    <span class="hljs-comment">// mutex</span>
+    <span class="hljs-keyword">int</span> result = <span class="hljs-built_in">pthread_mutex_trylock</span>(&amp;mutex_);
+    <span class="hljs-comment">// ...</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+
+    <span class="hljs-comment">// exclusive_owner_ 记下获得锁的 thread id</span>
+    <span class="hljs-built_in">DCHECK_EQ</span>(<span class="hljs-built_in">GetExclusiveOwnerTid</span>(), <span class="hljs-number">0</span>);
+    exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-built_in">SafeGetTid</span>(self), std::memory_order_relaxed);
+    <span class="hljs-built_in">RegisterAsLocked</span>(self);
+  &#125;
+  recursion_count_++;
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;
+
+<span class="hljs-comment">// 也是 tryLock 方法，特别的是它会自旋一小会</span>
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Mutex::ExclusiveTryLockWithSpinning</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-comment">// Spin a small number of times, since this affects our ability to respond to suspension</span>
+  <span class="hljs-comment">// requests. We spin repeatedly only if the mutex repeatedly becomes available and unavailable</span>
+  <span class="hljs-comment">// in rapid succession, and then we will typically not spin for the maximal period.</span>
+  <span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span> kMaxSpins = <span class="hljs-number">5</span>;
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; kMaxSpins; ++i) &#123;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ExclusiveTryLock</span>(self)) &#123;
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    &#125;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">WaitBrieflyFor</span>(&amp;state_and_contenders_, self,
+            [](<span class="hljs-keyword">int32_t</span> v) &#123; <span class="hljs-built_in"><span class="hljs-keyword">return</span></span> (v &amp; kHeldMask) == <span class="hljs-number">0</span>; &#125;)) &#123;
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+  &#125;
+  <span class="hljs-keyword">return</span> <span class="hljs-built_in">ExclusiveTryLock</span>(self);
+&#125;
+
+<span class="hljs-comment">// 释放排它锁</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Mutex::ExclusiveUnlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  recursion_count_--;
+  <span class="hljs-keyword">if</span> (!recursive_ || recursion_count_ == <span class="hljs-number">0</span>) &#123;
+    <span class="hljs-built_in">RegisterAsUnlocked</span>(self);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+    <span class="hljs-keyword">bool</span> done = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">do</span> &#123;
+
+      <span class="hljs-comment">// 使用 cas 将 state_and_contenders_ 最低 1 bit 置零（表示锁没被借出）</span>
+      <span class="hljs-keyword">int32_t</span> cur_state = state_and_contenders_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>((cur_state &amp; kHeldMask) != <span class="hljs-number">0</span>)) &#123;
+        <span class="hljs-comment">// We&#x27;re no longer the owner.</span>
+        exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-number">0</span> <span class="hljs-comment">/* pid */</span>, std::memory_order_relaxed);
+        <span class="hljs-comment">// Change state to not held and impose load/store ordering appropriate for lock release.</span>
+        <span class="hljs-keyword">uint32_t</span> new_state = cur_state &amp; ~kHeldMask;  <span class="hljs-comment">// Same number of contenders.</span>
+        done = state_and_contenders_.<span class="hljs-built_in">CompareAndSetWeakRelease</span>(cur_state, new_state);
+
+        <span class="hljs-comment">// state_and_contenders_ 不为零表示仍有线程在锁上挂起，用 futex 让系统唤醒其中一个</span>
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>(done)) &#123;  <span class="hljs-comment">// Spurious fail or waiters changed ?</span>
+          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">UNLIKELY</span>(new_state != <span class="hljs-number">0</span>) <span class="hljs-comment">/* have contenders */</span>) &#123;
+            <span class="hljs-built_in">futex</span>(state_and_contenders_.<span class="hljs-built_in">Address</span>(), FUTEX_WAKE_PRIVATE, kWakeOne,
+                  <span class="hljs-literal">nullptr</span>, <span class="hljs-literal">nullptr</span>, <span class="hljs-number">0</span>);
+          &#125;
+          <span class="hljs-comment">// We only do a futex wait after incrementing contenders and verifying the lock was</span>
+          <span class="hljs-comment">// still held. If we didn&#x27;t see waiters, then there couldn&#x27;t have been any futexes</span>
+          <span class="hljs-comment">// waiting on this lock when we did the CAS. New arrivals after that cannot wait for us,</span>
+          <span class="hljs-comment">// since the futex wait call would see the lock available and immediately return.</span>
+        &#125;
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-comment">// 异常情况...</span>
+      &#125;
+    &#125; <span class="hljs-keyword">while</span> (!done);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+
+    <span class="hljs-comment">// mutex</span>
+    exclusive_owner_.<span class="hljs-built_in">store</span>(<span class="hljs-number">0</span> <span class="hljs-comment">/* pid */</span>, std::memory_order_relaxed);
+    <span class="hljs-built_in">CHECK_MUTEX_CALL</span>(pthread_mutex_unlock, (&amp;mutex_));
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+  &#125;
+&#125;
+
+<span class="hljs-comment">// Unlock 等同于 ExclusiveUnlock</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Unlock</span><span class="hljs-params">(Thread* self)</span> <span class="hljs-title">RELEASE</span><span class="hljs-params">()</span> </span>&#123;  <span class="hljs-built_in">ExclusiveUnlock</span>(self); &#125;</code></pre></div>
 
 <h2 id="monitor-enter-指令"><a href="#monitor-enter-指令" class="headerlink" title="monitor-enter 指令"></a><code>monitor-enter</code> 指令</h2><h3 id="无锁、偏向锁和轻量级锁"><a href="#无锁、偏向锁和轻量级锁" class="headerlink" title="无锁、偏向锁和轻量级锁"></a>无锁、偏向锁和轻量级锁</h3><p>进入临界区，尝试获得锁</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 在 cs.android.com 找到的相关性很高的方法，可能不是指令 monitor-enter 直接调用的方法，但最终应该会走到这里来</span><br><span class="hljs-comment">// platform/superproject/art/runtime/mirror/object-inl.h</span><br><span class="hljs-function"><span class="hljs-keyword">inline</span> ObjPtr&lt;mirror::Object&gt; <span class="hljs-title">Object::MonitorEnter</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-keyword">return</span> Monitor::<span class="hljs-built_in">MonitorEnter</span>(self, <span class="hljs-keyword">this</span>, <span class="hljs-comment">/*trylock=*/</span><span class="hljs-literal">false</span>);<br>&#125;<br><br><span class="hljs-function">ObjPtr&lt;mirror::Object&gt; <span class="hljs-title">Monitor::MonitorEnter</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj, <span class="hljs-keyword">bool</span> trylock)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);<br>  <span class="hljs-built_in">DCHECK</span>(obj != <span class="hljs-literal">nullptr</span>);<br>  self-&gt;<span class="hljs-built_in">AssertThreadSuspensionIsAllowable</span>();<br>  obj = <span class="hljs-built_in">FakeLock</span>(obj);<br>  <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();<br>  <span class="hljs-keyword">size_t</span> contention_count = <span class="hljs-number">0</span>;<br>  <span class="hljs-keyword">constexpr</span> <span class="hljs-keyword">size_t</span> kExtraSpinIters = <span class="hljs-number">100</span>;<br>  <span class="hljs-function">StackHandleScope&lt;1&gt; <span class="hljs-title">hs</span><span class="hljs-params">(self)</span></span>;<br>  <span class="hljs-function">Handle&lt;mirror::Object&gt; <span class="hljs-title">h_obj</span><span class="hljs-params">(hs.NewHandle(obj))</span></span>;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !ART_USE_FUTEXES</span><br>  <span class="hljs-comment">// In this case we cannot inflate an unowned monitor, so we sometimes defer inflation.</span><br>  <span class="hljs-keyword">bool</span> should_inflate = <span class="hljs-literal">false</span>;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;<br>    LockWord lock_word = h_obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">false</span>);<br>    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;<br><br>      <span class="hljs-comment">// 无锁的情况下，升级为偏向锁（thin lock）</span><br>      <span class="hljs-comment">// 偏向锁记录下 thread id 和锁的个数 0，通过 cas 记录在 Object.monitor_</span><br>      <span class="hljs-keyword">case</span> LockWord::kUnlocked: &#123;<br>        <span class="hljs-function">LockWord <span class="hljs-title">thin_locked</span><span class="hljs-params">(LockWord::FromThinLockId(thread_id, <span class="hljs-number">0</span>, lock_word.GCState()))</span></span>;<br>        <span class="hljs-keyword">if</span> (h_obj-&gt;<span class="hljs-built_in">CasLockWord</span>(lock_word, thin_locked, CASMode::kWeak, std::memory_order_acquire)) &#123;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !ART_USE_FUTEXES</span><br>          <span class="hljs-keyword">if</span> (should_inflate) &#123;<br>            <span class="hljs-built_in">InflateThinLocked</span>(self, h_obj, lock_word, <span class="hljs-number">0</span>);<br>          &#125;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>          <span class="hljs-built_in">AtraceMonitorLock</span>(self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-comment">/* is_wait= */</span> <span class="hljs-literal">false</span>);<br>          <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span><br>        &#125;<br>        <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Go again.</span><br>      &#125;<br><br>      <span class="hljs-comment">// 偏向锁，而且当前线程跟偏向锁里记录的线程是同一个线程</span><br>      <span class="hljs-comment">// 那么只需把偏向锁里的锁个数加一即可，依然使用 cas 保存在 Object.monitor_</span><br>      <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;<br>        <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();<br>        <span class="hljs-keyword">if</span> (owner_thread_id == thread_id) &#123;<br>          <span class="hljs-comment">// No ordering required for initial lockword read.</span><br>          <span class="hljs-comment">// We own the lock, increase the recursion count.</span><br>          <span class="hljs-keyword">uint32_t</span> new_count = lock_word.<span class="hljs-built_in">ThinLockCount</span>() + <span class="hljs-number">1</span>;<br>          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>(new_count &lt;= LockWord::kThinLockMaxCount)) &#123;<br>            <span class="hljs-function">LockWord <span class="hljs-title">thin_locked</span><span class="hljs-params">(LockWord::FromThinLockId(thread_id,</span></span><br><span class="hljs-params"><span class="hljs-function">                                                          new_count,</span></span><br><span class="hljs-params"><span class="hljs-function">                                                          lock_word.GCState()))</span></span>;<br>            <span class="hljs-comment">// 重新设置偏向锁，一个选择用 cas 原子操作符，另一个选择没用，不明这样区分的意义</span><br>            <span class="hljs-comment">// Only this thread pays attention to the count. Thus there is no need for stronger</span><br>            <span class="hljs-comment">// than relaxed memory ordering.</span><br>            <span class="hljs-keyword">if</span> (!kUseReadBarrier) &#123;<br>              h_obj-&gt;<span class="hljs-built_in">SetLockWord</span>(thin_locked, <span class="hljs-comment">/* as_volatile= */</span> <span class="hljs-literal">false</span>);<br>              <span class="hljs-built_in">AtraceMonitorLock</span>(self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-comment">/* is_wait= */</span> <span class="hljs-literal">false</span>);<br>              <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span><br>            &#125; <span class="hljs-keyword">else</span> &#123;<br>              <span class="hljs-comment">// Use CAS to preserve the read barrier state.</span><br>              <span class="hljs-keyword">if</span> (h_obj-&gt;<span class="hljs-built_in">CasLockWord</span>(lock_word,<br>                                     thin_locked,<br>                                     CASMode::kWeak,<br>                                     std::memory_order_relaxed)) &#123;<br>                <span class="hljs-built_in">AtraceMonitorLock</span>(self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-comment">/* is_wait= */</span> <span class="hljs-literal">false</span>);<br>                <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span><br>              &#125;<br>            &#125;<br>            <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Go again.</span><br>          &#125; <span class="hljs-keyword">else</span> &#123;<br><br>            <span class="hljs-comment">// 当前线程持有偏向锁，但锁的个数超过阈值 kThinLockMaxCount</span><br>            <span class="hljs-comment">// 那么将偏向锁（thin lock）升级为重量级锁（fat lock）</span><br>            <span class="hljs-comment">// We&#x27;d overflow the recursion count, so inflate the monitor.</span><br>            <span class="hljs-built_in">InflateThinLocked</span>(self, h_obj, lock_word, <span class="hljs-number">0</span>);<br>          &#125;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br><br>          <span class="hljs-comment">// 持有偏向锁的线程不是当前线程，此时的 thin lock 对应上文的轻量级锁</span><br>          <span class="hljs-comment">// 也就是说轻量级锁是这么一种情况：一个线程持有偏向锁，遇到了另一个线程的争抢</span><br>          <span class="hljs-comment">// 争抢的线程在这里自旋（spin），contention_count 表示自旋的次数</span><br>          <span class="hljs-comment">// 1. 如果自旋次数 &lt;= kExtraSpinIters，那么继续在外一层的 while 循环里自旋</span><br>          <span class="hljs-comment">// 2. 如果自旋次数 &lt; kExtraSpinIters，争抢线程让渡 CPU 给优先级更高的线程，并将自己排到 CPU 调度队列的队尾（sched_yield），相当于优化的自旋</span><br>          <span class="hljs-comment">// 3. 最后将轻量级锁膨胀为重量级锁</span><br>          <span class="hljs-keyword">if</span> (trylock) &#123;<br>            <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;<br>          &#125;<br>          contention_count++;<br>          Runtime* runtime = Runtime::<span class="hljs-built_in">Current</span>();<br>          <span class="hljs-keyword">if</span> (contention_count<br>              &lt;= kExtraSpinIters + runtime-&gt;<span class="hljs-built_in">GetMaxSpinsBeforeThinLockInflation</span>()) &#123;<br>            <span class="hljs-keyword">if</span> (contention_count &gt; kExtraSpinIters) &#123;<br>              <span class="hljs-built_in">sched_yield</span>();<br>            &#125;<br>          &#125; <span class="hljs-keyword">else</span> &#123;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>            contention_count = <span class="hljs-number">0</span>;<br>            <span class="hljs-comment">// No ordering required for initial lockword read. Install rereads it anyway.</span><br>            <span class="hljs-built_in">InflateThinLocked</span>(self, h_obj, lock_word, <span class="hljs-number">0</span>);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br>            <span class="hljs-comment">// Can&#x27;t inflate from non-owning thread. Keep waiting. Bad for power, but this code</span><br>            <span class="hljs-comment">// isn&#x27;t used on-device.</span><br>            should_inflate = <span class="hljs-literal">true</span>;<br>            <span class="hljs-built_in">usleep</span>(<span class="hljs-number">10</span>);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>          &#125;<br>        &#125;<br>        <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Start from the beginning.</span><br>      &#125;<br><br>      <span class="hljs-comment">// 重量级锁的情况下会挂起当前线程，在下一节分析</span><br>      <span class="hljs-keyword">case</span> LockWord::kFatLocked: &#123;<br>        std::<span class="hljs-built_in">atomic_thread_fence</span>(std::memory_order_acquire);<br>        Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();<br>        <span class="hljs-keyword">if</span> (trylock) &#123;<br>          <span class="hljs-keyword">return</span> mon-&gt;<span class="hljs-built_in">TryLock</span>(self) ? h_obj.<span class="hljs-built_in">Get</span>() : <span class="hljs-literal">nullptr</span>;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>          mon-&gt;<span class="hljs-built_in">Lock</span>(self);<br>          <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span><br>        &#125;<br>      &#125;<br><br>      <span class="hljs-comment">// 不清楚这个条件</span><br>      <span class="hljs-keyword">case</span> LockWord::kHashCode:<br>        <span class="hljs-built_in">Inflate</span>(self, <span class="hljs-literal">nullptr</span>, h_obj.<span class="hljs-built_in">Get</span>(), lock_word.<span class="hljs-built_in">GetHashCode</span>());<br>        <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Start from the beginning.</span><br>      <span class="hljs-keyword">default</span>: &#123;<br>        <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();<br>        <span class="hljs-built_in">UNREACHABLE</span>();<br>      &#125;<br>    &#125;<br>  &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 在 cs.android.com 找到的相关性很高的方法，可能不是指令 monitor-enter 直接调用的方法，但最终应该会走到这里来</span>
+<span class="hljs-comment">// platform/superproject/art/runtime/mirror/object-inl.h</span>
+<span class="hljs-function"><span class="hljs-keyword">inline</span> ObjPtr&lt;mirror::Object&gt; <span class="hljs-title">Object::MonitorEnter</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-keyword">return</span> Monitor::<span class="hljs-built_in">MonitorEnter</span>(self, <span class="hljs-keyword">this</span>, <span class="hljs-comment">/*trylock=*/</span><span class="hljs-literal">false</span>);
+&#125;
 
-<h3 id="锁膨胀的过程（inflate）"><a href="#锁膨胀的过程（inflate）" class="headerlink" title="锁膨胀的过程（inflate）"></a>锁膨胀的过程（inflate）</h3><figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// thin lock 膨胀至重量级锁（fat lock）的过程</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::InflateThinLocked</span><span class="hljs-params">(Thread* self, Handle&lt;mirror::Object&gt; obj, LockWord lock_word, <span class="hljs-keyword">uint32_t</span> hash_code)</span> </span>&#123;<br>  <span class="hljs-comment">// 当前线程持有此偏向锁的情况（由于锁个数超过阈值导致膨胀）</span><br>  <span class="hljs-comment">// 升级到重量级锁（fat lock）</span><br>  <span class="hljs-built_in">DCHECK_EQ</span>(lock_word.<span class="hljs-built_in">GetState</span>(), LockWord::kThinLocked);<br>  <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();<br>  <span class="hljs-keyword">if</span> (owner_thread_id == self-&gt;<span class="hljs-built_in">GetThreadId</span>()) &#123;<br>    <span class="hljs-comment">// We own the monitor, we can easily inflate it.</span><br>    <span class="hljs-built_in">Inflate</span>(self, self, obj.<span class="hljs-built_in">Get</span>(), hash_code);<br>  &#125; <span class="hljs-keyword">else</span> &#123;<br><br>    <span class="hljs-comment">// 当前线程不持有此偏向锁，出现争抢（此时对应轻量级锁）</span><br>    <span class="hljs-comment">// 挂起持有偏向锁的线程，将轻量级锁膨胀为重量级锁（fat lock），然后恢复线程</span><br>    ThreadList* thread_list = Runtime::<span class="hljs-built_in">Current</span>()-&gt;<span class="hljs-built_in">GetThreadList</span>();<br>    <span class="hljs-comment">// Suspend the owner, inflate. First change to blocked and give up mutator_lock_.</span><br>    self-&gt;<span class="hljs-built_in">SetMonitorEnterObject</span>(obj.<span class="hljs-built_in">Get</span>());<br>    <span class="hljs-keyword">bool</span> timed_out;<br>    Thread* owner;<br>    &#123;<br>      <span class="hljs-function">ScopedThreadSuspension <span class="hljs-title">sts</span><span class="hljs-params">(self, kWaitingForLockInflation)</span></span>;<br>      owner = thread_list-&gt;<span class="hljs-built_in">SuspendThreadByThreadId</span>(owner_thread_id, SuspendReason::kInternal, &amp;timed_out);<br>    &#125;<br>    <span class="hljs-keyword">if</span> (owner != <span class="hljs-literal">nullptr</span>) &#123;<br>      <span class="hljs-comment">// We succeeded in suspending the thread, check the lock&#x27;s status didn&#x27;t change.</span><br>      lock_word = obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);<br>      <span class="hljs-keyword">if</span> (lock_word.<span class="hljs-built_in">GetState</span>() == LockWord::kThinLocked &amp;&amp;<br>          lock_word.<span class="hljs-built_in">ThinLockOwner</span>() == owner_thread_id) &#123;<br>        <span class="hljs-comment">// Go ahead and inflate the lock.</span><br>        <span class="hljs-built_in">Inflate</span>(self, owner, obj.<span class="hljs-built_in">Get</span>(), hash_code);<br>      &#125;<br>      <span class="hljs-keyword">bool</span> resumed = thread_list-&gt;<span class="hljs-built_in">Resume</span>(owner, SuspendReason::kInternal);<br>      <span class="hljs-built_in">DCHECK</span>(resumed);<br>    &#125;<br>    self-&gt;<span class="hljs-built_in">SetMonitorEnterObject</span>(<span class="hljs-literal">nullptr</span>);<br>  &#125;<br>&#125;<br><br><span class="hljs-comment">// 具体的膨胀过程</span><br><span class="hljs-comment">// 膨胀到 fat lock 后多个一个概念 Monitor</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Inflate</span><span class="hljs-params">(Thread* self, Thread* owner, ObjPtr&lt;mirror::Object&gt; obj, <span class="hljs-keyword">int32_t</span> hash_code)</span> </span>&#123;<br>  <span class="hljs-comment">// Allocate and acquire a new monitor.</span><br>  Monitor* m = MonitorPool::<span class="hljs-built_in">CreateMonitor</span>(self, owner, obj, hash_code);<br>  <span class="hljs-keyword">if</span> (m-&gt;<span class="hljs-built_in">Install</span>(self)) &#123;<br>    Runtime::<span class="hljs-built_in">Current</span>()-&gt;<span class="hljs-built_in">GetMonitorList</span>()-&gt;<span class="hljs-built_in">Add</span>(m);<br>    <span class="hljs-built_in">CHECK_EQ</span>(obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>).<span class="hljs-built_in">GetState</span>(), LockWord::kFatLocked);<br>  &#125; <span class="hljs-keyword">else</span> &#123;<br>    MonitorPool::<span class="hljs-built_in">ReleaseMonitor</span>(self, m);<br>  &#125;<br>&#125;<br><br><span class="hljs-comment">// fat lock 在这里被设置到 Object.monitor</span><br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Install</span><span class="hljs-params">(Thread* self)</span> NO_THREAD_SAFETY_ANALYSIS </span>&#123;<br>  Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>  <span class="hljs-built_in">CHECK</span>(owner == <span class="hljs-literal">nullptr</span> || owner == self || (ART_USE_FUTEXES &amp;&amp; owner-&gt;<span class="hljs-built_in">IsSuspended</span>()));<br>  <span class="hljs-function">LockWord <span class="hljs-title">lw</span><span class="hljs-params">(GetObject()-&gt;GetLockWord(<span class="hljs-literal">false</span>))</span></span>;<br>  <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lw.<span class="hljs-built_in">GetState</span>()) &#123;<br>    <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;<br>      lock_count_ = lw.<span class="hljs-built_in">ThinLockCount</span>();<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>      monitor_lock_.<span class="hljs-built_in">ExclusiveLockUncontendedFor</span>(owner);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br>      monitor_lock_.<span class="hljs-built_in">ExclusiveLock</span>(owner);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>      <span class="hljs-function">LockWord <span class="hljs-title">fat</span><span class="hljs-params">(<span class="hljs-keyword">this</span>, lw.GCState())</span></span>;<br>      <span class="hljs-comment">// Publish the updated lock word, which may race with other threads.</span><br>      <span class="hljs-keyword">bool</span> success = <span class="hljs-built_in">GetObject</span>()-&gt;<span class="hljs-built_in">CasLockWord</span>(lw, fat, CASMode::kWeak, std::memory_order_release);<br>      <span class="hljs-keyword">if</span> (success) &#123;<br>        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ATraceEnabled</span>()) &#123;<br>          <span class="hljs-built_in">SetLockingMethod</span>(owner);<br>        &#125;<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br>      &#125; <span class="hljs-keyword">else</span> &#123;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span><br>        monitor_lock_.<span class="hljs-built_in">ExclusiveUnlockUncontended</span>();<br><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span><br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">uint32_t</span> i = <span class="hljs-number">0</span>; i &lt;= lockCount; ++i) &#123;<br>          monitor_lock_.<span class="hljs-built_in">ExclusiveUnlock</span>(owner);<br>        &#125;<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>      &#125;<br>    &#125;<br>    <span class="hljs-comment">// ...</span><br>&#125;<br><br><span class="hljs-comment">// 上面说过，thin lock 的 LockWord 低 16 bits 是 thread id，然后是 12 bits 的锁个数</span><br><span class="hljs-comment">// 对于 fat lock，低 28 bits 是 monitor id</span><br><span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-title">LockWord::LockWord</span><span class="hljs-params">(Monitor* mon, <span class="hljs-keyword">uint32_t</span> gc_state)</span></span><br><span class="hljs-function">    : value_(mon-&gt;GetMonitorId() | (gc_state &lt;&lt; kGCStateShift) | (kStateFat &lt;&lt; kStateShift)) &#123;</span><br><span class="hljs-meta">#<span class="hljs-meta-keyword">ifndef</span> __LP64__</span><br>  <span class="hljs-built_in">DCHECK_ALIGNED</span>(mon, kMonitorIdAlignment);<br><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span><br>  <span class="hljs-built_in">DCHECK_EQ</span>(<span class="hljs-built_in">FatLockMonitor</span>(), mon);<br>  <span class="hljs-built_in">DCHECK_LE</span>(mon-&gt;<span class="hljs-built_in">GetMonitorId</span>(), <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kMaxMonitorId));<br>  <span class="hljs-built_in">CheckReadBarrierState</span>();<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<span class="hljs-function">ObjPtr&lt;mirror::Object&gt; <span class="hljs-title">Monitor::MonitorEnter</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj, <span class="hljs-keyword">bool</span> trylock)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
+  <span class="hljs-built_in">DCHECK</span>(obj != <span class="hljs-literal">nullptr</span>);
+  self-&gt;<span class="hljs-built_in">AssertThreadSuspensionIsAllowable</span>();
+  obj = <span class="hljs-built_in">FakeLock</span>(obj);
+  <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();
+  <span class="hljs-keyword">size_t</span> contention_count = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">constexpr</span> <span class="hljs-keyword">size_t</span> kExtraSpinIters = <span class="hljs-number">100</span>;
+  <span class="hljs-function">StackHandleScope&lt;1&gt; <span class="hljs-title">hs</span><span class="hljs-params">(self)</span></span>;
+  <span class="hljs-function">Handle&lt;mirror::Object&gt; <span class="hljs-title">h_obj</span><span class="hljs-params">(hs.NewHandle(obj))</span></span>;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !ART_USE_FUTEXES</span>
+  <span class="hljs-comment">// In this case we cannot inflate an unowned monitor, so we sometimes defer inflation.</span>
+  <span class="hljs-keyword">bool</span> should_inflate = <span class="hljs-literal">false</span>;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
+    LockWord lock_word = h_obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">false</span>);
+    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;
+
+      <span class="hljs-comment">// 无锁的情况下，升级为偏向锁（thin lock）</span>
+      <span class="hljs-comment">// 偏向锁记录下 thread id 和锁的个数 0，通过 cas 记录在 Object.monitor_</span>
+      <span class="hljs-keyword">case</span> LockWord::kUnlocked: &#123;
+        <span class="hljs-function">LockWord <span class="hljs-title">thin_locked</span><span class="hljs-params">(LockWord::FromThinLockId(thread_id, <span class="hljs-number">0</span>, lock_word.GCState()))</span></span>;
+        <span class="hljs-keyword">if</span> (h_obj-&gt;<span class="hljs-built_in">CasLockWord</span>(lock_word, thin_locked, CASMode::kWeak, std::memory_order_acquire)) &#123;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !ART_USE_FUTEXES</span>
+          <span class="hljs-keyword">if</span> (should_inflate) &#123;
+            <span class="hljs-built_in">InflateThinLocked</span>(self, h_obj, lock_word, <span class="hljs-number">0</span>);
+          &#125;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+          <span class="hljs-built_in">AtraceMonitorLock</span>(self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-comment">/* is_wait= */</span> <span class="hljs-literal">false</span>);
+          <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span>
+        &#125;
+        <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Go again.</span>
+      &#125;
+
+      <span class="hljs-comment">// 偏向锁，而且当前线程跟偏向锁里记录的线程是同一个线程</span>
+      <span class="hljs-comment">// 那么只需把偏向锁里的锁个数加一即可，依然使用 cas 保存在 Object.monitor_</span>
+      <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;
+        <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();
+        <span class="hljs-keyword">if</span> (owner_thread_id == thread_id) &#123;
+          <span class="hljs-comment">// No ordering required for initial lockword read.</span>
+          <span class="hljs-comment">// We own the lock, increase the recursion count.</span>
+          <span class="hljs-keyword">uint32_t</span> new_count = lock_word.<span class="hljs-built_in">ThinLockCount</span>() + <span class="hljs-number">1</span>;
+          <span class="hljs-keyword">if</span> (<span class="hljs-built_in">LIKELY</span>(new_count &lt;= LockWord::kThinLockMaxCount)) &#123;
+            <span class="hljs-function">LockWord <span class="hljs-title">thin_locked</span><span class="hljs-params">(LockWord::FromThinLockId(thread_id,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                                          new_count,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                                          lock_word.GCState()))</span></span>;
+            <span class="hljs-comment">// 重新设置偏向锁，一个选择用 cas 原子操作符，另一个选择没用，不明这样区分的意义</span>
+            <span class="hljs-comment">// Only this thread pays attention to the count. Thus there is no need for stronger</span>
+            <span class="hljs-comment">// than relaxed memory ordering.</span>
+            <span class="hljs-keyword">if</span> (!kUseReadBarrier) &#123;
+              h_obj-&gt;<span class="hljs-built_in">SetLockWord</span>(thin_locked, <span class="hljs-comment">/* as_volatile= */</span> <span class="hljs-literal">false</span>);
+              <span class="hljs-built_in">AtraceMonitorLock</span>(self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-comment">/* is_wait= */</span> <span class="hljs-literal">false</span>);
+              <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span>
+            &#125; <span class="hljs-keyword">else</span> &#123;
+              <span class="hljs-comment">// Use CAS to preserve the read barrier state.</span>
+              <span class="hljs-keyword">if</span> (h_obj-&gt;<span class="hljs-built_in">CasLockWord</span>(lock_word,
+                                     thin_locked,
+                                     CASMode::kWeak,
+                                     std::memory_order_relaxed)) &#123;
+                <span class="hljs-built_in">AtraceMonitorLock</span>(self, h_obj.<span class="hljs-built_in">Get</span>(), <span class="hljs-comment">/* is_wait= */</span> <span class="hljs-literal">false</span>);
+                <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span>
+              &#125;
+            &#125;
+            <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Go again.</span>
+          &#125; <span class="hljs-keyword">else</span> &#123;
+
+            <span class="hljs-comment">// 当前线程持有偏向锁，但锁的个数超过阈值 kThinLockMaxCount</span>
+            <span class="hljs-comment">// 那么将偏向锁（thin lock）升级为重量级锁（fat lock）</span>
+            <span class="hljs-comment">// We&#x27;d overflow the recursion count, so inflate the monitor.</span>
+            <span class="hljs-built_in">InflateThinLocked</span>(self, h_obj, lock_word, <span class="hljs-number">0</span>);
+          &#125;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+
+          <span class="hljs-comment">// 持有偏向锁的线程不是当前线程，此时的 thin lock 对应上文的轻量级锁</span>
+          <span class="hljs-comment">// 也就是说轻量级锁是这么一种情况：一个线程持有偏向锁，遇到了另一个线程的争抢</span>
+          <span class="hljs-comment">// 争抢的线程在这里自旋（spin），contention_count 表示自旋的次数</span>
+          <span class="hljs-comment">// 1. 如果自旋次数 &lt;= kExtraSpinIters，那么继续在外一层的 while 循环里自旋</span>
+          <span class="hljs-comment">// 2. 如果自旋次数 &lt; kExtraSpinIters，争抢线程让渡 CPU 给优先级更高的线程，并将自己排到 CPU 调度队列的队尾（sched_yield），相当于优化的自旋</span>
+          <span class="hljs-comment">// 3. 最后将轻量级锁膨胀为重量级锁</span>
+          <span class="hljs-keyword">if</span> (trylock) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;
+          &#125;
+          contention_count++;
+          Runtime* runtime = Runtime::<span class="hljs-built_in">Current</span>();
+          <span class="hljs-keyword">if</span> (contention_count
+              &lt;= kExtraSpinIters + runtime-&gt;<span class="hljs-built_in">GetMaxSpinsBeforeThinLockInflation</span>()) &#123;
+            <span class="hljs-keyword">if</span> (contention_count &gt; kExtraSpinIters) &#123;
+              <span class="hljs-built_in">sched_yield</span>();
+            &#125;
+          &#125; <span class="hljs-keyword">else</span> &#123;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+            contention_count = <span class="hljs-number">0</span>;
+            <span class="hljs-comment">// No ordering required for initial lockword read. Install rereads it anyway.</span>
+            <span class="hljs-built_in">InflateThinLocked</span>(self, h_obj, lock_word, <span class="hljs-number">0</span>);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+            <span class="hljs-comment">// Can&#x27;t inflate from non-owning thread. Keep waiting. Bad for power, but this code</span>
+            <span class="hljs-comment">// isn&#x27;t used on-device.</span>
+            should_inflate = <span class="hljs-literal">true</span>;
+            <span class="hljs-built_in">usleep</span>(<span class="hljs-number">10</span>);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+          &#125;
+        &#125;
+        <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Start from the beginning.</span>
+      &#125;
+
+      <span class="hljs-comment">// 重量级锁的情况下会挂起当前线程，在下一节分析</span>
+      <span class="hljs-keyword">case</span> LockWord::kFatLocked: &#123;
+        std::<span class="hljs-built_in">atomic_thread_fence</span>(std::memory_order_acquire);
+        Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();
+        <span class="hljs-keyword">if</span> (trylock) &#123;
+          <span class="hljs-keyword">return</span> mon-&gt;<span class="hljs-built_in">TryLock</span>(self) ? h_obj.<span class="hljs-built_in">Get</span>() : <span class="hljs-literal">nullptr</span>;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+          mon-&gt;<span class="hljs-built_in">Lock</span>(self);
+          <span class="hljs-keyword">return</span> h_obj.<span class="hljs-built_in">Get</span>();  <span class="hljs-comment">// Success!</span>
+        &#125;
+      &#125;
+
+      <span class="hljs-comment">// 不清楚这个条件</span>
+      <span class="hljs-keyword">case</span> LockWord::kHashCode:
+        <span class="hljs-built_in">Inflate</span>(self, <span class="hljs-literal">nullptr</span>, h_obj.<span class="hljs-built_in">Get</span>(), lock_word.<span class="hljs-built_in">GetHashCode</span>());
+        <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Start from the beginning.</span>
+      <span class="hljs-keyword">default</span>: &#123;
+        <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();
+        <span class="hljs-built_in">UNREACHABLE</span>();
+      &#125;
+    &#125;
+  &#125;
+&#125;</code></pre></div>
+
+<h3 id="锁膨胀的过程（inflate）"><a href="#锁膨胀的过程（inflate）" class="headerlink" title="锁膨胀的过程（inflate）"></a>锁膨胀的过程（inflate）</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// thin lock 膨胀至重量级锁（fat lock）的过程</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::InflateThinLocked</span><span class="hljs-params">(Thread* self, Handle&lt;mirror::Object&gt; obj, LockWord lock_word, <span class="hljs-keyword">uint32_t</span> hash_code)</span> </span>&#123;
+  <span class="hljs-comment">// 当前线程持有此偏向锁的情况（由于锁个数超过阈值导致膨胀）</span>
+  <span class="hljs-comment">// 升级到重量级锁（fat lock）</span>
+  <span class="hljs-built_in">DCHECK_EQ</span>(lock_word.<span class="hljs-built_in">GetState</span>(), LockWord::kThinLocked);
+  <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();
+  <span class="hljs-keyword">if</span> (owner_thread_id == self-&gt;<span class="hljs-built_in">GetThreadId</span>()) &#123;
+    <span class="hljs-comment">// We own the monitor, we can easily inflate it.</span>
+    <span class="hljs-built_in">Inflate</span>(self, self, obj.<span class="hljs-built_in">Get</span>(), hash_code);
+  &#125; <span class="hljs-keyword">else</span> &#123;
+
+    <span class="hljs-comment">// 当前线程不持有此偏向锁，出现争抢（此时对应轻量级锁）</span>
+    <span class="hljs-comment">// 挂起持有偏向锁的线程，将轻量级锁膨胀为重量级锁（fat lock），然后恢复线程</span>
+    ThreadList* thread_list = Runtime::<span class="hljs-built_in">Current</span>()-&gt;<span class="hljs-built_in">GetThreadList</span>();
+    <span class="hljs-comment">// Suspend the owner, inflate. First change to blocked and give up mutator_lock_.</span>
+    self-&gt;<span class="hljs-built_in">SetMonitorEnterObject</span>(obj.<span class="hljs-built_in">Get</span>());
+    <span class="hljs-keyword">bool</span> timed_out;
+    Thread* owner;
+    &#123;
+      <span class="hljs-function">ScopedThreadSuspension <span class="hljs-title">sts</span><span class="hljs-params">(self, kWaitingForLockInflation)</span></span>;
+      owner = thread_list-&gt;<span class="hljs-built_in">SuspendThreadByThreadId</span>(owner_thread_id, SuspendReason::kInternal, &amp;timed_out);
+    &#125;
+    <span class="hljs-keyword">if</span> (owner != <span class="hljs-literal">nullptr</span>) &#123;
+      <span class="hljs-comment">// We succeeded in suspending the thread, check the lock&#x27;s status didn&#x27;t change.</span>
+      lock_word = obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);
+      <span class="hljs-keyword">if</span> (lock_word.<span class="hljs-built_in">GetState</span>() == LockWord::kThinLocked &amp;&amp;
+          lock_word.<span class="hljs-built_in">ThinLockOwner</span>() == owner_thread_id) &#123;
+        <span class="hljs-comment">// Go ahead and inflate the lock.</span>
+        <span class="hljs-built_in">Inflate</span>(self, owner, obj.<span class="hljs-built_in">Get</span>(), hash_code);
+      &#125;
+      <span class="hljs-keyword">bool</span> resumed = thread_list-&gt;<span class="hljs-built_in">Resume</span>(owner, SuspendReason::kInternal);
+      <span class="hljs-built_in">DCHECK</span>(resumed);
+    &#125;
+    self-&gt;<span class="hljs-built_in">SetMonitorEnterObject</span>(<span class="hljs-literal">nullptr</span>);
+  &#125;
+&#125;
+
+<span class="hljs-comment">// 具体的膨胀过程</span>
+<span class="hljs-comment">// 膨胀到 fat lock 后多个一个概念 Monitor</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Inflate</span><span class="hljs-params">(Thread* self, Thread* owner, ObjPtr&lt;mirror::Object&gt; obj, <span class="hljs-keyword">int32_t</span> hash_code)</span> </span>&#123;
+  <span class="hljs-comment">// Allocate and acquire a new monitor.</span>
+  Monitor* m = MonitorPool::<span class="hljs-built_in">CreateMonitor</span>(self, owner, obj, hash_code);
+  <span class="hljs-keyword">if</span> (m-&gt;<span class="hljs-built_in">Install</span>(self)) &#123;
+    Runtime::<span class="hljs-built_in">Current</span>()-&gt;<span class="hljs-built_in">GetMonitorList</span>()-&gt;<span class="hljs-built_in">Add</span>(m);
+    <span class="hljs-built_in">CHECK_EQ</span>(obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>).<span class="hljs-built_in">GetState</span>(), LockWord::kFatLocked);
+  &#125; <span class="hljs-keyword">else</span> &#123;
+    MonitorPool::<span class="hljs-built_in">ReleaseMonitor</span>(self, m);
+  &#125;
+&#125;
+
+<span class="hljs-comment">// fat lock 在这里被设置到 Object.monitor</span>
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Install</span><span class="hljs-params">(Thread* self)</span> NO_THREAD_SAFETY_ANALYSIS </span>&#123;
+  Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+  <span class="hljs-built_in">CHECK</span>(owner == <span class="hljs-literal">nullptr</span> || owner == self || (ART_USE_FUTEXES &amp;&amp; owner-&gt;<span class="hljs-built_in">IsSuspended</span>()));
+  <span class="hljs-function">LockWord <span class="hljs-title">lw</span><span class="hljs-params">(GetObject()-&gt;GetLockWord(<span class="hljs-literal">false</span>))</span></span>;
+  <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lw.<span class="hljs-built_in">GetState</span>()) &#123;
+    <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;
+      lock_count_ = lw.<span class="hljs-built_in">ThinLockCount</span>();
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+      monitor_lock_.<span class="hljs-built_in">ExclusiveLockUncontendedFor</span>(owner);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+      monitor_lock_.<span class="hljs-built_in">ExclusiveLock</span>(owner);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+      <span class="hljs-function">LockWord <span class="hljs-title">fat</span><span class="hljs-params">(<span class="hljs-keyword">this</span>, lw.GCState())</span></span>;
+      <span class="hljs-comment">// Publish the updated lock word, which may race with other threads.</span>
+      <span class="hljs-keyword">bool</span> success = <span class="hljs-built_in">GetObject</span>()-&gt;<span class="hljs-built_in">CasLockWord</span>(lw, fat, CASMode::kWeak, std::memory_order_release);
+      <span class="hljs-keyword">if</span> (success) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ATraceEnabled</span>()) &#123;
+          <span class="hljs-built_in">SetLockingMethod</span>(owner);
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+      &#125; <span class="hljs-keyword">else</span> &#123;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> ART_USE_FUTEXES</span>
+        monitor_lock_.<span class="hljs-built_in">ExclusiveUnlockUncontended</span>();
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">uint32_t</span> i = <span class="hljs-number">0</span>; i &lt;= lockCount; ++i) &#123;
+          monitor_lock_.<span class="hljs-built_in">ExclusiveUnlock</span>(owner);
+        &#125;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+      &#125;
+    &#125;
+    <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// 上面说过，thin lock 的 LockWord 低 16 bits 是 thread id，然后是 12 bits 的锁个数</span>
+<span class="hljs-comment">// 对于 fat lock，低 28 bits 是 monitor id</span>
+<span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-title">LockWord::LockWord</span><span class="hljs-params">(Monitor* mon, <span class="hljs-keyword">uint32_t</span> gc_state)</span></span>
+<span class="hljs-function">    : value_(mon-&gt;GetMonitorId() | (gc_state &lt;&lt; kGCStateShift) | (kStateFat &lt;&lt; kStateShift)) &#123;</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">ifndef</span> __LP64__</span>
+  <span class="hljs-built_in">DCHECK_ALIGNED</span>(mon, kMonitorIdAlignment);
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+  <span class="hljs-built_in">DCHECK_EQ</span>(<span class="hljs-built_in">FatLockMonitor</span>(), mon);
+  <span class="hljs-built_in">DCHECK_LE</span>(mon-&gt;<span class="hljs-built_in">GetMonitorId</span>(), <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kMaxMonitorId));
+  <span class="hljs-built_in">CheckReadBarrierState</span>();
+&#125;</code></pre></div>
 
 <h3 id="Monitor-Lock-挂起线程"><a href="#Monitor-Lock-挂起线程" class="headerlink" title="Monitor::Lock 挂起线程"></a><code>Monitor::Lock</code> 挂起线程</h3><p>上面介绍的是对象锁，也就是把 <code>Object</code> 作为 <code>Lock</code> 使用，具体来说是 <code>Object.monitor</code> 的四种状态：无锁、偏向锁、轻量级锁和重量级锁</p>
 <p>而 <code>Monitor::Lock</code> 实现的是在重量级锁状态下，「挂起」线程的过程，它包含了自旋、futex/mutex 系统调用</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">template</span> &lt;LockReason reason&gt;<br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Lock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-keyword">bool</span> called_monitors_callback = <span class="hljs-literal">false</span>;<br>  <span class="hljs-comment">// 一小会的自旋</span><br>  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">TryLock</span>(self, <span class="hljs-comment">/*spin=*/</span> <span class="hljs-literal">true</span>)) &#123;<br>  <span class="hljs-comment">//... 挂起</span><br>  <span class="hljs-comment">// Acquire monitor_lock_ without mutator_lock_, expecting to block this time.</span><br>  <span class="hljs-comment">// We already tried spinning above. The shutdown procedure currently assumes we stop</span><br>  <span class="hljs-comment">// touching monitors shortly after we suspend, so don&#x27;t spin again here.</span><br>  monitor_lock_.<span class="hljs-built_in">ExclusiveLock</span>(self);<br>  <span class="hljs-comment">//...</span><br>&#125;<br><br><span class="hljs-comment">// 自己持有锁，锁加一；否则自旋一小会尝试加锁</span><br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::TryLock</span><span class="hljs-params">(Thread* self, <span class="hljs-keyword">bool</span> spin)</span> </span>&#123;<br>  Thread *owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>  <span class="hljs-keyword">if</span> (owner == self) &#123;<br>    lock_count_++;<br>    <span class="hljs-built_in">CHECK_NE</span>(lock_count_, <span class="hljs-number">0u</span>);  <span class="hljs-comment">// Abort on overflow.</span><br>  &#125; <span class="hljs-keyword">else</span> &#123;<br>    <span class="hljs-keyword">bool</span> success = spin ? monitor_lock_.<span class="hljs-built_in">ExclusiveTryLockWithSpinning</span>(self)<br>        : monitor_lock_.<span class="hljs-built_in">ExclusiveTryLock</span>(self);<br>    <span class="hljs-comment">//...</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">template</span> &lt;LockReason reason&gt;
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Lock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-keyword">bool</span> called_monitors_callback = <span class="hljs-literal">false</span>;
+  <span class="hljs-comment">// 一小会的自旋</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">TryLock</span>(self, <span class="hljs-comment">/*spin=*/</span> <span class="hljs-literal">true</span>)) &#123;
+  <span class="hljs-comment">//... 挂起</span>
+  <span class="hljs-comment">// Acquire monitor_lock_ without mutator_lock_, expecting to block this time.</span>
+  <span class="hljs-comment">// We already tried spinning above. The shutdown procedure currently assumes we stop</span>
+  <span class="hljs-comment">// touching monitors shortly after we suspend, so don&#x27;t spin again here.</span>
+  monitor_lock_.<span class="hljs-built_in">ExclusiveLock</span>(self);
+  <span class="hljs-comment">//...</span>
+&#125;
+
+<span class="hljs-comment">// 自己持有锁，锁加一；否则自旋一小会尝试加锁</span>
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::TryLock</span><span class="hljs-params">(Thread* self, <span class="hljs-keyword">bool</span> spin)</span> </span>&#123;
+  Thread *owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+  <span class="hljs-keyword">if</span> (owner == self) &#123;
+    lock_count_++;
+    <span class="hljs-built_in">CHECK_NE</span>(lock_count_, <span class="hljs-number">0u</span>);  <span class="hljs-comment">// Abort on overflow.</span>
+  &#125; <span class="hljs-keyword">else</span> &#123;
+    <span class="hljs-keyword">bool</span> success = spin ? monitor_lock_.<span class="hljs-built_in">ExclusiveTryLockWithSpinning</span>(self)
+        : monitor_lock_.<span class="hljs-built_in">ExclusiveTryLock</span>(self);
+    <span class="hljs-comment">//...</span>
+&#125;</code></pre></div>
 
 <h2 id="monitor-exit-指令"><a href="#monitor-exit-指令" class="headerlink" title="monitor-exit 指令"></a><code>monitor-exit</code> 指令</h2><h3 id="偏向锁和轻量级锁"><a href="#偏向锁和轻量级锁" class="headerlink" title="偏向锁和轻量级锁"></a>偏向锁和轻量级锁</h3><p>退出临界区，释放锁</p>
-<figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// platform/superproject/art/runtime/mirror/object-inl.h</span><br><span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">Object::MonitorExit</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-keyword">return</span> Monitor::<span class="hljs-built_in">MonitorExit</span>(self, <span class="hljs-keyword">this</span>);<br>&#125;<br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::MonitorExit</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj)</span> </span>&#123;<br>  <span class="hljs-comment">//...</span><br>  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;<br>    LockWord lock_word = obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);<br>    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;<br>      <span class="hljs-keyword">case</span> LockWord::kHashCode:<br>        <span class="hljs-comment">// Fall-through.</span><br>			<br>      <span class="hljs-comment">// 对象的锁并没有借出，抛出 java 异常</span><br>      <span class="hljs-keyword">case</span> LockWord::kUnlocked:<br>        <span class="hljs-built_in">FailedUnlock</span>(h_obj.<span class="hljs-built_in">Get</span>(), self-&gt;<span class="hljs-built_in">GetThreadId</span>(), <span class="hljs-number">0u</span>, <span class="hljs-literal">nullptr</span>);<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;  <span class="hljs-comment">// Failure.</span><br><br>      <span class="hljs-comment">// 当前线程并不拥有锁，抛出 java 异常</span><br>      <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;<br>        <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();<br>        <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();<br>        <span class="hljs-keyword">if</span> (owner_thread_id != thread_id) &#123;<br>          <span class="hljs-built_in">FailedUnlock</span>(h_obj.<span class="hljs-built_in">Get</span>(), thread_id, owner_thread_id, <span class="hljs-literal">nullptr</span>);<br>          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;  <span class="hljs-comment">// Failure.</span><br>        &#125; <span class="hljs-keyword">else</span> &#123;<br><br>          <span class="hljs-comment">// 偏向锁，锁减一，如果锁为零则释放锁，最后写回 Object.monitor</span><br>          <span class="hljs-comment">// We own the lock, decrease the recursion count.</span><br>          LockWord new_lw = LockWord::<span class="hljs-built_in">Default</span>();<br>          <span class="hljs-keyword">if</span> (lock_word.<span class="hljs-built_in">ThinLockCount</span>() != <span class="hljs-number">0</span>) &#123;<br>            <span class="hljs-keyword">uint32_t</span> new_count = lock_word.<span class="hljs-built_in">ThinLockCount</span>() - <span class="hljs-number">1</span>;<br>            new_lw = LockWord::<span class="hljs-built_in">FromThinLockId</span>(thread_id, new_count, lock_word.<span class="hljs-built_in">GCState</span>());<br>          &#125; <span class="hljs-keyword">else</span> &#123;<br>            new_lw = LockWord::<span class="hljs-built_in">FromDefault</span>(lock_word.<span class="hljs-built_in">GCState</span>());<br>          &#125;<br>          <span class="hljs-keyword">if</span> (!kUseReadBarrier) &#123;<br>            <span class="hljs-built_in">DCHECK_EQ</span>(new_lw.<span class="hljs-built_in">ReadBarrierState</span>(), <span class="hljs-number">0U</span>);<br>            h_obj-&gt;<span class="hljs-built_in">SetLockWord</span>(new_lw, <span class="hljs-literal">true</span>);<br>            <span class="hljs-built_in">AtraceMonitorUnlock</span>();<br>            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br>          &#125; <span class="hljs-keyword">else</span> &#123;<br>            <span class="hljs-keyword">if</span> (h_obj-&gt;<span class="hljs-built_in">CasLockWord</span>(lock_word, new_lw, CASMode::kWeak, std::memory_order_release)) &#123;<br>              <span class="hljs-built_in">AtraceMonitorUnlock</span>();<br>              <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br>            &#125;<br>          &#125;<br>          <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Go again.</span><br>        &#125;<br>      &#125;<br>			<br>      <span class="hljs-comment">// 释放重量级锁</span><br>      <span class="hljs-keyword">case</span> LockWord::kFatLocked: &#123;<br>        Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();<br>        <span class="hljs-keyword">return</span> mon-&gt;<span class="hljs-built_in">Unlock</span>(self);<br>      &#125;<br><br>      <span class="hljs-keyword">default</span>: &#123;<br>        <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();<br>        <span class="hljs-built_in">UNREACHABLE</span>();<br>      &#125;<br>    &#125;<br>  &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// platform/superproject/art/runtime/mirror/object-inl.h</span>
+<span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">Object::MonitorExit</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-keyword">return</span> Monitor::<span class="hljs-built_in">MonitorExit</span>(self, <span class="hljs-keyword">this</span>);
+&#125;
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::MonitorExit</span><span class="hljs-params">(Thread* self, ObjPtr&lt;mirror::Object&gt; obj)</span> </span>&#123;
+  <span class="hljs-comment">//...</span>
+  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
+    LockWord lock_word = obj-&gt;<span class="hljs-built_in">GetLockWord</span>(<span class="hljs-literal">true</span>);
+    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (lock_word.<span class="hljs-built_in">GetState</span>()) &#123;
+      <span class="hljs-keyword">case</span> LockWord::kHashCode:
+        <span class="hljs-comment">// Fall-through.</span>
+			
+      <span class="hljs-comment">// 对象的锁并没有借出，抛出 java 异常</span>
+      <span class="hljs-keyword">case</span> LockWord::kUnlocked:
+        <span class="hljs-built_in">FailedUnlock</span>(h_obj.<span class="hljs-built_in">Get</span>(), self-&gt;<span class="hljs-built_in">GetThreadId</span>(), <span class="hljs-number">0u</span>, <span class="hljs-literal">nullptr</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;  <span class="hljs-comment">// Failure.</span>
 
-<h3 id="重量级锁"><a href="#重量级锁" class="headerlink" title="重量级锁"></a>重量级锁</h3><figure class="highlight cpp"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 当前线程持有此重量级锁，且锁为零，退出临界区导致释放锁并唤醒等待线程</span><br><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);<br>  Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>  <span class="hljs-keyword">if</span> (owner == self) &#123;<br>    <span class="hljs-comment">// We own the monitor, so nobody else can be in here.</span><br>    <span class="hljs-built_in">CheckLockOwnerRequest</span>(self);<br>    <span class="hljs-built_in">AtraceMonitorUnlock</span>();<br>    <span class="hljs-keyword">if</span> (lock_count_ == <span class="hljs-number">0</span>) &#123;<br>      owner_.<span class="hljs-built_in">store</span>(<span class="hljs-literal">nullptr</span>, std::memory_order_relaxed);<br>      <span class="hljs-built_in">SignalWaiterAndReleaseMonitorLock</span>(self);<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br><br>      <span class="hljs-comment">// 当前线程持有此重量级锁，且锁不为零（重入）</span><br>      <span class="hljs-comment">// 退出临界区导致锁减一，但不释放锁</span><br>      --lock_count_;<br>      <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));<br>      <span class="hljs-built_in">DCHECK_EQ</span>(owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed), self);<br>      <span class="hljs-comment">// Keep monitor_lock_, but pretend we released it.</span><br>      <span class="hljs-built_in">FakeUnlockMonitorLock</span>();<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br>  &#125;<br><br>  <span class="hljs-comment">// 当前线程不持有此重量级锁，抛出 java 异常</span><br>  <span class="hljs-comment">// We don&#x27;t own this, so we&#x27;re not allowed to unlock it.</span><br>  <span class="hljs-comment">// The JNI spec says that we should throw IllegalMonitorStateException in this case.</span><br>  <span class="hljs-keyword">uint32_t</span> owner_thread_id = <span class="hljs-number">0u</span>;<br>  &#123;<br>    <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(self, *Locks::thread_list_lock_)</span></span>;<br>    owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);<br>    <span class="hljs-keyword">if</span> (owner != <span class="hljs-literal">nullptr</span>) &#123;<br>      owner_thread_id = owner-&gt;<span class="hljs-built_in">GetThreadId</span>();<br>    &#125;<br>  &#125;<br>  <span class="hljs-built_in">FailedUnlock</span>(<span class="hljs-built_in">GetObject</span>(), self-&gt;<span class="hljs-built_in">GetThreadId</span>(), owner_thread_id, <span class="hljs-keyword">this</span>);<br>  <span class="hljs-comment">// Pretend to release monitor_lock_, which we should not.</span><br>  <span class="hljs-built_in">FakeUnlockMonitorLock</span>();<br>  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;<br>&#125;<br><br><span class="hljs-comment">// 释放重量级锁</span><br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::SignalWaiterAndReleaseMonitorLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;<br>  <span class="hljs-comment">// ...</span><br>  monitor_lock_.<span class="hljs-built_in">Unlock</span>(self);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+      <span class="hljs-comment">// 当前线程并不拥有锁，抛出 java 异常</span>
+      <span class="hljs-keyword">case</span> LockWord::kThinLocked: &#123;
+        <span class="hljs-keyword">uint32_t</span> thread_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();
+        <span class="hljs-keyword">uint32_t</span> owner_thread_id = lock_word.<span class="hljs-built_in">ThinLockOwner</span>();
+        <span class="hljs-keyword">if</span> (owner_thread_id != thread_id) &#123;
+          <span class="hljs-built_in">FailedUnlock</span>(h_obj.<span class="hljs-built_in">Get</span>(), thread_id, owner_thread_id, <span class="hljs-literal">nullptr</span>);
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;  <span class="hljs-comment">// Failure.</span>
+        &#125; <span class="hljs-keyword">else</span> &#123;
+
+          <span class="hljs-comment">// 偏向锁，锁减一，如果锁为零则释放锁，最后写回 Object.monitor</span>
+          <span class="hljs-comment">// We own the lock, decrease the recursion count.</span>
+          LockWord new_lw = LockWord::<span class="hljs-built_in">Default</span>();
+          <span class="hljs-keyword">if</span> (lock_word.<span class="hljs-built_in">ThinLockCount</span>() != <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">uint32_t</span> new_count = lock_word.<span class="hljs-built_in">ThinLockCount</span>() - <span class="hljs-number">1</span>;
+            new_lw = LockWord::<span class="hljs-built_in">FromThinLockId</span>(thread_id, new_count, lock_word.<span class="hljs-built_in">GCState</span>());
+          &#125; <span class="hljs-keyword">else</span> &#123;
+            new_lw = LockWord::<span class="hljs-built_in">FromDefault</span>(lock_word.<span class="hljs-built_in">GCState</span>());
+          &#125;
+          <span class="hljs-keyword">if</span> (!kUseReadBarrier) &#123;
+            <span class="hljs-built_in">DCHECK_EQ</span>(new_lw.<span class="hljs-built_in">ReadBarrierState</span>(), <span class="hljs-number">0U</span>);
+            h_obj-&gt;<span class="hljs-built_in">SetLockWord</span>(new_lw, <span class="hljs-literal">true</span>);
+            <span class="hljs-built_in">AtraceMonitorUnlock</span>();
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+          &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-keyword">if</span> (h_obj-&gt;<span class="hljs-built_in">CasLockWord</span>(lock_word, new_lw, CASMode::kWeak, std::memory_order_release)) &#123;
+              <span class="hljs-built_in">AtraceMonitorUnlock</span>();
+              <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+            &#125;
+          &#125;
+          <span class="hljs-keyword">continue</span>;  <span class="hljs-comment">// Go again.</span>
+        &#125;
+      &#125;
+			
+      <span class="hljs-comment">// 释放重量级锁</span>
+      <span class="hljs-keyword">case</span> LockWord::kFatLocked: &#123;
+        Monitor* mon = lock_word.<span class="hljs-built_in">FatLockMonitor</span>();
+        <span class="hljs-keyword">return</span> mon-&gt;<span class="hljs-built_in">Unlock</span>(self);
+      &#125;
+
+      <span class="hljs-keyword">default</span>: &#123;
+        <span class="hljs-built_in">LOG</span>(FATAL) &lt;&lt; <span class="hljs-string">&quot;Invalid monitor state &quot;</span> &lt;&lt; lock_word.<span class="hljs-built_in">GetState</span>();
+        <span class="hljs-built_in">UNREACHABLE</span>();
+      &#125;
+    &#125;
+  &#125;
+&#125;</code></pre></div>
+
+<h3 id="重量级锁"><a href="#重量级锁" class="headerlink" title="重量级锁"></a>重量级锁</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 当前线程持有此重量级锁，且锁为零，退出临界区导致释放锁并唤醒等待线程</span>
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
+  Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+  <span class="hljs-keyword">if</span> (owner == self) &#123;
+    <span class="hljs-comment">// We own the monitor, so nobody else can be in here.</span>
+    <span class="hljs-built_in">CheckLockOwnerRequest</span>(self);
+    <span class="hljs-built_in">AtraceMonitorUnlock</span>();
+    <span class="hljs-keyword">if</span> (lock_count_ == <span class="hljs-number">0</span>) &#123;
+      owner_.<span class="hljs-built_in">store</span>(<span class="hljs-literal">nullptr</span>, std::memory_order_relaxed);
+      <span class="hljs-built_in">SignalWaiterAndReleaseMonitorLock</span>(self);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+
+      <span class="hljs-comment">// 当前线程持有此重量级锁，且锁不为零（重入）</span>
+      <span class="hljs-comment">// 退出临界区导致锁减一，但不释放锁</span>
+      --lock_count_;
+      <span class="hljs-built_in">DCHECK</span>(monitor_lock_.<span class="hljs-built_in">IsExclusiveHeld</span>(self));
+      <span class="hljs-built_in">DCHECK_EQ</span>(owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed), self);
+      <span class="hljs-comment">// Keep monitor_lock_, but pretend we released it.</span>
+      <span class="hljs-built_in">FakeUnlockMonitorLock</span>();
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  &#125;
+
+  <span class="hljs-comment">// 当前线程不持有此重量级锁，抛出 java 异常</span>
+  <span class="hljs-comment">// We don&#x27;t own this, so we&#x27;re not allowed to unlock it.</span>
+  <span class="hljs-comment">// The JNI spec says that we should throw IllegalMonitorStateException in this case.</span>
+  <span class="hljs-keyword">uint32_t</span> owner_thread_id = <span class="hljs-number">0u</span>;
+  &#123;
+    <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(self, *Locks::thread_list_lock_)</span></span>;
+    owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
+    <span class="hljs-keyword">if</span> (owner != <span class="hljs-literal">nullptr</span>) &#123;
+      owner_thread_id = owner-&gt;<span class="hljs-built_in">GetThreadId</span>();
+    &#125;
+  &#125;
+  <span class="hljs-built_in">FailedUnlock</span>(<span class="hljs-built_in">GetObject</span>(), self-&gt;<span class="hljs-built_in">GetThreadId</span>(), owner_thread_id, <span class="hljs-keyword">this</span>);
+  <span class="hljs-comment">// Pretend to release monitor_lock_, which we should not.</span>
+  <span class="hljs-built_in">FakeUnlockMonitorLock</span>();
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+&#125;
+
+<span class="hljs-comment">// 释放重量级锁</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::SignalWaiterAndReleaseMonitorLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+  <span class="hljs-comment">// ...</span>
+  monitor_lock_.<span class="hljs-built_in">Unlock</span>(self);
+&#125;</code></pre></div>
 
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>根据上面的代码总结下 <code>synchronized</code> 加锁的流程：</p>
 <ul>

@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html lang="zh-CN" data-default-color-scheme=&#34;dark&#34;>
+<html lang="zh-CN" >
 
 
 
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/docco.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -141,11 +141,6 @@
           </li>
         
         
-          <li class="nav-item" id="color-toggle-btn">
-            <a class="nav-link" target="_self">&nbsp;<i
-                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
-          </li>
-        
       </ul>
     </div>
   </div>
@@ -179,7 +174,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      909 字
+      907 字
     </span>
   
 
@@ -229,20 +224,159 @@
 </ul>
 <p>利用条件变量前需要先获得锁</p>
 <p>所以 <code>Condition</code> 的所有方法都需要加锁</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">lock.lock();<br><span class="hljs-comment">// ...</span><br>condition.await();<br><span class="hljs-comment">// ...</span><br>lock.unlock();<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java">lock.lock();
+<span class="hljs-comment">// ...</span>
+condition.await();
+<span class="hljs-comment">// ...</span>
+lock.unlock();</code></pre></div>
 
 <p><code>Condition</code> 的 await/signal 对标 <code>Object</code> 的 wait/notify，wait/notify 使用对象监视器实现的，而 await/signal 使用 <code>Lock</code> 实现的（<code>Lock</code> 对标 <code>synchronized</code> 关键字）</p>
 <p><code>ConditionObject</code> 自己持有一个双向链表的排队队列 condition queue，所有阻塞在此条件变量上的线程都在此排队</p>
 <p>被唤醒的线程会被转移到 AQS 队列尾部（又叫 sync queue）</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ConditionObject</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Condition</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Node firstWaiter; <span class="hljs-comment">/** First node of condition queue. */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Node lastWaiter;  <span class="hljs-comment">/** Last node of condition queue. */</span><br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ConditionObject</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Condition</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Node firstWaiter; <span class="hljs-comment">/** First node of condition queue. */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Node lastWaiter;  <span class="hljs-comment">/** Last node of condition queue. */</span>
+&#125;</code></pre></div>
 
 <h2 id="阻塞"><a href="#阻塞" class="headerlink" title="阻塞"></a>阻塞</h2><p>整个 await 大体就是以是否在 sync queue 为标识的循环，当节点转移到 sync queue 时表示线程被唤醒，跳出阻塞循环</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> ConditionObject.await() <span class="hljs-keyword">throws</span> InterruptedException &#123;<br>    <span class="hljs-comment">// ... 在 condition queue 队尾添加一个 Node.CONDITION 类型的新节点（所有阻塞在此条件变量上的线程都在此排队）</span><br>    Node node = addConditionWaiter();<br>    <span class="hljs-comment">// 进入阻塞状态前需要释放锁，同时唤醒下一个等待锁的线程</span><br>    <span class="hljs-keyword">int</span> savedState = fullyRelease(node);<br>    <span class="hljs-keyword">int</span> interruptMode = <span class="hljs-number">0</span>;<br>    <span class="hljs-comment">// 进入阻塞</span><br>    <span class="hljs-comment">// 被唤醒的线程会从 condition queue 转移到 AQS 排队队列（又叫同步队列，sync queue）</span><br>    <span class="hljs-comment">// isOnSyncQueue 返回 true 表示此节点已被转移到 sync queue，跳出阻塞循环</span><br>    <span class="hljs-keyword">while</span> (!isOnSyncQueue(node)) &#123;<br>        LockSupport.park(<span class="hljs-keyword">this</span>);<br>        <span class="hljs-comment">// await() 是可被中断的，awaitUninterruptibly() 不会被中断</span><br>        <span class="hljs-comment">// 线程恢复后，如果发生了中断，要跳出阻塞状态</span><br>        <span class="hljs-keyword">if</span> ((interruptMode = checkInterruptWhileWaiting(node)) != <span class="hljs-number">0</span>)<br>            <span class="hljs-keyword">break</span>;<br>    &#125;<br>    <span class="hljs-comment">// 线程恢复后需要重新获得锁</span><br>    <span class="hljs-keyword">if</span> (acquireQueued(node, savedState) &amp;&amp; interruptMode != THROW_IE)<br>        interruptMode = REINTERRUPT;<br>    <span class="hljs-keyword">if</span> (node.nextWaiter != <span class="hljs-keyword">null</span>) <span class="hljs-comment">// clean up if cancelled</span><br>        unlinkCancelledWaiters();<br>    <span class="hljs-keyword">if</span> (interruptMode != <span class="hljs-number">0</span>)<br>        reportInterruptAfterWait(interruptMode);<br>&#125;<br><br><span class="hljs-keyword">private</span> Node ConditionObject.addConditionWaiter() &#123;<br>    Node t = lastWaiter;<br>    <span class="hljs-comment">// If lastWaiter is cancelled, clean out.</span><br>    <span class="hljs-keyword">if</span> (t != <span class="hljs-keyword">null</span> &amp;&amp; t.waitStatus != Node.CONDITION) &#123;<br>        unlinkCancelledWaiters();<br>        t = lastWaiter;<br>    &#125;<br>    Node node = <span class="hljs-keyword">new</span> Node(Node.CONDITION)<br>    <span class="hljs-keyword">if</span> (t == <span class="hljs-keyword">null</span>)<br>        firstWaiter = node;<br>    <span class="hljs-keyword">else</span><br>        t.nextWaiter = node;<br>    lastWaiter = node;<br>    <span class="hljs-keyword">return</span> node;<br>&#125;<br><br><span class="hljs-keyword">int</span> AbstractQueuedSynchronizer.fullyRelease(Node node) &#123;<br>    <span class="hljs-keyword">try</span> &#123;<br>        <span class="hljs-keyword">int</span> savedState = getState();<br>        <span class="hljs-keyword">if</span> (release(savedState))<br>            <span class="hljs-keyword">return</span> savedState;<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();<br>    &#125; <span class="hljs-keyword">catch</span> (Throwable t) &#123;<br>        node.waitStatus = Node.CANCELLED;<br>        <span class="hljs-keyword">throw</span> t;<br>    &#125;<br>&#125;<br><span class="hljs-keyword">boolean</span> AbstractQueuedSynchronizer.release(<span class="hljs-keyword">int</span> arg) &#123;<br>    <span class="hljs-keyword">if</span> (tryRelease(arg)) &#123;<br>        Node h = head;<br>        <span class="hljs-keyword">if</span> (h != <span class="hljs-keyword">null</span> &amp;&amp; h.waitStatus != <span class="hljs-number">0</span>)<br>            unparkSuccessor(h);<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;<br>&#125;<br><span class="hljs-keyword">boolean</span> ReentrantLock.Sync.tryRelease(<span class="hljs-keyword">int</span> releases) &#123;<br>    <span class="hljs-keyword">int</span> c = getState() - releases;<br>    <span class="hljs-keyword">if</span> (Thread.currentThread() != getExclusiveOwnerThread())<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();<br>    <span class="hljs-keyword">boolean</span> free = <span class="hljs-keyword">false</span>;<br>    <span class="hljs-keyword">if</span> (c == <span class="hljs-number">0</span>) &#123;<br>        free = <span class="hljs-keyword">true</span>;<br>        setExclusiveOwnerThread(<span class="hljs-keyword">null</span>);<br>    &#125;<br>    setState(c);<br>    <span class="hljs-keyword">return</span> free;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> ConditionObject.await() <span class="hljs-keyword">throws</span> InterruptedException &#123;
+    <span class="hljs-comment">// ... 在 condition queue 队尾添加一个 Node.CONDITION 类型的新节点（所有阻塞在此条件变量上的线程都在此排队）</span>
+    Node node = addConditionWaiter();
+    <span class="hljs-comment">// 进入阻塞状态前需要释放锁，同时唤醒下一个等待锁的线程</span>
+    <span class="hljs-keyword">int</span> savedState = fullyRelease(node);
+    <span class="hljs-keyword">int</span> interruptMode = <span class="hljs-number">0</span>;
+    <span class="hljs-comment">// 进入阻塞</span>
+    <span class="hljs-comment">// 被唤醒的线程会从 condition queue 转移到 AQS 排队队列（又叫同步队列，sync queue）</span>
+    <span class="hljs-comment">// isOnSyncQueue 返回 true 表示此节点已被转移到 sync queue，跳出阻塞循环</span>
+    <span class="hljs-keyword">while</span> (!isOnSyncQueue(node)) &#123;
+        LockSupport.park(<span class="hljs-keyword">this</span>);
+        <span class="hljs-comment">// await() 是可被中断的，awaitUninterruptibly() 不会被中断</span>
+        <span class="hljs-comment">// 线程恢复后，如果发生了中断，要跳出阻塞状态</span>
+        <span class="hljs-keyword">if</span> ((interruptMode = checkInterruptWhileWaiting(node)) != <span class="hljs-number">0</span>)
+            <span class="hljs-keyword">break</span>;
+    &#125;
+    <span class="hljs-comment">// 线程恢复后需要重新获得锁</span>
+    <span class="hljs-keyword">if</span> (acquireQueued(node, savedState) &amp;&amp; interruptMode != THROW_IE)
+        interruptMode = REINTERRUPT;
+    <span class="hljs-keyword">if</span> (node.nextWaiter != <span class="hljs-keyword">null</span>) <span class="hljs-comment">// clean up if cancelled</span>
+        unlinkCancelledWaiters();
+    <span class="hljs-keyword">if</span> (interruptMode != <span class="hljs-number">0</span>)
+        reportInterruptAfterWait(interruptMode);
+&#125;
+
+<span class="hljs-keyword">private</span> Node ConditionObject.addConditionWaiter() &#123;
+    Node t = lastWaiter;
+    <span class="hljs-comment">// If lastWaiter is cancelled, clean out.</span>
+    <span class="hljs-keyword">if</span> (t != <span class="hljs-keyword">null</span> &amp;&amp; t.waitStatus != Node.CONDITION) &#123;
+        unlinkCancelledWaiters();
+        t = lastWaiter;
+    &#125;
+    Node node = <span class="hljs-keyword">new</span> Node(Node.CONDITION)
+    <span class="hljs-keyword">if</span> (t == <span class="hljs-keyword">null</span>)
+        firstWaiter = node;
+    <span class="hljs-keyword">else</span>
+        t.nextWaiter = node;
+    lastWaiter = node;
+    <span class="hljs-keyword">return</span> node;
+&#125;
+
+<span class="hljs-keyword">int</span> AbstractQueuedSynchronizer.fullyRelease(Node node) &#123;
+    <span class="hljs-keyword">try</span> &#123;
+        <span class="hljs-keyword">int</span> savedState = getState();
+        <span class="hljs-keyword">if</span> (release(savedState))
+            <span class="hljs-keyword">return</span> savedState;
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();
+    &#125; <span class="hljs-keyword">catch</span> (Throwable t) &#123;
+        node.waitStatus = Node.CANCELLED;
+        <span class="hljs-keyword">throw</span> t;
+    &#125;
+&#125;
+<span class="hljs-keyword">boolean</span> AbstractQueuedSynchronizer.release(<span class="hljs-keyword">int</span> arg) &#123;
+    <span class="hljs-keyword">if</span> (tryRelease(arg)) &#123;
+        Node h = head;
+        <span class="hljs-keyword">if</span> (h != <span class="hljs-keyword">null</span> &amp;&amp; h.waitStatus != <span class="hljs-number">0</span>)
+            unparkSuccessor(h);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+&#125;
+<span class="hljs-keyword">boolean</span> ReentrantLock.Sync.tryRelease(<span class="hljs-keyword">int</span> releases) &#123;
+    <span class="hljs-keyword">int</span> c = getState() - releases;
+    <span class="hljs-keyword">if</span> (Thread.currentThread() != getExclusiveOwnerThread())
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();
+    <span class="hljs-keyword">boolean</span> free = <span class="hljs-keyword">false</span>;
+    <span class="hljs-keyword">if</span> (c == <span class="hljs-number">0</span>) &#123;
+        free = <span class="hljs-keyword">true</span>;
+        setExclusiveOwnerThread(<span class="hljs-keyword">null</span>);
+    &#125;
+    setState(c);
+    <span class="hljs-keyword">return</span> free;
+&#125;</code></pre></div>
 
 <h2 id="唤醒一个阻塞的线程（从队头节点开始）"><a href="#唤醒一个阻塞的线程（从队头节点开始）" class="headerlink" title="唤醒一个阻塞的线程（从队头节点开始）"></a>唤醒一个阻塞的线程（从队头节点开始）</h2><p>将在 condition queue 上节点转移到 sync queue 上</p>
-<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 把 condition queue 第一个节点（等待最久的线程）从队列里移除，添加到 sync queue 并唤醒其线程</span><br><span class="hljs-keyword">void</span> ConditionObject.signal() &#123;<br>    <span class="hljs-keyword">if</span> (!isHeldExclusively())<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();<br>    Node first = firstWaiter;<br>    <span class="hljs-keyword">if</span> (first != <span class="hljs-keyword">null</span>)<br>        doSignal(first);<br>&#125;<br><br><span class="hljs-comment">// 从 condition queue 里移除</span><br><span class="hljs-keyword">void</span> ConditionObject.doSignal(Node first) &#123;<br>    <span class="hljs-keyword">do</span> &#123;<br>        <span class="hljs-keyword">if</span> ( (firstWaiter = first.nextWaiter) == <span class="hljs-keyword">null</span>)<br>            lastWaiter = <span class="hljs-keyword">null</span>;<br>        first.nextWaiter = <span class="hljs-keyword">null</span>;<br>    &#125; <span class="hljs-keyword">while</span> (!transferForSignal(first) &amp;&amp;<br>             (first = firstWaiter) != <span class="hljs-keyword">null</span>);<br>&#125;<br><br><span class="hljs-comment">// 插入至 sync queue 队尾并唤醒其线程</span><br><span class="hljs-keyword">boolean</span> ConditionObject.transferForSignal(Node node) &#123;<br>    <span class="hljs-keyword">if</span> (!node.compareAndSetWaitStatus(Node.CONDITION, <span class="hljs-number">0</span>))<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;<br>    Node p = enq(node);<br>    <span class="hljs-keyword">int</span> ws = p.waitStatus;<br>    <span class="hljs-keyword">if</span> (ws &gt; <span class="hljs-number">0</span> || !p.compareAndSetWaitStatus(ws, Node.SIGNAL))<br>        LockSupport.unpark(node.thread);<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;<br>&#125;<br>Node AbstractQueuedSynchronizer.enq(Node node) &#123;<br>    <span class="hljs-keyword">for</span> (;;) &#123;<br>        Node oldTail = tail;<br>        <span class="hljs-keyword">if</span> (oldTail != <span class="hljs-keyword">null</span>) &#123;<br>            U.putObject(node, Node.PREV, oldTail);<br>            <span class="hljs-keyword">if</span> (compareAndSetTail(oldTail, node)) &#123;<br>                oldTail.next = node;<br>                <span class="hljs-keyword">return</span> oldTail;<br>            &#125;<br>        &#125; <span class="hljs-keyword">else</span> &#123;<br>            initializeSyncQueue();<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 把 condition queue 第一个节点（等待最久的线程）从队列里移除，添加到 sync queue 并唤醒其线程</span>
+<span class="hljs-keyword">void</span> ConditionObject.signal() &#123;
+    <span class="hljs-keyword">if</span> (!isHeldExclusively())
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();
+    Node first = firstWaiter;
+    <span class="hljs-keyword">if</span> (first != <span class="hljs-keyword">null</span>)
+        doSignal(first);
+&#125;
 
-<h2 id="唤醒全部线程"><a href="#唤醒全部线程" class="headerlink" title="唤醒全部线程"></a>唤醒全部线程</h2><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 跟唤醒第一个线程时一样的：</span><br><span class="hljs-comment">// 将所有在 Condition 上排队的线程逐个从 Condition 排队队列里移除，添加到 AQS 队尾，并唤醒其线程</span><br><span class="hljs-keyword">void</span> ConditionObject.signalAll() &#123;<br>    <span class="hljs-keyword">if</span> (!isHeldExclusively())<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();<br>    Node first = firstWaiter;<br>    <span class="hljs-keyword">if</span> (first != <span class="hljs-keyword">null</span>)<br>        doSignalAll(first);<br>&#125;<br><br><span class="hljs-keyword">void</span> ConditionObject.doSignalAll(Node first) &#123;<br>    lastWaiter = firstWaiter = <span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">do</span> &#123;<br>        Node next = first.nextWaiter;<br>        first.nextWaiter = <span class="hljs-keyword">null</span>;<br>        transferForSignal(first);<br>        first = next;<br>    &#125; <span class="hljs-keyword">while</span> (first != <span class="hljs-keyword">null</span>);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<span class="hljs-comment">// 从 condition queue 里移除</span>
+<span class="hljs-keyword">void</span> ConditionObject.doSignal(Node first) &#123;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-keyword">if</span> ( (firstWaiter = first.nextWaiter) == <span class="hljs-keyword">null</span>)
+            lastWaiter = <span class="hljs-keyword">null</span>;
+        first.nextWaiter = <span class="hljs-keyword">null</span>;
+    &#125; <span class="hljs-keyword">while</span> (!transferForSignal(first) &amp;&amp;
+             (first = firstWaiter) != <span class="hljs-keyword">null</span>);
+&#125;
+
+<span class="hljs-comment">// 插入至 sync queue 队尾并唤醒其线程</span>
+<span class="hljs-keyword">boolean</span> ConditionObject.transferForSignal(Node node) &#123;
+    <span class="hljs-keyword">if</span> (!node.compareAndSetWaitStatus(Node.CONDITION, <span class="hljs-number">0</span>))
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+    Node p = enq(node);
+    <span class="hljs-keyword">int</span> ws = p.waitStatus;
+    <span class="hljs-keyword">if</span> (ws &gt; <span class="hljs-number">0</span> || !p.compareAndSetWaitStatus(ws, Node.SIGNAL))
+        LockSupport.unpark(node.thread);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+&#125;
+Node AbstractQueuedSynchronizer.enq(Node node) &#123;
+    <span class="hljs-keyword">for</span> (;;) &#123;
+        Node oldTail = tail;
+        <span class="hljs-keyword">if</span> (oldTail != <span class="hljs-keyword">null</span>) &#123;
+            U.putObject(node, Node.PREV, oldTail);
+            <span class="hljs-keyword">if</span> (compareAndSetTail(oldTail, node)) &#123;
+                oldTail.next = node;
+                <span class="hljs-keyword">return</span> oldTail;
+            &#125;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            initializeSyncQueue();
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h2 id="唤醒全部线程"><a href="#唤醒全部线程" class="headerlink" title="唤醒全部线程"></a>唤醒全部线程</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 跟唤醒第一个线程时一样的：</span>
+<span class="hljs-comment">// 将所有在 Condition 上排队的线程逐个从 Condition 排队队列里移除，添加到 AQS 队尾，并唤醒其线程</span>
+<span class="hljs-keyword">void</span> ConditionObject.signalAll() &#123;
+    <span class="hljs-keyword">if</span> (!isHeldExclusively())
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalMonitorStateException();
+    Node first = firstWaiter;
+    <span class="hljs-keyword">if</span> (first != <span class="hljs-keyword">null</span>)
+        doSignalAll(first);
+&#125;
+
+<span class="hljs-keyword">void</span> ConditionObject.doSignalAll(Node first) &#123;
+    lastWaiter = firstWaiter = <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">do</span> &#123;
+        Node next = first.nextWaiter;
+        first.nextWaiter = <span class="hljs-keyword">null</span>;
+        transferForSignal(first);
+        first = next;
+    &#125; <span class="hljs-keyword">while</span> (first != <span class="hljs-keyword">null</span>);
+&#125;</code></pre></div>
             </div>
             <hr>
             <div>
