@@ -348,17 +348,17 @@ img[lazyload] {
 }
 :root {
   --color-mode: 'light';
-  --body-bg-color: #eee;
-  --board-bg-color: #fff;
-  --text-color: #3c4858;
-  --sec-text-color: #718096;
-  --post-text-color: #2c3e50;
-  --post-heading-color: #1a202c;
-  --post-link-color: #0366d6;
-  --link-hover-color: #30a9de;
-  --link-hover-bg-color: #f8f9fa;
-  --navbar-bg-color: #2f4154;
-  --navbar-text-color: #fff;
+  --body-bg-color: #000;
+  --board-bg-color: #000;
+  --text-color: #f8f9fa;
+  --sec-text-color: #f8f9fa;
+  --post-text-color: #f8f9fa;
+  --post-heading-color: #f8f9fa;
+  --post-link-color: #00a6fb;
+  --link-hover-color: #00a6fb;
+  --link-hover-bg-color: #364151;
+  --navbar-bg-color: #1f3144;
+  --navbar-text-color: #d0d0d0;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -916,7 +916,7 @@ img[lazyload] {
   .navbar .dropdown-collapse,
   .top-nav-collapse,
   .navbar-col-show {
-    background: rgba(47,65,84,0.7);
+    background: rgba(31,49,68,0.7);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
   }
@@ -925,7 +925,7 @@ img[lazyload] {
   .navbar .dropdown-collapse,
   .top-nav-collapse,
   .navbar-col-show {
-    background: #2f4154;
+    background: #1f3144;
   }
 }
 @media (max-width: 767px) {
@@ -1731,11 +1731,11 @@ post-custom {
   border-left: 0.35rem solid;
   border-radius: 0.25rem;
   margin: 1.5rem 0;
-  color: #3c4858;
+  color: #f8f9fa;
   font-size: 0.9rem;
 }
 .note a {
-  color: #3c4858;
+  color: #f8f9fa;
 }
 .note *:last-child {
   margin-bottom: 0;
@@ -1775,7 +1775,7 @@ note-default {
   font-size: 85%;
   margin: 0;
   padding: 0.2em 0.4em;
-  color: #3c4858;
+  color: #f8f9fa;
 }
 .label-default {
   background: #f7f7f7;
