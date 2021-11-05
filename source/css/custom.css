@@ -26,7 +26,11 @@
 }
 
 code {
-    color: #e83e8c;
+    color: #91cb3e;
+}
+
+.markdown-body {
+    background-color: transparent;
 }
 
 .post-content {

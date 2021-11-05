@@ -46,7 +46,7 @@ code:
 
     # 代码块是否显示行号
     # If true, the code block display line numbers
-    line_number: true
+    line_number: false
 
     # 实现高亮的库，对应下面的设置
     # Highlight library
@@ -57,7 +57,7 @@ code:
       # 在链接中挑选 style 填入
       # Select a style in the link
       # See: https://highlightjs.org/static/demo/
-      style: "Docco"
+      style: "Tomorrow Night Blue"
 
       # 是否根据 style 改变代码背景色（如果 style 是深色背景别忘了开启此项）
       # If true, the code background will change color based on the style (If style has a dark background, don't forget to true)
@@ -116,7 +116,7 @@ fun_features:
 # 主题暗色模式，开启后菜单中会出现切换按钮，用户浏览器会存储切换选项，并且会遵循 prefers-color-scheme 自动切换
 # Theme dark mode. If enable, a switch button will appear on the menu, each of the visitor's browser will store his switch option
 dark_mode:
-  enable: true
+  enable: false
   # 默认的选项（当用户手动切换后则不再按照默认模式），选择 `auto` 会优先遵循 prefers-color-scheme，其次按用户本地时间 18 点到次日 6 点之间进入暗色模式
   # Default option (when the visitor switches manually, the default mode is no longer followed), choosing `auto` will give priority to prefers-color-scheme, and then enter the dark mode from 18:00 to 6:00 in the visitor’s local time
   # Options: auto | light | dark
@@ -131,7 +131,7 @@ color:
   body_bg_color: "#eee"
   # 暗色模式下的 body 背景色，下同
   # Color in dark mode, the same below
-  body_bg_color_dark: "#181c27"
+  body_bg_color_dark: "#000"
 
   # 顶部菜单背景色
   # Color of navigation bar background
@@ -146,32 +146,32 @@ color:
   # 全局字体色
   # Color of global text
   text_color: "#3c4858"
-  text_color_dark: "#c4c6c9"
+  text_color_dark: "#f8f9fa"
 
   # 全局次级字体色（摘要、简介等位置）
   # Color of global secondary text (excerpt, introduction, etc.)
   sec_text_color: "#718096"
-  sec_text_color_dark: "#a7a9ad"
+  sec_text_color_dark: "#f8f9fa"
 
   # 文章正文字体色
   # Color of post text
   post_text_color: "#2c3e50"
-  post_text_color_dark: "#c4c6c9"
+  post_text_color_dark: "#f8f9fa"
 
   # 文章正文字体色（h1 h2 h3...）
   # Color of Article heading (h1 h2 h3...)
   post_heading_color: "#1a202c"
-  post_heading_color_dark: "#c4c6c9"
+  post_heading_color_dark: "#f8f9fa"
 
   # 文章超链接字体色
   # Color of post link
   post_link_color: "#0366d6"
-  post_link_color_dark: "#1589e9"
+  post_link_color_dark: "#00a6fb"
 
   # 超链接悬浮时字体色
   # Color of link when hovering
   link_hover_color: "#30a9de"
-  link_hover_color_dark: "#30a9de"
+  link_hover_color_dark: "#00a6fb"
 
   # 超链接悬浮背景色
   # Color of link background when hovering
@@ -181,7 +181,7 @@ color:
   # 主面板背景色
   # Color of main board
   board_color: "#fff"
-  board_color_dark: "#252d38"
+  board_color_dark: "#000"
 
 # 主题字体配置
 # Font
