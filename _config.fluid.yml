@@ -57,11 +57,11 @@ code:
       # 在链接中挑选 style 填入
       # Select a style in the link
       # See: https://highlightjs.org/static/demo/
-      style: "Night Owl"
+      style: "Tomorrow Night Blue"
 
       # 是否根据 style 改变代码背景色（如果 style 是深色背景别忘了开启此项）
       # If true, the code background will change color based on the style (If style has a dark background, don't forget to true)
-      bg_color: true
+      bg_color: false
 
     prismjs:
       # 在下方链接页面右侧的圆形按钮挑选 style 填入，也可以直接填入 css 链接
@@ -79,7 +79,7 @@ fun_features:
   # 为 subtitle 添加打字机效果
   # Typing animation for subtitle
   typing:
-    enable: true
+    enable: false
 
     # 打印速度，数字越大越慢
     # Typing speed, the larger the number, the slower
@@ -109,7 +109,7 @@ fun_features:
   progressbar:
     enable: true
     height_px: 3
-    color: "#29d"
+    color: "#91cb3e"
     # See: https://github.com/rstacruz/nprogress
     options: { showSpinner: false, trickleSpeed: 100 }
 
@@ -128,15 +128,15 @@ dark_mode:
 color:
   # body 背景色
   # Color of body background
-  body_bg_color: "#000"
+  body_bg_color: "#141414"
   # 暗色模式下的 body 背景色，下同
   # Color in dark mode, the same below
-  body_bg_color_dark: "#000"
+  body_bg_color_dark: "#141414"
 
   # 顶部菜单背景色
   # Color of navigation bar background
-  navbar_bg_color: "#1f3144"
-  navbar_bg_color_dark: "#1f3144"
+  navbar_bg_color: "#141414"
+  navbar_bg_color_dark: "#141414"
 
   # 顶部菜单字体色
   # Color of navigation bar text
@@ -145,23 +145,23 @@ color:
 
   # 全局字体色
   # Color of global text
-  text_color: "#f8f9fa"
-  text_color_dark: "#f8f9fa"
+  text_color: "#ffffff"
+  text_color_dark: "#ffffff"
 
   # 全局次级字体色（摘要、简介等位置）
   # Color of global secondary text (excerpt, introduction, etc.)
-  sec_text_color: "#f8f9fa"
-  sec_text_color_dark: "#f8f9fa"
+  sec_text_color: "#ffffff"
+  sec_text_color_dark: "#ffffff"
 
   # 文章正文字体色
   # Color of post text
-  post_text_color: "#f8f9fa"
-  post_text_color_dark: "#f8f9fa"
+  post_text_color: "#ffffff"
+  post_text_color_dark: "#ffffff"
 
   # 文章正文字体色（h1 h2 h3...）
   # Color of Article heading (h1 h2 h3...)
-  post_heading_color: "#f8f9fa"
-  post_heading_color_dark: "#f8f9fa"
+  post_heading_color: "#ffffff"
+  post_heading_color_dark: "#ffffff"
 
   # 文章超链接字体色
   # Color of post link
@@ -291,7 +291,7 @@ version:
 navbar:
   # 导航栏左侧的标题，为空则按 hexo config 中 `title` 显示
   # The title on the left side of the navigation bar. If empty, it is based on `title` in hexo config
-  blog_title: "Cyrus Blog"
+  blog_title: "Cyrus Land"
 
   # 导航栏毛玻璃特效，实验性功能，可能会造成页面滚动掉帧和抖动，部分浏览器不支持会自动不生效
   # Navigation bar frosted glass special animation. It is an experimental feature
@@ -424,7 +424,7 @@ index:
   # 头图高度，屏幕百分比
   # Height ratio of banner image
   # Available: 0 - 100
-  banner_img_height: 60
+  banner_img_height: 30
 
   # 头图黑色蒙版的不透明度，available: 0 - 1.0， 1 是完全不透明
   # Opacity of the banner mask, 1.0 is completely opaque
@@ -434,7 +434,7 @@ index:
   # 首页副标题的独立设置
   # Independent config of home page subtitle
   slogan:
-    enable: true
+    enable: false
 
     # 为空则按 hexo config.subtitle 显示
     # If empty, text based on `subtitle` in hexo config
@@ -491,7 +491,7 @@ index:
 #---------------------------
 post:
   banner_img: /image/sunset_sea.jpg
-  banner_img_height: 60
+  banner_img_height: 30
   banner_mask_alpha: 0.3
 
   # 文章在首页的默认封面图，当没有指定 index_img 时会使用该图片，若两者都为空则不显示任何图片
@@ -569,7 +569,7 @@ post:
   # 版权声明，会显示在每篇文章的结尾
   # Copyright, will be displayed at the end of each post
   copyright:
-    enable: true
+    enable: false
     content: '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！'
 
   # 文章底部上一篇下一篇功能
@@ -765,7 +765,7 @@ twikoo:
 #---------------------------
 archive:
   banner_img: /image/temple.jpeg
-  banner_img_height: 60
+  banner_img_height: 30
   banner_mask_alpha: 0.3
   subtitle:
 
@@ -777,7 +777,7 @@ archive:
 category:
   enable: false
   banner_img: /image/deer.jpeg
-  banner_img_height: 60
+  banner_img_height: 30
   banner_mask_alpha: 0.3
   subtitle:
 
@@ -807,7 +807,7 @@ category:
 tag:
   enable: true
   banner_img: /image/sunset_mountain.jpg
-  banner_img_height: 60
+  banner_img_height: 30
   banner_mask_alpha: 0.3
   subtitle:
   tagcloud:
@@ -830,7 +830,7 @@ about:
   subtitle:
   avatar: /image/avatar.png
   name: "Cyrus"
-  intro: "An Android Developer"
+  intro: "Android Developer"
   # 更多图标可从 https://hexo.fluid-dev.com/docs/icon/ 查找，`class` 代表图标的 css class，添加 `qrcode` 后，图标不再是链接而是悬浮二维码
   # More icons can be found from https://hexo.fluid-dev.com/docs/en/icon/  `class` is the css class of the icon. If adding `qrcode`, The icon is no longer a link, but a hovering QR code
   icons:
@@ -869,9 +869,9 @@ page404:
 # Links Page
 #---------------------------
 links:
-  enable: true
+  enable: false
   banner_img: /image/default.png
-  banner_img_height: 60
+  banner_img_height: 30
   banner_mask_alpha: 0.3
   subtitle:
   # 友链的成员项
