@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="MP4 文件结构浅析">
               
+                MP4 文件结构浅析
+              
             </span>
 
             
@@ -218,7 +220,7 @@
             
             <div class="markdown-body">
               <h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p><code>mp4</code> 文件由一个个连续的 <code>box</code> 组成</p>
-<div class="hljs code-wrapper"><pre><code class="hljs gauss">mp4 = <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + ...</code></pre></div>
+<div class="code-wrapper"><pre><code class="hljs gauss">mp4 = <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + <span class="hljs-built_in">box</span> + ...</code></pre></div>
 
 <p>box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：</p>
 <ol>
@@ -227,14 +229,14 @@
 </ol>
 <p>本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念</p>
 <h1 id="chunk"><a href="#chunk" class="headerlink" title="chunk"></a>chunk</h1><p>一个 mp4 文件可以包含多个 <code>track</code>（视频、音频和字幕），而每个 track 则由多个 <code>chunk</code> 组成</p>
-<div class="hljs code-wrapper"><pre><code class="hljs ini"><span class="hljs-attr">mp4</span> = video track + audio track + subtitle track + ...
+<div class="code-wrapper"><pre><code class="hljs ini"><span class="hljs-attr">mp4</span> = video track + audio track + subtitle track + ...
 <span class="hljs-attr">track</span> = chunk + chunk + chunk + ...</code></pre></div>
 
 <p><code>Stco Box</code> 描述了一个 track 有多少个 chunk 以及每个 chunk 在 mp4 文件里的偏移量，这样就具有了快速定位（<code>seek</code>）chunk 的能力</p>
 <p>比如下图说明 track 有 486 个 chunk，每个 chunk 在文件里的偏移量都记录在后面的表里</p>
 <p><img src="../../../../image/2021-07-05-mp4-structure/stco.webp" srcset="/image/loading.gif" lazyload alt="stco box"></p>
 <h1 id="sample"><a href="#sample" class="headerlink" title="sample"></a>sample</h1><p><code>sample</code>（采样）相当于一帧，解码的过程就是计算出一帧帧的图像，每个 chunk 包含多个 <code>sample</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs glsl">chunk = <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + ...</code></pre></div>
+<div class="code-wrapper"><pre><code class="hljs glsl">chunk = <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + <span class="hljs-keyword">sample</span> + ...</code></pre></div>
 
 <p>具体哪个 chunk 包含哪几个 sample 由 <code>Stsc Box</code> 描述： <code>stsc = entry count + (first chunk + samples per chunk + sample description index)</code>，如下图，它是这么描述的：</p>
 <ol>
@@ -372,12 +374,6 @@
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -526,17 +522,6 @@
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -153,6 +153,8 @@
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="线程池 ThreadPool 的实现">
+              
+                线程池 ThreadPool 的实现
               
             </span>
 
@@ -233,7 +235,7 @@
 <li><code>TERMINATED</code>，<code>terminated()</code> 执行完毕</li>
 </ul>
 <h2 id="生产者-消费者模式的-worker"><a href="#生产者-消费者模式的-worker" class="headerlink" title="生产者 - 消费者模式的 worker"></a>生产者 - 消费者模式的 worker</h2><p>线程（worker）作为消费者，不断地从任务队列（workQueue）里获取任务并执行</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Worker</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Worker</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
         runWorker(<span class="hljs-keyword">this</span>);
     &#125;	
@@ -324,7 +326,7 @@ Runnable ThreadPoolExecutor.getTask() &#123;
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="corePoolSize，workQueue-和-maximumPoolSize-之间的关系"><a href="#corePoolSize，workQueue-和-maximumPoolSize-之间的关系" class="headerlink" title="corePoolSize，workQueue 和 maximumPoolSize 之间的关系"></a><code>corePoolSize</code>，<code>workQueue</code> 和 <code>maximumPoolSize</code> 之间的关系</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> ThreadPoolExecutor.execute(Runnable command) &#123;
+<h2 id="corePoolSize，workQueue-和-maximumPoolSize-之间的关系"><a href="#corePoolSize，workQueue-和-maximumPoolSize-之间的关系" class="headerlink" title="corePoolSize，workQueue 和 maximumPoolSize 之间的关系"></a><code>corePoolSize</code>，<code>workQueue</code> 和 <code>maximumPoolSize</code> 之间的关系</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> ThreadPoolExecutor.execute(Runnable command) &#123;
     <span class="hljs-comment">// 如果线程数 &lt; corePoolSize，则新开一个线程执行任务</span>
     <span class="hljs-keyword">int</span> c = ctl.get();
     <span class="hljs-keyword">if</span> (workerCountOf(c) &lt; corePoolSize) &#123;
@@ -429,7 +431,7 @@ Runnable ThreadPoolExecutor.getTask() &#123;
 <h3 id="DelayedWorkQueue-按执行时间优先级排序的阻塞队列"><a href="#DelayedWorkQueue-按执行时间优先级排序的阻塞队列" class="headerlink" title="DelayedWorkQueue 按执行时间优先级排序的阻塞队列"></a><code>DelayedWorkQueue</code> 按执行时间优先级排序的阻塞队列</h3><p>提交一个新任务到 <code>DelayedWorkQueue</code>，重排 workQueue</p>
 <p>workQueue 是按执行时间点排序的，leader 是在队头任务上挂起的线程，leader 未唤醒时新来的出队请求将在 available 上挂起</p>
 <p>队列为空时线程也在 available 上挂起</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ScheduledFuture&lt;?&gt; ScheduledThreadPoolExecutor.schedule(Runnable command, <span class="hljs-keyword">long</span> delay, TimeUnit unit) &#123;
+<div class="code-wrapper"><pre><code class="hljs java">ScheduledFuture&lt;?&gt; ScheduledThreadPoolExecutor.schedule(Runnable command, <span class="hljs-keyword">long</span> delay, TimeUnit unit) &#123;
     <span class="hljs-keyword">if</span> (command == <span class="hljs-keyword">null</span> || unit == <span class="hljs-keyword">null</span>)
         <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException();
     RunnableScheduledFuture&lt;Void&gt; t = decorateTask(command,
@@ -507,7 +509,7 @@ Runnable ThreadPoolExecutor.getTask() &#123;
 &#125;</code></pre></div>
 
 <p>上面说过 <code>worker</code> 是一个「生产者-消费者」模型，通过 <code>getTask</code> 不断地从 <code>workQueue</code> 获取任务</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 从 workQueue 获取任务（blocked &amp; timeouted）</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 从 workQueue 获取任务（blocked &amp; timeouted）</span>
 Runnable ThreadPoolExecutor.getTask() &#123;
     <span class="hljs-keyword">boolean</span> timedOut = <span class="hljs-keyword">false</span>; <span class="hljs-comment">// Did the last poll() time out?</span>
     <span class="hljs-keyword">for</span> (;;) &#123;
@@ -648,7 +650,7 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
 &#125;</code></pre></div>
 
 <h2 id="如果-worker-数量超过-maximumPoolSize，task-会被-reject"><a href="#如果-worker-数量超过-maximumPoolSize，task-会被-reject" class="headerlink" title="如果 worker 数量超过 maximumPoolSize，task 会被 reject"></a>如果 worker 数量超过 maximumPoolSize，task 会被 reject</h2><p><code>ThreadPoolExecutor</code> 提供了 <code>RejectedExecutionHandler</code> 来处理这种情况，平常通过 <code>Executors</code> 创建的线程池使用默认的 <code>AbortPolicy</code>，它会抛出异常</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * A handler for rejected tasks that throws a</span>
 <span class="hljs-comment"> * &#123;<span class="hljs-doctag">@code</span> RejectedExecutionException&#125;.</span>
 <span class="hljs-comment"> */</span>
@@ -673,7 +675,7 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
 &#125;</code></pre></div>
 
 <p>其他的还有：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 扔掉 task 不做任何处理</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 扔掉 task 不做任何处理</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DiscardPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">RejectedExecutionHandler</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> </span>&#123;&#125;
 &#125;
@@ -715,12 +717,6 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -869,17 +865,6 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

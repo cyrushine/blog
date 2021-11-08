@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="Application 是如何被创建和初始化的？">
               
+                Application 是如何被创建和初始化的？
+              
             </span>
 
             
@@ -220,7 +222,7 @@
               <h2 id="时序图"><a href="#时序图" class="headerlink" title="时序图"></a>时序图</h2><p>从 <code>startActivity</code> 开始，比如打开一个 app 的首页，当 app 未启动时就会走创建 <code>Application</code> 这条路</p>
 <p><img src="../../../../image/2021-03-02-how-application-being-created-and-init/from_startActivity_to_zygote.png" srcset="/image/loading.gif" lazyload alt="from_startActivity_to_zygote.png"></p>
 <h2 id="AMS-承担的工作"><a href="#AMS-承担的工作" class="headerlink" title="AMS 承担的工作"></a>AMS 承担的工作</h2><p>其中的转折点在 <code>resumeTopActivityInnerLocked</code>，发现 app process 不存在，走启动 app process 的流程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">boolean</span> ActivityStack.resumeTopActivityInnerLocked(ActivityRecord prev, ActivityOptions options) &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">boolean</span> ActivityStack.resumeTopActivityInnerLocked(ActivityRecord prev, ActivityOptions options) &#123;
     <span class="hljs-comment">// ... Launching this app&#x27;s activity, make sure the app is no longer considered stopped. 下面是启动 Activity 的逻辑</span>
     <span class="hljs-keyword">if</span> (next.attachedToProcess()) &#123;
         <span class="hljs-comment">// ...</span>
@@ -241,7 +243,7 @@
 &#125;</code></pre></div>
 
 <p>最后走到 <code>attemptZygoteSendArgsAndGetResult</code>，AMS 将 app 的相关参数通过 socket 发送给 zygote 进程，由 zygote 负责 fork 出一个 app process，这一段路程就算完结了</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> Process.<span class="hljs-function">ProcessStartResult <span class="hljs-title">attemptZygoteSendArgsAndGetResult</span><span class="hljs-params">(ZygoteState zygoteState, String msgStr)</span> <span class="hljs-keyword">throws</span> ZygoteStartFailedEx </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> Process.<span class="hljs-function">ProcessStartResult <span class="hljs-title">attemptZygoteSendArgsAndGetResult</span><span class="hljs-params">(ZygoteState zygoteState, String msgStr)</span> <span class="hljs-keyword">throws</span> ZygoteStartFailedEx </span>&#123;
     <span class="hljs-keyword">try</span> &#123;
         <span class="hljs-keyword">final</span> BufferedWriter zygoteWriter = zygoteState.mZygoteOutputWriter;
         <span class="hljs-keyword">final</span> DataInputStream zygoteInputStream = zygoteState.mZygoteInputStream;
@@ -262,7 +264,7 @@
 &#125;</code></pre></div>
 
 <p>值得注意的是，AMS 是通过 <code>LocalSocket</code> 与 zygote 交互的，它们建立连接的过程如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> Process.ProcessStartResult ZygoteProcess.startViaZygote(...) &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> Process.ProcessStartResult ZygoteProcess.startViaZygote(...) &#123;
     ArrayList&lt;String&gt; argsForZygote = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();
     argsForZygote.add(<span class="hljs-string">&quot;--runtime-args&quot;</span>);
     <span class="hljs-comment">// 拼接字符串参数 ...</span>
@@ -319,7 +321,7 @@
 &#125;</code></pre></div>
 
 <h2 id="走入-zygote"><a href="#走入-zygote" class="headerlink" title="走入 zygote"></a>走入 zygote</h2><h3 id="从-zygote-开始"><a href="#从-zygote-开始" class="headerlink" title="从 zygote 开始"></a>从 zygote 开始</h3><p>下面就轮到 zygote 出场了，zygote 进程是 system server 和 app 进程的父进程，它在 java 的入口点是 <code>ZygoteInit.main</code>；zygote 启动后会加载各个进程共享的资源，然后启动 system server，最后工作在主循环 <code>runSelectLoop</code> 上；在 <code>runSelectLoop</code> 里，zygote 通过 <code>epoll</code> 监听 zygote server socket 并根据请求参数 fork 出 app 进程（上面也说到过 AMS 是通过 <code>LocalSocket</code> 请求让 zygote fork app process）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// frameworks/base/core/java/com/android/internal/os/ZygoteInit.java</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// frameworks/base/core/java/com/android/internal/os/ZygoteInit.java</span>
 
 <span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * zygote 的入口点</span>
@@ -336,7 +338,7 @@
 &#125;</code></pre></div>
 
 <p>zygote server socket 实际上是个挂载在 <code>/dev/sockets/</code> 目录下的 FD，它是由脚本 <code>init.rc</code> 创建的，这个 FD 可以通过环境变量 <code>ANDROID_SOCKET_&lt;socketName&gt;</code> 获得</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ZygoteServer(<span class="hljs-keyword">boolean</span> isPrimaryZygote) &#123;
+<div class="code-wrapper"><pre><code class="hljs java">ZygoteServer(<span class="hljs-keyword">boolean</span> isPrimaryZygote) &#123;
     mUsapPoolEventFD = Zygote.getUsapPoolEventFD();
     <span class="hljs-keyword">if</span> (isPrimaryZygote) &#123;
         mZygoteSocket = Zygote.createManagedSocketFromInitSocket(Zygote.PRIMARY_SOCKET_NAME);  <span class="hljs-comment">// PRIMARY_SOCKET_NAME = &quot;zygote&quot;</span>
@@ -377,7 +379,7 @@
 &#125;</code></pre></div>
 
 <p>而 zygote 主循环的整个代码就是 epoll 多路复用的模型</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * Runs the zygote process&#x27;s select loop. Accepts new connections as</span>
 <span class="hljs-comment"> * they happen, and reads commands from connections one spawn-request&#x27;s</span>
 <span class="hljs-comment"> * worth at a time.</span>
@@ -423,7 +425,7 @@ Runnable ZygoteServer.runSelectLoop(String abiList) &#123;
 <p><img src="../../../../image/2021-03-02-how-application-being-created-and-init/fork_by_zygote.png" srcset="/image/loading.gif" lazyload alt="fork_by_zygote.png"></p>
 <p>在 <code>fork()</code> 系统调用后，返回 0 表示当前处于子进程，&gt; 0 处于父进程（也就是 zygote）</p>
 <p>zygote 进程会继续它的主循环 <code>runSelectLoop</code>，而子进程会跳出主循环，执行 <code>ZygoteConnection.processCommand</code> 返回的 <code>Runnable</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> ZygoteInit.main(String[] argv) &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> ZygoteInit.main(String[] argv) &#123;
     <span class="hljs-comment">// ...</span>
     Runnable caller;
     <span class="hljs-keyword">try</span> &#123;
@@ -441,7 +443,7 @@ Runnable ZygoteServer.runSelectLoop(String abiList) &#123;
 &#125;</code></pre></div>
 
 <p>这个 <code>Runnable</code> 实际上是通过反射调用 <code>ActivityThread.main</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// app 进程的 entry point 被设置为 android.app.ActivityThread</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// app 进程的 entry point 被设置为 android.app.ActivityThread</span>
 <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">startProcessLocked</span><span class="hljs-params">(ProcessRecord app, HostingRecord hostingRecord,</span></span>
 <span class="hljs-params"><span class="hljs-function">        <span class="hljs-keyword">int</span> zygotePolicyFlags, <span class="hljs-keyword">boolean</span> disableHiddenApiChecks, <span class="hljs-keyword">boolean</span> disableTestApiChecks,</span></span>
 <span class="hljs-params"><span class="hljs-function">        <span class="hljs-keyword">boolean</span> mountExtStorageFull, String abiOverride)</span> </span>&#123;
@@ -505,7 +507,7 @@ Runnable ZygoteServer.runSelectLoop(String abiList) &#123;
 
 <h2 id="Application-实例的创建和初始化"><a href="#Application-实例的创建和初始化" class="headerlink" title="Application 实例的创建和初始化"></a>Application 实例的创建和初始化</h2><p><img src="../../../../image/2021-03-02-how-application-being-created-and-init/create_application.png" srcset="/image/loading.gif" lazyload alt="create_application.png"></p>
 <p>app process 的起始点是 <code>ActivityThread.main</code>，做完所有准备龚州工作后进入 loop 循环，后续的任务通过 <code>Handler</code> 执行</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     Looper.prepareMainLooper();
     <span class="hljs-comment">// ...</span>
@@ -514,7 +516,7 @@ Runnable ZygoteServer.runSelectLoop(String abiList) &#123;
 &#125;</code></pre></div>
 
 <p><code>ActivityThread.handleBindApplication</code> 是 <code>Application</code> 实例创建和初始化的地方</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> ActivityThread.handleBindApplication(AppBindData data) &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> ActivityThread.handleBindApplication(AppBindData data) &#123;
     <span class="hljs-comment">// ...</span>
     Application app;
     <span class="hljs-keyword">final</span> StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskWrites();
@@ -585,12 +587,6 @@ Application AppComponentFactory.instantiateApplication(ClassLoader cl, String cl
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -739,17 +735,6 @@ Application AppComponentFactory.instantiateApplication(ClassLoader cl, String cl
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

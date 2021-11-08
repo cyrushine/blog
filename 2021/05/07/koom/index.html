@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -153,6 +153,8 @@
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="KOOM - 利用子进程 dump hprof">
+              
+                KOOM - 利用子进程 dump hprof
               
             </span>
 
@@ -240,7 +242,7 @@
 </ol>
 <p>但是要从各个 Android 版本的 so 文件里准确找到这些函数（符号）是有难度的</p>
 <p>寻找 <code>SuspendVMEv</code> 和 <code>ResumeVMEv</code> 的地址</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 自己实现 dlopen dlsym dlclose 以兼容各 Android 版本</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 自己实现 dlopen dlsym dlclose 以兼容各 Android 版本</span>
 <span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">initForkVMSymbols</span><span class="hljs-params">()</span> </span>&#123;
   <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);
   <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;
@@ -420,7 +422,7 @@
 &#125;</code></pre></div>
 
 <p>查找 <code>ScopedSuspendAll</code> 的构造函数和析构函数</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
   <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);
   <span class="hljs-comment">// ...</span>
@@ -454,7 +456,7 @@
 <li>子进程返回 0，dump hprof 后退出进程</li>
 <li>父进程返回子进程 pid，首先恢复 JVM，然后利用 <code>waitpid</code> 阻塞直到子进程完成 dump hprof，然后处理 hprof</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
   <span class="hljs-meta">@Override</span>
   <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
@@ -480,7 +482,7 @@
   &#125;    
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jint JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_trySuspendVMThenFork</span><span class="hljs-params">(</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jint JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_trySuspendVMThenFork</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jobject jObject)</span> </span>&#123;
   <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;
     <span class="hljs-built_in">initForkVMSymbols</span>();
@@ -492,7 +494,7 @@
 &#125;</code></pre></div>
 
 <p>Android 11 的情况下也是利用系统调用 <code>fork</code> 出子进程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
   <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);
   <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span> || ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span> ||
@@ -522,7 +524,7 @@
 &#125;</code></pre></div>
 
 <h2 id="处理-hprof"><a href="#处理-hprof" class="headerlink" title="处理 hprof"></a>处理 hprof</h2><p>子进程用 <code>Debug.dumpHprofData</code> 生成 hprof 文件后结束，父进程拿到 hprof 后开个新进程，在 <code>Service</code> 里用 <code>LeakCanary.Shark</code> 解析</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
   <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;
     <span class="hljs-comment">//...</span>
     <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;
@@ -565,7 +567,7 @@
 <span class="hljs-comment">//       android:process=&quot;:heap_analysis&quot; /&gt;</span></code></pre></div>
 
 <p>Android 11 则是查找类 <code>Hprof</code> 的构造/析构函数和 <code>dump</code> 函数，在 native 层进行 dump hprof，后续依然是在 java 层开个新进程解析</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
   <span class="hljs-comment">// ... 直接在 native 层 dump hprof</span>
   <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *filename = env-&gt;<span class="hljs-built_in">GetStringUTFChars</span>(file_name, <span class="hljs-literal">nullptr</span>);
@@ -624,12 +626,6 @@
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -778,17 +774,6 @@
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="Lock（五）Condition 的语言实现：Object.wait 和 Object.notify">
               
+                Lock（五）Condition 的语言实现：Object.wait 和 Object.notify
+              
             </span>
 
             
@@ -220,7 +222,7 @@
               <p>在 <a href="../../../../2021/01/24/condition-by-lock/">Lock（三）利用 Lock 实现 Condition</a> 我们介绍了如何用 <code>Lock</code> 来实现 <code>Condition</code>，而 <code>Condition</code> 对标的是 <code>Object.wait</code> 和 <code>Object.notify</code></p>
 <p>我们来看看 ART 是怎么实现 wait/notify 的（最好先了解下 <a href="../../../../2021/02/08/synchronized-implementation/">synchronized 的基础知识</a>）</p>
 <h2 id="ConditionVariable"><a href="#ConditionVariable" class="headerlink" title="ConditionVariable"></a>ConditionVariable</h2><p>对 futex/mutex 的封装，宏 <code>ART_USE_FUTEXES</code> 决定底层是使用 futex 还是 mutex；它不是「条件变量」，<code>Monitor</code> 才是（而且它还包含 Lock 的角色）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::Wait</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   guard_.<span class="hljs-built_in">CheckSafeToWait</span>(self);
   <span class="hljs-built_in">WaitHoldingLocks</span>(self);
@@ -297,7 +299,7 @@
 <p><code>Thread</code> 有个成员变量充当 next 指针：<code>Thread::GetWaitNext()</code> 和 <code>Thread::SetWaitNext(Thread* next)</code></p>
 <p>await 是把线程添加到 wait set 队尾，notify 是把 wait set 队头转移为 wake set 队头，然后在退出临界区（释放锁）时唤醒 wake set 队头</p>
 <p>同时 <code>Thread::wait_monitor_</code> 标识线程在哪个 <code>Monitor</code> 上挂起</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Monitor</span> &#123;</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Monitor</span> &#123;</span>
   <span class="hljs-comment">// Threads currently waiting on this monitor.</span>
   <span class="hljs-function">Thread* wait_set_ <span class="hljs-title">GUARDED_BY</span><span class="hljs-params">(monitor_lock_)</span></span>;
   <span class="hljs-comment">// Threads that were waiting on this monitor, but are now contending on it.</span>
@@ -341,7 +343,7 @@
   &#125;
 &#125;</code></pre></div>
 
-<h2 id="Object-wait"><a href="#Object-wait" class="headerlink" title="Object.wait"></a>Object.wait</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> Object.wait() <span class="hljs-keyword">throws</span> InterruptedException &#123;
+<h2 id="Object-wait"><a href="#Object-wait" class="headerlink" title="Object.wait"></a>Object.wait</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> Object.wait() <span class="hljs-keyword">throws</span> InterruptedException &#123;
     wait(<span class="hljs-number">0</span>);
 &#125;
 <span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout) <span class="hljs-keyword">throws</span> InterruptedException &#123;
@@ -349,7 +351,7 @@
 &#125;
 <span class="hljs-keyword">native</span> <span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout, <span class="hljs-keyword">int</span> nanos) <span class="hljs-keyword">throws</span> InterruptedException;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/native/java_lang_Object.cc</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/native/java_lang_Object.cc</span>
 
 <span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_waitJI</span><span class="hljs-params">(JNIEnv* env, jobject java_this, jlong ms, jint ns)</span> </span>&#123;
   <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
@@ -472,7 +474,7 @@
 &#125;</code></pre></div>
 
 <h2 id="Object-notify"><a href="#Object-notify" class="headerlink" title="Object.notify"></a>Object.notify</h2><p>把挂起的线程从 wait set 转移到 wake set</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_notify</span><span class="hljs-params">(JNIEnv* env, jobject java_this)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_notify</span><span class="hljs-params">(JNIEnv* env, jobject java_this)</span> </span>&#123;
   <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
   soa.Decode&lt;mirror::Object&gt;(java_this)-&gt;<span class="hljs-built_in">Notify</span>(soa.<span class="hljs-built_in">Self</span>());
 &#125;
@@ -538,7 +540,7 @@
 &#125;</code></pre></div>
 
 <p>调用 notify 前需要先获得它的对象锁，notify 把线程转移到 wake set，释放锁时会唤醒线程（从而让线程能够重新获得锁）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
   Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
   <span class="hljs-keyword">if</span> (owner == self) &#123;
@@ -629,12 +631,6 @@
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -783,17 +779,6 @@
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

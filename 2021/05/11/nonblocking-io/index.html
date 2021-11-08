@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -153,6 +153,8 @@
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="【转】网络 IO 演变发展过程和模型介绍">
+              
+                【转】网络 IO 演变发展过程和模型介绍
               
             </span>
 
@@ -260,12 +262,12 @@
 <p>无论下面的 <code>select</code>、<code>poll</code>、<code>epoll</code>，其都是这种思想实现的，不过在实现上，<code>select</code>/<code>poll</code> 可以看做是第一版，而 <code>epoll</code> 是第二版</p>
 <h3 id="IO-多路复用第一版的概念"><a href="#IO-多路复用第一版的概念" class="headerlink" title="IO 多路复用第一版的概念"></a>IO 多路复用第一版的概念</h3><p>IO 多路复用第一版，这个概念是本人想出来的，主要是方便将 <code>select</code>/<code>poll</code> 和 <code>epoll</code> 进行区分</p>
 <p>所以此处 IO 多路复用第一版，主要特指 <code>select</code> 和 <code>poll</code> 这两个。</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// readfds:关心读的fd集合；writefds：关心写的fd集合；excepttfds：异常的fd集合</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// readfds:关心读的fd集合；writefds：关心写的fd集合；excepttfds：异常的fd集合</span>
 <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">select</span> <span class="hljs-params">(<span class="hljs-keyword">int</span> n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)</span></span>;</code></pre></div>
 
 <p><code>select</code> 函数监视的文件描述符分 3 类，分别是 <code>writefds</code>、<code>readfds</code> 和 <code>exceptfds</code>。调用后 <code>select</code> 函数会阻塞，直到有描述副就绪（有数据 可读、可写、或者有 except），或者超时（timeout 指定等待时间，如果立即返回设为 null 即可），函数返回。当 <code>select</code> 函数返回后，可以通过遍历 <code>fdset</code>，来找到就绪的描述符。</p>
 <p><code>select</code> 目前几乎在所有的平台上支持，其良好跨平台支持也是它的一个优点。<code>select</code> 的一 个缺点在于单个进程能够监视的文件描述符的数量存在最大限制，在 Linux 上一般为 1024，可以通过修改宏定义甚至重新编译内核的方式提升这一限制，但 是这样也会造成效率的降低。</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">poll</span> <span class="hljs-params">(struct pollfd *fds, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> nfds, <span class="hljs-keyword">int</span> timeout)</span></span>;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">poll</span> <span class="hljs-params">(struct pollfd *fds, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> nfds, <span class="hljs-keyword">int</span> timeout)</span></span>;
 
 <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pollfd</span> &#123;</span>
     <span class="hljs-keyword">int</span> fd; <span class="hljs-comment">/* file descriptor */</span>
@@ -290,7 +292,7 @@
 </ol>
 <h2 id="IO-多路复用第二版"><a href="#IO-多路复用第二版" class="headerlink" title="IO 多路复用第二版"></a>IO 多路复用第二版</h2><p>IO 多路复用第二版主要指 <code>epoll</code>，<code>epoll</code> 的出现也是随着内核版本迭代才诞生的，在网上到处看到，<code>epoll</code> 是内核 2.6 以后开始支持的</p>
 <p><code>epoll</code> 的出现是为了解决前面提到的 IO 多路复用第一版的问题</p>
-<h3 id="IO-多路复用第二版的概念"><a href="#IO-多路复用第二版的概念" class="headerlink" title="IO 多路复用第二版的概念"></a>IO 多路复用第二版的概念</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">//创建epollFd，底层是在内核态分配一段区域，底层数据结构红黑树+双向链表</span>
+<h3 id="IO-多路复用第二版的概念"><a href="#IO-多路复用第二版的概念" class="headerlink" title="IO 多路复用第二版的概念"></a>IO 多路复用第二版的概念</h3><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">//创建epollFd，底层是在内核态分配一段区域，底层数据结构红黑树+双向链表</span>
 <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">epoll_create</span><span class="hljs-params">(<span class="hljs-keyword">int</span> size)</span>；<span class="hljs-comment">//创建一个epoll的句柄，size用来告诉内核这个监听的数目一共有多大</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-comment">//往红黑树中增加、删除、更新管理的socket fd</span></span>
@@ -310,7 +312,7 @@
 <li><code>fd</code>：是需要监听的 <code>fd</code>（文件描述符）</li>
 <li><code>epoll_event</code>：是告诉内核需要监听什么事，<code>struct epoll_event</code> 结构如下：</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">epoll_event</span> &#123;</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">epoll_event</span> &#123;</span>
   <span class="hljs-keyword">__uint32_t</span> events;  <span class="hljs-comment">/* Epoll events */</span>
   <span class="hljs-keyword">epoll_data_t</span> data;  <span class="hljs-comment">/* User data variable */</span>
 &#125;;
@@ -382,12 +384,6 @@
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -536,17 +532,6 @@
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

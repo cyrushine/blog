@@ -29,7 +29,7 @@ code {
     color: #91cb3e;
 }
 
-.markdown-body {
+[data-user-color-scheme='dark'] .markdown-body :not(pre) > code {
     background-color: transparent;
 }
 
@@ -40,4 +40,12 @@ code {
 
 .markdown-body {
     line-height: 1.6;
+}
+
+.markdown-body code {
+    font-size: 100% !important;
+}
+
+blockquote p {
+    margin-bottom: 0px !important;
 }

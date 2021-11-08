@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="Lock（二）AQS 源码分析以及 Lock 的实现">
               
+                Lock（二）AQS 源码分析以及 Lock 的实现
+              
             </span>
 
             
@@ -218,7 +220,7 @@
             
             <div class="markdown-body">
               <p>AQS 是 <code>Semaphore</code>、<code>ReentrantLock</code> 和 <code>ReentrantReadWriteLock</code> 的基础，它们紧密地结合在一块，分析 AQS 除了要明晰排队队列的操作，还要结合 <code>Semaphore</code>、<code>ReentrantLock</code> 和 <code>ReentrantReadWriteLock</code> 看看是怎么利用排队队列实现锁和信号量的</p>
-<h2 id="AQS-是基于-CLH-锁修改而来的，它的排队队列也是双向链表"><a href="#AQS-是基于-CLH-锁修改而来的，它的排队队列也是双向链表" class="headerlink" title="AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表"></a>AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
+<h2 id="AQS-是基于-CLH-锁修改而来的，它的排队队列也是双向链表"><a href="#AQS-是基于-CLH-锁修改而来的，它的排队队列也是双向链表" class="headerlink" title="AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表"></a>AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> <span class="hljs-keyword">volatile</span> Node head; <span class="hljs-comment">// 队头节点</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> <span class="hljs-keyword">volatile</span> Node tail; <span class="hljs-comment">// 队尾节点</span>
 &#125;
@@ -228,7 +230,7 @@
     <span class="hljs-keyword">volatile</span> Thread thread; <span class="hljs-comment">// 节点对应的线程</span>
 &#125;</code></pre></div>
 
-<h2 id="入队"><a href="#入队" class="headerlink" title="入队"></a>入队</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// tryAcquire 返回 true 表示获得锁，返回 false 表示未获得锁</span>
+<h2 id="入队"><a href="#入队" class="headerlink" title="入队"></a>入队</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// tryAcquire 返回 true 表示获得锁，返回 false 表示未获得锁</span>
 <span class="hljs-comment">// 由子类实现，比如公平锁、非公平锁等，这里先不讨论</span>
 <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">acquire</span><span class="hljs-params">(<span class="hljs-keyword">int</span> arg)</span> </span>&#123;
     <span class="hljs-keyword">if</span> (!tryAcquire(arg) &amp;&amp; <span class="hljs-comment">// 如果不能获得锁，在队列里排队并阻塞</span>
@@ -264,7 +266,7 @@
     Thread.currentThread().interrupt();
 &#125;</code></pre></div>
 
-<h2 id="阻塞线程（不是自旋）"><a href="#阻塞线程（不是自旋）" class="headerlink" title="阻塞线程（不是自旋）"></a>阻塞线程（不是自旋）</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">acquireQueued</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Node node, <span class="hljs-keyword">int</span> arg)</span> </span>&#123;
+<h2 id="阻塞线程（不是自旋）"><a href="#阻塞线程（不是自旋）" class="headerlink" title="阻塞线程（不是自旋）"></a>阻塞线程（不是自旋）</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">acquireQueued</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Node node, <span class="hljs-keyword">int</span> arg)</span> </span>&#123;
     <span class="hljs-keyword">try</span> &#123;
         <span class="hljs-keyword">boolean</span> interrupted = <span class="hljs-keyword">false</span>;
         <span class="hljs-keyword">for</span> (;;) &#123;
@@ -330,7 +332,7 @@
 <li>op == <code>FUTEX_WAKE</code>，最多唤醒 <code>val</code> 个等待在 <code>uaddr</code> 上进程</li>
 </ul>
 <p>而 <code>permit</code> 则是通过 <code>tls32_.park_state_</code> 实现，它是一个 <code>AtomicInteger</code>，取值范围为 <code>kPermitAvailable</code> = 0，<code>kNoPermit</code> = 1，<code>kNoPermitWaiterWaiting</code> = 2</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LockSupport</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LockSupport</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">park</span><span class="hljs-params">(Object blocker)</span> </span>&#123;
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
@@ -348,7 +350,7 @@
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">native</span> <span class="hljs-keyword">void</span> <span class="hljs-title">unpark</span><span class="hljs-params">(Object var1)</span></span>;
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// Unsafe.park 在 art/runtime/native/sun_misc_Unsafe.cc 里注册为 Unsafe_park</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// Unsafe.park 在 art/runtime/native/sun_misc_Unsafe.cc 里注册为 Unsafe_park</span>
 <span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Unsafe_park</span><span class="hljs-params">(JNIEnv* env, jobject, jboolean isAbsolute, jlong time)</span> </span>&#123;
     <span class="hljs-function">ScopedObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
     Thread::<span class="hljs-built_in">Current</span>()-&gt;<span class="hljs-built_in">Park</span>(isAbsolute, time);
@@ -389,7 +391,7 @@
 &#125;</code></pre></div>
 
 <h2 id="可重入的公平锁（ReentrantLock-FairSync）"><a href="#可重入的公平锁（ReentrantLock-FairSync）" class="headerlink" title="可重入的公平锁（ReentrantLock.FairSync）"></a>可重入的公平锁（<code>ReentrantLock.FairSync</code>）</h2><p>公平锁按照 FIFO 的优先级顺序，从排队队列的头部开始依次传递锁的所有权</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FairSync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Sync</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FairSync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Sync</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span> </span>&#123;
         acquire(<span class="hljs-number">1</span>);
     &#125;
@@ -432,7 +434,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="可重入的非公平锁（ReentrantLock-NonfairSync）"><a href="#可重入的非公平锁（ReentrantLock-NonfairSync）" class="headerlink" title="可重入的非公平锁（ReentrantLock.NonfairSync）"></a>可重入的非公平锁（<code>ReentrantLock.NonfairSync</code>）</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NonfairSync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Sync</span> </span>&#123;
+<h2 id="可重入的非公平锁（ReentrantLock-NonfairSync）"><a href="#可重入的非公平锁（ReentrantLock-NonfairSync）" class="headerlink" title="可重入的非公平锁（ReentrantLock.NonfairSync）"></a>可重入的非公平锁（<code>ReentrantLock.NonfairSync</code>）</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NonfairSync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Sync</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span> </span>&#123; <span class="hljs-comment">// 只要锁没有被取走，自己就可以获得锁</span>
         <span class="hljs-keyword">if</span> (compareAndSetState(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>))
             setExclusiveOwnerThread(Thread.currentThread());
@@ -467,7 +469,7 @@
 &#125;</code></pre></div>
 
 <h2 id="释放锁"><a href="#释放锁" class="headerlink" title="释放锁"></a>释放锁</h2><p>排队取锁的线程都被阻塞了，释放锁的同时需要唤醒下一个排队的线程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
     <span class="hljs-comment">// tryRelease 由子类实现，返回 true 表示当前线程持有锁并成功释放锁（可重入的情况下，未必能够释放锁）</span>
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">release</span><span class="hljs-params">(<span class="hljs-keyword">int</span> arg)</span> </span>&#123;
         <span class="hljs-keyword">if</span> (tryRelease(arg)) &#123; <span class="hljs-comment">// head 是持有锁的线程</span>
@@ -508,7 +510,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="可重入锁的释放过程（ReentrantLock-Sync）"><a href="#可重入锁的释放过程（ReentrantLock-Sync）" class="headerlink" title="可重入锁的释放过程（ReentrantLock.Sync）"></a>可重入锁的释放过程（<code>ReentrantLock.Sync</code>）</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">abstract</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Sync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
+<h2 id="可重入锁的释放过程（ReentrantLock-Sync）"><a href="#可重入锁的释放过程（ReentrantLock-Sync）" class="headerlink" title="可重入锁的释放过程（ReentrantLock.Sync）"></a>可重入锁的释放过程（<code>ReentrantLock.Sync</code>）</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">abstract</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Sync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">tryRelease</span><span class="hljs-params">(<span class="hljs-keyword">int</span> releases)</span> </span>&#123;
         <span class="hljs-comment">// releases 恒为一，而 state 为重入得次数，也即重入次数减一</span>
         <span class="hljs-keyword">int</span> c = getState() - releases;
@@ -527,7 +529,7 @@
 &#125;</code></pre></div>
 
 <h2 id="可重入的读写锁（ReentrantReadWriteLock）"><a href="#可重入的读写锁（ReentrantReadWriteLock）" class="headerlink" title="可重入的读写锁（ReentrantReadWriteLock）"></a>可重入的读写锁（<code>ReentrantReadWriteLock</code>）</h2><p>一个资源能够被多个读线程访问（读锁有多把），或者被一个写线程访问（写锁只有一把），但是不能同时存在读写线程（读锁和写锁是互斥的）</p>
-<h2 id="获取读锁"><a href="#获取读锁" class="headerlink" title="获取读锁"></a>获取读锁</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ReadLock</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Lock</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<h2 id="获取读锁"><a href="#获取读锁" class="headerlink" title="获取读锁"></a>获取读锁</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ReadLock</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Lock</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span> </span>&#123;
         sync.acquireShared(<span class="hljs-number">1</span>);
     &#125;
@@ -640,7 +642,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="获取写锁"><a href="#获取写锁" class="headerlink" title="获取写锁"></a>获取写锁</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ReadLock</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Lock</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<h2 id="获取写锁"><a href="#获取写锁" class="headerlink" title="获取写锁"></a>获取写锁</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ReadLock</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Lock</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span> </span>&#123;
         sync.acquire(<span class="hljs-number">1</span>);
     &#125;
@@ -696,7 +698,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="释放读锁"><a href="#释放读锁" class="headerlink" title="释放读锁"></a>释放读锁</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ReadLock</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Lock</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<h2 id="释放读锁"><a href="#释放读锁" class="headerlink" title="释放读锁"></a>释放读锁</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ReadLock</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Lock</span>, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">unlock</span><span class="hljs-params">()</span> </span>&#123;
         sync.releaseShared(<span class="hljs-number">1</span>);
     &#125;
@@ -745,7 +747,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="释放写锁"><a href="#释放写锁" class="headerlink" title="释放写锁"></a>释放写锁</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">abstract</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Sync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
+<h2 id="释放写锁"><a href="#释放写锁" class="headerlink" title="释放写锁"></a>释放写锁</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">abstract</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Sync</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> </span>&#123;
     <span class="hljs-comment">// 写锁个数减一，当写锁个数为零时，返回 true 导致 AQS 移除当前节点并唤醒下一个排队的线程</span>
     <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">tryRelease</span><span class="hljs-params">(<span class="hljs-keyword">int</span> releases)</span> </span>&#123;
         <span class="hljs-keyword">if</span> (!isHeldExclusively())
@@ -760,7 +762,7 @@
 &#125;</code></pre></div>
 
 <h2 id="Semaphore"><a href="#Semaphore" class="headerlink" title="Semaphore"></a>Semaphore</h2><p>信号量相当于一个保存着多个锁的保险箱，它可以向外借出锁（<code>acquire</code>）和回收借出的锁（<code>release</code>），当锁用完的时候 <code>acquire</code> 会阻塞</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 获得锁</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 获得锁</span>
 <span class="hljs-keyword">void</span> Semaphore.acquire() <span class="hljs-keyword">throws</span> InterruptedException &#123;
     sync.acquireSharedInterruptibly(<span class="hljs-number">1</span>);
 &#125;
@@ -868,12 +870,6 @@
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -1022,17 +1018,6 @@
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="深入分析 Kotlin Coroutines 是如何实现的（二）">
               
+                深入分析 Kotlin Coroutines 是如何实现的（二）
+              
             </span>
 
             
@@ -219,7 +221,7 @@
             <div class="markdown-body">
               <h1 id="async-await"><a href="#async-await" class="headerlink" title="async / await"></a>async / await</h1><p><code>async</code> 和 <code>await</code> 是一对较为现代的 API 用以实现 **结构化并发编程 (Structured Concurrency)**，如下面代码所示，虽然 <code>runBlocking</code> 底层是单个线程，但是 <code>delay</code> 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO</p>
 <p><code>job1</code>、<code>job2</code> 和 <code>job3</code> 三个任务并发执行，不需要编写任何线程同步代码如 <code>Condition.await</code> 、<code>Condition.signal</code>、<code>CountDownLatch</code> 等即可获得任务结果并计算它们之和，从输出 <code>measureTimeMillis: 961</code> 可以确认三个任务是并发执行的，<code>result: 2453</code> 正确地输出了任务结果之和说明求和这一行代码是在三个任务都执行完毕并返回计算结果后执行的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
     <span class="hljs-keyword">val</span> values = (<span class="hljs-number">500L</span>..<span class="hljs-number">1000L</span>)
 
     <span class="hljs-keyword">val</span> cost = measureTimeMillis &#123;
@@ -262,7 +264,7 @@
 <li>如果协程已经执行完毕得到计算结果（比如在多线程环境下），计算结果存储在 <code>CancellableContinuationImpl.state</code>，<code>trySuspend</code> 返回 false，<code>getResult</code> 返回计算所得的结果</li>
 <li>协程尚未完成，比如上面的例子，被 <code>delay</code> 中断执行而放入任务队列重新调度，<code>trySuspend</code> 返回 true，<code>getResult</code> 返回 <code>COROUTINE_SUSPENDED</code></li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> CoroutineScope.<span class="hljs-title">async</span><span class="hljs-params">(</span></span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> CoroutineScope.<span class="hljs-title">async</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    context: <span class="hljs-type">CoroutineContext</span> = EmptyCoroutineContext,</span></span>
 <span class="hljs-params"><span class="hljs-function">    start: <span class="hljs-type">CoroutineStart</span> = CoroutineStart.DEFAULT,</span></span>
 <span class="hljs-params"><span class="hljs-function">    block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span></span></span>
@@ -375,7 +377,7 @@
 &#125;</code></pre></div>
 
 <p><code>await</code> 的返回值会直接影响代码的执行流程，为了使反编译后的代码清晰点，我将上面的例子删除掉多余的代码如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
     <span class="hljs-keyword">val</span> values = (<span class="hljs-number">500L</span>..<span class="hljs-number">1000L</span>)
 
     <span class="hljs-keyword">val</span> job1 = async &#123;
@@ -409,7 +411,7 @@
 <li>如果 <code>await</code> 返回计算结果则继续执行代码，进入下一个 case</li>
 <li>如果 <code>await</code> 返回 <code>COROUTINE_SUSPENDED</code> 则中断代码执行直接返回（case 不变）</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span>
 <span class="hljs-class"><span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span></span>
 <span class="hljs-class"><span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span>&lt;<span class="hljs-title">CoroutineScope</span>, <span class="hljs-title">Continuation</span>&lt;? <span class="hljs-title">super</span> <span class="hljs-title">Unit</span>&gt;, <span class="hljs-title">Object</span>&gt; </span>&#123;
     Object L$<span class="hljs-number">1</span>;
@@ -535,7 +537,7 @@ lbl56:
 <li><code>ResumeAwaitOnCompletion</code> 顾名思义就是恢复任务，重新调度被 <code>await</code> 中断的 <code>Continuation</code></li>
 <li>在这里就是 <code>Example_basic_01Kt.main.1</code> 由于 <code>job2</code> 没有完成而被中断，当 <code>job2</code> 完成后重新将 <code>Example_basic_01Kt.main.1</code> 放入任务队列进行调度，并且将 <code>job2</code> 的计算结果作为参数</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// DeferredCoroutine.await</span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// DeferredCoroutine.await</span>
 <span class="hljs-comment">// JobSupport.awaitInternal</span>
 <span class="hljs-keyword">private</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">awaitSuspend</span><span class="hljs-params">()</span></span>: Any? = suspendCoroutineUninterceptedOrReturn &#123; uCont -&gt;
     <span class="hljs-comment">/*</span>
@@ -578,7 +580,7 @@ lbl56:
 &#125;</code></pre></div>
 
 <h1 id="withContext-线程切换"><a href="#withContext-线程切换" class="headerlink" title="withContext - 线程切换"></a>withContext - 线程切换</h1><p>如下代码所示，使用 <code>withContext</code> 将执行线程从 main 切换至 worker，但不影响代码的执行顺序</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
     withContext(Dispatchers.IO) &#123;
         delay(<span class="hljs-number">1000</span>)
         println(<span class="hljs-string">&quot;jumping to Dispatchers.IO, <span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)
@@ -597,7 +599,7 @@ lbl56:
 <li><code>withContext</code> 得到调度，执行完毕后恢复 <code>runBlocking</code> 的执行</li>
 </ol>
 <p>show me the code 看看是不是如上面说的那样，用 Bytecode Viewer 反编译得到如下代码，正如上面说的 main 代码块从线程切换为边界，切分为两个代码块，<code>case 0</code> 将被 <code>withContext</code> 的返回值中断，重新调度时进入 <code>case 1</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span>
 <span class="hljs-class"><span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span></span>
 <span class="hljs-class"><span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span>&lt;<span class="hljs-title">CoroutineScope</span>, <span class="hljs-title">Continuation</span>&lt;? <span class="hljs-title">super</span> <span class="hljs-title">Unit</span>&gt;, <span class="hljs-title">Object</span>&gt; </span>&#123;
     <span class="hljs-keyword">int</span> label;
@@ -649,7 +651,7 @@ lbl13:
 
 <p><code>withContext</code> 跟 <code>launch</code> 和 <code>async</code> 差不多，将当前环境的和参数提供的 <code>CoroutineContext</code> 合并并用它作为 block context，当前 <code>Continuation</code>(也就是 runBlocking block) 作为 block 的 completion handler</p>
 <p><code>withContext</code> 将 block 包装为 <code>DispatchedCoroutine</code>，它没有执行过（<code>Continuation.resumeWith</code>）所以 <code>DispatchedCoroutine.trySuspend</code> 返回 true，导致 <code>withContext</code> 返回 <code>COROUTINE_SUSPENDED</code> 从而中断 main block 的执行，跟上面的猜想一致</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">withContext</span><span class="hljs-params">(</span></span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">withContext</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    context: <span class="hljs-type">CoroutineContext</span>,</span></span>
 <span class="hljs-params"><span class="hljs-function">    block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span></span></span>
 <span class="hljs-params"><span class="hljs-function">)</span></span>: T &#123;
@@ -733,12 +735,6 @@ lbl13:
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -881,17 +877,6 @@ lbl13:
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

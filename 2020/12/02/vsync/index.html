@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -153,6 +153,8 @@
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="Android 图形栈（一）vsync">
+              
+                Android 图形栈（一）vsync
               
             </span>
 
@@ -251,7 +253,7 @@
 <h2 id="SW-VSYNC-软件垂直同步信号"><a href="#SW-VSYNC-软件垂直同步信号" class="headerlink" title="SW_VSYNC - 软件垂直同步信号"></a>SW_VSYNC - 软件垂直同步信号</h2><p><code>DispSyncThread</code> 和 <code>DispSync</code> 收集 HW_VSYNC，计算并输出 SW_VSYNC；主循环是 <code>DispSyncThread.threadLoop()</code>，但在分析 main loop 之前，我们需要先了解 <code>DispSync</code> 几个重要的属性（参考<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/d3e4b1805c92">「Android SurfaceFlinger SW Vsync模型」</a>）</p>
 <p><code>mResyncSamples</code> 数组 - 通过上面的分析我们知道 <code>addResyncSample</code> 把 HW_VSYNC 加入 <code>DispSync</code>，但 <code>mResyncSamples</code> 只会保留最新的 32 个以供后续计算；它是个首尾相连、环状的循环列表，容量为 32</p>
 <p><code>mPeriod</code> - 两个 HW_VSYNC 之间的时间间隔，相当于刷新率，我们看下它是怎么计算的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] updateModelLocked %zu&quot;</span>, mName, mNumResyncSamples);
     <span class="hljs-comment">// 只有收集到足够多（≥ 6）的 HW_VSYNC 才去计算刷新率（以及其他参数）</span>
     <span class="hljs-keyword">if</span> (mNumResyncSamples &gt;= MIN_RESYNC_SAMPLES_FOR_UPDATE) &#123;
@@ -285,7 +287,7 @@
 &#125;</code></pre></div>
 
 <p><code>mPhase</code> - <code>mPeriod</code> 的偏差值；我们知道 <code>mPeriod</code> 是一个计算出来的平均值，而且还去除了一些噪音（极大值、极小值等），那么它与真实的 HW_VSYNC 之间必定会有偏差，<code>mPhase</code> 就是这个平均偏差（要从数学理论上去理解）；这里不深入细节了</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] updateModelLocked %zu&quot;</span>, mName, mNumResyncSamples);
     <span class="hljs-keyword">if</span> (mNumResyncSamples &gt;= MIN_RESYNC_SAMPLES_FOR_UPDATE) &#123;
         <span class="hljs-comment">// ...</span>
@@ -320,7 +322,7 @@
 
 <p><code>mReferenceTime</code>，这个最新那个 HW_VSYNC 的时间，每次计算下一个 SW_VSYNC 时都是以该时间作为基准，这样可以减少误差。如果每一个 SW_VSYNC 都以上一个 SW_VSYNC 作为基准，那误差就会不停的累加；而如果以第一个 HW_VSYNC 作基准，那每次 SW_VSYNC 误差是不会累加的</p>
 <p>现在我们看下 main loop</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">threadLoop</span><span class="hljs-params">()</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">threadLoop</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-keyword">status_t</span> err;
     <span class="hljs-keyword">nsecs_t</span> now = <span class="hljs-built_in">systemTime</span>(SYSTEM_TIME_MONOTONIC);
     <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
@@ -394,7 +396,7 @@
 
 <p>总的来说，SW_VSYNC 它去除了噪音，而且用过去 32 个 HW_VSYNC 样本的平均值作刷新率，对比 HW_VSYNC 显得平滑了很多</p>
 <p>那谁接收 SW_VSYNC？</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
     <span class="hljs-comment">// ... 一个是 app，叫做 APP_VSYNC 吧</span>
     mAppConnectionHandle =
             mScheduler-&gt;<span class="hljs-built_in">createConnection</span>(<span class="hljs-string">&quot;app&quot;</span>, mVsyncModulator.<span class="hljs-built_in">getOffsets</span>().app,
@@ -411,7 +413,7 @@
 &#125;</code></pre></div>
 
 <h2 id="APP-VSYNC-发送给-app-的垂直同步信号"><a href="#APP-VSYNC-发送给-app-的垂直同步信号" class="headerlink" title="APP_VSYNC - 发送给 app 的垂直同步信号"></a>APP_VSYNC - 发送给 app 的垂直同步信号</h2><p>还记得文章开头那张 <code>View.invalidate()</code> 时序图吗？最后面它唤醒了 <code>EventThread</code>，现在我们来看看 <code>EventThread</code> 的主循环都做了些什么</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">EventThread::threadMain</span><span class="hljs-params">(std::unique_lock&lt;std::mutex&gt;&amp; lock)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">EventThread::threadMain</span><span class="hljs-params">(std::unique_lock&lt;std::mutex&gt;&amp; lock)</span> </span>&#123;
     DisplayEventConsumers consumers;
 
     <span class="hljs-keyword">while</span> (mState != State::Quit) &#123;
@@ -462,7 +464,7 @@
 </ul>
 <p><img src="../../../../image/2020-12-02-vsync/consumer.jpg" srcset="/image/loading.gif" lazyload alt="consumer.jpg"></p>
 <h2 id="SF-VSYNC"><a href="#SF-VSYNC" class="headerlink" title="SF_VSYNC"></a>SF_VSYNC</h2><p>上面我们在分析是谁接收 SW_VSYNC 时，除了 APP_VSYNC 外，还有一路 SF_VSYNC</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
     <span class="hljs-comment">// ... 一个是 sf，叫做 SF_VSYNC 吧</span>
     mSfConnectionHandle =
     mScheduler-&gt;<span class="hljs-built_in">createConnection</span>(<span class="hljs-string">&quot;sf&quot;</span>, mVsyncModulator.<span class="hljs-built_in">getOffsets</span>().sf,
@@ -559,12 +561,6 @@
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -713,17 +709,6 @@
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

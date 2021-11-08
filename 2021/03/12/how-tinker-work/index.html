@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="解析 Tinker 是如何实现热修复的">
               
+                解析 Tinker 是如何实现热修复的
+              
             </span>
 
             
@@ -226,7 +228,7 @@
 <li>app 在下次启动时，将加载 V2.apk</li>
 </ul>
 <p>它的工作目录大概是这样的：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs xml">- /data/user/0/tinker.sample.android/tinker
+<div class="code-wrapper"><pre><code class="hljs xml">- /data/user/0/tinker.sample.android/tinker
     - info.lock
     - patch.info
     - patch-d1ec6aa9
@@ -256,7 +258,7 @@
 <li><code>mOriginAppClassLoader</code>，android app 的类加载器，包含 V1 版本的代码</li>
 </ul>
 <p>加载类的时候，首先从自身加载（也就是优先加载 V2 版本的代码），然后再从 app 的类加载器中加载（V1 版本的代码就会被 V2 所覆盖）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TinkerClassLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">PathClassLoader</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TinkerClassLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">PathClassLoader</span> </span>&#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ClassLoader mOriginAppClassLoader;
 
     TinkerClassLoader(String dexPath, File optimizedDir, String libraryPath, ClassLoader originAppClassLoader) &#123;
@@ -299,7 +301,7 @@
 &#125;</code></pre></div>
 
 <p>创建 <code>TinkerClassLoader</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ClassLoader NewClassLoaderInjector.inject(Application app, ClassLoader oldClassLoader, 
+<div class="code-wrapper"><pre><code class="hljs java">ClassLoader NewClassLoaderInjector.inject(Application app, ClassLoader oldClassLoader, 
 		 File dexOptDir, <span class="hljs-keyword">boolean</span> useDLC, List&lt;File&gt; patchedDexes) <span class="hljs-keyword">throws</span> Throwable &#123;
     <span class="hljs-keyword">final</span> String[] patchedDexPaths = <span class="hljs-keyword">new</span> String[patchedDexes.size()];
     <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; patchedDexPaths.length; ++i) &#123;
@@ -372,7 +374,7 @@ ClassLoader NewClassLoaderInjector.createNewClassLoader(ClassLoader oldClassLoad
 &#125;</code></pre></div>
 
 <h3 id="替代-PathClassLoader"><a href="#替代-PathClassLoader" class="headerlink" title="替代 PathClassLoader"></a>替代 <code>PathClassLoader</code></h3><p><code>PathClassLoader</code> 结构如下，因为没有公开方法设置 <code>optimizeDir</code>（odex 文件目录，后续会讲到 Tinker 触发 dex 优化时把文件输出目录设置在 patch dir 内），需要通过反射重新构造 <code>dexElements</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs html">- dalvik.system.PathClassLoader（继承自 BaseDexClassLoader）
+<div class="code-wrapper"><pre><code class="hljs html">- dalvik.system.PathClassLoader（继承自 BaseDexClassLoader）
     - pathList: DexPathList
         - nativeLibraryDirectories: File[]
             - 0
@@ -385,7 +387,7 @@ ClassLoader NewClassLoaderInjector.createNewClassLoader(ClassLoader oldClassLoad
                 - urlHandler: ClassPathURLStreamHandler = null</code></pre></div>
 
 <p>不同 android 版本里 app class loader 的实现和结构可能是不同的，需要分开处理；Tinker 整理出了 V23、V19、V14 和 V4 四个版本</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> SystemClassLoaderAdder.injectDexesInternal(ClassLoader cl, List&lt;File&gt; dexFiles, File optimizeDir) <span class="hljs-keyword">throws</span> Throwable &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> SystemClassLoaderAdder.injectDexesInternal(ClassLoader cl, List&lt;File&gt; dexFiles, File optimizeDir) <span class="hljs-keyword">throws</span> Throwable &#123;
     <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= <span class="hljs-number">23</span>) &#123;
         V23.install(cl, dexFiles, optimizeDir);
     &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= <span class="hljs-number">19</span>) &#123;
@@ -457,7 +459,7 @@ ClassLoader NewClassLoaderInjector.createNewClassLoader(ClassLoader oldClassLoad
 <li><code>Resources.mClassLoader</code></li>
 <li><code>Resources.mDrawableInflater(DrawableInflater).mClassLoader</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> NewClassLoaderInjector.doInject(Application app, ClassLoader classLoader) <span class="hljs-keyword">throws</span> Throwable &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> NewClassLoaderInjector.doInject(Application app, ClassLoader classLoader) <span class="hljs-keyword">throws</span> Throwable &#123;
     Thread.currentThread().setContextClassLoader(classLoader);
     <span class="hljs-keyword">final</span> Context baseContext = (Context) findField(app.getClass(), <span class="hljs-string">&quot;mBase&quot;</span>).get(app);
     <span class="hljs-keyword">try</span> &#123;
@@ -485,7 +487,7 @@ ClassLoader NewClassLoaderInjector.createNewClassLoader(ClassLoader oldClassLoad
 
 <p>上面列出的几个 <code>ClassLoader</code>，其中有两个是比较重要的</p>
 <p><code>Application.mBase(ContextImpl).mClassLoader</code> 是在实例化 <code>ApplicationLike</code> 时用到；为了能够加载到 V2 版本的代码，app application 必须设置为 <code>TinkerApplication</code>（它是 Tinker 库的类，只要不更新 Tinker 版本，业务的迭代更新一般不会改动到它，所以它是比较稳定不变的）；在注入 <code>TinkerClassLoader</code> 后，通过反射调用业务方的 <code>ApplicationLike</code>（业务代码较常变动）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> TinkerApplication.attachBaseContext(Context base)
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> TinkerApplication.attachBaseContext(Context base)
 
 <span class="hljs-keyword">void</span> TinkerApplication.onBaseContextAttached(Context base, <span class="hljs-keyword">long</span> applicationStartElapsedTime, <span class="hljs-keyword">long</span> applicationStartMillisTime) &#123;
     loadTinker();  <span class="hljs-comment">// 先注入 TinkerClassLoader</span>
@@ -503,7 +505,7 @@ Handler TinkerApplication.createInlineFence(Application app, <span class="hljs-k
 &#125;</code></pre></div>
 
 <p><code>Application.mBase(ContextImpl).mPackageInfo(LoadedApk).mClassLoader</code> 在实例化 <code>Activity</code> 时会用到，在<a href="../../../../2020/11/03/launch-activity-sequence/">这篇文章</a>里可以找到入口点：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleLaunchActivity(ActivityClientRecord r, PendingTransactionActions pendingActions, Intent customIntent)=
+<div class="code-wrapper"><pre><code class="hljs java">ActivityThread.handleLaunchActivity(ActivityClientRecord r, PendingTransactionActions pendingActions, Intent customIntent)=
 
 ActivityThread.performLaunchActivity(ActivityClientRecord r, Intent customIntent) &#123;
     <span class="hljs-comment">// ...</span>
@@ -550,7 +552,7 @@ ContextImpl.createActivityContext(ActivityThread mainThread, LoadedApk packageIn
 
 <h2 id="资源的热更新"><a href="#资源的热更新" class="headerlink" title="资源的热更新"></a>资源的热更新</h2><h3 id="app-resources"><a href="#app-resources" class="headerlink" title="app resources"></a>app resources</h3><p>对于资源的热更新 Tinker 做了两块</p>
 <p>一块是针对 app context 的，Tinker 用新的资源包（比如上面说到的 <code>/data/user/0/tinker.sample.android/tinker/patch-d1ec6aa9/res/resources.apk</code>）构造出一个新的 <code>AssetManager</code>，替换掉 <code>Resources</code> 里旧的 <code>Resource.mResourcesImpl(ResourcesImpl).mAssets</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">TinkerResourceLoader.loadTinkerResources(TinkerApplication application, String directory, Intent intentResult)
+<div class="code-wrapper"><pre><code class="hljs java">TinkerResourceLoader.loadTinkerResources(TinkerApplication application, String directory, Intent intentResult)
 
 <span class="hljs-comment">// 资源热更新的逻辑在这里</span>
 TinkerResourcePatcher.monkeyPatchExistingResources(Context context, String externalResourceFile) <span class="hljs-keyword">throws</span> Throwable &#123;
@@ -579,7 +581,7 @@ TinkerResourcePatcher.monkeyPatchExistingResources(Context context, String exter
 &#125;</code></pre></div>
 
 <p>app context 里的 <code>Resources</code> 是在构造 app context 的同时通过 <code>ResourcesManager.getResources</code> 创建的，而且 <code>ResourcesManager.mResourceReferences</code> 会持有一个它的弱引用</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleBindApplication(AppBindData data) &#123;
+<div class="code-wrapper"><pre><code class="hljs java">ActivityThread.handleBindApplication(AppBindData data) &#123;
     <span class="hljs-comment">// ... 实例化 ContextImpl 和 Application</span>
     app = data.info.makeApplication(data.restrictedBackupMode, <span class="hljs-keyword">null</span>);
     <span class="hljs-comment">// ...</span>
@@ -657,7 +659,7 @@ ResourcesManager.createResourcesLocked(...) &#123;
 &#125;</code></pre></div>
 
 <p><code>Application</code> 创建后会调用 <code>Application.attach</code>，后续会触发 <code>TinkerResourcePatcher.isResourceCanPatch</code> 和 <code>TinkerResourcePatcher.monkeyPatchExistingResources</code>，从而把 <code>ResourcesManager.mResourceReferences</code> 里的 <code>Resources</code> 都修改掉</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">Instrumentation.newApplication(ClassLoader cl, String className, Context context) 
+<div class="code-wrapper"><pre><code class="hljs java">Instrumentation.newApplication(ClassLoader cl, String className, Context context) 
 		<span class="hljs-keyword">throws</span> InstantiationException, IllegalAccessException, ClassNotFoundException &#123;
     Application app = getFactory(context.getPackageName()).instantiateApplication(cl, className);
     app.attach(context);
@@ -704,7 +706,7 @@ TinkerResourceLoader.isResourceCanPatch(Context context) <span class="hljs-keywo
 
 <h3 id="local-resources"><a href="#local-resources" class="headerlink" title="local resources"></a>local resources</h3><p>另一块是针对局部 <code>Context</code> 的，比如 <code>Activity</code>，从<a href="../../../../2020/11/03/launch-activity-sequence/">Activity 启动流程时序图</a>可以找到创建 <code>Activity</code> 的入口点</p>
 <p>创建 <code>Activity</code> 的时候会创建并使用它自己的 <code>Context</code>，而且把 <code>Context.getResources</code> 指向从 <code>ActivityThread.mPackages</code> 里找到的资源目录，所以 Tinker 会在 <code>monkeyPatchExistingResources</code> 修改 <code>ActivityThread.mPackages</code> 指向新资源包</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 创建 Activity</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 创建 Activity</span>
 ActivityThread.handleLaunchActivity ...
 
 ActivityThread.performLaunchActivity(ActivityClientRecord r, Intent customIntent) &#123;
@@ -839,12 +841,6 @@ TinkerResourcePatcher.monkeyPatchExistingResources(Context context, String exter
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -993,17 +989,6 @@ TinkerResourcePatcher.monkeyPatchExistingResources(Context context, String exter
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

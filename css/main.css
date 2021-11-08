@@ -348,16 +348,16 @@ img[lazyload] {
 }
 :root {
   --color-mode: 'light';
-  --body-bg-color: #000;
+  --body-bg-color: #141414;
   --board-bg-color: #000;
-  --text-color: #f8f9fa;
-  --sec-text-color: #f8f9fa;
-  --post-text-color: #f8f9fa;
-  --post-heading-color: #f8f9fa;
+  --text-color: #ffffff;
+  --sec-text-color: #ffffff;
+  --post-text-color: #ffffff;
+  --post-heading-color: #ffffff;
   --post-link-color: #00a6fb;
   --link-hover-color: #00a6fb;
   --link-hover-bg-color: #364151;
-  --navbar-bg-color: #1f3144;
+  --navbar-bg-color: #141414;
   --navbar-text-color: #d0d0d0;
 }
 @media (prefers-color-scheme: dark) {
@@ -365,16 +365,16 @@ img[lazyload] {
     --color-mode: 'dark';
   }
   :root:not([data-user-color-scheme]) {
-    --body-bg-color: #000;
+    --body-bg-color: #141414;
     --board-bg-color: #000;
-    --text-color: #f8f9fa;
-    --sec-text-color: #f8f9fa;
-    --post-text-color: #f8f9fa;
-    --post-heading-color: #f8f9fa;
+    --text-color: #ffffff;
+    --sec-text-color: #ffffff;
+    --post-text-color: #ffffff;
+    --post-heading-color: #ffffff;
     --post-link-color: #00a6fb;
     --link-hover-color: #00a6fb;
     --link-hover-bg-color: #364151;
-    --navbar-bg-color: #1f3144;
+    --navbar-bg-color: #141414;
     --navbar-text-color: #d0d0d0;
   }
   :root:not([data-user-color-scheme]) img,
@@ -438,7 +438,7 @@ img[lazyload] {
     :root:not([data-user-color-scheme]) .navbar .dropdown-collapse,
     :root:not([data-user-color-scheme]) .top-nav-collapse,
     :root:not([data-user-color-scheme]) .navbar-col-show {
-      background: rgba(31,49,68,0.7);
+      background: rgba(20,20,20,0.7);
       -webkit-backdrop-filter: blur(3px);
       backdrop-filter: blur(3px);
     }
@@ -447,7 +447,7 @@ img[lazyload] {
     :root:not([data-user-color-scheme]) .navbar .dropdown-collapse,
     :root:not([data-user-color-scheme]) .top-nav-collapse,
     :root:not([data-user-color-scheme]) .navbar-col-show {
-      background: #1f3144;
+      background: #141414;
     }
   }
   :root:not([data-user-color-scheme]) .note :not(pre) > code {
@@ -463,16 +463,16 @@ img[lazyload] {
   }
 }
 [data-user-color-scheme='dark'] {
-  --body-bg-color: #000;
+  --body-bg-color: #141414;
   --board-bg-color: #000;
-  --text-color: #f8f9fa;
-  --sec-text-color: #f8f9fa;
-  --post-text-color: #f8f9fa;
-  --post-heading-color: #f8f9fa;
+  --text-color: #ffffff;
+  --sec-text-color: #ffffff;
+  --post-text-color: #ffffff;
+  --post-heading-color: #ffffff;
   --post-link-color: #00a6fb;
   --link-hover-color: #00a6fb;
   --link-hover-bg-color: #364151;
-  --navbar-bg-color: #1f3144;
+  --navbar-bg-color: #141414;
   --navbar-text-color: #d0d0d0;
 }
 [data-user-color-scheme='dark'] img,
@@ -536,7 +536,7 @@ img[lazyload] {
   [data-user-color-scheme='dark'] .navbar .dropdown-collapse,
   [data-user-color-scheme='dark'] .top-nav-collapse,
   [data-user-color-scheme='dark'] .navbar-col-show {
-    background: rgba(31,49,68,0.7);
+    background: rgba(20,20,20,0.7);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
   }
@@ -545,7 +545,7 @@ img[lazyload] {
   [data-user-color-scheme='dark'] .navbar .dropdown-collapse,
   [data-user-color-scheme='dark'] .top-nav-collapse,
   [data-user-color-scheme='dark'] .navbar-col-show {
-    background: #1f3144;
+    background: #141414;
   }
 }
 [data-user-color-scheme='dark'] .note :not(pre) > code {
@@ -916,7 +916,7 @@ img[lazyload] {
   .navbar .dropdown-collapse,
   .top-nav-collapse,
   .navbar-col-show {
-    background: rgba(31,49,68,0.7);
+    background: rgba(20,20,20,0.7);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
   }
@@ -925,7 +925,7 @@ img[lazyload] {
   .navbar .dropdown-collapse,
   .top-nav-collapse,
   .navbar-col-show {
-    background: #1f3144;
+    background: #141414;
   }
 }
 @media (max-width: 767px) {
@@ -1271,10 +1271,10 @@ a.fancybox:hover {
 }
 #nprogress .bar {
   height: 3px !important;
-  background-color: #29d !important;
+  background-color: #91cb3e !important;
 }
 #nprogress .peg {
-  box-shadow: 0 0 14px #29d, 0 0 8px #29d !important;
+  box-shadow: 0 0 14px #91cb3e, 0 0 8px #91cb3e !important;
 }
 @media (max-width: 575px) {
   #nprogress .bar {
@@ -1731,11 +1731,11 @@ post-custom {
   border-left: 0.35rem solid;
   border-radius: 0.25rem;
   margin: 1.5rem 0;
-  color: #f8f9fa;
+  color: #ffffff;
   font-size: 0.9rem;
 }
 .note a {
-  color: #f8f9fa;
+  color: #ffffff;
 }
 .note *:last-child {
   margin-bottom: 0;
@@ -1775,7 +1775,7 @@ note-default {
   font-size: 85%;
   margin: 0;
   padding: 0.2em 0.4em;
-  color: #f8f9fa;
+  color: #ffffff;
 }
 .label-default {
   background: #f7f7f7;

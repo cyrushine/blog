@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="崩溃日志收集库 xCrash 浅析">
               
+                崩溃日志收集库 xCrash 浅析
+              
             </span>
 
             
@@ -220,7 +222,7 @@
               <p><a target="_blank" rel="noopener" href="https://github.com/iqiyi/xCrash">xCrash</a> 是爱奇艺团队开源的一款崩溃日志收集库，可以收集 <strong>java crash</strong>、<strong>native crash</strong> 和 <strong>ANR</strong> 日志</p>
 <p>日志格式为专用格式，内容还算丰富：<strong>机器信息</strong>、<strong>崩溃线程和其他线程的方法栈</strong>、<strong>logcat</strong>、<strong>打开的 fd</strong> 等等 …</p>
 <h2 id="Java-Crash"><a href="#Java-Crash" class="headerlink" title="Java Crash"></a>Java Crash</h2><p>捕获 Java Crash 用的是 <code>DefaultUncaughtExceptionHandler</code>，相关的基础知识参考 <a href="../../../../2021/06/18/uncaught-exception-handler/">Uncaught Exception Handling</a></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JavaCrashHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">UncaughtExceptionHandler</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JavaCrashHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">UncaughtExceptionHandler</span> </span>&#123;
 
     <span class="hljs-meta">@Override</span>
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">uncaughtException</span><span class="hljs-params">(Thread thread, Throwable throwable)</span> </span>&#123;
@@ -332,7 +334,7 @@
     &#125;        
 &#125;</code></pre></div>
 
-<h3 id="Header"><a href="#Header" class="headerlink" title="Header"></a>Header</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> String <span class="hljs-title">getEmergency</span><span class="hljs-params">(Date crashTime, Thread thread, Throwable throwable)</span> </span>&#123;
+<h3 id="Header"><a href="#Header" class="headerlink" title="Header"></a>Header</h3><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> String <span class="hljs-title">getEmergency</span><span class="hljs-params">(Date crashTime, Thread thread, Throwable throwable)</span> </span>&#123;
     <span class="hljs-comment">//stack stace</span>
     StringWriter sw = <span class="hljs-keyword">new</span> StringWriter();
     PrintWriter pw = <span class="hljs-keyword">new</span> PrintWriter(sw);
@@ -393,7 +395,7 @@
 &#125;</code></pre></div>
 
 <p>输出的日志内容如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+<div class="code-wrapper"><pre><code class="hljs text">*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 Tombstone maker: &#x27;xCrash 2.4.6&#x27;                                                                    // xCrash 把日志叫做 tombstone，这里指的是生成 tombstone 的 xCrash 的版本
 Crash type: &#x27;java&#x27;                                                                                 // 指明 crash 类型，此日志包含的是 java crash（此外还有 native crash 和 ANR）
 Start time: &#x27;2019-10-12T03:23:19.580+0800&#x27;                                                         // 初始化 xCrash 的时间，也就是调用 XCrash.init 的时间
@@ -434,7 +436,7 @@ Caused by: java.lang.RuntimeException: test java exception
 	... 13 more</code></pre></div>
 
 <h3 id="logcat"><a href="#logcat" class="headerlink" title="logcat"></a>logcat</h3><p>其实就是调用 <code>logcat</code> 命令获取崩溃时的 <code>main</code>、<code>system</code> 和 <code>events</code> 三个 buffer 的日志，如：<code>/system/bin/logcat -b main -d -v threadtime -t 200 --pid 21356 *:D</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">static</span> String <span class="hljs-title">getLogcat</span><span class="hljs-params">(<span class="hljs-keyword">int</span> logcatMainLines, <span class="hljs-keyword">int</span> logcatSystemLines, <span class="hljs-keyword">int</span> logcatEventsLines)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">static</span> String <span class="hljs-title">getLogcat</span><span class="hljs-params">(<span class="hljs-keyword">int</span> logcatMainLines, <span class="hljs-keyword">int</span> logcatSystemLines, <span class="hljs-keyword">int</span> logcatEventsLines)</span> </span>&#123;
     <span class="hljs-keyword">int</span> pid = android.os.Process.myPid();
     StringBuilder sb = <span class="hljs-keyword">new</span> StringBuilder();
     sb.append(<span class="hljs-string">&quot;logcat:\n&quot;</span>);
@@ -498,7 +500,7 @@ Caused by: java.lang.RuntimeException: test java exception
 &#125;</code></pre></div>
 
 <p>输出如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">logcat:
+<div class="code-wrapper"><pre><code class="hljs text">logcat:
 --------- tail end of log main (/system/bin/logcat -b main -d -v threadtime -t 200 --pid 21356 *:D)
 10-12 03:23:19.356 21356 21356 I xcrash.sample: Late-enabling -Xcheck:jni
 10-12 03:23:19.398 21356 21356 E xcrash.sample: Unknown bits set in runtime_flags: 0x8000
@@ -541,7 +543,7 @@ Caused by: java.lang.RuntimeException: test java exception
 10-12 03:23:20.083 21356 21356 I am_on_top_resumed_gained_called: [0,xcrash.sample.MainActivity,topStateChangedWhenResumed]</code></pre></div>
 
 <h3 id="Opened-FD"><a href="#Opened-FD" class="headerlink" title="Opened FD"></a>Opened FD</h3><p>打印已打开的 FD 及其路径，已打开的 FD 在目录 <code>/proc/self/fd</code> 下</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">static</span> String <span class="hljs-title">getFds</span><span class="hljs-params">()</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">static</span> String <span class="hljs-title">getFds</span><span class="hljs-params">()</span> </span>&#123;
     StringBuilder sb = <span class="hljs-keyword">new</span> StringBuilder(<span class="hljs-string">&quot;open files:\n&quot;</span>);
     <span class="hljs-keyword">try</span> &#123;
         File dir = <span class="hljs-keyword">new</span> File(<span class="hljs-string">&quot;/proc/self/fd&quot;</span>);
@@ -582,7 +584,7 @@ Caused by: java.lang.RuntimeException: test java exception
 &#125;</code></pre></div>
 
 <p>输出如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">open files:
+<div class="code-wrapper"><pre><code class="hljs text">open files:
     fd 0: /dev/null
     fd 1: /dev/null
     fd 2: /dev/null
@@ -700,7 +702,7 @@ Caused by: java.lang.RuntimeException: test java exception
     fd 117: /proc/21356/fd/117
     (number of FDs: 115)</code></pre></div>
 
-<h3 id="System-Memory-Summary"><a href="#System-Memory-Summary" class="headerlink" title="System Memory Summary"></a>System Memory Summary</h3><div class="hljs code-wrapper"><pre><code class="hljs text">System Summary (From: /proc/meminfo)
+<h3 id="System-Memory-Summary"><a href="#System-Memory-Summary" class="headerlink" title="System Memory Summary"></a>System Memory Summary</h3><div class="code-wrapper"><pre><code class="hljs text">System Summary (From: /proc/meminfo)
  MemTotal:        3855796 kB
  MemFree:           90124 kB
  MemAvailable:    1452636 kB
@@ -736,7 +738,7 @@ Caused by: java.lang.RuntimeException: test java exception
  VmallocUsed:      223632 kB
  VmallocChunk:   258675172 kB</code></pre></div>
 
-<h3 id="APP-Process-Summary"><a href="#APP-Process-Summary" class="headerlink" title="APP Process Summary"></a>APP Process Summary</h3><div class="hljs code-wrapper"><pre><code class="hljs text">Process Status (From: /proc/PID/status)
+<h3 id="APP-Process-Summary"><a href="#APP-Process-Summary" class="headerlink" title="APP Process Summary"></a>APP Process Summary</h3><div class="code-wrapper"><pre><code class="hljs text">Process Status (From: /proc/PID/status)
  Name:	xcrash.sample
  State:	R (running)
  Tgid:	21356
@@ -780,7 +782,7 @@ Caused by: java.lang.RuntimeException: test java exception
  voluntary_ctxt_switches:	343
  nonvoluntary_ctxt_switches:	301</code></pre></div>
 
-<h3 id="APP-Process-Limits"><a href="#APP-Process-Limits" class="headerlink" title="APP Process Limits"></a>APP Process Limits</h3><div class="hljs code-wrapper"><pre><code class="hljs text">Process Limits (From: /proc/PID/limits)
+<h3 id="APP-Process-Limits"><a href="#APP-Process-Limits" class="headerlink" title="APP Process Limits"></a>APP Process Limits</h3><div class="code-wrapper"><pre><code class="hljs text">Process Limits (From: /proc/PID/limits)
  Limit                     Soft Limit           Hard Limit           Units
  Max cpu time              unlimited            unlimited            seconds
  Max file size             unlimited            unlimited            bytes
@@ -799,7 +801,7 @@ Caused by: java.lang.RuntimeException: test java exception
  Max realtime priority     0                    0
  Max realtime timeout      unlimited            unlimited            us</code></pre></div>
 
-<h3 id="APP-Memory-Summary"><a href="#APP-Memory-Summary" class="headerlink" title="APP Memory Summary"></a>APP Memory Summary</h3><div class="hljs code-wrapper"><pre><code class="hljs text">Process Summary (From: android.os.Debug.MemoryInfo)
+<h3 id="APP-Memory-Summary"><a href="#APP-Memory-Summary" class="headerlink" title="APP Memory Summary"></a>APP Memory Summary</h3><div class="code-wrapper"><pre><code class="hljs text">Process Summary (From: android.os.Debug.MemoryInfo)
                        Pss(KB)
                         ------
            Java Heap:     7632
@@ -812,7 +814,7 @@ Caused by: java.lang.RuntimeException: test java exception
                TOTAL:    46650           TOTAL SWAP:     6460
 </code></pre></div>
 
-<h3 id="Other-StackTraces"><a href="#Other-StackTraces" class="headerlink" title="Other StackTraces"></a>Other StackTraces</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> String <span class="hljs-title">getOtherThreadsInfo</span><span class="hljs-params">(Thread crashedThread)</span> </span>&#123;
+<h3 id="Other-StackTraces"><a href="#Other-StackTraces" class="headerlink" title="Other StackTraces"></a>Other StackTraces</h3><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> String <span class="hljs-title">getOtherThreadsInfo</span><span class="hljs-params">(Thread crashedThread)</span> </span>&#123;
 
     <span class="hljs-comment">// 其他线程可能有很多，所以有“白名单”机制</span>
     <span class="hljs-keyword">int</span> thdMatchedRegex = <span class="hljs-number">0</span>;
@@ -877,7 +879,7 @@ Caused by: java.lang.RuntimeException: test java exception
 &#125;</code></pre></div>
 
 <p>输出如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+<div class="code-wrapper"><pre><code class="hljs text">--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 pid: 21356, tid: 4364, name: RenderThread  &gt;&gt;&gt; xcrash.sample &lt;&lt;&lt;
 
 java stacktrace:
@@ -1071,7 +1073,7 @@ dumped JVM threads:24</code></pre></div>
 <p>signal 可以是进程范围的，比如内核产生的信号、kill 和 sigqueue；也可以是线程范围的，比如因执行机器指令而导致的硬件异常（SIGSEGV、SIGFPE）、通过 tgkill 或者 pthread_kill 指定目标线程</p>
 <p>进程范围的信号会随机选择一个 signal unblocked 的线程来消费（deliver）</p>
 <p><code>sigaction</code> 用来注册信号处理器，是升级版的 <code>signal</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 如果 act != null，它被注册为新的信号处理器；如果 oldact != null，上一个信号处理器将被保存在此</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 如果 act != null，它被注册为新的信号处理器；如果 oldact != null，上一个信号处理器将被保存在此</span>
 <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">sigaction</span><span class="hljs-params">(<span class="hljs-keyword">int</span> signum, <span class="hljs-keyword">const</span> struct sigaction *act, struct sigaction *oldact)</span></span>;
 
 <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sigaction</span> &#123;</span>
@@ -1128,7 +1130,7 @@ dumped JVM threads:24</code></pre></div>
 <span class="hljs-comment">                              (since Linux 3.5) */</span>
 &#125;</code></pre></div>
 
-<h3 id="sigaltstack"><a href="#sigaltstack" class="headerlink" title="sigaltstack"></a>sigaltstack</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/** </span>
+<h3 id="sigaltstack"><a href="#sigaltstack" class="headerlink" title="sigaltstack"></a>sigaltstack</h3><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/** </span>
 <span class="hljs-comment"> * 为当前进程设置一个新的（获取上一个）信号处理器调用栈，其实就是为信号处理器预先分配一块内存，作为其调用栈</span>
 <span class="hljs-comment"> * The most common usage of an alternate signal stack is to handle the SIGSEGV signal </span>
 <span class="hljs-comment"> * that is generated if the space available for the normal process stack is exhausted: </span>
@@ -1143,7 +1145,7 @@ dumped JVM threads:24</code></pre></div>
     <span class="hljs-keyword">size_t</span> ss_size;   <span class="hljs-comment">/* Number of bytes in stack */</span>
 &#125; <span class="hljs-keyword">stack_t</span>;</code></pre></div>
 
-<h3 id="xc-crash-signal-handler"><a href="#xc-crash-signal-handler" class="headerlink" title="xc_crash_signal_handler"></a>xc_crash_signal_handler</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// XCrash.init</span>
+<h3 id="xc-crash-signal-handler"><a href="#xc-crash-signal-handler" class="headerlink" title="xc_crash_signal_handler"></a>xc_crash_signal_handler</h3><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// XCrash.init</span>
 <span class="hljs-comment">// NativeHandler.initialize</span>
 <span class="hljs-comment">// NativeHandler.nativeInit</span>
 <span class="hljs-comment">// xc_jni_init</span>
@@ -1198,7 +1200,7 @@ dumped JVM threads:24</code></pre></div>
 <li><code>xcd_core.c</code> 里的 main 函数从管道里读取 <code>xc_crash_spot</code> 并写入 tombstone 日志文件，退出</li>
 <li>signal handler 线程从阻塞中恢复，退出 APP 进程</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// APP 进程，signal hander 线程，dump 开始的地方</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// APP 进程，signal hander 线程，dump 开始的地方</span>
 <span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">xc_crash_signal_handler</span><span class="hljs-params">(<span class="hljs-keyword">int</span> sig, <span class="hljs-keyword">siginfo_t</span> *si, <span class="hljs-keyword">void</span> *uc)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">// set crash spot info</span>
@@ -1325,7 +1327,7 @@ dumped JVM threads:24</code></pre></div>
 <li>SIGSEGV 会将错误地址写入 <code>siginfo_t.si_addr</code></li>
 <li>有关 <code>siginfo_t</code> 的更详细信息请参考 <code>man sigaction.2</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> <span class="hljs-title">xcd_process_record_signal_info</span><span class="hljs-params">(<span class="hljs-keyword">xcd_process_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> <span class="hljs-title">xcd_process_record_signal_info</span><span class="hljs-params">(<span class="hljs-keyword">xcd_process_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">//fault addr</span>
     <span class="hljs-keyword">char</span> addr_desc[<span class="hljs-number">64</span>];
@@ -1362,7 +1364,7 @@ dumped JVM threads:24</code></pre></div>
 &#125;</code></pre></div>
 
 <p>输出如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0</code></pre></div>
+<div class="code-wrapper"><pre><code class="hljs text">signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0</code></pre></div>
 
 <h3 id="Registers-Info"><a href="#Registers-Info" class="headerlink" title="Registers Info"></a>Registers Info</h3><p>打印寄存器（<code>Register</code>）的值，下面是 ARM64 的例子，它有 30 个通用寄存器</p>
 <table>
@@ -1393,7 +1395,7 @@ dumped JVM threads:24</code></pre></div>
 <td>表示当前执行的指令的地址</td>
 </tr>
 </tbody></table>
-<div class="hljs code-wrapper"><pre><code class="hljs text">x0  0000000000000003  x1  0000000000000000  x2  000000751128fd60  x3  0000007511290020
+<div class="code-wrapper"><pre><code class="hljs text">x0  0000000000000003  x1  0000000000000000  x2  000000751128fd60  x3  0000007511290020
 x4  000000751128fd60  x5  00000075a26c1708  x6  000000751128fd50  x7  00000075200a59dc
 x8  0000000000000000  x9  79fc7e30c0ff4d9e  x10 00000000000003e8  x11 0000000000000000
 x12 0000000000004100  x13 0000000000000001  x14 0000000000080100  x15 0000000000000000
@@ -1410,7 +1412,7 @@ sp  0000007fe0ef2070  lr  00000074b9bcc8cc  pc  00000074b9bcc884</code></pre></d
 <li><code>PTRACE_PEEKDATA</code>（读内存）、 <code>PTRACE_POKEDATA</code>（写内存）、<code>PTRACE_GETREGS</code>（读寄存器）、<code>PTRACE_SETREGS</code>（写寄存器）…</li>
 <li><code>PTRACE_DETACH</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">long</span> <span class="hljs-title">ptrace</span><span class="hljs-params">(<span class="hljs-keyword">enum</span> __ptrace_request request, <span class="hljs-keyword">pid_t</span> pid, <span class="hljs-keyword">void</span> *addr, <span class="hljs-keyword">void</span> *data)</span></span>;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">long</span> <span class="hljs-title">ptrace</span><span class="hljs-params">(<span class="hljs-keyword">enum</span> __ptrace_request request, <span class="hljs-keyword">pid_t</span> pid, <span class="hljs-keyword">void</span> *addr, <span class="hljs-keyword">void</span> *data)</span></span>;
 
 <span class="hljs-comment">// 通过 ptrace 获取寄存器的值并保存到 xcd_thread_t.regs</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">xcd_thread_load_regs</span><span class="hljs-params">(<span class="hljs-keyword">xcd_thread_t</span> *self)</span></span>
@@ -1491,7 +1493,7 @@ sp  0000007fe0ef2070  lr  00000074b9bcc8cc  pc  00000074b9bcc884</code></pre></d
 <td>文件的路径</td>
 </tr>
 </tbody></table>
-<div class="hljs code-wrapper"><pre><code class="hljs text">address                perms  offset    dev     inode     pathname
+<div class="code-wrapper"><pre><code class="hljs text">address                perms  offset    dev     inode     pathname
 12c00000-32c00000      rw-p   00000000  00:00   0         [anon:dalvik-main space (region space)]
 70fb9000-71248000      rw-p   00000000  00:00   0         [anon:dalvik-/apex/com.android.art/javalib/boot.art]
 71248000-712a3000      rw-p   00000000  00:00   0         [anon:dalvik-/apex/com.android.art/javalib/boot-core-libart.art]
@@ -1634,7 +1636,7 @@ sp  0000007fe0ef2070  lr  00000074b9bcc8cc  pc  00000074b9bcc884</code></pre></d
 </tr>
 </tbody></table>
 <p>可以用 <code>readelf</code> 命令查看 ELF 文件的结构，以 <code>/apex/com.android.art/lib64/libart.so</code> 为例，<code>readelf -S -W libart.so</code> 输出 Section Header Table</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">There are 28 section headers, starting at offset 0x7d8af8:
+<div class="code-wrapper"><pre><code class="hljs text">There are 28 section headers, starting at offset 0x7d8af8:
 
 Section Headers:
   [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
@@ -1673,7 +1675,7 @@ Key to Flags:
   p (processor specific)</code></pre></div>
 
 <p><code>readelf -p .dynstr libart.so</code> 输出字符串表：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">String dump of section &#x27;.dynstr&#x27;:
+<div class="code-wrapper"><pre><code class="hljs text">String dump of section &#x27;.dynstr&#x27;:
   [     1]  __cxa_atexit
   [     e]  __cxa_finalize
   [    1d]  _ZN3art14AotClassLinkerC2EPNS_11InternTableE
@@ -1694,7 +1696,7 @@ Key to Flags:
   [   316]  _ZN7android4base10LogMessageC1EPKcjNS0_11LogSeverityES3_i</code></pre></div>
 
 <p><code>readelf -s libart.so</code> 输出符号表：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">Symbol table &#x27;.dynsym&#x27; contains 5774 entries:
+<div class="code-wrapper"><pre><code class="hljs text">Symbol table &#x27;.dynsym&#x27; contains 5774 entries:
    Num:    Value          Size Type    Bind   Vis      Ndx Name
      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
      1: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __cxa_atexit@LIBC (2)
@@ -1744,7 +1746,7 @@ Key to Flags:
 <td>函数与 pc 的偏移</td>
 </tr>
 </tbody></table>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xcd_thread_record_backtrace</span><span class="hljs-params">(<span class="hljs-keyword">xcd_thread_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xcd_thread_record_backtrace</span><span class="hljs-params">(<span class="hljs-keyword">xcd_thread_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-keyword">if</span>(XCD_THREAD_STATUS_OK != self-&gt;status) <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>; <span class="hljs-comment">//ignore</span>
 
@@ -1832,7 +1834,7 @@ Key to Flags:
 &#125;</code></pre></div>
 
 <p>输出如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">backtrace:
+<div class="code-wrapper"><pre><code class="hljs text">backtrace:
     #00 pc 000000000000b884  /data/app/xcrash.sample-WeCpVYjROKKgYtuzbHflHg==/lib/arm64/libxcrash.so (xc_test_call_4+24)
     #01 pc 000000000000b8c8  /data/app/xcrash.sample-WeCpVYjROKKgYtuzbHflHg==/lib/arm64/libxcrash.so (xc_test_call_3+24)
     #02 pc 000000000000b8f8  /data/app/xcrash.sample-WeCpVYjROKKgYtuzbHflHg==/lib/arm64/libxcrash.so (xc_test_call_2+24)
@@ -1852,7 +1854,7 @@ Key to Flags:
     ...</code></pre></div>
 
 <h3 id="Stack-Per-Frame"><a href="#Stack-Per-Frame" class="headerlink" title="Stack (Per Frame)"></a>Stack (Per Frame)</h3><p>这里打印的是上个章节 <code>Backtrace</code> 描述的函数调用栈里，每一帧（<code>Frame</code>）对应的栈内存，sp 寄存器指向栈顶</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">stack:
+<div class="code-wrapper"><pre><code class="hljs text">stack:
          0000007fe0ef1ff0  0000000be0ef2260
          0000007fe0ef1ff8  00000075a5107020
          0000007fe0ef2000  0000007fe0ef2001  [stack]
@@ -1880,7 +1882,7 @@ Key to Flags:
          0000007fe0ef20b0  0000007fe0ef20d0  [stack]</code></pre></div>
 
 <h3 id="Memory-Near-XX"><a href="#Memory-Near-XX" class="headerlink" title="Memory Near XX"></a>Memory Near XX</h3><p>打印所有寄存器地址附近的内存，寄存器的值可以通过 <code>ptrace</code> 拿到</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">memory near x2:
+<div class="code-wrapper"><pre><code class="hljs text">memory near x2:
     000000751128fd40 0000000000000000 0000000000000000  ................
     000000751128fd50 000000751138cd50 0000000000000000  P.8.u...........
     000000751128fd60 00005015000050c4 0000007f00000000  .P...P..........
@@ -1917,7 +1919,7 @@ memory near x3:
     00000075112900f0 0000000000000000 0000000000000000  ................</code></pre></div>
 
 <h3 id="Memory-Map"><a href="#Memory-Map" class="headerlink" title="Memory Map"></a>Memory Map</h3><p>也就是 <code>/proc/pid/maps</code> 内存映射</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">memory map:
+<div class="code-wrapper"><pre><code class="hljs text">memory map:
     0000000012c00000-00000000133c0000 rw-        0   7c0000 [anon:dalvik-main space (region space)]
     00000000133c0000-0000000013dc0000 ---        0   a00000 &gt;
     0000000013dc0000-0000000013f80000 ---        0   1c0000 &gt;
@@ -1960,7 +1962,7 @@ memory near x3:
 <li>在内存里找到生成 ANR 报告的函数符号：<code>_ZN3art7Runtime14DumpForSigQuitERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE</code></li>
 <li>将 <code>STDERR_FILENO</code> 指向日志文件，调用 ANR 报告函数（它会把 ANR 日志写入 <code>STDERR_FILENO</code>），这样就捕获了 ANR 日志</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// XCrash.init</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// XCrash.init</span>
 <span class="hljs-comment">// NativeHandler.initialize</span>
 <span class="hljs-comment">// NativeHandler.nativeInit</span>
 <span class="hljs-comment">// xc_jni_init</span>
@@ -2153,12 +2155,6 @@ memory near x3:
                 
               </div>
               
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
-              
               
                 <div class="post-prevnext">
                   <article class="post-prev col-6">
@@ -2306,17 +2302,6 @@ memory near x3:
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 

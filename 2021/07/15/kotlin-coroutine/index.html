@@ -15,7 +15,7 @@
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
-  <meta name="theme-color" content="#1f3144">
+  <meta name="theme-color" content="#141414">
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
@@ -32,7 +32,7 @@
     
     
       
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/night-owl.min.css" />
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
     
   
 
@@ -62,7 +62,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -70,11 +70,11 @@
 
 
 <body>
-  <header style="height: 60vh;">
+  <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Blog</strong>&nbsp;</a>
+       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -154,6 +154,8 @@
           <div class="page-header text-center fade-in-up">
             <span class="h2" id="subtitle" title="深入分析 Kotlin Coroutines 是如何实现的">
               
+                深入分析 Kotlin Coroutines 是如何实现的
+              
             </span>
 
             
@@ -218,7 +220,7 @@
             
             <div class="markdown-body">
               <h1 id="launch-启动协程"><a href="#launch-启动协程" class="headerlink" title="launch - 启动协程"></a>launch - 启动协程</h1><p>从 kotlin coroutines 的 <a target="_blank" rel="noopener" href="https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.kt">Hello World!</a> 看起</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.kt</span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/test/guide/example-basic-01.kt</span>
 <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123; <span class="hljs-comment">// this: CoroutineScope</span>
     launch &#123; <span class="hljs-comment">// launch a new coroutine and continue</span>
         delay(<span class="hljs-number">1000L</span>) <span class="hljs-comment">// non-blocking delay for 1 second (default time unit is ms)</span>
@@ -229,7 +231,7 @@
 
 <p>需要先了解的是 <code>launch</code> 的参数 <code>block: suspend CoroutineScope.() -&gt; Unit</code> 被编译为继承自 <code>SuspendLamda</code> 和 <code>Function2&lt;CoroutineScope, Continuation&gt;</code>，如下面的代码所示（decompile by <a target="_blank" rel="noopener" href="https://github.com/Konloch/bytecode-viewer">bytecode-viewer</a>）</p>
 <p><code>SuspendLambda</code> 的继承关系如下：<code>SuspendLambda -&gt; ContinuationImpl -&gt; BaseContinuationImpl -&gt; Continuation</code>，所以 <code>block</code> 在库代码里一般称为 <code>continuation</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>$<span class="hljs-title">main</span>$1 <span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>$<span class="hljs-title">main</span>$1 <span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span> </span>&#123;
    <span class="hljs-keyword">int</span> label;
    <span class="hljs-comment">// $FF: synthetic field</span>
    <span class="hljs-keyword">private</span> Object L$<span class="hljs-number">0</span>;
@@ -312,7 +314,7 @@
 &#125;</code></pre></div>
 
 <p>然后一路跟踪下去看看 <code>launch</code> 做了什么</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin">CoroutineScope.launch                              <span class="hljs-comment">// return Job (实际上是 StandaloneCoroutine/LazyStandaloneCoroutine)</span>
+<div class="code-wrapper"><pre><code class="hljs kotlin">CoroutineScope.launch                              <span class="hljs-comment">// return Job (实际上是 StandaloneCoroutine/LazyStandaloneCoroutine)</span>
 AbstractCoroutine.start                            <span class="hljs-comment">// 创建 StandaloneCoroutine/LazyStandaloneCoroutine</span>
 CoroutineStart.invoke(block, receiver, completion) <span class="hljs-comment">// CoroutineStart.DEFAULT</span>
 startCoroutineCancellable(receiver, completion, onCancellation)
@@ -371,7 +373,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 
 <p>至此知道了 <code>block</code> 是被放到了任务队列里，那是谁在执行任务队列里的任务呢？这就不得不说起 <code>runBlocking</code></p>
 <p><code>runBlocking</code> 通过 <code>BlockingCoroutine.joinBlocking</code> 不断地执行任务队列里的任务（<code>EventLoopBase.processNextEvent</code>）直到队列为空，因此它是 <code>blocking method</code>；第一个加入到任务队列的是 runBlocking block，所以 <code>Hello World!</code> 示例里会先输出 <code>Hello</code> 然后执行第二个 coroutine 输出 <code>World!</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">runBlocking</span><span class="hljs-params">(context: <span class="hljs-type">CoroutineContext</span> = EmptyCoroutineContext, block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span>)</span></span>: T &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">runBlocking</span><span class="hljs-params">(context: <span class="hljs-type">CoroutineContext</span> = EmptyCoroutineContext, block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span>)</span></span>: T &#123;
     contract &#123;
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     &#125;
@@ -425,7 +427,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><code>launch</code> 把 block 放入任务队列等待执行，类似于 <code>ExecutorService.submit</code> 和 <code>Handler.post</code>，同时说明 <code>协程</code> 本质上就是对任务的调度，底层是线程/线程池 + 任务队列</p>
 <h1 id="Dispatcher-任务调度"><a href="#Dispatcher-任务调度" class="headerlink" title="Dispatcher - 任务调度"></a>Dispatcher - 任务调度</h1><p>首先要了解下 <code>CoroutineContext</code> 这个概念，跟 Android 上 <code>Context</code> 的意义是一样的，就是代表了一系列 coroutine API 的 <code>上下文</code>，本质上是一个 <code>Map</code>，通过 <code>CoroutineContext[key] = value</code> 存取</p>
 <p>其中有一个非常重要的组件：<code>CoroutineContext[ContinuationInterceptor]</code>，负责分发/调度 coroutine，有 <code>BlockingEventLoop</code>, <code>Dispatchers.Default</code>, <code>Dispatchers.IO</code> 等等</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">CoroutineContext</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">CoroutineContext</span> </span>&#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Returns the element with the given [key] from this context or `null`.</span>
 <span class="hljs-comment">     */</span>
@@ -440,7 +442,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 &#125;</code></pre></div>
 
 <p>通过 <code>CoroutineScope.launch</code> 启动 coroutine 时，新创建的 coroutine 会继承 scpoe context（<code>launch</code> 的参数 <code>context</code> 会覆盖相同 key 的 scope context element），而且当 context 不含 interceptor 时主动添加 <code>Dispatchers.Default</code> 作为 <code>Dispatcher</code>，也就是说 <code>Dispatcher</code>/<code>CoroutineContext[ContinuationInterceptor]</code> 作为任务调度器是一个 <strong>必不可少</strong> 的 coroutine 组件</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> CoroutineScope.<span class="hljs-title">launch</span><span class="hljs-params">(</span></span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> CoroutineScope.<span class="hljs-title">launch</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    context: <span class="hljs-type">CoroutineContext</span> = EmptyCoroutineContext,</span></span>
 <span class="hljs-params"><span class="hljs-function">    start: <span class="hljs-type">CoroutineStart</span> = CoroutineStart.DEFAULT,</span></span>
 <span class="hljs-params"><span class="hljs-function">    block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">Unit</span></span></span>
@@ -467,7 +469,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <li><code>Continuation.resumeCancellableWith</code> - 让 Dispatcher 负责调度 Continuation</li>
 </ul>
 <p>上一章节分析了 coroutine 本质上就是任务队列里的任务，并简单提了下 <code>BlockingEventLoop</code> 这个调度器，这一章节分析各种各样的调度器</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin">CoroutineScope.launch
+<div class="code-wrapper"><pre><code class="hljs kotlin">CoroutineScope.launch
 AbstractCoroutine.start
 CoroutineStart.invoke(block, receiver, completion)
 startCoroutineCancellable(receiver, completion, onCancellation)
@@ -512,7 +514,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <li>它是 <code>ThreadLocal</code> 的，跟 <code>Looper</code> 一样每个线程单独绑定一个 <code>BlockingEventLoop</code></li>
 <li><code>dispatch</code> 只是简单地将任务入队，然后唤醒对应的线程</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">runBlocking</span><span class="hljs-params">(context: <span class="hljs-type">CoroutineContext</span> = EmptyCoroutineContext, block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span>)</span></span>: T &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">runBlocking</span><span class="hljs-params">(context: <span class="hljs-type">CoroutineContext</span> = EmptyCoroutineContext, block: <span class="hljs-type">suspend</span> <span class="hljs-type">CoroutineScope</span>.() -&gt; <span class="hljs-type">T</span>)</span></span>: T &#123;
     contract &#123;
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     &#125;
@@ -592,7 +594,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 &#125;</code></pre></div>
 
 <h2 id="Dispatchers-Default"><a href="#Dispatchers-Default" class="headerlink" title="Dispatchers.Default"></a>Dispatchers.Default</h2><p>上一章节说过 <code>Coroutine.launch</code> 开启协程时，如果 context 不包含 dispatcher，会自动添加默认的 dispatcher: <code>Dispatchers.Default</code>，如下示例代码</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> = runBlocking &#123;
     <span class="hljs-keyword">val</span> scope = CoroutineScope(EmptyCoroutineContext)
     <span class="hljs-keyword">val</span> job = scope.launch &#123;
         println(<span class="hljs-string">&quot;Thread name: <span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)
@@ -601,7 +603,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 &#125;</code></pre></div>
 
 <p>从下面的代码可以看到 <code>Dispatchers.Default</code> 最终是通过 <code>CoroutineScheduler</code> 进行任务调度的，<code>CoroutineScheduler</code> 的代码量比较大这里就不深入分析了，但从它的构造函数参数 <code>corePoolSize</code>、<code>maxPoolSize</code> 和 <code>idleWorkerKeepAliveNs</code> 这些熟悉的概念可以看出它是个 <a href="../../../../2021/02/19/threadpool/">线程池</a></p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">object</span> Dispatchers &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">object</span> Dispatchers &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * The default [CoroutineDispatcher] that is used by all standard builders like</span>
 <span class="hljs-comment">     * [launch][CoroutineScope.launch], [async][CoroutineScope.async], etc</span>
@@ -669,7 +671,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <li><code>inFlightTasks</code> 记录了并发任务数，如果小于阈值 <code>parallelism</code>（默认 64）则提交到线程池</li>
 <li>否则将任务放到任务队列 <code>queue: ConcurrentLinkedQueue</code> 里，等提交到线程池的任务执行完自身逻辑，空出一个并发任务的位置后，再从 <code>queue</code> 里取一个等待中的任务提交到线程池</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">object</span> Dispatchers &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">object</span> Dispatchers &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * The [CoroutineDispatcher] that is designed for offloading blocking IO tasks to a shared pool of threads.</span>
 <span class="hljs-comment">     *</span>
@@ -807,7 +809,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 
 <h2 id="Dispatchers-Main"><a href="#Dispatchers-Main" class="headerlink" title="Dispatchers.Main"></a>Dispatchers.Main</h2><p><code>Dispatchers.Main</code> 在 Android 代表主线程，也就说这个调度器会把任务放到主线程执行：<code>Handler.post</code></p>
 <p>值得注意的是这里创建的是 <code>Async Handler</code>，<code>Async Handler</code> 创建的 <code>Message</code> 都是异步的：<code>Message.isAsynchronous() == true</code>，也就是说通过 <code>Dispatchers.Main</code> 调度的任务不会受到 <a href="../../../../2020/09/27/handler-messagequeue-looper/">同步栅栏</a> 的影响</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">object</span> Dispatchers &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">object</span> Dispatchers &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * A coroutine dispatcher that is confined to the Main thread operating with UI objects.</span>
 <span class="hljs-comment">     * This dispatcher can be used either directly or via [MainScope] factory.</span>
@@ -910,7 +912,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <p>Delays coroutine for a given time without blocking a thread and resumes it after a specified time.</p>
 </blockquote>
 <p>正如 <code>delay</code> 的函数文档所说，它是 <code>non-blocking</code> 的，那什么是非阻塞呢？如下代码所示，上面说过 <code>launch coroutine</code> 其实就是任务调度，下面的两个 <code>launch</code> 一共往任务队列放进两个任务，而 <code>runBlocking</code> 底层是单个线程，故两个任务是串行的：先执行 <code>delay(1000)</code> 再执行 <code>delay(500)</code>；然而 <code>500</code> 却先于 <code>1000</code> 输出，说明 <code>delay(1000)</code> 确实没有阻塞线程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Unit</span> = runBlocking &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Unit</span> = runBlocking &#123;
     launch &#123;
         delay(<span class="hljs-number">1000</span>)
         println(<span class="hljs-string">&quot;1000&quot;</span>)
@@ -926,7 +928,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <span class="hljs-comment">// 1000</span></code></pre></div>
 
 <p>跟踪 <code>delay</code> 看看它是怎么实现的，但到 <code>suspendCoroutineUninterceptedOrReturn</code> 就走不下去了因为这个函数并没有什么实质的 body，那就直接看编译后的字节码吧</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">delay</span><span class="hljs-params">(timeMillis: <span class="hljs-type">Long</span>)</span></span> &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">delay</span><span class="hljs-params">(timeMillis: <span class="hljs-type">Long</span>)</span></span> &#123;
     <span class="hljs-keyword">if</span> (timeMillis &lt;= <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="hljs-comment">// don&#x27;t delay</span>
     <span class="hljs-keyword">return</span> suspendCancellableCoroutine <span class="hljs-symbol">sc@</span> &#123; cont: CancellableContinuation&lt;<span class="hljs-built_in">Unit</span>&gt; -&gt;
         <span class="hljs-comment">// if timeMillis == Long.MAX_VALUE then just wait forever like awaitCancellation, don&#x27;t schedule.</span>
@@ -962,7 +964,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <li>如果 Dispatcher 没有实现 <code>Delay</code> 接口则由 <code>DefaultDelay</code> 负责</li>
 </ul>
 <p>那么就一个个 Dispatcher 地看吧</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>$<span class="hljs-title">main</span>$1$1 <span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>$<span class="hljs-title">main</span>$1$1 <span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span> </span>&#123;
    <span class="hljs-meta">@Nullable</span>
    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invokeSuspend</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Object $result)</span> </span>&#123;
       Object var4 = IntrinsicsKt.getCOROUTINE_SUSPENDED();
@@ -1023,7 +1025,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 &#125;</code></pre></div>
 
 <h2 id="BlockingEventLoop"><a href="#BlockingEventLoop" class="headerlink" title="BlockingEventLoop"></a>BlockingEventLoop</h2><p>block 被层层包装为 <code>DelayedResumeTask</code> 并被放入 <code>_delayed: atomic&lt;DelayedTaskQueue?&gt;</code>，等待在 <code>delay</code> 毫秒后重新调度，类似于 <code>Handler.postDelayed(r, delayMillis)</code>，可重新调度任务后 block 不就重新被执行了一遍吗？</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BlockingEventLoop</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BlockingEventLoop</span></span>(
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> thread: Thread
 ) : EventLoopImplBase()
 
@@ -1109,7 +1111,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <li>引入成员属性 <code>label</code>，执行 block 时根据 <code>label</code> 的指示通过 <code>switch</code> 跳转执行各个代码段</li>
 <li>重新调度时执行完的代码段就不会被再次执行了</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// kotlin</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// kotlin</span>
 <span class="hljs-function">fun <span class="hljs-title">main</span><span class="hljs-params">()</span>: Unit </span>= runBlocking &#123;
     println(<span class="hljs-number">0</span>)
     delay(<span class="hljs-number">100</span>)
@@ -1214,7 +1216,7 @@ lbl49:
 
 <h3 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h3><p>coroutine 本质是任务队列，而 <code>delay</code> 本质是重新调度（重新入队至 <code>EventLoopImplBase._delay</code>），通过引入成员属性 <code>label</code>，以及将各个代码段用 <code>switch</code> 分段，即可实现在重新调度时跳转到指定 <code>代码行</code> 而不重复执行前面的代码</p>
 <h2 id="HandlerContext"><a href="#HandlerContext" class="headerlink" title="HandlerContext"></a>HandlerContext</h2><p><code>Dispatchers.Main</code> 在 Android 上是底层为单线程/主线程的 <code>HandlerContext(Looper.getMainLooper().asHandler(async = true))</code>，它实现了 <code>Delay</code>，通过 <code>Handler.postDelayed</code> 实现重新调度</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HandlerContext</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HandlerContext</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span></span>(
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> handler: Handler,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> name: String?,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> invokeImmediately: <span class="hljs-built_in">Boolean</span>
@@ -1234,7 +1236,7 @@ lbl49:
 
 <h2 id="DefaultDelay"><a href="#DefaultDelay" class="headerlink" title="DefaultDelay"></a>DefaultDelay</h2><p><code>Dispatchers.Default</code> 和 <code>Dispatcher.IO</code> 并没有实现 <code>Delay</code> 接口，如上面反编译后的 <code>getDelay</code> 所示，是由 <code>DefaultDelay</code> 来实现的</p>
 <p><code>EventLoopImplBase</code> 在上一章节介绍过，它实现了 <code>Delay</code> 接口，<code>EventLoopImplBase.scheduleResumeAfterDelay</code> 会将任务放入 <code>EventLoopImplBase._delay</code> 任务队列，也就是说这两个调度器上的 delay task 实际上是被放入别人的（<code>DefaultDelay</code>） delay queue 里</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">val</span> DefaultDelay: Delay = DefaultExecutor
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">val</span> DefaultDelay: Delay = DefaultExecutor
 
 <span class="hljs-keyword">internal</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">object</span> DefaultExecutor : EventLoopImplBase(), Runnable</code></pre></div>
 
@@ -1244,7 +1246,7 @@ lbl49:
 <li><code>DefaultExecutor</code> 将 <code>_delay</code> 里第一个到执行时间点的 task 转移到任务队列 <code>_queue</code> 并执行</li>
 </ul>
 <p>而任务队列里的 <code>Runnable</code> 实际上是 <code>DispatchedContinuation</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span></span>(), Delay &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span></span>(), Delay &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">scheduleResumeAfterDelay</span><span class="hljs-params">(timeMillis: <span class="hljs-type">Long</span>, continuation: <span class="hljs-type">CancellableContinuation</span>&lt;<span class="hljs-type">Unit</span>&gt;)</span></span> &#123;
         <span class="hljs-keyword">val</span> timeNanos = delayToNanos(timeMillis)
         <span class="hljs-keyword">if</span> (timeNanos &lt; MAX_DELAY_NS) &#123;
@@ -1345,7 +1347,7 @@ lbl49:
 
 <p>上面曾经说过 block 会经过重重包装，其中一层就是 <code>DispatchedContinuation</code>，它也是一个 <code>Runnable</code>（被 <code>DefaultExecutor</code> 执行）：<code>SchedulerTask.run</code> -&gt;  <code>DispatchedContinuation.resumeWith</code> -&gt; <code>CoroutineDispatcher.dispatch</code></p>
 <p>也就说 <code>DispatchedContinuation</code> = <code>CoroutineDispatcher</code> + <code>Continuation</code>，它被执行时是将任务交由对应的 Dispatcher 执行而不是由当前的线程执行（正如它的名字描述的那样），同时也实现了一个很重要的概念：<code>线程切换</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedContinuation</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedContinuation</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">val</span> dispatcher: CoroutineDispatcher,
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">val</span> continuation: Continuation&lt;T&gt;
 ) : DispatchedTask&lt;T&gt;(MODE_UNINITIALIZED), CoroutineStackFrame, Continuation&lt;T&gt; <span class="hljs-keyword">by</span> continuation
@@ -1418,7 +1420,7 @@ lbl49:
 <li><code>runBlocking</code> - 用当前线程作为调度器，会阻塞代码的执行直到所有协程都执行完毕</li>
 <li><code>CoroutineScope(EmptyCoroutineContext|Dispatchers.Main|Dispatchers.IO|...)</code> - 构造 scope，使用指定的上下文/调度器，如果上下文里不包含调度器则使用默认的 <code>Dispatchers.Default</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">CoroutineScope</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">CoroutineScope</span> </span>&#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * The context of this scope.</span>
 <span class="hljs-comment">     * Context is encapsulated by the scope and used for implementation of coroutine builders that are extensions on the scope.</span>
@@ -1446,12 +1448,6 @@ lbl49:
                   </div>
                 
               </div>
-              
-                <p class="note note-warning">
-                  
-                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
-                  
-                </p>
               
               
                 <div class="post-prevnext">
@@ -1600,17 +1596,6 @@ lbl49:
 
 
 
-
-  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
-  <script>
-    (function (window, document) {
-      var typing = Fluid.plugins.typing;
-      var title = document.getElementById('subtitle').title;
-      
-      typing(title)
-      
-    })(window, document);
-  </script>
 
 
 
