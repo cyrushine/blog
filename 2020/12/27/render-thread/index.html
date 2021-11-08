@@ -26,7 +26,7 @@
 <meta property="og:description" content="接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法 syncFrameState重要的方法有三个：makeCurrent，">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-12-27T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="vsync">
 <meta property="article:tag" content="render thread">
@@ -232,7 +232,7 @@
               <p>接着<a href="../../../../2020/12/13/ui-thread-in-vsync/">上一篇文章</a>，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 <code>DisplayList</code>，而 render thread 会根据 <code>DisplayList</code> 执行真正的渲染工作，主要是 <code>DrawFrameTask.syncFrameState</code> 和 <code>CanvasContext.draw</code> 这两个方法</p>
 <h2 id="syncFrameState"><a href="#syncFrameState" class="headerlink" title="syncFrameState"></a>syncFrameState</h2><p>重要的方法有三个：<code>makeCurrent</code>，<code>unpinImages</code> 和 <code>prepareTree</code></p>
 <p><code>TreeInfo</code> 用来在后续的一系列操作中收集信息，你会看到它在各个方法中作为参数传递</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">DrawFrameTask::syncFrameState</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">DrawFrameTask::syncFrameState</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">bool</span> canDraw = mContext-&gt;<span class="hljs-built_in">makeCurrent</span>();
     mContext-&gt;<span class="hljs-built_in">unpinImages</span>();
@@ -243,7 +243,7 @@
     <span class="hljs-keyword">return</span> info.prepareTextures;
 &#125;</code></pre></div>
 
-<h2 id="makeCurrent"><a href="#makeCurrent" class="headerlink" title="makeCurrent"></a>makeCurrent</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">CanvasContext::makeCurrent</span><span class="hljs-params">()</span></span>
+<h2 id="makeCurrent"><a href="#makeCurrent" class="headerlink" title="makeCurrent"></a>makeCurrent</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">CanvasContext::makeCurrent</span><span class="hljs-params">()</span></span>
 <span class="hljs-function">MakeCurrentResult <span class="hljs-title">SkiaOpenGLPipeline::makeCurrent</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (!mEglManager.<span class="hljs-built_in">makeCurrent</span>(mEglSurface, &amp;error)) &#123;
@@ -260,7 +260,7 @@
 
 <p>最终是调用了 opengl 的 <code>[eglMakeCurrent](https://www.khronos.org/registry/EGL/sdk/docs/man/html/eglMakeCurrent.xhtml)</code> 方法准备 opengl 环境；现在是 ui thread，并不会在这里进行渲染，而是为了待会将 mutable images 上传到 gpu</p>
 <p>opengl api 都是像 <code>glDrawArrays</code>、<code>glDrawElements</code>、<code>glBindTexture</code> 这样只有方法名和参数的，它的上下文是绑定在 thread 上的，在调用 opengl api 前 <code>eglMakeCurrent</code> 就是确保当前线程有 opengl 上下文；mEglDisplay 可以理解为设备的屏幕；opengl 有双缓冲，一个被主线程读取，一个被渲染线程写入，就是第二和第三个参数，渲染完交换一下，读变写，写变读，当前都是用得同一个 surface；第四个就是 opengl 的上下文，保存了 opengl 状态机</p>
-<h2 id="unpinImages"><a href="#unpinImages" class="headerlink" title="unpinImages"></a>unpinImages</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/** \class SkImage</span>
+<h2 id="unpinImages"><a href="#unpinImages" class="headerlink" title="unpinImages"></a>unpinImages</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/** \class SkImage</span>
 <span class="hljs-comment">    SkImage describes a two dimensional array of pixels to draw. The pixels may be</span>
 <span class="hljs-comment">    decoded in a raster bitmap, encoded in a SkPicture or compressed data stream,</span>
 <span class="hljs-comment">    or located in GPU memory as a GPU texture.</span>
@@ -299,7 +299,7 @@
 <p><code>pinImages</code> 把在内存的 SkImage 作为纹理上传到 gpu 内存，然后可以通过纹理 id 引用，从而避免在内存里操作（复制）像素</p>
 <p><code>unpinImages</code> 从 gpu 内存里移除纹理</p>
 <h2 id="DamageAccumulator"><a href="#DamageAccumulator" class="headerlink" title="DamageAccumulator"></a>DamageAccumulator</h2><p><code>DamageAccumulator</code> 是 <code>DirtyStack</code> stack（FIFO，用双向链表实现），用来累计脏区，它的一般用法是这样的</p>
-<div class="code-wrapper"><pre><code class="hljs cpp">info.damageAccumulator-&gt;<span class="hljs-built_in">pushTransform</span>(<span class="hljs-keyword">this</span>);
+<div class="hljs code-wrapper"><pre><code class="hljs cpp">info.damageAccumulator-&gt;<span class="hljs-built_in">pushTransform</span>(<span class="hljs-keyword">this</span>);
 <span class="hljs-built_in">damageSelf</span>(info);
 info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
@@ -344,7 +344,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="prepareTree"><a href="#prepareTree" class="headerlink" title="prepareTree"></a>prepareTree</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">CanvasContext::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info, <span class="hljs-keyword">int64_t</span>* uiFrameInfo, <span class="hljs-keyword">int64_t</span> syncQueued, RenderNode* target)</span> </span>&#123;
+<h2 id="prepareTree"><a href="#prepareTree" class="headerlink" title="prepareTree"></a>prepareTree</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">CanvasContext::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info, <span class="hljs-keyword">int64_t</span>* uiFrameInfo, <span class="hljs-keyword">int64_t</span> syncQueued, RenderNode* target)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> sp&lt;RenderNode&gt;&amp; node : mRenderNodes) &#123;
         <span class="hljs-comment">// Only the primary target node will be drawn full - all other nodes would get drawn in</span>
@@ -357,7 +357,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>target 是 <code>HardwareRenderer.mRootNode</code> 对应的 native <code>RootRenderNode</code>，<code>mRenderNodes</code> 正常情况下应该只有一个元素 target，所以这里应该总是 <code>TreeInfo::MODE_FULL</code></p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info)</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info)</span></span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::prepareTreeImpl</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-keyword">bool</span> functorsNeedLayer)</span> </span>&#123;    
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.mode == TreeInfo::MODE_FULL) &#123;
@@ -402,7 +402,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>还记得在<a href="../../../../2020/12/13/ui-thread-in-vsync/">上篇文章</a>里提到， DisplayList 在 endRecording 阶段被放在 <code>RenderNode.mStagingDisplayList</code>，这时候转移到 <code>mDisplayList</code></p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SkiaDisplayList::prepareListAndChildren</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-keyword">bool</span> functorsNeedLayer,</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SkiaDisplayList::prepareListAndChildren</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-keyword">bool</span> functorsNeedLayer,</span></span>
 <span class="hljs-params"><span class="hljs-function">        std::function&lt;<span class="hljs-keyword">void</span>(RenderNode*, TreeObserver&amp;, TreeInfo&amp;, <span class="hljs-keyword">bool</span>)&gt; childFn)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.prepareTextures &amp;&amp; !info.canvasContext.<span class="hljs-built_in">pinImages</span>(mMutableImages)) &#123;
@@ -425,7 +425,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <p><code>SkiaRecordingCanvas.drawBitmap</code> 等方法会将 mutable image 放入 <code>mMutableImages</code>，然后在 prepare 阶段上传到 gpu；为什么这么做呢，我猜想是在渲染之前需要确保所有内容都计算完毕并确保不变，mutable image 可以被修改，所以放到 gpu 里确保不被改动，immutable image 因为本身就不可修改所以无需这样处理</p>
 <p><code>TreeInfo.prepareTextures</code> 标识 mutable images 有没上传成功；如果上传成功，ui thread 在 <code>DrawFrameTask::syncFrameState</code> 之后就会被唤醒，否则会一直阻塞直到 <code>CanvasContext.draw</code> 完成；这对 ui thread 有着很大的影响</p>
 <p><code>SkiaDisplayList.mChildNodes</code> 应该只有一个 <code>DecorView.mRenderNode</code>，在这里它的 <code>prepareTreeImpl</code> 被调用</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::pushLayerUpdate</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::pushLayerUpdate</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.canvasContext.<span class="hljs-built_in">createOrUpdateLayer</span>(<span class="hljs-keyword">this</span>, *info.damageAccumulator, info.errorHandler)) &#123;
         <span class="hljs-built_in">damageSelf</span>(info);
@@ -456,7 +456,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 <p>我们知道 <code>View</code> 是 framework ui api，<code>RenderNode</code> 相当于绘制这块 <code>View</code> 所需的配置文件；这里新增了一个新的概念 layer，它是这块 <code>View</code> 对应的 surface，它所呈现的内容将绘制在这个 surface 上，同 opengl 里 surface 的概念</p>
 <p><code>RenderNode</code> 和它的脏区被添加到 <code>TreeInfo.layerUpdateQueue</code>；queue 里应该有两个元素，一个是 <code>HardwareRenderer.mRootNode</code> 对应的 native <code>RootRenderNode</code>，一个是 <code>DecorView.mRenderNode</code></p>
-<h2 id="CanvasContext-draw"><a href="#CanvasContext-draw" class="headerlink" title="CanvasContext.draw"></a>CanvasContext.draw</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">CanvasContext::draw</span><span class="hljs-params">()</span> </span>&#123;
+<h2 id="CanvasContext-draw"><a href="#CanvasContext-draw" class="headerlink" title="CanvasContext.draw"></a>CanvasContext.draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">CanvasContext::draw</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-comment">// 还记得上面说的吗，脏区是累加的，这里是总的脏区</span>
     SkRect dirty;
     mDamageAccumulator.<span class="hljs-built_in">finish</span>(&amp;dirty);
@@ -477,7 +477,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <h2 id="getFrame"><a href="#getFrame" class="headerlink" title="getFrame"></a>getFrame</h2><p>看下 <code>Frame</code>，它包含 <code>EGLSurface</code> 和 surface 宽高</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">Frame <span class="hljs-title">SkiaOpenGLPipeline::getFrame</span><span class="hljs-params">()</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">Frame <span class="hljs-title">SkiaOpenGLPipeline::getFrame</span><span class="hljs-params">()</span></span>
 <span class="hljs-function">Frame <span class="hljs-title">EglManager::beginFrame</span><span class="hljs-params">(EGLSurface surface)</span> </span>&#123;
     <span class="hljs-comment">// ... </span>
     <span class="hljs-built_in">makeCurrent</span>(surface);
@@ -490,7 +490,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">return</span> frame;
 &#125;</code></pre></div>
 
-<h2 id="IRenderPipeline-draw"><a href="#IRenderPipeline-draw" class="headerlink" title="IRenderPipeline::draw"></a>IRenderPipeline::draw</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SkiaOpenGLPipeline::draw</span><span class="hljs-params">(...)</span></span>
+<h2 id="IRenderPipeline-draw"><a href="#IRenderPipeline-draw" class="headerlink" title="IRenderPipeline::draw"></a>IRenderPipeline::draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SkiaOpenGLPipeline::draw</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaPipeline::renderFrame</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     SkCanvas* canvas = <span class="hljs-built_in">tryCapture</span>(surface.<span class="hljs-built_in">get</span>(), nodes[<span class="hljs-number">0</span>].<span class="hljs-built_in">get</span>(), layers);
@@ -507,7 +507,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p><code>SkiaPipeline::renderLayersImpl</code></p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 看上面，layers 是在 RenderNode::prepareTree 阶段加入的，包括 </span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 看上面，layers 是在 RenderNode::prepareTree 阶段加入的，包括 </span>
 <span class="hljs-comment">// HardwareRenderer.mRootNode 对应的 native RootRenderNode 和 DecorView.mRenderNode</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaPipeline::renderLayersImpl</span><span class="hljs-params">(<span class="hljs-keyword">const</span> LayerUpdateQueue&amp; layers, <span class="hljs-keyword">bool</span> opaque)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
@@ -547,7 +547,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <p>它在 <code>SkiaPipeline::createOrUpdateLayer</code> 里通过 <code>RenderNode::setLayerSurface</code> 被赋予 <code>SkSurface_Gpu</code>；那么上面的 canvas 则是以 <code>SkGpuDevice</code> 为 backend 的 <code>SkCanvas</code>，所有的 draw 操作（onDrawXXX）都被重定向到 <code>SkGpuDevice</code>（drawXXX）；而在 <code>SkGpuDevice</code> 里，draw 操作又被重定向到 <code>GrRenderTargetContext</code>；在 <code>GrRenderTargetContext</code> 里，draw 操作被封装为 <code>GrDrawOp</code>，通过 <code>GrOpsTask::addDrawOp</code> 加入到 <code>GrRenderTargetContext::fOpsTask</code>；而 <code>GrRenderTargetContext::fOpsTask</code> 会被 <code>GrDrawingManager::fDAG</code> 持有</p>
 <p>drawing op 在这里被再次包装，由 <code>DisplayList</code> 包装为 <code>GrDrawOp</code></p>
 <p><code>RenderNode</code> 的 <code>DisplayList</code> 会被渲染到 layer 上</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * Call to ensure all drawing to the context has been issued to the underlying 3D API.</span>
 <span class="hljs-comment"> */</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrContext::flush</span><span class="hljs-params">()</span></span>
@@ -674,7 +674,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>最终 <code>flush</code> 将 <code>GrDrawOp</code> 转换为 opengl 命令并提交给 gpu 执行，下面看看绘制一个矩形 <code>GrFillRectOp</code> 是怎么转换为 opengl 命令的</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkCanvas::drawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; r, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkCanvas::drawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; r, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkCanvas::onDrawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; r, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
@@ -708,7 +708,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>看看 <code>GrFillRectOp</code> 的定义</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">GrFillRectOp::Make</span><span class="hljs-params">(...)</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">GrFillRectOp::Make</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"><span class="hljs-keyword">static</span> std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">Make</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> Op, <span class="hljs-keyword">typename</span>... OpArgs&gt;</span>
@@ -737,7 +737,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrRenderTargetContext::addDrawOp</span><span class="hljs-params">(<span class="hljs-keyword">const</span> GrClip&amp; clip, std::unique_ptr&lt;GrDrawOp&gt; op,</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrRenderTargetContext::addDrawOp</span><span class="hljs-params">(<span class="hljs-keyword">const</span> GrClip&amp; clip, std::unique_ptr&lt;GrDrawOp&gt; op,</span></span>
 <span class="hljs-params"><span class="hljs-function">                                      <span class="hljs-keyword">const</span> std::function&lt;WillAddOpFn&gt;&amp; willAddFn)</span> </span>&#123;
     <span class="hljs-keyword">auto</span> opList = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">getRTOpList</span>();
     <span class="hljs-comment">// ...</span>
@@ -775,7 +775,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">recordOp</span>(std::<span class="hljs-built_in">move</span>(op), processorAnalysis, clip.<span class="hljs-built_in">doesClip</span>() ? &amp;clip : <span class="hljs-literal">nullptr</span>, &amp;dstProxy, caps);
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FillRectOp</span> <span class="hljs-keyword">final</span> :</span> <span class="hljs-keyword">public</span> GrMeshDrawOp &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FillRectOp</span> <span class="hljs-keyword">final</span> :</span> <span class="hljs-keyword">public</span> GrMeshDrawOp &#123;
     <span class="hljs-function">VertexSpec <span class="hljs-title">vertexSpec</span><span class="hljs-params">()</span> <span class="hljs-keyword">const</span> </span>&#123;
         <span class="hljs-keyword">auto</span> indexBufferOption = GrQuadPerEdgeAA::<span class="hljs-built_in">CalcIndexBufferOption</span>(fHelper.<span class="hljs-built_in">aaType</span>(), fQuads.<span class="hljs-built_in">count</span>());
         <span class="hljs-keyword">return</span> <span class="hljs-built_in">VertexSpec</span>(fQuads.<span class="hljs-built_in">deviceQuadType</span>(), fColorType, fQuads.<span class="hljs-built_in">localQuadType</span>(),

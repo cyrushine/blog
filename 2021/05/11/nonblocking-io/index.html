@@ -36,7 +36,7 @@
 <meta property="og:image" content="https://p1-tt.byteimg.com/origin/pgc-image/cd4d1c679c9e48a9846e65ad76363e7b">
 <meta property="og:image" content="https://p1-tt.byteimg.com/origin/pgc-image/b092d02d992646b49468059f5c808036">
 <meta property="article:published_time" content="2021-05-11T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.396Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="epoll">
 <meta property="article:tag" content="select">
@@ -284,12 +284,12 @@
 <p>无论下面的 <code>select</code>、<code>poll</code>、<code>epoll</code>，其都是这种思想实现的，不过在实现上，<code>select</code>/<code>poll</code> 可以看做是第一版，而 <code>epoll</code> 是第二版</p>
 <h3 id="IO-多路复用第一版的概念"><a href="#IO-多路复用第一版的概念" class="headerlink" title="IO 多路复用第一版的概念"></a>IO 多路复用第一版的概念</h3><p>IO 多路复用第一版，这个概念是本人想出来的，主要是方便将 <code>select</code>/<code>poll</code> 和 <code>epoll</code> 进行区分</p>
 <p>所以此处 IO 多路复用第一版，主要特指 <code>select</code> 和 <code>poll</code> 这两个。</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// readfds:关心读的fd集合；writefds：关心写的fd集合；excepttfds：异常的fd集合</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// readfds:关心读的fd集合；writefds：关心写的fd集合；excepttfds：异常的fd集合</span>
 <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">select</span> <span class="hljs-params">(<span class="hljs-keyword">int</span> n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)</span></span>;</code></pre></div>
 
 <p><code>select</code> 函数监视的文件描述符分 3 类，分别是 <code>writefds</code>、<code>readfds</code> 和 <code>exceptfds</code>。调用后 <code>select</code> 函数会阻塞，直到有描述副就绪（有数据 可读、可写、或者有 except），或者超时（timeout 指定等待时间，如果立即返回设为 null 即可），函数返回。当 <code>select</code> 函数返回后，可以通过遍历 <code>fdset</code>，来找到就绪的描述符。</p>
 <p><code>select</code> 目前几乎在所有的平台上支持，其良好跨平台支持也是它的一个优点。<code>select</code> 的一 个缺点在于单个进程能够监视的文件描述符的数量存在最大限制，在 Linux 上一般为 1024，可以通过修改宏定义甚至重新编译内核的方式提升这一限制，但 是这样也会造成效率的降低。</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">poll</span> <span class="hljs-params">(struct pollfd *fds, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> nfds, <span class="hljs-keyword">int</span> timeout)</span></span>;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">poll</span> <span class="hljs-params">(struct pollfd *fds, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> nfds, <span class="hljs-keyword">int</span> timeout)</span></span>;
 
 <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pollfd</span> &#123;</span>
     <span class="hljs-keyword">int</span> fd; <span class="hljs-comment">/* file descriptor */</span>
@@ -314,7 +314,7 @@
 </ol>
 <h2 id="IO-多路复用第二版"><a href="#IO-多路复用第二版" class="headerlink" title="IO 多路复用第二版"></a>IO 多路复用第二版</h2><p>IO 多路复用第二版主要指 <code>epoll</code>，<code>epoll</code> 的出现也是随着内核版本迭代才诞生的，在网上到处看到，<code>epoll</code> 是内核 2.6 以后开始支持的</p>
 <p><code>epoll</code> 的出现是为了解决前面提到的 IO 多路复用第一版的问题</p>
-<h3 id="IO-多路复用第二版的概念"><a href="#IO-多路复用第二版的概念" class="headerlink" title="IO 多路复用第二版的概念"></a>IO 多路复用第二版的概念</h3><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">//创建epollFd，底层是在内核态分配一段区域，底层数据结构红黑树+双向链表</span>
+<h3 id="IO-多路复用第二版的概念"><a href="#IO-多路复用第二版的概念" class="headerlink" title="IO 多路复用第二版的概念"></a>IO 多路复用第二版的概念</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">//创建epollFd，底层是在内核态分配一段区域，底层数据结构红黑树+双向链表</span>
 <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">epoll_create</span><span class="hljs-params">(<span class="hljs-keyword">int</span> size)</span>；<span class="hljs-comment">//创建一个epoll的句柄，size用来告诉内核这个监听的数目一共有多大</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-comment">//往红黑树中增加、删除、更新管理的socket fd</span></span>
@@ -334,7 +334,7 @@
 <li><code>fd</code>：是需要监听的 <code>fd</code>（文件描述符）</li>
 <li><code>epoll_event</code>：是告诉内核需要监听什么事，<code>struct epoll_event</code> 结构如下：</li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">epoll_event</span> &#123;</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">epoll_event</span> &#123;</span>
   <span class="hljs-keyword">__uint32_t</span> events;  <span class="hljs-comment">/* Epoll events */</span>
   <span class="hljs-keyword">epoll_data_t</span> data;  <span class="hljs-comment">/* User data variable */</span>
 &#125;;

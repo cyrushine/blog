@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-31-how-glide-work/glide_memory_cache.jpg">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-31-how-glide-work/glide_disk_cache.jpg">
 <meta property="article:published_time" content="2020-10-31T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="Glide">
 <meta name="twitter:card" content="summary_large_image">
@@ -266,7 +266,7 @@
 <li>resource cache 会增大磁盘缓存起码一倍；比如上述的 bitmap bytes 比压缩格式的 jpg 要大</li>
 <li>是否有 resource cache 受几个条件的影响</li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs java">DiskCacheStrategy
+<div class="hljs code-wrapper"><pre><code class="hljs java">DiskCacheStrategy
 	NONE      - 没有磁盘缓存
 	DATA      - 只缓存 data cache
 	RESOURCE  - 只缓存 resource cache
@@ -302,7 +302,7 @@
 <li>fetch source 阶段是线程池</li>
 </ul>
 <h2 id="加载路径"><a href="#加载路径" class="headerlink" title="加载路径"></a>加载路径</h2><p>加载路径把 model - dataClass - resourceClass - transcodeClass 串联起来</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// url string 是 model，类型是 String；transcodeClass 是 Drawable.class，最终的目标类型；此时的 resourceClass 是 Object.class</span>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// url string 是 model，类型是 String；transcodeClass 是 Drawable.class，最终的目标类型；此时的 resourceClass 是 Object.class</span>
 GlideApp.with(<span class="hljs-keyword">this</span>).as(Drawable.class).load(url).into(photoView);</code></pre></div>
 
 <ol>

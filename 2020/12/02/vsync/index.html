@@ -37,7 +37,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-12-02-vsync/45628.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-12-02-vsync/45643.png">
 <meta property="article:published_time" content="2020-12-02T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="vsync">
 <meta property="article:tag" content="invalidate">
@@ -275,7 +275,7 @@
 <h2 id="SW-VSYNC-软件垂直同步信号"><a href="#SW-VSYNC-软件垂直同步信号" class="headerlink" title="SW_VSYNC - 软件垂直同步信号"></a>SW_VSYNC - 软件垂直同步信号</h2><p><code>DispSyncThread</code> 和 <code>DispSync</code> 收集 HW_VSYNC，计算并输出 SW_VSYNC；主循环是 <code>DispSyncThread.threadLoop()</code>，但在分析 main loop 之前，我们需要先了解 <code>DispSync</code> 几个重要的属性（参考<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/d3e4b1805c92">「Android SurfaceFlinger SW Vsync模型」</a>）</p>
 <p><code>mResyncSamples</code> 数组 - 通过上面的分析我们知道 <code>addResyncSample</code> 把 HW_VSYNC 加入 <code>DispSync</code>，但 <code>mResyncSamples</code> 只会保留最新的 32 个以供后续计算；它是个首尾相连、环状的循环列表，容量为 32</p>
 <p><code>mPeriod</code> - 两个 HW_VSYNC 之间的时间间隔，相当于刷新率，我们看下它是怎么计算的</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] updateModelLocked %zu&quot;</span>, mName, mNumResyncSamples);
     <span class="hljs-comment">// 只有收集到足够多（≥ 6）的 HW_VSYNC 才去计算刷新率（以及其他参数）</span>
     <span class="hljs-keyword">if</span> (mNumResyncSamples &gt;= MIN_RESYNC_SAMPLES_FOR_UPDATE) &#123;
@@ -309,7 +309,7 @@
 &#125;</code></pre></div>
 
 <p><code>mPhase</code> - <code>mPeriod</code> 的偏差值；我们知道 <code>mPeriod</code> 是一个计算出来的平均值，而且还去除了一些噪音（极大值、极小值等），那么它与真实的 HW_VSYNC 之间必定会有偏差，<code>mPhase</code> 就是这个平均偏差（要从数学理论上去理解）；这里不深入细节了</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DispSync::updateModelLocked</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;[%s] updateModelLocked %zu&quot;</span>, mName, mNumResyncSamples);
     <span class="hljs-keyword">if</span> (mNumResyncSamples &gt;= MIN_RESYNC_SAMPLES_FOR_UPDATE) &#123;
         <span class="hljs-comment">// ...</span>
@@ -344,7 +344,7 @@
 
 <p><code>mReferenceTime</code>，这个最新那个 HW_VSYNC 的时间，每次计算下一个 SW_VSYNC 时都是以该时间作为基准，这样可以减少误差。如果每一个 SW_VSYNC 都以上一个 SW_VSYNC 作为基准，那误差就会不停的累加；而如果以第一个 HW_VSYNC 作基准，那每次 SW_VSYNC 误差是不会累加的</p>
 <p>现在我们看下 main loop</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">threadLoop</span><span class="hljs-params">()</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">threadLoop</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-keyword">status_t</span> err;
     <span class="hljs-keyword">nsecs_t</span> now = <span class="hljs-built_in">systemTime</span>(SYSTEM_TIME_MONOTONIC);
     <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
@@ -418,7 +418,7 @@
 
 <p>总的来说，SW_VSYNC 它去除了噪音，而且用过去 32 个 HW_VSYNC 样本的平均值作刷新率，对比 HW_VSYNC 显得平滑了很多</p>
 <p>那谁接收 SW_VSYNC？</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
     <span class="hljs-comment">// ... 一个是 app，叫做 APP_VSYNC 吧</span>
     mAppConnectionHandle =
             mScheduler-&gt;<span class="hljs-built_in">createConnection</span>(<span class="hljs-string">&quot;app&quot;</span>, mVsyncModulator.<span class="hljs-built_in">getOffsets</span>().app,
@@ -435,7 +435,7 @@
 &#125;</code></pre></div>
 
 <h2 id="APP-VSYNC-发送给-app-的垂直同步信号"><a href="#APP-VSYNC-发送给-app-的垂直同步信号" class="headerlink" title="APP_VSYNC - 发送给 app 的垂直同步信号"></a>APP_VSYNC - 发送给 app 的垂直同步信号</h2><p>还记得文章开头那张 <code>View.invalidate()</code> 时序图吗？最后面它唤醒了 <code>EventThread</code>，现在我们来看看 <code>EventThread</code> 的主循环都做了些什么</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">EventThread::threadMain</span><span class="hljs-params">(std::unique_lock&lt;std::mutex&gt;&amp; lock)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">EventThread::threadMain</span><span class="hljs-params">(std::unique_lock&lt;std::mutex&gt;&amp; lock)</span> </span>&#123;
     DisplayEventConsumers consumers;
 
     <span class="hljs-keyword">while</span> (mState != State::Quit) &#123;
@@ -486,7 +486,7 @@
 </ul>
 <p><img src="../../../../image/2020-12-02-vsync/consumer.jpg" srcset="/image/loading.gif" lazyload alt="consumer.jpg"></p>
 <h2 id="SF-VSYNC"><a href="#SF-VSYNC" class="headerlink" title="SF_VSYNC"></a>SF_VSYNC</h2><p>上面我们在分析是谁接收 SW_VSYNC 时，除了 APP_VSYNC 外，还有一路 SF_VSYNC</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SurfaceFlinger::initScheduler</span><span class="hljs-params">(DisplayId primaryDisplayId)</span> </span>&#123;
     <span class="hljs-comment">// ... 一个是 sf，叫做 SF_VSYNC 吧</span>
     mSfConnectionHandle =
     mScheduler-&gt;<span class="hljs-built_in">createConnection</span>(<span class="hljs-string">&quot;sf&quot;</span>, mVsyncModulator.<span class="hljs-built_in">getOffsets</span>().sf,

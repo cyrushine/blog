@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-11-11-starting-window/starting_window.jpg">
 <meta property="article:published_time" content="2020-11-11T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="windowDisablePreview">
 <meta property="article:tag" content="starting window">
@@ -240,7 +240,7 @@
 <p>跟寻<a href="../../../../2020/11/03/launch-activity-sequence/">上一篇文章</a>的脚步，找到 start point：<code>ActivityStarter.startActivityUnchecked</code></p>
 <p><img src="../../../../image/2020-11-11-starting-window/starting_window.jpg" srcset="/image/loading.gif" lazyload alt="starting_window.jpg"></p>
 <p>从上图可以看到，starting window 其实是系统通过 <code>ViewManager.addView</code> 往屏幕上添加的一个 <code>window</code>；而且它的显示时间比较早，比创建 app 进程（<code>ActivityStackSupervisor.startProcessAsync</code>）和 <code>ActivityThread</code> 执行 <code>Activity</code> 生命周期函数（<code>ActivityThread.performLaunchActivity</code>）都要早，所以它才能起到快速响应用户点击操作的效果；其次它的 view 是很简单的纯色背景，这样渲染也比较快出来，下面是构建 starting window 的代码，我们来看看它的样式是如何设置的</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> StartingSurface <span class="hljs-title">addSplashScreen</span><span class="hljs-params">(...)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> StartingSurface <span class="hljs-title">addSplashScreen</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">try</span> &#123;
         <span class="hljs-comment">// ... theme 是 launch activity theme，在这个 theme 里我们可以设置 starting window 样式</span>

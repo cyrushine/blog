@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-20-anr/input_dispatcher.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-20-anr/anr.jpg">
 <meta property="article:published_time" content="2020-10-20T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta name="twitter:card" content="summary_large_image">
@@ -250,7 +250,7 @@
 </li>
 </ol>
 <p>这里需要补充下 Native Looper 不同于 Java Looper 的地方：提供了监听文件描述符的机制</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * @param fd       需要监听的文件描述符</span>
 <span class="hljs-comment"> * @param ident    表示为当前发生事件的标识符，必须 &gt;= 0，或者为 POLL_CALLBACK(-2) 如果指定了 callback</span>
 <span class="hljs-comment"> * @param events   表示为要监听的文件类型，默认是 EVENT_INPUT</span>
@@ -269,7 +269,7 @@
 <ul>
 <li>指定 callback 来处理事件 : 当该文件描述符上有事件到来时，该 callback 会被执行；调用 <code>Looper.wake()</code> 也会触发 callback 执行</li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce() -&gt; pollInner()</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce() -&gt; pollInner()</span>
 
 <span class="hljs-keyword">int</span> eventCount = <span class="hljs-built_in">epoll_wait</span>(mEpollFd.<span class="hljs-built_in">get</span>(), eventItems, EPOLL_MAX_EVENTS, timeoutMillis)
 <span class="hljs-comment">// ...</span>
@@ -309,7 +309,7 @@
 <ul>
 <li>通过指定的 ident 来处理事件：当该文件描述符有数据到来时，<code>pollOnce()</code> 会返回一个 ident，调用者会判断该 ident 是否等于自己需要处理的事件 ident，如果是的话，则开始处理事件</li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce()</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// pollAll() -&gt; pollOnce()</span>
 
 <span class="hljs-keyword">for</span> (;;) &#123;
     <span class="hljs-keyword">while</span> (mResponseIndex &lt; mResponses.<span class="hljs-built_in">size</span>()) &#123;
@@ -349,7 +349,7 @@
 <p>产生 ANR 的逻辑就在 <code>dispatchKeyLocked</code>（分发一个 input event 的过程）</p>
 <p><img src="../../../../image/2020-10-20-anr/anr.jpg" srcset="/image/loading.gif" lazyload alt="anr.jpg"></p>
 <p>1，<code>findFocusedWindowTargetsLocked</code> 找到 input event 的分发 window 对象，然后 <code>checkWindowReadyForMoreInputLocked</code> 检查 widnow 是否可以接收 input event，这里截取一段检查逻辑：</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// outboundQueue 不为空说明此 window 仍有 input event 未发送，waitQueue 不为空说明有 input event 在消费中（未收到消费完成的响应）</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// outboundQueue 不为空说明此 window 仍有 input event 未发送，waitQueue 不为空说明有 input event 在消费中（未收到消费完成的响应）</span>
 <span class="hljs-comment">// 也就是说 input event 必须是按顺序分发和消费的，不能乱序</span>
 <span class="hljs-keyword">if</span> (eventEntry-&gt;type == EventEntry::TYPE_KEY) &#123;
     <span class="hljs-keyword">if</span> (!connection-&gt;outboundQueue.<span class="hljs-built_in">isEmpty</span>() || !connection-&gt;waitQueue.<span class="hljs-built_in">isEmpty</span>()) &#123;

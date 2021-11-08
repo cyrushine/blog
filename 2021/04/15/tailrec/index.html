@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-15-tailrec/code.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-15-tailrec/java_output.png">
 <meta property="article:published_time" content="2021-04-15T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.396Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="kotlin">
 <meta property="article:tag" content="tailrec">
@@ -263,14 +263,14 @@
 <li>编译器碰到尾递归，自动按照某种特定的方式进行优化编译</li>
 </ol>
 <p>举例：</p>
-<div class="code-wrapper"><pre><code class="hljs python"><span class="hljs-comment"># 没有使用尾递归的形式</span>
+<div class="hljs code-wrapper"><pre><code class="hljs python"><span class="hljs-comment"># 没有使用尾递归的形式</span>
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">recsum</span>(<span class="hljs-params">x</span>):</span>
   <span class="hljs-keyword">if</span> x == <span class="hljs-number">1</span>:
     <span class="hljs-keyword">return</span> x
   <span class="hljs-keyword">else</span>:
     <span class="hljs-keyword">return</span> x + recsum(x - <span class="hljs-number">1</span>)</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs python"><span class="hljs-comment"># 使用尾递归的形式）</span>
+<div class="hljs code-wrapper"><pre><code class="hljs python"><span class="hljs-comment"># 使用尾递归的形式）</span>
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">tailrecsum</span>(<span class="hljs-params">x, running_total=<span class="hljs-number">0</span></span>):</span>
   <span class="hljs-keyword">if</span> x == <span class="hljs-number">0</span>:
     <span class="hljs-keyword">return</span> running_total
@@ -306,7 +306,7 @@
 </ol>
 <h2 id="验证-Kotlin-的尾递归优化"><a href="#验证-Kotlin-的尾递归优化" class="headerlink" title="验证 Kotlin 的尾递归优化"></a>验证 Kotlin 的尾递归优化</h2><p>实现阶乘，<code>factorial</code> 是普通的递归版本，<code>factorialTail</code> 是尾递归版本（Kotlin 里除了要把递归函数写成尾递归的形式，还要添加 <code>tailrec</code> 关键字）</p>
 <p>当计算 <code>5!</code> 时，通过控制台可以看到普通的递归会有 5 个栈帧（相当于从左至右计算：1 * 2 * 3 * 4 * 5）；而尾递归则只有一个栈帧，说明 Kotlin 确实通过尾递归优化减少了递归调用时的栈帧消耗（相当于从右至左计算：5 * 4 * 3 * 2 * 1）</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
     <span class="hljs-keyword">companion</span> <span class="hljs-keyword">object</span>&#123;
         <span class="hljs-meta">@JvmStatic</span>
         <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">(args: <span class="hljs-type">Array</span>&lt;<span class="hljs-type">String</span>&gt;)</span></span> &#123;
@@ -350,7 +350,7 @@
 <p>打开 class 文件可以看到，其实是把递归写法转换为 <code>while</code> 循环，从而实现「只使用一个栈帧」的目标 </p>
 <p><img src="../../../../image/2021-04-15-tailrec/code.png" srcset="/image/loading.gif" lazyload alt="code.png"></p>
 <h2 id="验证-Java-的尾递归优化"><a href="#验证-Java-的尾递归优化" class="headerlink" title="验证 Java 的尾递归优化"></a>验证 Java 的尾递归优化</h2><p>从下面的控制台输出可以看到，无论是普通递归还是尾递归都产生了四个栈帧，说明 java 编译器并未实现对尾递归的优化</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * 阶乘的普通递归版本</span>
 <span class="hljs-comment"> * 5! = 1 * 2 * 3 * 4 * 5</span>
 <span class="hljs-comment"> */</span>

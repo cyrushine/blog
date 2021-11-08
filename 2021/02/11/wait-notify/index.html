@@ -26,7 +26,7 @@
 <meta property="og:description" content="在 Lock（三）利用 Lock 实现 Condition 我们介绍了如何用 Lock 来实现 Condition，而 Condition 对标的是 Object.wait 和 Object.notify 我们来看看 ART 是怎么实现 wait&#x2F;notify 的（最好先了解下 synchronized 的基础知识） ConditionVariable对 futex&#x2F;mutex 的封装，宏 ART">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-02-11T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="wait">
 <meta property="article:tag" content="notify">
@@ -232,7 +232,7 @@
               <p>在 <a href="../../../../2021/01/24/condition-by-lock/">Lock（三）利用 Lock 实现 Condition</a> 我们介绍了如何用 <code>Lock</code> 来实现 <code>Condition</code>，而 <code>Condition</code> 对标的是 <code>Object.wait</code> 和 <code>Object.notify</code></p>
 <p>我们来看看 ART 是怎么实现 wait/notify 的（最好先了解下 <a href="../../../../2021/02/08/synchronized-implementation/">synchronized 的基础知识</a>）</p>
 <h2 id="ConditionVariable"><a href="#ConditionVariable" class="headerlink" title="ConditionVariable"></a>ConditionVariable</h2><p>对 futex/mutex 的封装，宏 <code>ART_USE_FUTEXES</code> 决定底层是使用 futex 还是 mutex；它不是「条件变量」，<code>Monitor</code> 才是（而且它还包含 Lock 的角色）</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ConditionVariable::Wait</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   guard_.<span class="hljs-built_in">CheckSafeToWait</span>(self);
   <span class="hljs-built_in">WaitHoldingLocks</span>(self);
@@ -309,7 +309,7 @@
 <p><code>Thread</code> 有个成员变量充当 next 指针：<code>Thread::GetWaitNext()</code> 和 <code>Thread::SetWaitNext(Thread* next)</code></p>
 <p>await 是把线程添加到 wait set 队尾，notify 是把 wait set 队头转移为 wake set 队头，然后在退出临界区（释放锁）时唤醒 wake set 队头</p>
 <p>同时 <code>Thread::wait_monitor_</code> 标识线程在哪个 <code>Monitor</code> 上挂起</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Monitor</span> &#123;</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Monitor</span> &#123;</span>
   <span class="hljs-comment">// Threads currently waiting on this monitor.</span>
   <span class="hljs-function">Thread* wait_set_ <span class="hljs-title">GUARDED_BY</span><span class="hljs-params">(monitor_lock_)</span></span>;
   <span class="hljs-comment">// Threads that were waiting on this monitor, but are now contending on it.</span>
@@ -353,7 +353,7 @@
   &#125;
 &#125;</code></pre></div>
 
-<h2 id="Object-wait"><a href="#Object-wait" class="headerlink" title="Object.wait"></a>Object.wait</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> Object.wait() <span class="hljs-keyword">throws</span> InterruptedException &#123;
+<h2 id="Object-wait"><a href="#Object-wait" class="headerlink" title="Object.wait"></a>Object.wait</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> Object.wait() <span class="hljs-keyword">throws</span> InterruptedException &#123;
     wait(<span class="hljs-number">0</span>);
 &#125;
 <span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout) <span class="hljs-keyword">throws</span> InterruptedException &#123;
@@ -361,7 +361,7 @@
 &#125;
 <span class="hljs-keyword">native</span> <span class="hljs-keyword">void</span> Object.wait(<span class="hljs-keyword">long</span> timeout, <span class="hljs-keyword">int</span> nanos) <span class="hljs-keyword">throws</span> InterruptedException;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/native/java_lang_Object.cc</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/native/java_lang_Object.cc</span>
 
 <span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_waitJI</span><span class="hljs-params">(JNIEnv* env, jobject java_this, jlong ms, jint ns)</span> </span>&#123;
   <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
@@ -484,7 +484,7 @@
 &#125;</code></pre></div>
 
 <h2 id="Object-notify"><a href="#Object-notify" class="headerlink" title="Object.notify"></a>Object.notify</h2><p>把挂起的线程从 wait set 转移到 wake set</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_notify</span><span class="hljs-params">(JNIEnv* env, jobject java_this)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Object_notify</span><span class="hljs-params">(JNIEnv* env, jobject java_this)</span> </span>&#123;
   <span class="hljs-function">ScopedFastNativeObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
   soa.Decode&lt;mirror::Object&gt;(java_this)-&gt;<span class="hljs-built_in">Notify</span>(soa.<span class="hljs-built_in">Self</span>());
 &#125;
@@ -550,7 +550,7 @@
 &#125;</code></pre></div>
 
 <p>调用 notify 前需要先获得它的对象锁，notify 把线程转移到 wake set，释放锁时会唤醒线程（从而让线程能够重新获得锁）</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
   Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
   <span class="hljs-keyword">if</span> (owner == self) &#123;

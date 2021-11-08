@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-06-28-logan/files.png">
 <meta property="article:published_time" content="2021-06-28T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.833Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.396Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="log">
 <meta property="article:tag" content="logcat">
@@ -307,7 +307,7 @@
 </tr>
 </tbody></table>
 <h3 id="日志队列与-生产者-消费者-模型"><a href="#日志队列与-生产者-消费者-模型" class="headerlink" title="日志队列与 生产者-消费者 模型"></a>日志队列与 生产者-消费者 模型</h3><p>调用 <code>Logan.w</code> 的线程是日志的生产者，日志写入请求被放入日志队列（<code>Queue</code>）里等待处理，<code>LoganThread</code> 线程作为消费者不断地执行日志队列里的任务</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Logan</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Logan</span> </span>&#123;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> log  表示日志内容</span>
@@ -392,7 +392,7 @@
 &#125;</code></pre></div>
 
 <h3 id="内存缓存-Buffer"><a href="#内存缓存-Buffer" class="headerlink" title="内存缓存 Buffer"></a>内存缓存 Buffer</h3><p>并不是每次日志请求都立刻写入到日志文件里，而是在内存中开辟一段缓存（默认为 150K）作为 buffer，当 buffer 里的数据积累得足够多时（1/3 buffer 大小）才写入文件</p>
-<div class="code-wrapper"><pre><code class="hljs cpp">LoganThread.doWriteLog2File
+<div class="hljs code-wrapper"><pre><code class="hljs cpp">LoganThread.doWriteLog2File
 LoganProtocol.logan_write
 CLoganProtocol.logan_write
 CLoganProtocol.<span class="hljs-function">clogan_write</span>
@@ -422,7 +422,7 @@ CLoganProtocol.<span class="hljs-function">clogan_write</span>
 <h4 id="mmap"><a href="#mmap" class="headerlink" title="mmap"></a>mmap</h4><p>当 APP 因为崩溃而被 kill 或者被其他进程 kill 时，保存在内存中的日志缓存就会失去回写文件的机会，从而导致日志的丢失</p>
 <p>使用 <code>mmap</code> 可以在虚拟内存中开辟一片内存空间作为 buffer，它对应了一个 file backed，系统会选择合适的机会将 buffer 回写至文件，而且在进程被 kill 时系统可以确保 buffer 被正确地回写，确保进程异常时不会丢失日志</p>
 <p>mmap file 位于 <code>&#123;cacheDir&#125;/logan_cache/logan.mmap2</code>，buffer 和 mmap file 的大小默认为 150K</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-meta-keyword">ifndef</span> LOGAN_MMAP_LENGTH</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-meta-keyword">ifndef</span> LOGAN_MMAP_LENGTH</span>
 <span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> LOGAN_MMAP_LENGTH 150 * 1024 <span class="hljs-comment">//150k</span></span>
 <span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
 
@@ -527,7 +527,7 @@ CLoganProtocol.<span class="hljs-function">clogan_write</span>
 
 <h3 id="flush-回写日志文件"><a href="#flush-回写日志文件" class="headerlink" title="flush 回写日志文件"></a>flush 回写日志文件</h3><p>因为有 buffer 的存在，<code>Logan.w(log, type)</code> 先将日志写入内存缓存，只有当缓存超过阈值（50K）时才回写文件系统，<code>Logan.f()</code> 使 buffer 立刻回写至文件系统</p>
 <p>使用 <code>fopen</code>、<code>fseek</code>、<code>ftell</code>、<code>fwrite</code>、<code>fflush</code>、<code>fclose</code> 等高级 IO API，它们是具有缓存的</p>
-<div class="code-wrapper"><pre><code class="hljs cpp">Logan.<span class="hljs-built_in">f</span>()
+<div class="hljs code-wrapper"><pre><code class="hljs cpp">Logan.<span class="hljs-built_in">f</span>()
 LoganControlCenter.<span class="hljs-built_in">flush</span>()
 LoganThread.<span class="hljs-built_in">doFlushLog2File</span>()
 LoganProtocol.<span class="hljs-built_in">logan_flush</span>()
@@ -576,7 +576,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <h3 id="日志文件"><a href="#日志文件" class="headerlink" title="日志文件"></a>日志文件</h3><p>日志文件保存在目录 <code>LoganConfig.Builder.setPath(path)</code>，日志按日期存储，文件名是日期当天零时零分零秒的 <code>时间戳</code></p>
 <p><img src="../../../../image/2021-06-28-logan/files.png" srcset="/image/loading.gif" lazyload alt="files.png"></p>
 <p>日志经过 gzip 压缩和 AES 加密，其格式是 JSON，每个日志文件的第一条总是 <code>clogan header</code></p>
-<div class="code-wrapper"><pre><code class="hljs json">&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs json">&#123;
     <span class="hljs-attr">&quot;c&quot;</span>:<span class="hljs-string">&quot;clogan header&quot;</span>,    <span class="hljs-comment">// 日志内容</span>
     <span class="hljs-attr">&quot;f&quot;</span>:<span class="hljs-number">1</span>,                  <span class="hljs-comment">// flag，Logan.w(log, type) 中的 type 传入</span>
     <span class="hljs-attr">&quot;l&quot;</span>:<span class="hljs-string">&quot;init&quot;</span>,             <span class="hljs-comment">// local time，本地时间</span>
@@ -602,7 +602,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 &#125;</code></pre></div>
 
 <p>每次写日志时，都会判断下当前日期是否与日志文件的日期一致；如果不一致说明跨天了，创建当天的日志文件，并删除 <code>LoganConfig.Builder.setDay(long)</code> 前的日志文件</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
 
     <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doWriteLog2File</span><span class="hljs-params">(WriteAction action)</span> </span>&#123;
         <span class="hljs-keyword">if</span> (Logan.sDebug) &#123;
@@ -639,7 +639,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <ol>
 <li>日志内容为空</li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganControlCenter</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganControlCenter</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">write</span><span class="hljs-params">(String log, <span class="hljs-keyword">int</span> flag)</span> </span>&#123;
         <span class="hljs-keyword">if</span> (TextUtils.isEmpty(log)) &#123;
             <span class="hljs-keyword">return</span>;
@@ -651,7 +651,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <ol start="2">
 <li>任务队列满了</li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganControlCenter</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganControlCenter</span> </span>&#123;
 
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span> mMaxQueue;     <span class="hljs-comment">// 最大队列数</span>
 
@@ -691,7 +691,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <ol start="3">
 <li>存储设备容量不足（默认至少 50M）</li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
 
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span> mMinSDCard;
 
@@ -754,7 +754,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <li>日志文件大小超过限制</li>
 </ol>
 <p>默认 10M，<code>LoganConfig</code> 未公开 setter</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganConfig</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganConfig</span> </span>&#123;
 
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> M = <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>; <span class="hljs-comment">//M</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> DEFAULT_FILE_SIZE = <span class="hljs-number">10</span> * M;
@@ -762,7 +762,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
     <span class="hljs-keyword">long</span> mMaxFile = DEFAULT_FILE_SIZE; <span class="hljs-comment">// 删除文件最大值（实际并不会删除，只是不再写入）</span>
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> LOGAN_LOGFILE_MAXLENGTH 10 * 1024 * 1024</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> LOGAN_LOGFILE_MAXLENGTH 10 * 1024 * 1024</span>
 
 <span class="hljs-keyword">static</span> <span class="hljs-keyword">long</span> max_file_len = LOGAN_LOGFILE_MAXLENGTH;
 
@@ -783,7 +783,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 &#125;</code></pre></div>
 
 <h3 id="公司内部日志库-VLog"><a href="#公司内部日志库-VLog" class="headerlink" title="公司内部日志库 VLog"></a>公司内部日志库 VLog</h3><p>VLog 使用 Logan 来持久化 <code>Android.util.Log</code> 的日志输出，以便下发指令远程抓取用户日志，通过 gradle plugin Transform 和 ASM 将 <code>Log.XXX</code> 替换为 <code>VLog.XXX</code>，从而达到透明重定向日志输出的目的</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LogHandleTransform</span>(<span class="hljs-title">project</span>: <span class="hljs-title">Project</span>, <span class="hljs-title">ext</span>: <span class="hljs-title">LogExtension</span>?) : <span class="hljs-title">Transform</span>() </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LogHandleTransform</span>(<span class="hljs-title">project</span>: <span class="hljs-title">Project</span>, <span class="hljs-title">ext</span>: <span class="hljs-title">LogExtension</span>?) : <span class="hljs-title">Transform</span>() </span>&#123;
 
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> classProcessor: ClassProcessor = ClassProcessor()
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> logExtension: LogExtension? = <span class="hljs-function">ext</span>

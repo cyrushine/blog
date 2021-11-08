@@ -26,7 +26,7 @@
 <meta property="og:description" content="设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-01-19T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="面试">
 <meta name="twitter:card" content="summary_large_image">
@@ -306,7 +306,7 @@
 <h2 id="IdleHandler-是怎么实现的？"><a href="#IdleHandler-是怎么实现的？" class="headerlink" title="IdleHandler 是怎么实现的？"></a><code>IdleHandler</code> 是怎么实现的？</h2><p>在 <code>MessageQueue.next</code> 里，当队列为空，或者还不到第一个消息的执行时间时（<code>Message</code> 是按照执行时间排序的），在 <code>MessageQueue.mIdleHandlers</code> 里的 <code>IdleHandler</code> 会被执行</p>
 <h2 id="Retrofit-是怎么接口的？"><a href="#Retrofit-是怎么接口的？" class="headerlink" title="Retrofit 是怎么接口的？"></a>Retrofit 是怎么接口的？</h2><p>使用动态代理 <code>Proxy.newProxyInstance</code>，其核心是方法拦截</p>
 <p>在运行时创建一个实现了所选接口的类，这个类的构造函数需要一个 <code>InvocationHandler</code>，接口所有的方法调用都会代理至 <code>InvocationHandler</code></p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> &lt;T&gt; T Retrofit.create(<span class="hljs-keyword">final</span> Class&lt;T&gt; service) &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> &lt;T&gt; T Retrofit.create(<span class="hljs-keyword">final</span> Class&lt;T&gt; service) &#123;
   Utils.validateServiceInterface(service);
   <span class="hljs-keyword">if</span> (validateEagerly) &#123;
     eagerlyValidateMethods(service);
@@ -330,7 +330,7 @@
 &#125;</code></pre></div>
 
 <h2 id="Activity-重建的过程"><a href="#Activity-重建的过程" class="headerlink" title="Activity 重建的过程"></a><code>Activity</code> 重建的过程</h2><p>旧的 <code>Activity</code> 走向死亡（<code>onPause</code> -&gt; <code>onStop</code> -&gt; <code>onDestroy</code>），新的 <code>Activity</code> 进入（<code>onCreate</code> -&gt; <code>onStart</code> -&gt; <code>onResume</code>）</p>
-<div class="code-wrapper"><pre><code class="hljs java">ActivityThread.handleRelaunchActivity(...)
+<div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleRelaunchActivity(...)
 
 <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleRelaunchActivityInner</span><span class="hljs-params">(ActivityClientRecord r, <span class="hljs-keyword">int</span> configChanges,</span></span>
 <span class="hljs-params"><span class="hljs-function">        List&lt;ResultInfo&gt; pendingResults, List&lt;ReferrerIntent&gt; pendingIntents,</span></span>
@@ -374,7 +374,7 @@
 &#125;</code></pre></div>
 
 <h3 id="ViewModel-和-Fragment-会随之重建吗"><a href="#ViewModel-和-Fragment-会随之重建吗" class="headerlink" title="ViewModel 和 Fragment 会随之重建吗?"></a><code>ViewModel</code> 和 <code>Fragment</code> 会随之重建吗?</h3><p>不会，在 <code>Activity.onStop</code> 之后 <code>Activity.onDestory</code> 之前，<code>FragmentActivity</code> 将 <code>Fragment</code> 和 <code>ViewModelStore</code> 借由方法 <code>onRetainNonConfigurationInstance</code> 传递给 <code>ActivityClientRecord</code> 保存<br>并在 <code>Activity.attach</code> 被重新赋值给新的 <code>Activity</code></p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object FragmentActivity.onRetainNonConfigurationInstance() &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object FragmentActivity.onRetainNonConfigurationInstance() &#123;
     Object custom = onRetainCustomNonConfigurationInstance()
     FragmentManagerNonConfig fragments = mFragments.retainNestedNonConfig()
     <span class="hljs-keyword">if</span> (fragments == <span class="hljs-keyword">null</span> &amp;&amp; mViewModelStore == <span class="hljs-keyword">null</span> &amp;&amp; custom == <span class="hljs-keyword">null</span>) &#123;
@@ -457,7 +457,7 @@
 
 <h2 id="CountDownLatch-和-CyclicBarrier-的区别"><a href="#CountDownLatch-和-CyclicBarrier-的区别" class="headerlink" title="CountDownLatch 和 CyclicBarrier 的区别"></a><code>CountDownLatch</code> 和 <code>CyclicBarrier</code> 的区别</h2><p>开始多个线程通过 <code>CountDownLatch.await()</code> 被它阻塞，然后其他线程执行完一个任务就通过 <code>countDown()</code> 把里面的计算器 <code>count</code> 减一，直到计数器归零阻塞的线程才被唤醒；它是 oneshot 不能重复使用，内部通过 <code>AQS</code> 实现</p>
 <p>N 个并行线程执行任务，执行完就阻塞在 <code>CyclicBarrier.await()</code> 上面，直到 N 个线程都执行完任务，最后一个调用 <code>await()</code> 的线程执行完 <code>barrierCommand</code> 后，其他线程被唤醒，而 <code>CyclicBarrier</code> 被重置为初始状态；不同于 <code>CountDownLatch</code> 的一次性，<code>CyclicBarrier</code> 可以重复使用</p>
-<h2 id="如何让-N-个线程串行执行？"><a href="#如何让-N-个线程串行执行？" class="headerlink" title="如何让 N 个线程串行执行？"></a>如何让 N 个线程串行执行？</h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JoinThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
+<h2 id="如何让-N-个线程串行执行？"><a href="#如何让-N-个线程串行执行？" class="headerlink" title="如何让 N 个线程串行执行？"></a>如何让 N 个线程串行执行？</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JoinThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
     <span class="hljs-keyword">private</span> Runnable task;
     <span class="hljs-keyword">private</span> Thread prev;
 
@@ -478,7 +478,7 @@
 
 <h2 id="5-个线程，前-4-个执行完后才执行第-5-个"><a href="#5-个线程，前-4-个执行完后才执行第-5-个" class="headerlink" title="5 个线程，前 4 个执行完后才执行第 5 个"></a>5 个线程，前 4 个执行完后才执行第 5 个</h2><p>用 <code>CountDownLatch</code>，计算器设为 4，第 5 个线程通过 <code>await()</code> 阻塞在计数器上面，前 4 个执行到最后一步时使计数器减一，当计数器为零时第 5 个线程被唤醒</p>
 <h2 id="两个线程交替输出-1-100"><a href="#两个线程交替输出-1-100" class="headerlink" title="两个线程交替输出 1 - 100"></a>两个线程交替输出 1 - 100</h2><h3 id="自旋-volatile"><a href="#自旋-volatile" class="headerlink" title="自旋 + volatile"></a>自旋 + <code>volatile</code></h3><p>既然是交替输出，那必然一个输出奇数一个输出偶数，输出日志这一操作是很快的，所以可以考虑乐观锁：自旋</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">int</span> count;
 
@@ -526,7 +526,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<h3 id="基于条件变量-Condition"><a href="#基于条件变量-Condition" class="headerlink" title="基于条件变量 Condition"></a>基于条件变量 <code>Condition</code></h3><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
+<h3 id="基于条件变量-Condition"><a href="#基于条件变量-Condition" class="headerlink" title="基于条件变量 Condition"></a>基于条件变量 <code>Condition</code></h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">int</span> count;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ReentrantLock lock = <span class="hljs-keyword">new</span> ReentrantLock();

@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-04-dispatchtouchevent/02.jpeg">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-04-dispatchtouchevent/03.jpg">
 <meta property="article:published_time" content="2020-10-04T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="TouchEvent">
 <meta property="article:tag" content="Motion">
@@ -248,7 +248,7 @@
 <li><code>Activity.onTouchEvent</code></li>
 </ul>
 <p>网上大部分文章到此就结束了，实际上重点应该在 <code>ViewGroup.dispatchTouchEvent</code>，里面是事件分发的核心逻辑，我把它切分为三个阶段：</p>
-<h3 id="拦截"><a href="#拦截" class="headerlink" title="拦截"></a>拦截</h3><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// DOWN 会被拦截，后续的 MOVE 和 UP 如果有 touch target 也会被拦截</span>
+<h3 id="拦截"><a href="#拦截" class="headerlink" title="拦截"></a>拦截</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// DOWN 会被拦截，后续的 MOVE 和 UP 如果有 touch target 也会被拦截</span>
 <span class="hljs-comment">// Check for interception.</span>
 <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> intercepted;
 <span class="hljs-keyword">if</span> (actionMasked == MotionEvent.ACTION_DOWN || mFirstTouchTarget != <span class="hljs-keyword">null</span>) &#123;
@@ -268,7 +268,7 @@
     intercepted = <span class="hljs-keyword">true</span>;
 &#125;</code></pre></div>
 
-<h3 id="分发"><a href="#分发" class="headerlink" title="分发"></a>分发</h3><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 收到 CANCEL 或者 onInterceptTouchEvent 返回 true，则不分发 DOWN 给 children</span>
+<h3 id="分发"><a href="#分发" class="headerlink" title="分发"></a>分发</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 收到 CANCEL 或者 onInterceptTouchEvent 返回 true，则不分发 DOWN 给 children</span>
 <span class="hljs-comment">// 导致 children 收不到 DOWN 以及没有 touch target</span>
 <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> canceled = resetCancelNextUpFlag(<span class="hljs-keyword">this</span>) || actionMasked == MotionEvent.ACTION_CANCEL;
 <span class="hljs-comment">// ...</span>
@@ -298,7 +298,7 @@
         <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
-<h3 id="处理"><a href="#处理" class="headerlink" title="处理"></a>处理</h3><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 如果没有 touch target，则走自己的 View.dispatchTouchEvent 流程（相当于流向 onTouchEvent）</span>
+<h3 id="处理"><a href="#处理" class="headerlink" title="处理"></a>处理</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 如果没有 touch target，则走自己的 View.dispatchTouchEvent 流程（相当于流向 onTouchEvent）</span>
 <span class="hljs-comment">// Dispatch to touch targets.</span>
 <span class="hljs-keyword">if</span> (mFirstTouchTarget == <span class="hljs-keyword">null</span>) &#123;
     <span class="hljs-comment">// No touch targets so treat this as an ordinary view.</span>
@@ -377,7 +377,7 @@
 <li>左右滑动的卡片列表同 banner</li>
 <li><code>SwipeRefreshLayout</code> 看下述源码可以看到是由 touch event 和 nested scroll 两种方式触发，touch event 不够灵活屏蔽掉，选用 nested scroll；<code>dispatchNestedPreScroll</code>、<code>dispatchNestedScroll</code>、<code>dispatchNestedPreFling</code> 和 <code>dispatchNestedFling</code> 正常触发，<code>startNestedScroll</code> 则在 scrollY == 0 时触发，这样就只在滚动到顶的时候才触发 refresh。</li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 显示 loading</span>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 显示 loading</span>
 <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">startDragging</span><span class="hljs-params">(<span class="hljs-keyword">float</span> y)</span> </span>&#123;
     <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> yDiff = y - mInitialDownY;
     <span class="hljs-keyword">if</span> (yDiff &gt; mTouchSlop &amp;&amp; !mIsBeingDragged) &#123;

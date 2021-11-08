@@ -26,7 +26,7 @@
 <meta property="og:description" content="Process.killProcess(pid)最终执行系统调用 kill class Process &amp;#123;     public static final int SIGNAL_KILL &#x3D; 9;      public static final void killProcess(int pid) &amp;#123;         sendSignal(pid, SIGNAL_KILL);">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-06-20T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.833Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.396Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="kill">
 <meta property="article:tag" content="exit">
@@ -230,7 +230,7 @@
             
             <div class="markdown-body">
               <h2 id="Process-killProcess-pid"><a href="#Process-killProcess-pid" class="headerlink" title="Process.killProcess(pid)"></a>Process.killProcess(pid)</h2><p>最终执行系统调用 <code>kill</code></p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Process</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Process</span> </span>&#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> SIGNAL_KILL = <span class="hljs-number">9</span>;
 
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">killProcess</span><span class="hljs-params">(<span class="hljs-keyword">int</span> pid)</span> </span>&#123;
@@ -240,7 +240,7 @@
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">native</span> <span class="hljs-keyword">void</span> <span class="hljs-title">sendSignal</span><span class="hljs-params">(<span class="hljs-keyword">int</span> pid, <span class="hljs-keyword">int</span> signal)</span></span>;
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// android_util_Process.cpp</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// android_util_Process.cpp</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">android_os_Process_sendSignal</span><span class="hljs-params">(JNIEnv* env, jobject clazz, jint pid, jint sig)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-keyword">if</span> (pid &gt; <span class="hljs-number">0</span>) &#123;
@@ -251,9 +251,9 @@
 
 
 <h3 id="signal（信号）"><a href="#signal（信号）" class="headerlink" title="signal（信号）"></a>signal（信号）</h3><p><strong>信号</strong> 是一个古老的、异步的 IPC 机制，一个进程可以给另一个进程发送信号（<code>kill</code>），收到信号（<code>SIGxxx</code>）的进程会暂停并进入相应的信号处理程序（<code>Signal Handlers</code>），信号处理程序是可以配置的</p>
-<div class="code-wrapper"><pre><code class="hljs shell">kill -s sig pid</code></pre></div>
+<div class="hljs code-wrapper"><pre><code class="hljs shell">kill -s sig pid</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-built_in">kill</span>(pid, sig)
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-built_in">kill</span>(pid, sig)
 
 <span class="hljs-comment">// 自定义信号处理程序</span>
 <span class="hljs-comment">// handler 可以是：SIG_IGN 忽略此信号，SIG_DFL 设置默认的信号处理程序，函数地址</span>
@@ -295,7 +295,7 @@
 </tr>
 </tbody></table>
 <h2 id="System-exit-status"><a href="#System-exit-status" class="headerlink" title="System.exit(status)"></a>System.exit(status)</h2><p>退出 VM 回到 native 代码，能够保证 shutdown hook 执行完，native 代码甚至可以重新进入 VM 或者做其他的事，进程没有被杀死，其他 native thread 也在正常运行</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">System</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">System</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">exit</span><span class="hljs-params">(<span class="hljs-keyword">int</span> status)</span> </span>&#123;
         Runtime.getRuntime().exit(status);
     &#125;

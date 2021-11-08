@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/socket.jpg">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/signal_catcher_thread.png">
 <meta property="article:published_time" content="2021-07-10T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.833Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.396Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="anr">
 <meta name="twitter:card" content="summary_large_image">
@@ -243,7 +243,7 @@
 <li>在执行第二步的过程中，如果发现 window 存在有未消费的 input event 则产生 ANR</li>
 </ol>
 <p><code>产生 ANR - 输出 ANR 日志 - 弹出 ANR 对话框</code> 整个流程的方法栈如下：</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">InputDispatcher::start</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">InputDispatcher::start</span>
 <span class="hljs-function">InputDispatcher::dispatchOnce</span>
 <span class="hljs-function">InputDispatcher::processAnrsLocked</span>
 <span class="hljs-function"><span class="hljs-title">InputDispatcher::onAnrLocked</span><span class="hljs-params">(<span class="hljs-keyword">const</span> Connection&amp; connection)</span></span>
@@ -275,7 +275,7 @@
 <li>内存压力统计信息（Pressure Stall Information），读取自 <code>/proc/pressure/memory</code>，表示任务阻塞在内存资源上的总时长</li>
 <li>最近几个采集点之间的 CPU 使用率（CPU Usage）</li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs log"># from mi 9
+<div class="hljs code-wrapper"><pre><code class="hljs log"># from mi 9
 09-29 16:03:03.457  1763 29602 E ActivityManager: ANR in com.example.myapplication (com.example.myapplication/.MainActivity)
 09-29 16:03:03.457  1763 29602 E ActivityManager: PID: 27750
 09-29 16:03:03.457  1763 29602 E ActivityManager: Reason: Input dispatching timed out (com.example.myapplication/com.example.myapplication.MainActivity, 23ec514 com.example.myapplication/com.example.myapplication.MainActivity (server) is not responding. Waited 8008ms for MotionEvent(action=DOWN))
@@ -437,7 +437,7 @@
 09-29 16:03:03.457  1763 29602 E ActivityManager: 15% TOTAL: 6.1% user + 7.5% kernel + 0.9% irq + 0.4% softirq</code></pre></div>
 
 <p>上面的日志是在 <code>ProcessErrorStateRecord.appNotResponding</code> 输出的，<code>info</code> 是输出至 logcat system 的日志</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">appNotResponding</span><span class="hljs-params">(String activityShortComponentName, ApplicationInfo aInfo,</span></span>
 <span class="hljs-params"><span class="hljs-function">            String parentShortComponentName, WindowProcessController parentProcess,</span></span>
 <span class="hljs-params"><span class="hljs-function">            <span class="hljs-keyword">boolean</span> aboveSystem, String annotation, <span class="hljs-keyword">boolean</span> onlyDumpSelf)</span> </span>&#123;
@@ -495,7 +495,7 @@
 &#125;</code></pre></div>
 
 <h2 id="load-average"><a href="#load-average" class="headerlink" title="load average"></a>load average</h2><p>用进程数来描述 CPU 负载压力</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">appNotResponding</span><span class="hljs-params">(...)</span> </span>&#123;
         <span class="hljs-comment">// ...</span>
         <span class="hljs-keyword">if</span> (isMonitorCpuUsage()) &#123;
@@ -553,7 +553,7 @@
 <p>The fourth field consists of two numbers separated by a slash (/).  The first of these is the number of currently  runnable  kernel  scheduling entities (processes, threads).  The value after the slash is the number of kernel scheduling entities that currently exist on the system.  </p>
 <p>The fifth field is the PID of the process that was most recently created on the system.</p>
 </blockquote>
-<p>在绿联 6812（4 x <a href="mailto:&#x41;&#53;&#x33;&#64;&#49;&#46;&#53;&#71;">&#x41;&#53;&#x33;&#64;&#49;&#46;&#53;&#71;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
+<p>在绿联 6812（4 x <a href="mailto:&#x41;&#x35;&#x33;&#64;&#49;&#46;&#53;&#71;">&#x41;&#x35;&#x33;&#64;&#49;&#46;&#53;&#71;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
 <ul>
 <li>在过去的 1, 5, 15 分钟内 CPU 的平均负载是 13.31, 13.74, 13.81</li>
 <li>当前有 1167 个进程，其中有 2 个正在运行</li>
@@ -573,7 +573,7 @@
 <p>在此之前，Linux 也有一些资源压力的评估方法，最具代表性的是 load average 和 vmpressure</p>
 </blockquote>
 <p>每类资源的压力信息都通过 proc 文件系统的独立文件来提供，路径为：<code>/proc/pressure/memory</code>，<code>/proc/pressure/cpu</code> 和 <code>/proc/pressure/io</code>，其中 /proc/pressure/io 输出格式如下：</p>
-<div class="code-wrapper"><pre><code class="hljs log">some avg10=0.30 avg60=0.12 avg300=0.02 total=4170757
+<div class="hljs code-wrapper"><pre><code class="hljs log">some avg10=0.30 avg60=0.12 avg300=0.02 total=4170757
 full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
 
 <ul>
@@ -590,13 +590,13 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
 <p>IO 和 memory 都有 some 和 full 两个维度，那是因为的确有可能系统中的所有任务都阻塞在 IO 或者 memory 资源，同时 CPU 进入 idle 状态</p>
 <p>但是 CPU 资源不可能出现这个情况：不可能全部的 runnable 的任务都等待 CPU 资源，至少有一个 runnable 任务会被调度器选中占有 CPU 资源，因此 CPU 资源没有 full 维度的 PSI 信息呈现</p>
 <p>通过这些阻塞占比数据，我们可以看到短期以及中长期一段时间内各种资源的压力情况，可以较精确的确定时延抖动原因，并制定对应的负载管理策略</p>
-<div class="code-wrapper"><pre><code class="hljs log">09-29 16:03:03.457  1763 29602 E ActivityManager: ----- Output from /proc/pressure/memory -----
+<div class="hljs code-wrapper"><pre><code class="hljs log">09-29 16:03:03.457  1763 29602 E ActivityManager: ----- Output from /proc/pressure/memory -----
 09-29 16:03:03.457  1763 29602 E ActivityManager: some avg10=0.00 avg60=0.00 avg300=0.02 total=32995625
 09-29 16:03:03.457  1763 29602 E ActivityManager: full avg10=0.00 avg60=0.00 avg300=0.00 total=11591183
 09-29 16:03:03.457  1763 29602 E ActivityManager: ----- End output from /proc/pressure/memory -----</code></pre></div>
 
 <p>现在我们来看看 anr logcat 里输出的 /proc/pressure/memory 内容，full 都为零说明任务同时阻塞在内存资源上的情况没有出现，some - avg300=0.02 表明在有任务阻塞在内存资源上 6s（300s * 0.02，注意这 6s 是总和，不一定是连续的）</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MemoryPressureUtil</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MemoryPressureUtil</span> </span>&#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String FILE = <span class="hljs-string">&quot;/proc/pressure/memory&quot;</span>;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String TAG = <span class="hljs-string">&quot;MemoryPressure&quot;</span>;
 
@@ -628,14 +628,14 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
 <li>如果是 <code>anr - mLastSampleTime - mCurrentSampleTime</code>，说明 ANR 发生在两次快照差值（统计时间段）之前，对应的是 <code>later</code></li>
 <li>如果是 <code>mLastSampleTime - mCurrentSampleTime - anr</code>，说明 ANR 发生在两次快照差值（统计时间段）之后，对应的是 <code>ago</code></li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs log">// 第一段 CPU Usage 是由 mService.mAppProfiler.printCurrentCpuState(report, anrTime) 打印出来的
+<div class="hljs code-wrapper"><pre><code class="hljs log">// 第一段 CPU Usage 是由 mService.mAppProfiler.printCurrentCpuState(report, anrTime) 打印出来的
 09-29 16:03:03.457  1763 29602 E ActivityManager: CPU usage from 0ms to 14680ms later (2021-09-29 16:02:48.726 to 2021-09-29 16:03:03.406):
 ...
 // 第二段 CPU Usage 是由 info.append(processCpuTracker.printCurrentState(anrTime)) 打印出来的
 09-29 16:03:03.457  1763 29602 E ActivityManager: CPU usage from 57ms to 615ms later (2021-09-29 16:02:48.783 to 2021-09-29 16:02:49.341):
 ...</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">appNotResponding</span><span class="hljs-params">(String activityShortComponentName, ApplicationInfo aInfo,</span></span>
 <span class="hljs-params"><span class="hljs-function">            String parentShortComponentName, WindowProcessController parentProcess,</span></span>
 <span class="hljs-params"><span class="hljs-function">            <span class="hljs-keyword">boolean</span> aboveSystem, String annotation, <span class="hljs-keyword">boolean</span> onlyDumpSelf)</span> </span>&#123;
@@ -705,7 +705,7 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
 &#125;</code></pre></div>
 
 <h3 id="收集进程-proc-pid"><a href="#收集进程-proc-pid" class="headerlink" title="收集进程 /proc/[pid]"></a>收集进程 <code>/proc/[pid]</code></h3><p><code>Process.getPids(dir, array)</code> 遍历目录 <code>dir</code> （这里传入的是 <code>/proc</code>）下的条目，找到纯数字的条目（即为 <code>pid</code>）加入到 <code>array</code>（pid array），<code>array</code> 会复用，只有当 <code>pid</code> 的数量超过 <code>array</code> 容量时才分配新的数组</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// Process.getPids(dir, array)</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// Process.getPids(dir, array)</span>
 <span class="hljs-comment">// 从 /proc 获取 pid 列表到 array</span>
 <span class="hljs-function">jintArray <span class="hljs-title">android_os_Process_getPids</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
 <span class="hljs-params"><span class="hljs-function">                                     jstring file <span class="hljs-comment">/* /proc */</span>, jintArray lastArray)</span></span>
@@ -791,7 +791,7 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
 &#125;</code></pre></div>
 
 <h3 id="进程概览-proc-pid-stat"><a href="#进程概览-proc-pid-stat" class="headerlink" title="进程概览 /proc/[pid]/stat"></a>进程概览 <code>/proc/[pid]/stat</code></h3><p>在 MI 9 上通过 <code>cat /proc/8538/stat</code> 打印出的内容如下（8538 是通过 <code>ps -A | grep com.tencent.mm</code> 查找出的微信的 pid）：</p>
-<div class="code-wrapper"><pre><code class="hljs shell">cepheus:/proc $ cat /proc/8538/stat
+<div class="hljs code-wrapper"><pre><code class="hljs shell">cepheus:/proc $ cat /proc/8538/stat
 8538 (com.tencent.mm) S 690 690 0 0 -1 1077952832 2355958 1597 22562 6 39676 24386 2 1 20 0 209 0 464604 73654394880 26729 18446744073709551615 1 1 0 0 0 0 4608 4097 1073775868 0 0 0 17 0 0 0 2401 0 0 0 0 0 0 0 0 0 0</code></pre></div>
 
 <p>一些重要字段的含义如下（来自 <code>man proc.5</code> 里的 <code>/proc/[pid]/stat</code> 章节）：</p>
@@ -1013,7 +1013,7 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
 </tr>
 </tbody></table>
 <p>第一次遇到进程时（构造 <code>State</code>）将初始值填入 <code>base_xxx</code>，下次遇到进程时给 <code>rel_xxx</code> 赋值：<code>rel_xxx = [now] - base_xxx</code> 并更新 <code>base_xxx</code> 为当前值 <code>[now]</code>，也就是说 <code>base_xxx</code> 是当前快照而 <code>rel_xxx</code> 是当前与上一次快照的差值</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessCpuTracker</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessCpuTracker</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">update</span><span class="hljs-params">()</span> </span>&#123;
         <span class="hljs-keyword">if</span> (DEBUG) Slog.v(TAG, <span class="hljs-string">&quot;Update: &quot;</span> + <span class="hljs-keyword">this</span>);
 
@@ -1299,7 +1299,7 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
     &#125;    
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">jboolean <span class="hljs-title">android_os_Process_readProcFile</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">jboolean <span class="hljs-title">android_os_Process_readProcFile</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
 <span class="hljs-params"><span class="hljs-function">        jstring file, jintArray format, jobjectArray outStrings,</span></span>
 <span class="hljs-params"><span class="hljs-function">        jlongArray outLongs, jfloatArray outFloats)</span></span>
 <span class="hljs-function"></span>&#123;
@@ -1560,7 +1560,7 @@ full avg10=0.12 avg60=0.05 avg300=0.01 total=1856503</code></pre></div>
 </tr>
 </tbody></table>
 <p>可以看到跟 <code>进程概览</code> 一样，<code>mBaseXxxTime</code> 记录的是当前值，<code>mRelXxxTime</code> 记录的是当前与上一次的差值</p>
-<div class="code-wrapper"><pre><code class="hljs shell">cepheus:/ $ cat /proc/stat
+<div class="hljs code-wrapper"><pre><code class="hljs shell">cepheus:/ $ cat /proc/stat
 cpu  1908033 248762 1291479 9313559 21704 241034 75778 0 0 0
 cpu0 261151 61609 246778 2138176 9728 89991 29646 0 0 0
 cpu1 280460 61787 257071 884928 2710 43158 18528 0 0 0
@@ -1578,7 +1578,7 @@ procs_running 1
 procs_blocked 0
 softirq 28955158 6101535 6564415 106706 1458910 1999704 0 1242328 6001922 0 5479638</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessCpuTracker</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessCpuTracker</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">update</span><span class="hljs-params">()</span> </span>&#123;
         <span class="hljs-keyword">if</span> (DEBUG) Slog.v(TAG, <span class="hljs-string">&quot;Update: &quot;</span> + <span class="hljs-keyword">this</span>);
 
@@ -1659,13 +1659,13 @@ softirq 28955158 6101535 6564415 106706 1458910 1999704 0 1242328 6001922 0 5479
 <li>在进程生存的时间段内（<code>SystemClock.uptimeMillis()</code>），分配给进程的 CPU 时间的占比，细分用户态和内核态</li>
 <li>在两个采集点（<code>ProcessCpuTracker.update</code>）之间的时间段内，CPU 的整体使用率（idle time 表示空闲）</li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs log">[prefix][(user + system + iowait + irq + softIrq) / totalTime]% [pid]/[label]: 
+<div class="hljs code-wrapper"><pre><code class="hljs log">[prefix][(user + system + iowait + irq + softIrq) / totalTime]% [pid]/[label]: 
 [user/totalTime]% user + [system/totalTime]% kernel + [iowait/totalTime]% iowait + [irq/totalTime]% irq + [softirq/totalTime]% softirq / faults: [minFaults] minor [majFaults] major
 
 32% 8356/com.taobao.taobao: 17% user + 15% kernel / faults: 9334 minor 85 major
 19% TOTAL: 8% user + 9.2% kernel + 0.6% iowait + 0.9% irq + 0.4% softirq</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessCpuTracker</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessCpuTracker</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">public</span> String <span class="hljs-title">printCurrentState</span><span class="hljs-params">(<span class="hljs-keyword">long</span> now)</span> </span>&#123;
         <span class="hljs-comment">// ...</span>
         <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> totalTime = mRelUserTime + mRelSystemTime + mRelIoWaitTime
@@ -1768,7 +1768,7 @@ softirq 28955158 6101535 6564415 106706 1458910 1999704 0 1242328 6001922 0 5479
 
 <h1 id="ANR-日志文件"><a href="#ANR-日志文件" class="headerlink" title="ANR 日志文件"></a>ANR 日志文件</h1><p>ANR 日志文件太大了，下面仅展示日志的基本结构，整个示例文件可以在 <a href="../../../../files/2021-06-27-deep-drive-into-anr/anr_2021-09-29-16-02-49-393">这里</a> 下载</p>
 <p>日志文件包含多个进程，每个进程以 <code>----- pid [pid] at [time] -----</code> 开始，以 <code>----- end [pid] -----</code> 结束，而且很明显地分为 <code>java process</code> 和 <code>native process</code></p>
-<div class="code-wrapper"><pre><code class="hljs log"># java process 包含了 JVM 各种统计信息以及 thread trace
+<div class="hljs code-wrapper"><pre><code class="hljs log"># java process 包含了 JVM 各种统计信息以及 thread trace
 ----- pid 001 at 2021-09-29 16:02:49 -----
 Cmd line: com.example.myapplication
 ...
@@ -1827,7 +1827,7 @@ ABI: &#x27;arm&#x27;
 <blockquote>
 <p>旧版本的 Android 上日志文件在 /data/anr/traces.txt</p>
 </blockquote>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String ANR_TRACE_DIR = <span class="hljs-string">&quot;/data/anr&quot;</span>;
     <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String ANR_FILE_PREFIX = <span class="hljs-string">&quot;anr_&quot;</span>;
 
@@ -1938,7 +1938,7 @@ ABI: &#x27;arm&#x27;
 <li>最后是 <code>lastPids</code>，它们是 <code>ActivityManagerService.mProcessList</code> 里不正常的进程（比如 ANR process）</li>
 </ol>
 <p>如果进程很多，那么 dump processes 耗费的时间也是很可观的，所以整个 dump processes 的过程有个时间上限 20s，超过这个阈值即使还有进程没有 dump 也会将其忽略，这也就解释了为什么要按上面的逻辑对进程进行排序，因为要优先打印重要的进程信息</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProcessErrorStateRecord</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">appNotResponding</span><span class="hljs-params">(String activityShortComponentName, ApplicationInfo aInfo,</span></span>
 <span class="hljs-params"><span class="hljs-function">            String parentShortComponentName, WindowProcessController parentProcess,</span></span>
 <span class="hljs-params"><span class="hljs-function">            <span class="hljs-keyword">boolean</span> aboveSystem, String annotation, <span class="hljs-keyword">boolean</span> onlyDumpSelf)</span> </span>&#123;
@@ -2141,7 +2141,7 @@ ABI: &#x27;arm&#x27;
     &#125;
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">jintArray <span class="hljs-title">android_os_Process_getPidsForCommands</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">jintArray <span class="hljs-title">android_os_Process_getPidsForCommands</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
 <span class="hljs-params"><span class="hljs-function">        jobjectArray commandNames)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-keyword">if</span> (commandNames == <span class="hljs-literal">NULL</span>) &#123;
@@ -2245,7 +2245,7 @@ ABI: &#x27;arm&#x27;
 <p>Since Linux 2.6.11, the pipe capacity is 16 pages (i.e., 65,536 bytes in a system with a page size  of  4096 bytes).  </p>
 <p>Since Linux 2.6.35, the default pipe capacity is 16 pages, but the capacity can be queried and set using the fcntl(2) F_GETPIPE_SZ and F_SETPIPE_SZ operations. </p>
 </blockquote>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityManagerService</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityManagerService</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">long</span> <span class="hljs-title">dumpJavaTracesTombstoned</span><span class="hljs-params">(<span class="hljs-keyword">int</span> pid, String fileName, <span class="hljs-keyword">long</span> timeoutMs)</span> </span>&#123;
         <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> timeStart = SystemClock.elapsedRealtime();
         <span class="hljs-keyword">boolean</span> javaSuccess = Debug.dumpJavaBacktraceToFileTimeout(pid, fileName,
@@ -2276,7 +2276,7 @@ ABI: &#x27;arm&#x27;
     &#125;
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> jboolean <span class="hljs-title">android_os_Debug_dumpJavaBacktraceToFileTimeout</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> jboolean <span class="hljs-title">android_os_Debug_dumpJavaBacktraceToFileTimeout</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
 <span class="hljs-params"><span class="hljs-function">        jint pid, jstring fileName, jint timeoutSecs)</span> </span>&#123;
     <span class="hljs-keyword">const</span> <span class="hljs-keyword">bool</span> ret = <span class="hljs-built_in">dumpTraces</span>(env, pid, fileName, timeoutSecs, kDebuggerdJavaBacktrace);
     <span class="hljs-keyword">return</span> ret ? JNI_TRUE : JNI_FALSE;
@@ -2565,7 +2565,7 @@ ABI: &#x27;arm&#x27;
   <span class="hljs-keyword">return</span> <span class="hljs-built_in">TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">sendmsg</span>(sockfd.<span class="hljs-built_in">get</span>(), &amp;msg, flags));
 &#125;</code></pre></div>
 
-<h3 id="Unix-Domain-Socket"><a href="#Unix-Domain-Socket" class="headerlink" title="Unix Domain Socket"></a>Unix Domain Socket</h3><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/* </span>
+<h3 id="Unix-Domain-Socket"><a href="#Unix-Domain-Socket" class="headerlink" title="Unix Domain Socket"></a>Unix Domain Socket</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/* </span>
 <span class="hljs-comment"> * man socket.2</span>
 <span class="hljs-comment"> * </span>
 <span class="hljs-comment"> * domain: </span>
@@ -2593,7 +2593,7 @@ ABI: &#x27;arm&#x27;
 <p>int sigwait(const sigset_t *set, int *sig)</p>
 <p>The  sigwait()  function  suspends execution of the calling thread until one of the signals specified in the signal set set becomes pending.  The function accepts the signal (removes it from the pending list of signals), and returns the signal number in sig</p>
 </blockquote>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/runtime.cc</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/runtime.cc</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Runtime::InitNonZygoteOrPostFork</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv* env,</span></span>
 <span class="hljs-params"><span class="hljs-function">    <span class="hljs-keyword">bool</span> is_system_server,</span></span>
@@ -2710,7 +2710,7 @@ SignalCatcher::<span class="hljs-built_in">SignalCatcher</span>()
 &#125;;</code></pre></div>
 
 <h3 id="proces-thread-dump"><a href="#proces-thread-dump" class="headerlink" title="proces/thread dump"></a>proces/thread dump</h3><p>APP 在收到信号 <code>SIGQUIT(3)</code> 后，<code>Signal Catcher</code> 线程会将有关 VM 的信息 dump 出来，如下面的代码所示，是不是跟 ANR Traces 日志里的内容很相似？这样我们就可以看着代码一点点地分析出日志里各段的含义</p>
-<div class="code-wrapper"><pre><code class="hljs log">// 以下日志来自 SignalCatcher::HandleSigQuit
+<div class="hljs code-wrapper"><pre><code class="hljs log">// 以下日志来自 SignalCatcher::HandleSigQuit
 ----- pid 27750(当前进程，也就是被 dump 的进程) at 2021-09-29 16:02:49(输出这段日志的时间) -----
 Cmd line: com.example.myapplication(来自 /proc/pid/cmdline)
 Build fingerprint: &#x27;Xiaomi/cepheus/cepheus:11/RKQ1.200826.002/V12.5.4.0.RFACNXM:user/release-keys&#x27;
@@ -3040,7 +3040,7 @@ DALVIK THREADS (16):
   native: #10 pc 000000000008ec64  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64)
   (no managed stack frames)</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SignalCatcher::HandleSigQuit</span><span class="hljs-params">()</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SignalCatcher::HandleSigQuit</span><span class="hljs-params">()</span> </span>&#123;
   Runtime* runtime = Runtime::<span class="hljs-built_in">Current</span>();
   std::ostringstream os;
   os &lt;&lt; <span class="hljs-string">&quot;\n&quot;</span>
@@ -3122,7 +3122,7 @@ DALVIK THREADS (16):
 <li>将 <code>pid</code>、<code>dumpType</code> 等参数发送过去，返回一个 output fd (这个 fd 其实就是上面介绍过的 <code>debuggerd_trigger_dump</code> 里管道的 write fd，它被注册到 <code>debuggerd.tombstoned</code>)</li>
 <li>把 dump 字符串写入 output fd</li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SignalCatcher::Output</span><span class="hljs-params">(<span class="hljs-keyword">const</span> std::string&amp; s)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SignalCatcher::Output</span><span class="hljs-params">(<span class="hljs-keyword">const</span> std::string&amp; s)</span> </span>&#123;
   <span class="hljs-function">ScopedThreadStateChange <span class="hljs-title">tsc</span><span class="hljs-params">(Thread::Current(), kWaitingForSignalCatcherOutput)</span></span>;
   <span class="hljs-keyword">palette_status_t</span> status = <span class="hljs-built_in">PaletteWriteCrashThreadStacks</span>(s.<span class="hljs-built_in">data</span>(), s.<span class="hljs-built_in">size</span>());
   <span class="hljs-keyword">if</span> (status == PALETTE_STATUS_OK) &#123;
@@ -3242,14 +3242,14 @@ DALVIK THREADS (16):
 &#125;</code></pre></div>
 
 <h2 id="dump-native-traces"><a href="#dump-native-traces" class="headerlink" title="dump native traces"></a>dump native traces</h2><p>最终还是来到 <code>debuggerd_trigger_dump</code>，只不过此时 <code>dump_type</code> 是 <code>kDebuggerdNativeBacktrace</code></p>
-<div class="code-wrapper"><pre><code class="hljs reasonml"><span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Debug</span>.</span></span>dump<span class="hljs-constructor">NativeBacktraceToFileTimeout(<span class="hljs-params">pid</span>, <span class="hljs-params">file</span>, <span class="hljs-params">timeoutSecs</span>)</span>
+<div class="hljs code-wrapper"><pre><code class="hljs reasonml"><span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Debug</span>.</span></span>dump<span class="hljs-constructor">NativeBacktraceToFileTimeout(<span class="hljs-params">pid</span>, <span class="hljs-params">file</span>, <span class="hljs-params">timeoutSecs</span>)</span>
 android_os_Debug_dumpNativeBacktraceToFileTimeout
 dump<span class="hljs-constructor">Traces(JNIEnv<span class="hljs-operator">*</span> <span class="hljs-params">env</span>, <span class="hljs-params">jint</span> <span class="hljs-params">pid</span>, <span class="hljs-params">jstring</span> <span class="hljs-params">fileName</span>, <span class="hljs-params">jint</span> <span class="hljs-params">timeoutSecs</span>, DebuggerdDumpType <span class="hljs-params">dumpType</span>)</span>
 dump<span class="hljs-constructor">_backtrace_to_file_timeout(<span class="hljs-params">pid_t</span> <span class="hljs-params">tid</span>, DebuggerdDumpType <span class="hljs-params">dump_type</span>, <span class="hljs-params">int</span> <span class="hljs-params">timeout_secs</span>, <span class="hljs-params">int</span> <span class="hljs-params">fd</span>)</span>
 debuggerd<span class="hljs-constructor">_trigger_dump(<span class="hljs-params">pid_t</span> <span class="hljs-params">tid</span>, DebuggerdDumpType <span class="hljs-params">dump_type</span>, <span class="hljs-params">unsigned</span> <span class="hljs-params">int</span> <span class="hljs-params">timeout_ms</span>, <span class="hljs-params">unique_fd</span> <span class="hljs-params">output_fd</span>)</span></code></pre></div>
 
 <h1 id="ANR-Dialog"><a href="#ANR-Dialog" class="headerlink" title="ANR Dialog"></a>ANR Dialog</h1><p>在 <code>ActivityManagerService.mUiHandler</code> 里打开 <code>AppNotRespondingDialog</code>，这个对话框一般会包含两个按钮：等待和关闭，如果选择关闭则会通过 <code>kill(pid, SIGKILL)</code> 杀死 ANR 进程</p>
-<div class="code-wrapper"><pre><code class="hljs java">ProcessRecord.ErrorDialogController.showAnrDialogs
+<div class="hljs code-wrapper"><pre><code class="hljs java">ProcessRecord.ErrorDialogController.showAnrDialogs
 ProcessRecord.ErrorDialogController.scheduleForAllDialogs
 ProcessRecord.ErrorDialogController.forAllDialogs
 

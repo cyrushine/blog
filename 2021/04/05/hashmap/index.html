@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-05-hashmap/op_2.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-05-hashmap/op_3.png">
 <meta property="article:published_time" content="2021-04-05T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.396Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="HashMap">
 <meta property="article:tag" content="红黑树">
@@ -259,7 +259,7 @@
 <li>桶的数量超过 <code>MIN_TREEIFY_CAPACITY</code>（小于这个数量只是进行扩容操作）；无论是链表还是红黑树，都是为了解决哈希冲突，如果桶太少则应该首先增加桶的数量降低哈希冲突出现的概率，其次才是用红黑树增加查找效率</li>
 </ul>
 <p>首先将 <code>Node</code> 转变为 <code>TreeNode</code>，此时还是链表结构；第一个节点即为根，后面的节点作为新节点，按规则依次添加到树里：比父节点小则添加到左子树，比父节点大则添加到右子树，从上往下搜索直到要添加的子树为空即为新节点的位置；每次插入新节点后都需要进行 <strong>平衡</strong> 操作</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">final</span> V <span class="hljs-title">putVal</span><span class="hljs-params">(<span class="hljs-keyword">int</span> hash, K key, V value, <span class="hljs-keyword">boolean</span> onlyIfAbsent, <span class="hljs-keyword">boolean</span> evict)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">final</span> V <span class="hljs-title">putVal</span><span class="hljs-params">(<span class="hljs-keyword">int</span> hash, K key, V value, <span class="hljs-keyword">boolean</span> onlyIfAbsent, <span class="hljs-keyword">boolean</span> evict)</span> </span>&#123;
     <span class="hljs-comment">// ... 将新元素添加至链表尾部（桶），如果桶的大小超过 TREEIFY_THRESHOLD，准备树化</span>
     <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> binCount = <span class="hljs-number">0</span>; ; ++binCount) &#123;
         <span class="hljs-keyword">if</span> ((e = p.next) == <span class="hljs-keyword">null</span>) &#123;
@@ -297,7 +297,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 将还是链表的桶树化，当前是链表头</span>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 将还是链表的桶树化，当前是链表头</span>
 <span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">treeify</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab)</span> </span>&#123;
 
     <span class="hljs-comment">// 链表里第一个元素作为红黑树初始的根</span>
@@ -352,7 +352,7 @@
     moveRootToFront(tab, root);
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 插入新节点后需要平衡红黑树</span>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 插入新节点后需要平衡红黑树</span>
 <span class="hljs-keyword">static</span> &lt;K,V&gt; <span class="hljs-function">TreeNode&lt;K,V&gt; <span class="hljs-title">balanceInsertion</span><span class="hljs-params">(TreeNode&lt;K,V&gt; root, TreeNode&lt;K,V&gt; x)</span> </span>&#123;
     x.red = <span class="hljs-keyword">true</span>; <span class="hljs-comment">// 新节点总是红色的</span>
 
@@ -431,7 +431,7 @@
 <h2 id="扩容的过程"><a href="#扩容的过程" class="headerlink" title="扩容的过程"></a>扩容的过程</h2><h3 id="计算扩容大小和下一次扩容阈值"><a href="#计算扩容大小和下一次扩容阈值" class="headerlink" title="计算扩容大小和下一次扩容阈值"></a>计算扩容大小和下一次扩容阈值</h3><p>扩容时，容量翻倍，下一次扩容阈值 <code>threshold</code> 也翻倍；特殊情况是当前容量小于默认初始容量 <code>DEFAULT_INITIAL_CAPACITY = 16</code> 时，<code>threshold</code> 不翻倍而是取扩容后的负载因子倍数</p>
 <p>第一次扩容时 <code>table</code> 尚未初始化，当前容量为零，如果构造函数有设置 <code>initialCapacity</code>，则扩容后的大小为 <code>initialCapacity</code>，下一次扩容阈值为 <code>initialCapacity * loadFactor</code>；否则扩容后大小和负载因子都取默认值</p>
 <p>第一次扩容时，<code>threshold</code> 取 <code>initialCapacity * loadFactor</code>，而 <code>loadFactor</code> 总是小于等于 1 的，所以 <code>threshold</code> 总是小于等于 <code>capacity</code>，后续即使翻倍 <code>threshold</code> 也是小于等于 <code>capacity</code></p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] resize() &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] resize() &#123;
     Node&lt;K,V&gt;[] oldTab = table;
     <span class="hljs-keyword">int</span> oldCap = (oldTab == <span class="hljs-keyword">null</span>) ? <span class="hljs-number">0</span> : oldTab.length;
     <span class="hljs-keyword">int</span> oldThr = threshold;
@@ -483,7 +483,7 @@
 <li>如果是红黑树，跟链表一样先拆分和迁移，如果链表里元素数量小于等于 <code>UNTREEIFY_THRESHOLD = 6</code> 则转化为链表，否则重新构建红黑树</li>
 </ol>
 <p>为什么拆分链表是可行的？假设当前容量 4 扩容后为 8，那么 hash 的右值为 <code>0011</code> 和 <code>0111</code>（object.hash() * (capacity - 1)，扩容的翻倍操作实际上是左移一位），可以看到区别就是高位对应的 object.hash() 值，高位 hash 为零即使扩容了位置也不变，高位 hash 为 1 则迁移到 oldCap + j 的位置上（obj 相当于高位对应的部分，j 则是低位对应的部分）</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] resize() &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] resize() &#123;
     <span class="hljs-comment">// ...</span>
     Node&lt;K,V&gt;[] newTab = (Node&lt;K,V&gt;[])<span class="hljs-keyword">new</span> Node[newCap];
     table = newTab;

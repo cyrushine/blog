@@ -26,7 +26,7 @@
 <meta property="og:description" content="不冻结 APP 的 dump hprof在 LeakCanary 浅析 和 Matrix - ResourcesCanary 浅析 这两篇文章里，介绍了检测内存泄漏的两种相似的思路：  WeakReference + ReferenceQueue + 延迟 5s 检查是否被 GC WeakReference + ConcurrentLinkedQueue，子线程轮询的方式每隔 1m 检查队列里的对">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-05-07T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.396Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="内存优化，OOM">
 <meta property="article:tag" content="APM">
@@ -252,7 +252,7 @@
 </ol>
 <p>但是要从各个 Android 版本的 so 文件里准确找到这些函数（符号）是有难度的</p>
 <p>寻找 <code>SuspendVMEv</code> 和 <code>ResumeVMEv</code> 的地址</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 自己实现 dlopen dlsym dlclose 以兼容各 Android 版本</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 自己实现 dlopen dlsym dlclose 以兼容各 Android 版本</span>
 <span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">initForkVMSymbols</span><span class="hljs-params">()</span> </span>&#123;
   <span class="hljs-keyword">void</span> *libHandle = kwai::linker::DlFcn::<span class="hljs-built_in">dlopen</span>(<span class="hljs-string">&quot;libart.so&quot;</span>, RTLD_NOW);
   <span class="hljs-keyword">if</span> (libHandle == <span class="hljs-literal">nullptr</span>) &#123;
@@ -432,7 +432,7 @@
 &#125;</code></pre></div>
 
 <p>查找 <code>ScopedSuspendAll</code> 的构造函数和析构函数</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
   <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);
   <span class="hljs-comment">// ...</span>
@@ -466,7 +466,7 @@
 <li>子进程返回 0，dump hprof 后退出进程</li>
 <li>父进程返回子进程 pid，首先恢复 JVM，然后利用 <code>waitpid</code> 阻塞直到子进程完成 dump hprof，然后处理 hprof</li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
   <span class="hljs-meta">@Override</span>
   <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
@@ -492,7 +492,7 @@
   &#125;    
 &#125;</code></pre></div>
 
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jint JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_trySuspendVMThenFork</span><span class="hljs-params">(</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jint JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_trySuspendVMThenFork</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jobject jObject)</span> </span>&#123;
   <span class="hljs-keyword">if</span> (suspendVM == <span class="hljs-literal">nullptr</span>) &#123;
     <span class="hljs-built_in">initForkVMSymbols</span>();
@@ -504,7 +504,7 @@
 &#125;</code></pre></div>
 
 <p>Android 11 的情况下也是利用系统调用 <code>fork</code> 出子进程</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
   <span class="hljs-built_in">pthread_once</span>(&amp;once_control, initDumpHprofSymbols);
   <span class="hljs-keyword">if</span> (ScopedSuspendAllConstructor == <span class="hljs-literal">nullptr</span> || ScopedSuspendAllDestructor == <span class="hljs-literal">nullptr</span> ||
@@ -534,7 +534,7 @@
 &#125;</code></pre></div>
 
 <h2 id="处理-hprof"><a href="#处理-hprof" class="headerlink" title="处理 hprof"></a>处理 hprof</h2><p>子进程用 <code>Debug.dumpHprofData</code> 生成 hprof 文件后结束，父进程拿到 hprof 后开个新进程，在 <code>Service</code> 里用 <code>LeakCanary.Shark</code> 解析</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForkJvmHeapDumper</span> </span>&#123;
   <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">dump</span><span class="hljs-params">(String path)</span> </span>&#123;
     <span class="hljs-comment">//...</span>
     <span class="hljs-keyword">boolean</span> dumpRes = <span class="hljs-keyword">false</span>;
@@ -577,7 +577,7 @@
 <span class="hljs-comment">//       android:process=&quot;:heap_analysis&quot; /&gt;</span></code></pre></div>
 
 <p>Android 11 则是查找类 <code>Hprof</code> 的构造/析构函数和 <code>dump</code> 函数，在 native 层进行 dump hprof，后续依然是在 java 层开个新进程解析</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">JNIEXPORT jboolean JNICALL <span class="hljs-title">Java_com_kwai_koom_javaoom_dump_ForkJvmHeapDumper_dumpHprofDataNative</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    JNIEnv *env, jclass clazz, jstring file_name)</span> </span>&#123;
   <span class="hljs-comment">// ... 直接在 native 层 dump hprof</span>
   <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *filename = env-&gt;<span class="hljs-built_in">GetStringUTFChars</span>(file_name, <span class="hljs-literal">nullptr</span>);

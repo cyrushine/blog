@@ -26,7 +26,7 @@
 <meta property="og:description" content="monitor 指令在 Lock（二）AQS 源码分析以及 Lock 的实现 这篇文章里介绍了基于 AQS 的 Lock，它是双向链表的排队队列和系统调用 futex 实现的 其实 java 语言规范里自带了 Lock 的实现：synchronized 关键字，下面看看 ART 是怎么实现它的 先写一个使用了 synchronized 的测试方法 package com.example.myapp">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-02-08T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:modified_time" content="2021-11-08T09:42:33.392Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="synchronized">
 <meta name="twitter:card" content="summary_large_image">
@@ -231,7 +231,7 @@
               <h2 id="monitor-指令"><a href="#monitor-指令" class="headerlink" title="monitor 指令"></a>monitor 指令</h2><p>在 <a href="../../../../2021/01/13/aqs-lock-implementation/">Lock（二）AQS 源码分析以及 Lock 的实现</a> 这篇文章里介绍了基于 AQS 的 <code>Lock</code>，它是双向链表的排队队列和系统调用 <code>futex</code> 实现的</p>
 <p>其实 java 语言规范里自带了 Lock 的实现：<code>synchronized</code> 关键字，下面看看 ART 是怎么实现它的</p>
 <p>先写一个使用了 <code>synchronized</code> 的测试方法</p>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">package</span> com.example.myapplication;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">package</span> com.example.myapplication;
 
 <span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Hello</span> </span>&#123;
 
@@ -250,11 +250,11 @@
 &#125;</code></pre></div>
 
 <p>编译打包出 apk 文件，解压出其中的 classes.dex，并用 <code>baksmali</code> 转换成 smali 指令</p>
-<div class="code-wrapper"><pre><code class="hljs bash">java -jar baksmali-2.4.0.jar disassemble classes.dex</code></pre></div>
+<div class="hljs code-wrapper"><pre><code class="hljs bash">java -jar baksmali-2.4.0.jar disassemble classes.dex</code></pre></div>
 
 <p><code>Hello.say(String)</code> 对应的 smali 代码是这样的</p>
 <p><code>synchronized</code> 代码块被两条指令包裹：<code>monitor-enter</code> 和 <code>monitor-exit</code></p>
-<div class="code-wrapper"><pre><code class="hljs bash">.method public say(Ljava/lang/String;)V
+<div class="hljs code-wrapper"><pre><code class="hljs bash">.method public say(Ljava/lang/String;)V
     .registers 5
     .param p1, <span class="hljs-string">&quot;msg&quot;</span>    <span class="hljs-comment"># Ljava/lang/String;</span>
 
@@ -309,7 +309,7 @@
 </ul>
 <h2 id="LockWord"><a href="#LockWord" class="headerlink" title="LockWord"></a>LockWord</h2><p>先了解一个结构<code>LockWord</code> ，它其实是一个 <code>uint32_t</code>，低 16 bits 保存持有锁的 thread id，后续 12 bits 保存锁的个数</p>
 <p>它是 <code>Object</code> 的成员变量 <code>monitor_</code>，所以每个 java 对象都可以作为锁使用</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> LockWord <span class="hljs-title">FromThinLockId</span><span class="hljs-params">(<span class="hljs-keyword">uint32_t</span> thread_id, <span class="hljs-keyword">uint32_t</span> count, <span class="hljs-keyword">uint32_t</span> gc_state)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> LockWord <span class="hljs-title">FromThinLockId</span><span class="hljs-params">(<span class="hljs-keyword">uint32_t</span> thread_id, <span class="hljs-keyword">uint32_t</span> count, <span class="hljs-keyword">uint32_t</span> gc_state)</span> </span>&#123;
     <span class="hljs-built_in">CHECK_LE</span>(thread_id, <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kThinLockMaxOwner));
     <span class="hljs-built_in">CHECK_LE</span>(count, <span class="hljs-keyword">static_cast</span>&lt;<span class="hljs-keyword">uint32_t</span>&gt;(kThinLockMaxCount));
     <span class="hljs-comment">// DCHECK_EQ(gc_bits &amp; kGCStateMaskToggled, 0U);</span>
@@ -326,7 +326,7 @@
 &#125;</code></pre></div>
 
 <h2 id="Mutex"><a href="#Mutex" class="headerlink" title="Mutex"></a>Mutex</h2><p>ART 使用 <code>Mutex</code> 作为互斥量的实现（lock &amp; unlock），它根据宏 <code>ART_USE_FUTEXES</code> 决定是使用 <code>futex</code> 还是 <code>mutex</code></p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/base/mutex.cc</span>
 
 <span class="hljs-comment">// 获取排它锁</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Mutex::ExclusiveLock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
@@ -481,7 +481,7 @@
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Unlock</span><span class="hljs-params">(Thread* self)</span> <span class="hljs-title">RELEASE</span><span class="hljs-params">()</span> </span>&#123;  <span class="hljs-built_in">ExclusiveUnlock</span>(self); &#125;</code></pre></div>
 
 <h2 id="monitor-enter-指令"><a href="#monitor-enter-指令" class="headerlink" title="monitor-enter 指令"></a><code>monitor-enter</code> 指令</h2><h3 id="无锁、偏向锁和轻量级锁"><a href="#无锁、偏向锁和轻量级锁" class="headerlink" title="无锁、偏向锁和轻量级锁"></a>无锁、偏向锁和轻量级锁</h3><p>进入临界区，尝试获得锁</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 在 cs.android.com 找到的相关性很高的方法，可能不是指令 monitor-enter 直接调用的方法，但最终应该会走到这里来</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 在 cs.android.com 找到的相关性很高的方法，可能不是指令 monitor-enter 直接调用的方法，但最终应该会走到这里来</span>
 <span class="hljs-comment">// platform/superproject/art/runtime/mirror/object-inl.h</span>
 <span class="hljs-function"><span class="hljs-keyword">inline</span> ObjPtr&lt;mirror::Object&gt; <span class="hljs-title">Object::MonitorEnter</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   <span class="hljs-keyword">return</span> Monitor::<span class="hljs-built_in">MonitorEnter</span>(self, <span class="hljs-keyword">this</span>, <span class="hljs-comment">/*trylock=*/</span><span class="hljs-literal">false</span>);
@@ -616,7 +616,7 @@
   &#125;
 &#125;</code></pre></div>
 
-<h3 id="锁膨胀的过程（inflate）"><a href="#锁膨胀的过程（inflate）" class="headerlink" title="锁膨胀的过程（inflate）"></a>锁膨胀的过程（inflate）</h3><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// thin lock 膨胀至重量级锁（fat lock）的过程</span>
+<h3 id="锁膨胀的过程（inflate）"><a href="#锁膨胀的过程（inflate）" class="headerlink" title="锁膨胀的过程（inflate）"></a>锁膨胀的过程（inflate）</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// thin lock 膨胀至重量级锁（fat lock）的过程</span>
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::InflateThinLocked</span><span class="hljs-params">(Thread* self, Handle&lt;mirror::Object&gt; obj, LockWord lock_word, <span class="hljs-keyword">uint32_t</span> hash_code)</span> </span>&#123;
   <span class="hljs-comment">// 当前线程持有此偏向锁的情况（由于锁个数超过阈值导致膨胀）</span>
   <span class="hljs-comment">// 升级到重量级锁（fat lock）</span>
@@ -715,7 +715,7 @@
 
 <h3 id="Monitor-Lock-挂起线程"><a href="#Monitor-Lock-挂起线程" class="headerlink" title="Monitor::Lock 挂起线程"></a><code>Monitor::Lock</code> 挂起线程</h3><p>上面介绍的是对象锁，也就是把 <code>Object</code> 作为 <code>Lock</code> 使用，具体来说是 <code>Object.monitor</code> 的四种状态：无锁、偏向锁、轻量级锁和重量级锁</p>
 <p>而 <code>Monitor::Lock</code> 实现的是在重量级锁状态下，「挂起」线程的过程，它包含了自旋、futex/mutex 系统调用</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">template</span> &lt;LockReason reason&gt;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">template</span> &lt;LockReason reason&gt;
 <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Monitor::Lock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   <span class="hljs-keyword">bool</span> called_monitors_callback = <span class="hljs-literal">false</span>;
   <span class="hljs-comment">// 一小会的自旋</span>
@@ -741,7 +741,7 @@
 &#125;</code></pre></div>
 
 <h2 id="monitor-exit-指令"><a href="#monitor-exit-指令" class="headerlink" title="monitor-exit 指令"></a><code>monitor-exit</code> 指令</h2><h3 id="偏向锁和轻量级锁"><a href="#偏向锁和轻量级锁" class="headerlink" title="偏向锁和轻量级锁"></a>偏向锁和轻量级锁</h3><p>退出临界区，释放锁</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// platform/superproject/art/runtime/mirror/object-inl.h</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// platform/superproject/art/runtime/mirror/object-inl.h</span>
 <span class="hljs-function"><span class="hljs-keyword">inline</span> <span class="hljs-keyword">bool</span> <span class="hljs-title">Object::MonitorExit</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   <span class="hljs-keyword">return</span> Monitor::<span class="hljs-built_in">MonitorExit</span>(self, <span class="hljs-keyword">this</span>);
 &#125;
@@ -805,7 +805,7 @@
   &#125;
 &#125;</code></pre></div>
 
-<h3 id="重量级锁"><a href="#重量级锁" class="headerlink" title="重量级锁"></a>重量级锁</h3><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 当前线程持有此重量级锁，且锁为零，退出临界区导致释放锁并唤醒等待线程</span>
+<h3 id="重量级锁"><a href="#重量级锁" class="headerlink" title="重量级锁"></a>重量级锁</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 当前线程持有此重量级锁，且锁为零，退出临界区导致释放锁并唤醒等待线程</span>
 <span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">Monitor::Unlock</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   <span class="hljs-built_in">DCHECK</span>(self != <span class="hljs-literal">nullptr</span>);
   Thread* owner = owner_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed);
