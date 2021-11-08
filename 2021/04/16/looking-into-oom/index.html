@@ -9,8 +9,7 @@
   <meta charset="UTF-8">
   <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
   <link rel="icon" href="/image/favicon.png">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
@@ -19,6 +18,21 @@
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
+  <meta name="description" content="堆内存分配失败导致的 OOM度量采用下述 API 来度量 APP 或系统的内存使用情况    类别 API 说明    APP Runtime.maxMemory() JVM 可以从系统那申请到的内存的最大值，ActivityManager.getMemoryClass() 和 ActivityManager.getLargeMemoryClass() 其中之一，超过此阈值会发生 OOM    R">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入 OOM">
+<meta property="og:url" content="https://www.dalvik.work/2021/04/16/looking-into-oom/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="堆内存分配失败导致的 OOM度量采用下述 API 来度量 APP 或系统的内存使用情况    类别 API 说明    APP Runtime.maxMemory() JVM 可以从系统那申请到的内存的最大值，ActivityManager.getMemoryClass() 和 ActivityManager.getLargeMemoryClass() 其中之一，超过此阈值会发生 OOM    R">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory_log.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory.png">
+<meta property="article:published_time" content="2021-04-16T04:00:00.000Z">
+<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="OOM">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory_log.png">
   
   <title>深入 OOM - Cyrus Blog</title>
 
@@ -41,7 +55,6 @@
   
 
 
-
 <!-- 主题依赖的图标库，不要自行修改 -->
 
 <link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
@@ -62,7 +75,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -73,8 +86,9 @@
   <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
-    <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -136,8 +150,9 @@
         
         
           <li class="nav-item" id="search-btn">
-            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
-                class="iconfont icon-search"></i>&nbsp;</a>
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
           </li>
         
         
@@ -173,21 +188,18 @@
 
 <div class="mt-1">
   
-    
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      3.2k 字
+      17k 字
     </span>
   
 
   
-    
     <span class="post-meta mr-2">
       <i class="iconfont icon-clock-fill"></i>
       
       
-      53
-       分钟
+      52 分钟
     </span>
   
 
@@ -754,7 +766,7 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
     
 
     
-      <a id="scroll-top-button" href="#" role="button">
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
         <i class="iconfont icon-arrowup" aria-hidden="true"></i>
       </a>
     
@@ -820,6 +832,10 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
 <!-- Plugins -->
 
 
+  <script  src="/js/local-search.js" ></script>
+
+
+
   
     <script  src="/js/img-lazyload.js" ></script>
   
@@ -830,23 +846,18 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
 
 
 
-  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
-
-
-
-  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-
-
-
-  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-
-
-
-  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-
-
-
-  <script  src="/js/local-search.js" ></script>
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
 
 
 

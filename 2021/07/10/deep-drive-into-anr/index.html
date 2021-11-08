@@ -9,8 +9,7 @@
   <meta charset="UTF-8">
   <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
   <link rel="icon" href="/image/favicon.png">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
@@ -19,6 +18,24 @@
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
+  <meta name="description" content="overview在 阅读源码系列：ANR 是怎么产生的 聊过不及时消费 input event 会产生 ANR：  InputReaderThread 不断地从 &#x2F;dev&#x2F;input 读取 input event 并放入 InputDispatcher.mInboundQueue 等待分发 InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送队列里">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入 ANR：产生的根源、处理流程和日志文件">
+<meta property="og:url" content="https://www.dalvik.work/2021/07/10/deep-drive-into-anr/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="overview在 阅读源码系列：ANR 是怎么产生的 聊过不及时消费 input event 会产生 ANR：  InputReaderThread 不断地从 &#x2F;dev&#x2F;input 读取 input event 并放入 InputDispatcher.mInboundQueue 等待分发 InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送队列里">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/proc_pressure_io_2.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/data_anr_permission.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/socket.jpg">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/signal_catcher_thread.png">
+<meta property="article:published_time" content="2021-07-10T04:00:00.000Z">
+<meta property="article:modified_time" content="2021-11-08T09:36:20.833Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="anr">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/proc_pressure_io_1.png">
   
   <title>深入 ANR：产生的根源、处理流程和日志文件 - Cyrus Blog</title>
 
@@ -41,7 +58,6 @@
   
 
 
-
 <!-- 主题依赖的图标库，不要自行修改 -->
 
 <link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
@@ -62,7 +78,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -73,8 +89,9 @@
   <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
-    <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -136,8 +153,9 @@
         
         
           <li class="nav-item" id="search-btn">
-            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
-                class="iconfont icon-search"></i>&nbsp;</a>
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
           </li>
         
         
@@ -173,21 +191,18 @@
 
 <div class="mt-1">
   
-    
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      22.9k 字
+      111k 字
     </span>
   
 
   
-    
     <span class="post-meta mr-2">
       <i class="iconfont icon-clock-fill"></i>
       
       
-      408
-       分钟
+      348 分钟
     </span>
   
 
@@ -538,7 +553,7 @@
 <p>The fourth field consists of two numbers separated by a slash (/).  The first of these is the number of currently  runnable  kernel  scheduling entities (processes, threads).  The value after the slash is the number of kernel scheduling entities that currently exist on the system.  </p>
 <p>The fifth field is the PID of the process that was most recently created on the system.</p>
 </blockquote>
-<p>在绿联 6812（4 x <a href="mailto:&#x41;&#53;&#51;&#64;&#49;&#x2e;&#x35;&#x47;">&#x41;&#53;&#51;&#64;&#49;&#x2e;&#x35;&#x47;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
+<p>在绿联 6812（4 x <a href="mailto:&#x41;&#53;&#x33;&#64;&#49;&#46;&#53;&#71;">&#x41;&#53;&#x33;&#64;&#49;&#46;&#53;&#71;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
 <ul>
 <li>在过去的 1, 5, 15 分钟内 CPU 的平均负载是 13.31, 13.74, 13.81</li>
 <li>当前有 1167 个进程，其中有 2 个正在运行</li>
@@ -3447,7 +3462,7 @@ ProcessRecord.ErrorDialogController.forAllDialogs
     
 
     
-      <a id="scroll-top-button" href="#" role="button">
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
         <i class="iconfont icon-arrowup" aria-hidden="true"></i>
       </a>
     
@@ -3513,6 +3528,10 @@ ProcessRecord.ErrorDialogController.forAllDialogs
 <!-- Plugins -->
 
 
+  <script  src="/js/local-search.js" ></script>
+
+
+
   
     <script  src="/js/img-lazyload.js" ></script>
   
@@ -3523,23 +3542,18 @@ ProcessRecord.ErrorDialogController.forAllDialogs
 
 
 
-  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
-
-
-
-  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-
-
-
-  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-
-
-
-  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-
-
-
-  <script  src="/js/local-search.js" ></script>
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
 
 
 

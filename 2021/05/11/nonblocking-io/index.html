@@ -9,8 +9,7 @@
   <meta charset="UTF-8">
   <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
   <link rel="icon" href="/image/favicon.png">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
@@ -19,6 +18,31 @@
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
+  <meta name="description" content="在互联网中提起网络，我们都会避免不了讨论高并发、百万连接。而此处的百万连接的实现，脱离不了网络 IO 的选择，因此本文作为一篇个人学习的笔记，特此进行记录一下整个网络 IO 的发展演变过程。以及目前广泛使用的网络模型。 网络 IO 的发展在本节内容中，我们将一步一步介绍网络 IO 的演变发展过程。介绍完发展过程后，再对网络 IO 中几组容易混淆的概念进行对比、分析。 ​ 网络 IO 的各个发展阶段">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【转】网络 IO 演变发展过程和模型介绍">
+<meta property="og:url" content="https://www.dalvik.work/2021/05/11/nonblocking-io/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="在互联网中提起网络，我们都会避免不了讨论高并发、百万连接。而此处的百万连接的实现，脱离不了网络 IO 的选择，因此本文作为一篇个人学习的笔记，特此进行记录一下整个网络 IO 的发展演变过程。以及目前广泛使用的网络模型。 网络 IO 的发展在本节内容中，我们将一步一步介绍网络 IO 的演变发展过程。介绍完发展过程后，再对网络 IO 中几组容易混淆的概念进行对比、分析。 ​ 网络 IO 的各个发展阶段">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://p1-tt.byteimg.com/origin/pgc-image/159e46c0950a4f2899729cb1ac78921b">
+<meta property="og:image" content="https://p6-tt.byteimg.com/origin/pgc-image/83594a2704d3449aa87f9a5d7cb07c16">
+<meta property="og:image" content="https://p6-tt.byteimg.com/origin/pgc-image/71c28eaee6a8417cbe636c7c883f6c02">
+<meta property="og:image" content="https://p6-tt.byteimg.com/origin/pgc-image/12149fcdc97a493fa54248ad8da64bfa">
+<meta property="og:image" content="https://p1-tt.byteimg.com/origin/pgc-image/fce10fab6ff645e082796b8fa275527b">
+<meta property="og:image" content="https://p1-tt.byteimg.com/origin/pgc-image/ddb4604a40fa4dd1a6cefc3f0799a03e">
+<meta property="og:image" content="https://p3-tt.byteimg.com/origin/pgc-image/21afcdfdb3e145318cc3a771ea11f649">
+<meta property="og:image" content="https://p3-tt.byteimg.com/origin/pgc-image/a4a057a00b5748d9b5146a9d4dc3ba2a">
+<meta property="og:image" content="https://p1-tt.byteimg.com/origin/pgc-image/cd4d1c679c9e48a9846e65ad76363e7b">
+<meta property="og:image" content="https://p1-tt.byteimg.com/origin/pgc-image/b092d02d992646b49468059f5c808036">
+<meta property="article:published_time" content="2021-05-11T04:00:00.000Z">
+<meta property="article:modified_time" content="2021-11-08T09:36:20.829Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="epoll">
+<meta property="article:tag" content="select">
+<meta property="article:tag" content="poll">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://p1-tt.byteimg.com/origin/pgc-image/159e46c0950a4f2899729cb1ac78921b">
   
   <title>【转】网络 IO 演变发展过程和模型介绍 - Cyrus Blog</title>
 
@@ -41,7 +65,6 @@
   
 
 
-
 <!-- 主题依赖的图标库，不要自行修改 -->
 
 <link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
@@ -62,7 +85,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.11","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -73,8 +96,9 @@
   <header style="height: 30vh;">
     <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
-    <a class="navbar-brand"
-       href="/">&nbsp;<strong>Cyrus Land</strong>&nbsp;</a>
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
 
     <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
             data-target="#navbarSupportedContent"
@@ -136,8 +160,9 @@
         
         
           <li class="nav-item" id="search-btn">
-            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
-                class="iconfont icon-search"></i>&nbsp;</a>
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
           </li>
         
         
@@ -173,21 +198,18 @@
 
 <div class="mt-1">
   
-    
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      5.2k 字
+      7.6k 字
     </span>
   
 
   
-    
     <span class="post-meta mr-2">
       <i class="iconfont icon-clock-fill"></i>
       
       
-      56
-       分钟
+      24 分钟
     </span>
   
 
@@ -434,7 +456,7 @@
     
 
     
-      <a id="scroll-top-button" href="#" role="button">
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
         <i class="iconfont icon-arrowup" aria-hidden="true"></i>
       </a>
     
@@ -500,6 +522,10 @@
 <!-- Plugins -->
 
 
+  <script  src="/js/local-search.js" ></script>
+
+
+
   
     <script  src="/js/img-lazyload.js" ></script>
   
@@ -510,23 +536,18 @@
 
 
 
-  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
-
-
-
-  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-
-
-
-  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-
-
-
-  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-
-
-
-  <script  src="/js/local-search.js" ></script>
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
 
 
 
