@@ -454,7 +454,10 @@ Log
           
           xCrash 是爱奇艺团队开源的一款崩溃日志收集库，可以收集 java crash、native crash 和 ANR 日志
 日志格式为专用格式，内容还算丰富：机器信息、崩溃线程和其他线程的方法栈、logcat、打开的 fd 等等 …
-Java Crash捕获 Java Crash 用的是 DefaultUncaughtExceptionHandler，相关的基础知识参考 Uncaught Ex
+默认配置为：
+
+java crash、native crash 和 ANR 都会被捕获
+日志目录在 /data/data/[pkg]/files/tombston
         </a>
       </p>
 
