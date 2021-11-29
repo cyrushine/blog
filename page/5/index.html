@@ -177,6 +177,54 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2020/10/20/anr/" target="_self">
+          阅读源码系列：ANR 是怎么产生的
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2020/10/20/anr/" target="_self">
+          
+          
+            
+          
+          根据日常的经验我们大概知道，如果 app 没有及时消费 MotionEvent，超过 5s 就会弹出 ANR 对话框；那么 ANR 的逻辑肯定是在事件分发过程中产生的，我们从事件的源头找起，看看 input 事件是怎么产生的
+input 的分发
+事件分发是从线程 InputReaderThread 开始的，它的主要工作是：
+
+从目录 /dev/input 获取 input event
+看来 and
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-10-20 04:00" pubdate>
+              2020-10-20
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2020/10/04/dispatchtouchevent/" target="_self">
           一文搞懂事件分发，手势冲突和滑动冲突
         </a>

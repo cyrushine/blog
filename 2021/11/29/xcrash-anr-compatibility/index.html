@@ -1,0 +1,1482 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  <meta name="description" content="Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT 信号处理器，R">
+<meta property="og:type" content="article">
+<meta property="og:title" content="xCrash ANR 兼容性测试">
+<meta property="og:url" content="https://www.dalvik.work/2021/11/29/xcrash-anr-compatibility/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT 信号处理器，R">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-11-29T04:00:00.000Z">
+<meta property="article:modified_time" content="2021-11-29T10:34:21.496Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="ANR">
+<meta property="article:tag" content="崩溃">
+<meta property="article:tag" content="xCrash">
+<meta name="twitter:card" content="summary_large_image">
+  
+  <title>xCrash ANR 兼容性测试 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="xCrash ANR 兼容性测试">
+              
+                xCrash ANR 兼容性测试
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-11-29 04:00" pubdate>
+        2021年11月29日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      54k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      167 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">xCrash ANR 兼容性测试</h1>
+            
+            <div class="markdown-body">
+              <table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Steps</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>目的</td>
+<td>测试 <code>xCrash</code> 捕获 <code>ANR</code> 的能力在各个 Android 版本上的兼容性</td>
+</tr>
+<tr>
+<td>平台</td>
+<td><a target="_blank" rel="noopener" href="https://wetest.qq.com/">WeTest</a> - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型</td>
+</tr>
+<tr>
+<td>Apk</td>
+<td>Viomi Fridge Launcher</td>
+</tr>
+<tr>
+<td>xCrash Version</td>
+<td>3.0.0</td>
+</tr>
+<tr>
+<td>ANR 捕获机制</td>
+<td>注册 <code>SIGQUIT</code> 信号处理器，<code>Runtime::DumpForSigQuit</code> 打印调用栈，一段时间内轮询 <code>ActivityManager.getProcessesInErrorState</code> 是否为 <code>ProcessErrorStateInfo.NOT_RESPONDING</code> 来判断当前 APP 是否发生 ANR</td>
+</tr>
+<tr>
+<td>测试流程</td>
+<td>APP 启动后 5s 初始化 xCrash ANR，3s 后启动 <code>AnrService</code>，通过 <code>startService</code> 超时来触发 ANR</td>
+</tr>
+<tr>
+<td>日志分析</td>
+<td>将日志文件逐个下载，放到 <a target="_blank" rel="noopener" href="https://cloudvyzor.com/">LogPad</a> 上过滤出 tag 为 <code>xcrash_dumper</code> 的条目</td>
+</tr>
+</tbody></table>
+<h1 id="详细的日志埋点"><a href="#详细的日志埋点" class="headerlink" title="详细的日志埋点"></a>详细的日志埋点</h1><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">initXCrash</span><span class="hljs-params">()</span></span> &#123;
+    mainHandler.postDelayed(&#123;
+        XCrash.<span class="hljs-keyword">init</span>(app, XCrash.InitParameters().apply &#123;
+            setAnrCallback &#123; logPath, emergency -&gt;
+                Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, <span class="hljs-string">&quot;ANR Callback, <span class="hljs-variable">$emergency</span>, <span class="hljs-variable">$logPath</span>&quot;</span>)    <span class="hljs-comment">// 自定义 ANR 回调</span>
+            &#125;
+        &#125;)
+
+        mainHandler.postDelayed(&#123;
+            <span class="hljs-keyword">try</span> &#123;
+                <span class="hljs-keyword">val</span> nativeHandlerClz = Class.forName(<span class="hljs-string">&quot;xcrash.NativeHandler&quot;</span>)
+                <span class="hljs-keyword">val</span> instanceField = nativeHandlerClz.getDeclaredField(<span class="hljs-string">&quot;instance&quot;</span>)
+                instanceField.isAccessible = <span class="hljs-literal">true</span>
+                <span class="hljs-keyword">val</span> nativeHandler = instanceField.<span class="hljs-keyword">get</span>(nativeHandlerClz)
+                <span class="hljs-keyword">val</span> anrTimeoutField = nativeHandlerClz.getDeclaredField(<span class="hljs-string">&quot;anrTimeoutMs&quot;</span>)
+                anrTimeoutField.isAccessible = <span class="hljs-literal">true</span>
+                anrTimeoutField.<span class="hljs-keyword">set</span>(nativeHandler, <span class="hljs-number">20</span> * <span class="hljs-number">1000L</span>)
+                <span class="hljs-comment">// 判断 ANR 的阈值校正为 20s，默认 15s 太短有时 ANR 对话框还没弹出，APP 不处于 NOT_RESPONDING 状态</span>
+                Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, <span class="hljs-string">&quot;NativeHandler.anrTimeoutMs = 20s&quot;</span>)    
+            &#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+                Log.e(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, <span class="hljs-string">&quot;fail to change NativeHandler.anrTimeoutMs&quot;</span>, e)
+            &#125;
+
+            app.startService(Intent(app, AnrService::<span class="hljs-keyword">class</span>.java))
+            Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, <span class="hljs-string">&quot;AnrService was started&quot;</span>)    <span class="hljs-comment">// 启动 Service 超时</span>
+        &#125;, <span class="hljs-number">3</span> * <span class="hljs-number">1000L</span>)
+    &#125;, <span class="hljs-number">5</span> * <span class="hljs-number">1000L</span>)    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AnrService</span> </span>&#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">onStartCommand</span><span class="hljs-params">(intent: <span class="hljs-type">Intent</span>?, flags: <span class="hljs-type">Int</span>, startId: <span class="hljs-type">Int</span>)</span></span>: <span class="hljs-built_in">Int</span> &#123;
+        <span class="hljs-keyword">val</span> tombstones = File(applicationContext.filesDir, <span class="hljs-string">&quot;tombstones&quot;</span>)
+        <span class="hljs-keyword">var</span> anrs = tombstones.listFiles &#123; _, name -&gt; name.endsWith(<span class="hljs-string">&quot;anr.xcrash&quot;</span>) &#125;
+        log(<span class="hljs-string">&quot;AnrService, delete <span class="hljs-subst">$&#123;anrs?.size&#125;</span> anr logs before anr&quot;</span>)    <span class="hljs-comment">// 清理 tombstones 目录</span>
+        anrs.forEach &#123; it.deleteSafely() &#125;
+
+        Thread.sleep(<span class="hljs-number">30</span> * <span class="hljs-number">1000L</span>)    <span class="hljs-comment">// 触发 ANR</span>
+
+        anrs = tombstones.listFiles &#123; _, name -&gt; name.endsWith(<span class="hljs-string">&quot;anr.xcrash&quot;</span>) &#125;
+        <span class="hljs-comment">// 看看有没 ANR 日志，没有的话说明没能捕获到 ANR</span>
+        log(<span class="hljs-string">&quot;AnrService, now <span class="hljs-subst">$&#123;System.currentTimeMillis() / <span class="hljs-number">1000</span>L&#125;</span>, found anr logs, <span class="hljs-subst">$&#123;anrs?.joinToString &#123; it.name &#125;</span>&#125;&quot;</span>)    
+
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">super</span>.onStartCommand(intent, flags, startId)
+    &#125;    
+&#125;</code></pre></div>
+
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">XCrash</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">int</span> <span class="hljs-title">init</span><span class="hljs-params">(Context ctx, InitParameters params)</span> </span>&#123;
+        <span class="hljs-keyword">if</span> (XCrash.initialized) &#123;
+            <span class="hljs-keyword">return</span> Errno.OK;
+        &#125;
+
+        XCrash.initialized = <span class="hljs-keyword">true</span>;
+
+        <span class="hljs-keyword">if</span> (ctx == <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">return</span> Errno.CONTEXT_IS_NULL;
+        &#125;
+
+        Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, <span class="hljs-string">&quot;xcrash start&quot;</span>);    <span class="hljs-comment">// xCrash 初始化</span>
+        <span class="hljs-comment">// ...</span>
+        <span class="hljs-comment">//init native crash handler / ANR handler (API level &gt;= 21)</span>
+        <span class="hljs-keyword">int</span> r = Errno.OK;
+        <span class="hljs-keyword">if</span> (params.enableNativeCrashHandler || (params.enableAnrHandler &amp;&amp; Build.VERSION.SDK_INT &gt;= <span class="hljs-number">21</span>)) &#123;
+            r = NativeHandler.getInstance().initialize(
+                ctx,
+                params.libLoader,
+                appId,
+                params.appVersion,
+                params.logDir,
+                params.enableNativeCrashHandler,
+                params.nativeRethrow,
+                params.nativeLogcatSystemLines,
+                params.nativeLogcatEventsLines,
+                params.nativeLogcatMainLines,
+                params.nativeDumpElfHash,
+                params.nativeDumpMap,
+                params.nativeDumpFds,
+                params.nativeDumpNetworkInfo,
+                params.nativeDumpAllThreads,
+                params.nativeDumpAllThreadsCountMax,
+                params.nativeDumpAllThreadsWhiteList,
+                params.nativeCallback,
+                params.enableAnrHandler &amp;&amp; Build.VERSION.SDK_INT &gt;= <span class="hljs-number">21</span>,
+                params.anrRethrow,
+                params.anrCheckProcessState,
+                params.anrLogcatSystemLines,
+                params.anrLogcatEventsLines,
+                params.anrLogcatMainLines,
+                params.anrDumpFds,
+                params.anrDumpNetworkInfo,
+                params.anrCallback);
+        &#125;
+
+        <span class="hljs-comment">//maintain tombstone and placeholder files in a background thread with some delay</span>
+        FileManager.getInstance().maintain();
+
+        <span class="hljs-keyword">return</span> r;
+    &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NativeHandler</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">initialize</span><span class="hljs-params">(...)</span> </span>&#123;
+        <span class="hljs-comment">//load lib</span>
+        <span class="hljs-keyword">if</span> (libLoader == <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">try</span> &#123;
+                System.loadLibrary(<span class="hljs-string">&quot;xcrash&quot;</span>);
+            &#125; <span class="hljs-keyword">catch</span> (Throwable e) &#123;
+                XCrash.getLogger().e(Util.TAG, <span class="hljs-string">&quot;NativeHandler System.loadLibrary failed&quot;</span>, e);
+                <span class="hljs-keyword">return</span> Errno.LOAD_LIBRARY_FAILED;
+            &#125;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-keyword">try</span> &#123;
+                libLoader.loadLibrary(<span class="hljs-string">&quot;xcrash&quot;</span>);
+            &#125; <span class="hljs-keyword">catch</span> (Throwable e) &#123;
+                XCrash.getLogger().e(Util.TAG, <span class="hljs-string">&quot;NativeHandler ILibLoader.loadLibrary failed&quot;</span>, e);
+                <span class="hljs-keyword">return</span> Errno.LOAD_LIBRARY_FAILED;
+            &#125;
+        &#125;
+
+        <span class="hljs-keyword">this</span>.ctx = ctx;
+        <span class="hljs-keyword">this</span>.crashRethrow = crashRethrow;
+        <span class="hljs-keyword">this</span>.crashCallback = crashCallback;
+        <span class="hljs-keyword">this</span>.anrEnable = anrEnable;
+        <span class="hljs-keyword">this</span>.anrCheckProcessState = anrCheckProcessState;
+        <span class="hljs-keyword">this</span>.anrCallback = anrCallback;
+        <span class="hljs-keyword">this</span>.anrTimeoutMs = anrRethrow ? <span class="hljs-number">15</span> * <span class="hljs-number">1000</span> : <span class="hljs-number">30</span> * <span class="hljs-number">1000</span>; <span class="hljs-comment">//setting rethrow to &quot;false&quot; is NOT recommended</span>
+
+        Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, <span class="hljs-string">&quot;xcrash native start&quot;</span>);    <span class="hljs-comment">// xCrash native 初始化 </span>
+        <span class="hljs-comment">//init native lib</span>
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-keyword">int</span> r = nativeInit(
+                Build.VERSION.SDK_INT,
+                Build.VERSION.RELEASE,
+                Util.getAbiList(),
+                Build.MANUFACTURER,
+                Build.BRAND,
+                Util.getMobileModel(),
+                Build.FINGERPRINT,
+                appId,
+                appVersion,
+                ctx.getApplicationInfo().nativeLibraryDir,
+                logDir,
+                crashEnable,
+                crashRethrow,
+                crashLogcatSystemLines,
+                crashLogcatEventsLines,
+                crashLogcatMainLines,
+                crashDumpElfHash,
+                crashDumpMap,
+                crashDumpFds,
+                crashDumpNetworkInfo,
+                crashDumpAllThreads,
+                crashDumpAllThreadsCountMax,
+                crashDumpAllThreadsWhiteList,
+                anrEnable,
+                anrRethrow,
+                anrLogcatSystemLines,
+                anrLogcatEventsLines,
+                anrLogcatMainLines,
+                anrDumpFds,
+                anrDumpNetworkInfo);
+            <span class="hljs-keyword">if</span> (r != <span class="hljs-number">0</span>) &#123;
+                XCrash.getLogger().e(Util.TAG, <span class="hljs-string">&quot;NativeHandler init failed&quot;</span>);
+                <span class="hljs-keyword">return</span> Errno.INIT_LIBRARY_FAILED;
+            &#125;
+            initNativeLibOk = <span class="hljs-keyword">true</span>;
+            Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, <span class="hljs-string">&quot;xcrash native end&quot;</span>);    <span class="hljs-comment">// xCrash native 初始化结束</span>
+            <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>; <span class="hljs-comment">//OK</span>
+        &#125; <span class="hljs-keyword">catch</span> (Throwable e) &#123;
+            XCrash.getLogger().e(Util.TAG, <span class="hljs-string">&quot;NativeHandler init failed&quot;</span>, e);
+            <span class="hljs-keyword">return</span> Errno.INIT_LIBRARY_FAILED;
+        &#125;
+    &#125;    
+&#125;</code></pre></div>
+
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> jint <span class="hljs-title">xc_jni_init</span><span class="hljs-params">(...)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">//...</span>
+    <span class="hljs-keyword">if</span>(trace_enable)
+    &#123;
+        <span class="hljs-comment">//trace init</span>
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;ANR native start&quot;</span>);    <span class="hljs-comment">// xcrash anr 初始化</span>
+        r_trace = <span class="hljs-built_in">xc_trace_init</span>(env,
+                            trace_rethrow ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>,
+                            (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)trace_logcat_system_lines,
+                            (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)trace_logcat_events_lines,
+                            (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)trace_logcat_main_lines,
+                            trace_dump_fds ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>,
+                            trace_dump_network_info ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>);
+    &#125;
+    <span class="hljs-comment">//...</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xc_trace_init</span><span class="hljs-params">(JNIEnv *env,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">int</span> rethrow,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> logcat_system_lines,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> logcat_events_lines,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> logcat_main_lines,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">int</span> dump_fds,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">int</span> dump_network_info)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">int</span> r;
+    <span class="hljs-keyword">pthread_t</span> thd;
+
+    <span class="hljs-comment">//capture SIGQUIT only for ART</span>
+    <span class="hljs-keyword">if</span>(xc_common_api_level &lt; <span class="hljs-number">21</span>) <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+
+    <span class="hljs-comment">//is Android Lollipop (5.x)?</span>
+    xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_level || <span class="hljs-number">22</span> == xc_common_api_level) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>);
+
+    xc_trace_dump_status = XC_TRACE_DUMP_NOT_START;
+    xc_trace_rethrow = rethrow;
+    xc_trace_logcat_system_lines = logcat_system_lines;
+    xc_trace_logcat_events_lines = logcat_events_lines;
+    xc_trace_logcat_main_lines = logcat_main_lines;
+    xc_trace_dump_fds = dump_fds;
+    xc_trace_dump_network_info = dump_network_info;
+
+    <span class="hljs-comment">//init for JNI callback</span>
+    <span class="hljs-built_in">xc_trace_init_callback</span>(env);
+
+    <span class="hljs-comment">//create event FD</span>
+    <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> &gt; (xc_trace_notifier = <span class="hljs-built_in">eventfd</span>(<span class="hljs-number">0</span>, EFD_CLOEXEC))) <span class="hljs-keyword">return</span> XCC_ERRNO_SYS;
+
+    <span class="hljs-comment">//register signal handler</span>
+    <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != (r = <span class="hljs-built_in">xcc_signal_trace_register</span>(xc_trace_handler))) <span class="hljs-keyword">goto</span> err2;
+    <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;ANR native register SIGQUIT&quot;</span>);    <span class="hljs-comment">// 为捕获 ANR 注册 SIGQUIT 信号处理器并启动 xc_trace_dumper 线程</span>
+
+    <span class="hljs-comment">//create thread for dump trace</span>
+    <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != (r = <span class="hljs-built_in">pthread_create</span>(&amp;thd, <span class="hljs-literal">NULL</span>, xc_trace_dumper, <span class="hljs-literal">NULL</span>))) <span class="hljs-keyword">goto</span> err1;
+
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+
+ err1:
+    <span class="hljs-built_in">xcc_signal_trace_unregister</span>();
+ err2:
+    <span class="hljs-built_in">close</span>(xc_trace_notifier);
+    xc_trace_notifier = <span class="hljs-number">-1</span>;
+    
+    <span class="hljs-keyword">return</span> r;
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">xc_trace_handler</span><span class="hljs-params">(<span class="hljs-keyword">int</span> sig, <span class="hljs-keyword">siginfo_t</span> *si, <span class="hljs-keyword">void</span> *uc)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// 信号处理程序收到 SIGQUIT(3)，唤醒 xc_trace_dumper 线程</span>
+    <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;SIGQUIT handler get %d, %d&quot;</span>, sig, xc_trace_notifier);    
+
+    <span class="hljs-keyword">uint64_t</span> data;
+    
+    (<span class="hljs-keyword">void</span>)sig;
+    (<span class="hljs-keyword">void</span>)si;
+    (<span class="hljs-keyword">void</span>)uc;
+
+    <span class="hljs-keyword">if</span>(xc_trace_notifier &gt;= <span class="hljs-number">0</span>)
+    &#123;
+        data = <span class="hljs-number">1</span>;
+        <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">write</span>(xc_trace_notifier, &amp;data, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(data)));
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> *<span class="hljs-title">xc_trace_dumper</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *arg)</span></span>
+<span class="hljs-function"></span>&#123;
+    JNIEnv         *env = <span class="hljs-literal">NULL</span>;
+    <span class="hljs-keyword">uint64_t</span>        data;
+    <span class="hljs-keyword">uint64_t</span>        trace_time;
+    <span class="hljs-keyword">int</span>             fd;
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">timeval</span>  <span class="hljs-title">tv</span>;</span>
+    <span class="hljs-keyword">char</span>            pathname[<span class="hljs-number">1024</span>];
+    jstring         j_pathname;
+    
+    (<span class="hljs-keyword">void</span>)arg;
+    
+    <span class="hljs-built_in">pthread_detach</span>(<span class="hljs-built_in">pthread_self</span>());
+
+    JavaVMAttachArgs attach_args = &#123;
+        .version = XC_JNI_VERSION,
+        .name    = <span class="hljs-string">&quot;xcrash_trace_dp&quot;</span>,
+        .group   = <span class="hljs-literal">NULL</span>
+    &#125;;
+    <span class="hljs-keyword">if</span>(JNI_OK != (*xc_common_vm)-&gt;<span class="hljs-built_in">AttachCurrentThread</span>(xc_common_vm, &amp;env, &amp;attach_args)) <span class="hljs-keyword">goto</span> exit;
+
+    <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>)
+    &#123;
+        <span class="hljs-comment">//block here, waiting for sigquit</span>
+        <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">read</span>(xc_trace_notifier, &amp;data, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(data)));
+
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;ANR native dumper awaken&quot;</span>);    <span class="hljs-comment">// xc_trace_dumper 线程被唤醒，说明收到了 SIGQUIT</span>
+
+        <span class="hljs-comment">//check if process already crashed</span>
+        <span class="hljs-keyword">if</span>(xc_common_native_crashed || xc_common_java_crashed) <span class="hljs-keyword">break</span>;
+
+        <span class="hljs-comment">//trace time</span>
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">gettimeofday</span>(&amp;tv, <span class="hljs-literal">NULL</span>)) <span class="hljs-keyword">break</span>;
+        trace_time = (<span class="hljs-keyword">uint64_t</span>)(tv.tv_sec) * <span class="hljs-number">1000</span> * <span class="hljs-number">1000</span> + (<span class="hljs-keyword">uint64_t</span>)tv.tv_usec;
+
+        <span class="hljs-comment">//Keep only one current trace.</span>
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xc_trace_logs_clean</span>()) <span class="hljs-keyword">continue</span>;
+
+        <span class="hljs-comment">//create and open log file</span>
+        <span class="hljs-keyword">if</span>((fd = <span class="hljs-built_in">xc_common_open_trace_log</span>(pathname, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(pathname), trace_time)) &lt; <span class="hljs-number">0</span>) <span class="hljs-keyword">continue</span>;
+
+        <span class="hljs-comment">//write header info</span>
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xc_trace_write_header</span>(fd, trace_time)) <span class="hljs-keyword">goto</span> end;
+
+        <span class="hljs-comment">//write trace info from ART runtime</span>
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_write_format</span>(fd, XCC_UTIL_THREAD_SEP<span class="hljs-string">&quot;Cmd line: %s\n&quot;</span>, xc_common_process_name)) <span class="hljs-keyword">goto</span> end;
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_write_str</span>(fd, <span class="hljs-string">&quot;Mode: ART DumpForSigQuit\n&quot;</span>)) <span class="hljs-keyword">goto</span> end;
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xc_trace_load_symbols</span>())
+        &#123;
+            <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_write_str</span>(fd, <span class="hljs-string">&quot;Failed to load symbols.\n&quot;</span>)) <span class="hljs-keyword">goto</span> end;
+            <span class="hljs-keyword">goto</span> skip;
+        &#125;
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xc_trace_check_address_valid</span>())
+        &#123;
+            <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_write_str</span>(fd, <span class="hljs-string">&quot;Failed to check runtime address.\n&quot;</span>)) <span class="hljs-keyword">goto</span> end;
+            <span class="hljs-keyword">goto</span> skip;
+        &#125;
+        <span class="hljs-keyword">if</span>(<span class="hljs-built_in">dup2</span>(fd, STDERR_FILENO) &lt; <span class="hljs-number">0</span>)
+        &#123;
+            <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_write_str</span>(fd, <span class="hljs-string">&quot;Failed to duplicate FD.\n&quot;</span>)) <span class="hljs-keyword">goto</span> end;
+            <span class="hljs-keyword">goto</span> skip;
+        &#125;
+
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;read header from %s&quot;</span>, pathname);    <span class="hljs-comment">// 首先写入 header，这里从日志文件里打印出来</span>
+        <span class="hljs-built_in">print_file</span>(pathname);
+
+        xc_trace_dump_status = XC_TRACE_DUMP_ON_GOING;
+        <span class="hljs-keyword">if</span>(<span class="hljs-built_in">sigsetjmp</span>(jmpenv, <span class="hljs-number">1</span>) == <span class="hljs-number">0</span>) 
+        &#123;
+            <span class="hljs-keyword">if</span>(xc_trace_is_lollipop)
+                <span class="hljs-built_in">xc_trace_libart_dbg_suspend</span>();
+            <span class="hljs-comment">// 利用 Runtime::DumpForSigQuit 打印调用栈</span>
+            <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;before dump&quot;</span>);
+            <span class="hljs-built_in">xc_trace_libart_runtime_dump</span>(*xc_trace_libart_runtime_instance, xc_trace_libcpp_cerr);    
+            <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;after dump, print log file&quot;</span>);
+            <span class="hljs-keyword">if</span>(xc_trace_is_lollipop)
+                <span class="hljs-built_in">xc_trace_libart_dbg_resume</span>();
+        &#125; 
+        <span class="hljs-keyword">else</span> 
+        &#123;
+            <span class="hljs-built_in">fflush</span>(<span class="hljs-literal">NULL</span>);
+            <span class="hljs-built_in">XCD_LOG_WARN</span>(<span class="hljs-string">&quot;longjmp to skip dumping trace\n&quot;</span>);
+        &#125;
+
+        <span class="hljs-built_in">dup2</span>(xc_common_fd_null, STDERR_FILENO);
+                            
+    skip:
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_write_str</span>(fd, <span class="hljs-string">&quot;\n&quot;</span>XCC_UTIL_THREAD_END<span class="hljs-string">&quot;\n&quot;</span>)) <span class="hljs-keyword">goto</span> end;
+
+        <span class="hljs-comment">//write other info</span>
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_record_logcat</span>(fd, xc_common_process_id, xc_common_api_level, xc_trace_logcat_system_lines, xc_trace_logcat_events_lines, xc_trace_logcat_main_lines)) <span class="hljs-keyword">goto</span> end;
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;logcat added&quot;</span>);    <span class="hljs-comment">// 收集 logcat 日志</span>
+        <span class="hljs-keyword">if</span>(xc_trace_dump_fds)
+            <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_record_fds</span>(fd, xc_common_process_id)) <span class="hljs-keyword">goto</span> end;
+        <span class="hljs-keyword">if</span>(xc_trace_dump_network_info)
+            <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_util_record_network_info</span>(fd, xc_common_process_id, xc_common_api_level)) <span class="hljs-keyword">goto</span> end;
+        <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcc_meminfo_record</span>(fd, xc_common_process_id)) <span class="hljs-keyword">goto</span> end;
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;meminfo added&quot;</span>);    <span class="hljs-comment">// 收集内存相关信息</span>
+
+    end:
+        <span class="hljs-comment">//close log file</span>
+        <span class="hljs-built_in">xc_common_close_trace_log</span>(fd);
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;close log fd&quot;</span>);    <span class="hljs-comment">// 日志文件写入完毕</span>
+
+        <span class="hljs-comment">//rethrow SIGQUIT to ART Signal Catcher</span>
+        <span class="hljs-keyword">if</span>(xc_trace_rethrow &amp;&amp; (XC_TRACE_DUMP_ART_CRASH != xc_trace_dump_status)) <span class="hljs-built_in">xc_trace_send_sigquit</span>();
+        xc_trace_dump_status = XC_TRACE_DUMP_END;
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;rethrow SIGQUIT&quot;</span>);    <span class="hljs-comment">// 重新抛出 SIGQUIT，不中断系统的 ANR 流程</span>
+
+        <span class="hljs-comment">//JNI callback</span>
+        <span class="hljs-comment">//Do we need to implement an emergency buffer for disk exhausted?</span>
+        <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> == xc_trace_cb_method) <span class="hljs-keyword">continue</span>;
+        <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> == (j_pathname = (*env)-&gt;<span class="hljs-built_in">NewStringUTF</span>(env, pathname))) <span class="hljs-keyword">continue</span>;
+        (*env)-&gt;<span class="hljs-built_in">CallStaticVoidMethod</span>(env, xc_common_cb_class, xc_trace_cb_method, j_pathname, <span class="hljs-literal">NULL</span>);
+        <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;JNI callback %s&quot;</span>, pathname);    <span class="hljs-comment">// 执行 NativeHandler.traceCallback</span>
+        <span class="hljs-built_in">XC_JNI_IGNORE_PENDING_EXCEPTION</span>();
+        (*env)-&gt;<span class="hljs-built_in">DeleteLocalRef</span>(env, j_pathname);
+    &#125;
+    
+    (*xc_common_vm)-&gt;<span class="hljs-built_in">DetachCurrentThread</span>(xc_common_vm);
+
+ exit:
+    xc_trace_notifier = <span class="hljs-number">-1</span>;
+    <span class="hljs-built_in">close</span>(xc_trace_notifier);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;
+&#125;</code></pre></div>
+
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NativeHandler</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">traceCallback</span><span class="hljs-params">(String logPath, String emergency)</span> </span>&#123;
+        String tag = <span class="hljs-string">&quot;xcrash_dumper&quot;</span>;
+        Log.d(tag, String.format(<span class="hljs-string">&quot;traceCallback %s %s&quot;</span>, emergency, logPath));    <span class="hljs-comment">// 记录 callback 调用</span>
+        <span class="hljs-keyword">if</span> (TextUtils.isEmpty(logPath)) &#123;
+            <span class="hljs-keyword">return</span>;
+        &#125;
+
+        <span class="hljs-comment">//append memory info</span>
+        TombstoneManager.appendSection(logPath, <span class="hljs-string">&quot;memory info&quot;</span>, Util.getProcessMemoryInfo());
+        Log.d(tag, <span class="hljs-string">&quot;memory info appended&quot;</span>);    <span class="hljs-comment">// 添加额外信息</span>
+
+        <span class="hljs-comment">//append background / foreground</span>
+        TombstoneManager.appendSection(logPath, <span class="hljs-string">&quot;foreground&quot;</span>, ActivityMonitor.getInstance().isApplicationForeground() ? <span class="hljs-string">&quot;yes&quot;</span> : <span class="hljs-string">&quot;no&quot;</span>);
+        Log.d(tag, <span class="hljs-string">&quot;background / foreground appended&quot;</span>);    <span class="hljs-comment">// 添加额外信息</span>
+
+        <span class="hljs-comment">//check process ANR state</span>
+        <span class="hljs-comment">// 一段时间内轮询 ActivityManager.getProcessesInErrorState 是否为 ProcessErrorStateInfo#NOT_RESPONDING 来判断当前 APP 是否发生 ANR</span>
+        <span class="hljs-keyword">if</span> (NativeHandler.getInstance().anrCheckProcessState) &#123;
+            <span class="hljs-keyword">if</span> (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, NativeHandler.getInstance().anrTimeoutMs)) &#123;
+                FileManager.getInstance().recycleLogFile(<span class="hljs-keyword">new</span> File(logPath));
+                Log.d(tag, <span class="hljs-string">&quot;not an ANR&quot;</span>);    
+                <span class="hljs-keyword">return</span>; <span class="hljs-comment">//not an ANR</span>
+            &#125;
+        &#125;
+
+        <span class="hljs-comment">//delete extra ANR log files</span>
+        <span class="hljs-keyword">if</span> (!FileManager.getInstance().maintainAnr()) &#123;
+            <span class="hljs-keyword">return</span>;
+        &#125;
+
+        <span class="hljs-comment">//rename trace log file to ANR log file</span>
+        String anrLogPath = logPath.substring(<span class="hljs-number">0</span>, logPath.length() - Util.traceLogSuffix.length()) + Util.anrLogSuffix;
+        File traceFile = <span class="hljs-keyword">new</span> File(logPath);
+        File anrFile = <span class="hljs-keyword">new</span> File(anrLogPath);
+        <span class="hljs-keyword">if</span> (!traceFile.renameTo(anrFile)) &#123;
+            FileManager.getInstance().recycleLogFile(traceFile);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+        <span class="hljs-comment">// trace.xcrash 和 anr.xcrash 的流程是一样的，通过上面的检查逻辑判断是否为 anr，是的话将后缀改为 anr.xcrash</span>
+        Log.d(tag, String.format(<span class="hljs-string">&quot;%s rename to %s&quot;</span>, logPath, anrLogPath));    
+
+        ICrashCallback callback = NativeHandler.getInstance().anrCallback;
+        <span class="hljs-keyword">if</span> (callback != <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">try</span> &#123;
+                callback.onCrash(anrLogPath, emergency);
+                Log.d(tag, <span class="hljs-string">&quot;anr callback invoked&quot;</span>);    <span class="hljs-comment">// 执行用户自定义的回调</span>
+            &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+                Log.e(tag, e.getMessage(), e);
+                XCrash.getLogger().w(Util.TAG, <span class="hljs-string">&quot;NativeHandler ANR callback.onCrash failed&quot;</span>, e);
+            &#125;
+        &#125;
+    &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Util</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">checkProcessAnrState</span><span class="hljs-params">(Context ctx, <span class="hljs-keyword">long</span> timeoutMs)</span> </span>&#123;
+        ActivityManager am = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
+        <span class="hljs-keyword">if</span> (am == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+
+        <span class="hljs-keyword">int</span> pid = android.os.Process.myPid();
+        <span class="hljs-keyword">long</span> poll = timeoutMs / <span class="hljs-number">500</span>;
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; poll; i++) &#123;
+            List&lt;ActivityManager.ProcessErrorStateInfo&gt; processErrorList = am.getProcessesInErrorState();
+            <span class="hljs-keyword">if</span> (processErrorList != <span class="hljs-keyword">null</span>) &#123;
+                <span class="hljs-keyword">for</span> (ActivityManager.ProcessErrorStateInfo errorStateInfo : processErrorList) &#123;
+                    <span class="hljs-keyword">if</span> (errorStateInfo.pid == pid) &#123;
+                        <span class="hljs-comment">// 轮询检查当前进程是否处于 NOT_RESPONDING 状态，这个轮询时间很关键</span>
+                        Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, String.format(<span class="hljs-string">&quot;process state: %s&quot;</span>, errorStateInfo.condition));    
+                    &#125;
+                    <span class="hljs-keyword">if</span> (errorStateInfo.pid == pid &amp;&amp; errorStateInfo.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) &#123;
+                        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+                    &#125;
+                &#125;
+            &#125;
+
+            <span class="hljs-keyword">try</span> &#123;
+                Thread.sleep(<span class="hljs-number">500</span>);
+            &#125; <span class="hljs-keyword">catch</span> (Exception ignored) &#123;
+            &#125;
+        &#125;
+
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+    &#125;    
+&#125;</code></pre></div>
+
+<h1 id="PIXEL-4-Android-12"><a href="#PIXEL-4-Android-12" class="headerlink" title="PIXEL 4 - Android 12"></a>PIXEL 4 - Android 12</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，4s 后 APP 进入 NOT_RESPONDING 状态</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:27:26.760  3215  3215 D xcrash_dumper: xcrash start
+11-25 11:27:26.770  3215  3215 D xcrash_dumper: xcrash native start
+11-25 11:27:26.771  3215  3215 D xcrash_dumper: ANR native start
+11-25 11:27:26.771  3215  3215 D xcrash_dumper: ANR native register SIGQUIT
+11-25 11:27:26.772  3215  3215 D xcrash_dumper: xcrash native end
+
+11-25 11:27:29.775  3215  3215 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-25 11:27:29.779  3215  3215 D xcrash_dumper: AnrService was started
+11-25 11:27:29.781  3215  3215 D xcrash_dumper: AnrService, delete 0 anr logs before anr
+
+11-25 11:27:50.178  3215  3215 D xcrash_dumper: SIGQUIT handler get 3, 235
+11-25 11:27:50.178  3215  4153 D xcrash_dumper: ANR native dumper awaken
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Start time: &#x27;2021-11-25T11:27:26.770+0800&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Crash time: &#x27;2021-11-25T11:27:50.178+0800&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: API level: &#x27;30&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: OS version: &#x27;11&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Kernel version: &#x27;Linux version 4.14.204-g074de30eab1a-ab7083077 #1 SMP PREEMPT Thu Jan 14 21:14:19 UTC 2021 (armv8l)&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Manufacturer: &#x27;Google&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Brand: &#x27;google&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Model: &#x27;Pixel 4&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Build fingerprint: &#x27;google/flame/flame:S/SPP1.210122.020.A3/7145137:user/release-keys&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: pid: 3215  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-25 11:27:50.205  3215  4153 D xcrash_dumper:
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-25 11:27:50.205  3215  4153 D xcrash_dumper: before dump
+11-25 11:27:50.563  3215  4153 D xcrash_dumper: after dump, print log file
+11-25 11:27:50.630  3215  4153 D xcrash_dumper: logcat added
+11-25 11:27:50.683  3215  4153 D xcrash_dumper: meminfo added
+11-25 11:27:50.683  3215  4153 D xcrash_dumper: close log fd
+11-25 11:27:50.684  3215  4153 D xcrash_dumper: rethrow SIGQUIT
+
+11-25 11:27:50.684  3215  4153 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:27:50.849  3215  4153 D xcrash_dumper: memory info appended
+11-25 11:27:50.849  3215  4153 D xcrash_dumper: background / foreground appended
+11-25 11:27:54.360  3215  4153 D xcrash_dumper: process state: 2
+11-25 11:27:54.361  3215  4153 D xcrash_dumper: delete anr log file until 10
+11-25 11:27:54.362  3215  4153 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-25 11:27:54.362  3215  4153 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-25 11:27:54.362  3215  4153 D xcrash_dumper: anr callback invoked
+11-25 11:27:54.362  3215  4153 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:27:59.784  3215  3215 D xcrash_dumper: AnrService, now 1637810879, found anr logs, tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
+
+<h1 id="PIXEL-5-Android-11"><a href="#PIXEL-5-Android-11" class="headerlink" title="PIXEL 5 - Android 11"></a>PIXEL 5 - Android 11</h1><p>主线程阻塞 12s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，6s 后 APP 进入 NOT_RESPONDING 状态</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 15:43:01.820  2668  2668 D xcrash_dumper: xcrash start
+11-25 15:43:01.844  2668  2668 D xcrash_dumper: xcrash native start
+11-25 15:43:01.845  2668  2668 D xcrash_dumper: ANR native start
+11-25 15:43:01.845  2668  2668 D xcrash_dumper: ANR native register SIGQUIT
+11-25 15:43:01.846  2668  2668 D xcrash_dumper: xcrash native end
+
+11-25 15:43:04.849  2668  2668 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-25 15:43:04.852  2668  2668 D xcrash_dumper: AnrService was started
+11-25 15:43:04.857  2668  2668 D xcrash_dumper: AnrService, delete 0 anr logs before anr
+
+11-25 15:43:16.061  2668  2668 D xcrash_dumper: SIGQUIT handler get 3, 168
+11-25 15:43:16.061  2668  3318 D xcrash_dumper: ANR native dumper awaken
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Start time: &#x27;2021-11-25T15:43:01.844+0800&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Crash time: &#x27;2021-11-25T15:43:16.061+0800&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: API level: &#x27;30&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: OS version: &#x27;11&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Kernel version: &#x27;Linux version 4.19.110-g9ceb3bf92e0a-ab6790968 #2 SMP PREEMPT Wed Aug 26 04:14:37 UTC 2020 (armv8l)&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Manufacturer: &#x27;Google&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Brand: &#x27;google&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Model: &#x27;Pixel 5&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Build fingerprint: &#x27;google/redfin/redfin:11/RD1A.200810.022.A4/6835977:user/release-keys&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: pid: 2668  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-25 15:43:16.079  2668  3318 D xcrash_dumper:
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-25 15:43:16.079  2668  3318 D xcrash_dumper: before dump
+11-25 15:43:16.372  2668  3318 D xcrash_dumper: after dump, print log file
+11-25 15:43:16.470  2668  3318 D xcrash_dumper: logcat added
+11-25 15:43:16.519  2668  3318 D xcrash_dumper: meminfo added
+11-25 15:43:16.519  2668  3318 D xcrash_dumper: close log fd
+11-25 15:43:16.519  2668  3318 D xcrash_dumper: rethrow SIGQUIT
+
+11-25 15:43:16.519  2668  3318 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 15:43:16.687  2668  3318 D xcrash_dumper: memory info appended
+11-25 15:43:16.688  2668  3318 D xcrash_dumper: background / foreground appended
+11-25 15:43:22.715  2668  3318 D xcrash_dumper: process state: 2
+11-25 15:43:22.716  2668  3318 D xcrash_dumper: delete anr log file until 10
+11-25 15:43:22.716  2668  3318 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-25 15:43:22.716  2668  3318 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-25 15:43:22.717  2668  3318 D xcrash_dumper: anr callback invoked
+11-25 15:43:22.717  2668  3318 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 15:43:34.860  2668  2668 D xcrash_dumper: AnrService, now 1637826214, found anr logs, tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
+
+<h1 id="MI-10-Android-10"><a href="#MI-10-Android-10" class="headerlink" title="MI 10 - Android 10"></a>MI 10 - Android 10</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，5s 后 APP 进入 NOT_RESPONDING 状态</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:30:52.898  8554  8554 D xcrash_dumper: xcrash start
+11-25 11:30:52.906  8554  8554 D xcrash_dumper: xcrash native start
+11-25 11:30:52.907  8554  8554 D xcrash_dumper: ANR native start
+11-25 11:30:52.907  8554  8554 D xcrash_dumper: ANR native register SIGQUIT
+11-25 11:30:52.907  8554  8554 D xcrash_dumper: xcrash native end
+
+11-25 11:30:55.910  8554  8554 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-25 11:30:55.915  8554  8554 D xcrash_dumper: AnrService was started
+11-25 11:30:55.918  8554  8554 D xcrash_dumper: AnrService, delete 0 anr logs before anr
+
+11-25 11:31:16.430  8554  8554 D xcrash_dumper: SIGQUIT handler get 3, 151
+11-25 11:31:16.430  8554  8867 D xcrash_dumper: ANR native dumper awaken
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Start time: &#x27;2021-11-25T11:30:52.906+0800&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Crash time: &#x27;2021-11-25T11:31:16.430+0800&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: API level: &#x27;29&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: OS version: &#x27;10&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Kernel version: &#x27;Linux version 4.19.81-perf-g453ac5d #1 SMP PREEMPT Tue May 19 03:00:27 CST 2020 (armv8l)&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Manufacturer: &#x27;Xiaomi&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Brand: &#x27;Xiaomi&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Model: &#x27;Mi 10&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Build fingerprint: &#x27;Xiaomi/umi/umi:10/QKQ1.191117.002/V11.0.25.0.QJBCNXM:user/release-keys&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: pid: 8554  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-25 11:31:16.449  8554  8867 D xcrash_dumper:
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-25 11:31:16.449  8554  8867 D xcrash_dumper: before dump
+11-25 11:31:16.624  8554  8867 D xcrash_dumper: after dump, print log file
+11-25 11:31:16.758  8554  8867 D xcrash_dumper: logcat added
+11-25 11:31:16.804  8554  8867 D xcrash_dumper: meminfo added
+11-25 11:31:16.804  8554  8867 D xcrash_dumper: close log fd
+11-25 11:31:16.804  8554  8867 D xcrash_dumper: rethrow SIGQUIT
+
+11-25 11:31:16.804  8554  8867 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:31:16.923  8554  8867 D xcrash_dumper: memory info appended
+11-25 11:31:16.923  8554  8867 D xcrash_dumper: background / foreground appended
+11-25 11:31:21.932  8554  8867 D xcrash_dumper: process state: 2
+11-25 11:31:21.932  8554  8867 D xcrash_dumper: delete anr log file until 10
+11-25 11:31:21.933  8554  8867 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-25 11:31:21.933  8554  8867 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-25 11:31:21.933  8554  8867 D xcrash_dumper: anr callback invoked
+11-25 11:31:21.933  8554  8867 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:31:25.920  8554  8554 D xcrash_dumper: AnrService, now 1637811085, found anr logs, tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
+
+<h1 id="HUAWEI-Mate-30-Android-10"><a href="#HUAWEI-Mate-30-Android-10" class="headerlink" title="HUAWEI Mate 30 - Android 10"></a>HUAWEI Mate 30 - Android 10</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.7s 后完成 ANR 日志重启抛出 SIGQUIT，0.8s 后 APP 进入 NOT_RESPONDING 状态</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-29 16:01:45.634 22368 22368 D xcrash_dumper: xcrash start
+11-29 16:01:45.657 22368 22368 D xcrash_dumper: xcrash native start
+11-29 16:01:45.658 22368 22368 D xcrash_dumper: ANR native start
+11-29 16:01:45.658 22368 22368 D xcrash_dumper: ANR native register SIGQUIT
+11-29 16:01:45.658 22368 22368 D xcrash_dumper: xcrash native end
+
+11-29 16:01:48.660 22368 22368 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-29 16:01:48.667 22368 22368 D xcrash_dumper: AnrService was started
+11-29 16:01:48.674 22368 22368 D xcrash_dumper: AnrService, delete 1 anr logs before anr
+
+11-29 16:02:09.330 22368 22368 D xcrash_dumper: SIGQUIT handler get 3, 259
+11-29 16:02:09.330 22368 22783 D xcrash_dumper: ANR native dumper awaken
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Start time: &#x27;2021-11-29T16:01:45.658+0800&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Crash time: &#x27;2021-11-29T16:02:09.330+0800&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: API level: &#x27;29&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: OS version: &#x27;10&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Kernel version: &#x27;Linux version 4.14.116 #1 SMP PREEMPT Mon Sep 27 15:35:43 CST 2021 (armv8l)&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Manufacturer: &#x27;HUAWEI&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Brand: &#x27;HUAWEI&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Model: &#x27;TAS-AL00&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Build fingerprint: &#x27;HUAWEI/TAS-AL00/HWTAS:10/HUAWEITAS-AL00/102.0.0.209C00:user/release-keys&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: pid: 22368  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-29 16:02:09.404 22368 22783 D xcrash_dumper:
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: before dump
+11-29 16:02:09.766 22368 22783 D xcrash_dumper: after dump, print log file
+11-29 16:02:09.882 22368 22783 D xcrash_dumper: logcat added
+11-29 16:02:10.002 22368 22783 D xcrash_dumper: meminfo added
+11-29 16:02:10.002 22368 22783 D xcrash_dumper: close log fd
+11-29 16:02:10.002 22368 22783 D xcrash_dumper: rethrow SIGQUIT
+
+11-29 16:02:10.003 22368 22783 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-29 16:02:10.232 22368 22783 D xcrash_dumper: memory info appended
+11-29 16:02:10.232 22368 22783 D xcrash_dumper: background / foreground appended
+11-29 16:02:10.735 22368 22783 D xcrash_dumper: process state: 2
+11-29 16:02:10.735 22368 22783 D xcrash_dumper: delete anr log file until 10
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: anr callback invoked
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-29 16:02:18.678 22368 22368 D xcrash_dumper: AnrService, now 1638172938, found anr logs, tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
+
+<h1 id="Redmi-K20-Android-9"><a href="#Redmi-K20-Android-9" class="headerlink" title="Redmi K20 - Android 9"></a>Redmi K20 - Android 9</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，4s 后 APP 进入 NOT_RESPONDING 状态</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:30:24.925 10449 10449 D xcrash_dumper: xcrash start
+11-25 11:30:24.936 10449 10449 D xcrash_dumper: xcrash native start
+11-25 11:30:24.938 10449 10449 D xcrash_dumper: ANR native start
+11-25 11:30:24.939 10449 10449 D xcrash_dumper: ANR native register SIGQUIT
+11-25 11:30:24.939 10449 10449 D xcrash_dumper: xcrash native end
+
+11-25 11:30:27.942 10449 10449 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-25 11:30:27.946 10449 10449 D xcrash_dumper: AnrService was started
+11-25 11:30:27.949 10449 10449 D xcrash_dumper: AnrService, delete 0 anr logs before anr
+
+11-25 11:30:48.467 10449 10449 D xcrash_dumper: SIGQUIT handler get 3, 159
+11-25 11:30:48.467 10449 10750 D xcrash_dumper: ANR native dumper awaken
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Start time: &#x27;2021-11-25T11:30:24.937+0800&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Crash time: &#x27;2021-11-25T11:30:48.467+0800&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: API level: &#x27;28&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: OS version: &#x27;9&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Kernel version: &#x27;Linux version 4.14.83-perf+ #1 SMP PREEMPT Thu Sep 26 12:23:20 CST 2019 (armv8l)&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Manufacturer: &#x27;Xiaomi&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Brand: &#x27;Xiaomi&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Model: &#x27;Redmi K20&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Build fingerprint: &#x27;Xiaomi/davinci/davinci:9/PKQ1.190302.001/V11.0.3.0.PFJCNXM:user/release-keys&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: pid: 10449  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-25 11:30:48.500 10449 10750 D xcrash_dumper:
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-25 11:30:48.500 10449 10750 D xcrash_dumper: before dump
+11-25 11:30:48.658 10449 10750 D xcrash_dumper: after dump, print log file
+11-25 11:30:48.975 10449 10750 D xcrash_dumper: logcat added
+11-25 11:30:49.063 10449 10750 D xcrash_dumper: meminfo added
+11-25 11:30:49.063 10449 10750 D xcrash_dumper: close log fd
+11-25 11:30:49.065 10449 10750 D xcrash_dumper: rethrow SIGQUIT
+
+11-25 11:30:49.066 10449 10750 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:30:49.179 10449 10750 D xcrash_dumper: memory info appended
+11-25 11:30:49.184 10449 10750 D xcrash_dumper: background / foreground appended
+11-25 11:30:52.699 10449 10750 D xcrash_dumper: process state: 2
+11-25 11:30:52.700 10449 10750 D xcrash_dumper: delete anr log file until 10
+11-25 11:30:52.701 10449 10750 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-25 11:30:52.701 10449 10750 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-25 11:30:52.701 10449 10750 D xcrash_dumper: anr callback invoked
+11-25 11:30:52.701 10449 10750 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:30:57.953 10449 10449 D xcrash_dumper: AnrService, now 1637811057, found anr logs, tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
+
+<h1 id="HUAWEI-P20-Pro-Android-8-1-0"><a href="#HUAWEI-P20-Pro-Android-8-1-0" class="headerlink" title="HUAWEI P20 Pro - Android 8.1.0"></a>HUAWEI P20 Pro - Android 8.1.0</h1><p>主线程阻塞 10s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，2s 后 APP 进入 NOT_RESPONDING 状态</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:32:17.213 23690 23690 D xcrash_dumper: xcrash start
+11-25 11:32:17.222 23690 23690 D xcrash_dumper: xcrash native start
+11-25 11:32:17.223 23690 23690 D xcrash_dumper: ANR native start
+11-25 11:32:17.223 23690 23690 D xcrash_dumper: ANR native register SIGQUIT
+11-25 11:32:17.223 23690 23690 D xcrash_dumper: xcrash native end
+
+11-25 11:32:20.226 23690 23690 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-25 11:32:20.233 23690 23690 D xcrash_dumper: AnrService was started
+11-25 11:32:20.238 23690 23690 D xcrash_dumper: AnrService, delete 0 anr logs before anr
+
+11-25 11:32:30.826 23690 23690 D xcrash_dumper: SIGQUIT handler get 3, 165
+11-25 11:32:30.826 23690 23972 D xcrash_dumper: ANR native dumper awaken
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811150826614_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Start time: &#x27;2021-11-25T11:32:17.222+0800&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Crash time: &#x27;2021-11-25T11:32:30.826+0800&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: API level: &#x27;27&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: OS version: &#x27;8.1.0&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Kernel version: &#x27;Linux version 4.4.103+ #1 SMP PREEMPT Sun Jul 8 16:11:30 CST 2018 (armv7l)&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Manufacturer: &#x27;HUAWEI&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Brand: &#x27;HUAWEI&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Model: &#x27;CLT-L29&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Build fingerprint: &#x27;HUAWEI/CLT-L29/HWCLT:8.1.0/HUAWEICLT-L29/152(C432):user/release-keys&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: pid: 23690  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-25 11:32:30.856 23690 23972 D xcrash_dumper:
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-25 11:32:30.856 23690 23972 D xcrash_dumper: before dump
+11-25 11:32:31.013 23690 23972 D xcrash_dumper: after dump, print log file
+11-25 11:32:31.187 23690 23972 D xcrash_dumper: logcat added
+11-25 11:32:31.311 23690 23972 D xcrash_dumper: meminfo added
+11-25 11:32:31.311 23690 23972 D xcrash_dumper: close log fd
+11-25 11:32:31.311 23690 23972 D xcrash_dumper: rethrow SIGQUIT
+
+11-25 11:32:31.316 23690 23972 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811150826614_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:32:31.474 23690 23972 D xcrash_dumper: memory info appended
+11-25 11:32:31.475 23690 23972 D xcrash_dumper: background / foreground appended
+11-25 11:32:33.487 23690 23972 D xcrash_dumper: process state: 2
+11-25 11:32:33.488 23690 23972 D xcrash_dumper: delete anr log file until 10
+11-25 11:32:33.491 23690 23972 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811150826614_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811150826614_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-25 11:32:33.491 23690 23972 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811150826614_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-25 11:32:33.491 23690 23972 D xcrash_dumper: anr callback invoked
+11-25 11:32:33.491 23690 23972 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811150826614_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash</code></pre></div>
+
+<h1 id="vivo-X9-Plus-Android-7-1-2"><a href="#vivo-X9-Plus-Android-7-1-2" class="headerlink" title="vivo X9 Plus - Android 7.1.2"></a>vivo X9 Plus - Android 7.1.2</h1><p>AnrService 运行 30s 未返回并没有触发 ANR，而后通过手动点击阻塞主线程 60s 才触发 ANR</p>
+<p>没有继续深入测试触发 ANR 的阈值，总之 SIGQUIT 处理器还是能捕获到 ANR 的，从收到 SIGQUIT 到写入调用栈重新抛出 SIGQUIT 用时 0.8s，0.3s 后进入 ANR 状态</p>
+<p>系统的 ANR 处理流程还会将日志写入到 /data/anr/traces.txt</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 16:38:01.561 12462 12462 D xcrash_dumper: xcrash start
+11-25 16:38:01.574 12462 12462 D xcrash_dumper: xcrash native start
+11-25 16:38:01.576 12462 12462 D xcrash_dumper: ANR native start
+11-25 16:38:01.576 12462 12462 D xcrash_dumper: ANR native register SIGQUIT
+11-25 16:38:01.576 12462 12462 D xcrash_dumper: xcrash native end
+
+11-25 16:38:04.584 12462 12462 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-25 16:38:04.598 12462 12462 D xcrash_dumper: AnrService was started
+11-25 16:38:04.608 12462 12462 D xcrash_dumper: AnrService, delete 0 anr logs before anr
+11-25 16:38:34.620 12462 12462 D xcrash_dumper: AnrService, now 1637829514, found anr logs, 
+
+11-25 16:41:10.125 12462 12462 D xcrash_dumper: SIGQUIT handler get 3, 143
+11-25 16:41:10.125 12462 12741 D xcrash_dumper: ANR native dumper awaken
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637829670125799_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Start time: &#x27;2021-11-25T16:38:01.575+0800&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Crash time: &#x27;2021-11-25T16:41:10.125+0800&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: API level: &#x27;25&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: OS version: &#x27;7.1.2&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Kernel version: &#x27;Linux version 3.10.84-perf-g955b276c #1 SMP PREEMPT Thu Dec 10 17:42:47 CST 2020 (armv8l)&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Manufacturer: &#x27;vivo&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Brand: &#x27;vivo&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Model: &#x27;vivo X9Plus&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Build fingerprint: &#x27;vivo/PD1619/PD1619:7.1.2/N2G47H/compil12101707:user/release-keys&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: pid: 12462  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: 
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-25 16:41:10.296 12462 12741 D xcrash_dumper: before dump
+11-25 16:41:10.581 12462 12741 D xcrash_dumper: after dump, print log file
+11-25 16:41:10.700 12462 12741 D xcrash_dumper: logcat added
+11-25 16:41:10.851 12462 12741 D xcrash_dumper: meminfo added
+11-25 16:41:10.851 12462 12741 D xcrash_dumper: close log fd
+11-25 16:41:10.851 12462 12741 D xcrash_dumper: rethrow SIGQUIT
+
+11-25 16:41:10.851 12462 12468 I art     : Thread[3,tid=12468,WaitingInMainSignalCatcherLoop,Thread*=0xdcd2b000,peer=0x12c13d30,&quot;Signal Catcher&quot;]: reacting to signal 3
+11-25 16:41:10.851 12462 12468 I art     : 
+11-25 16:41:11.132 12462 12468 I art     : Wrote stack traces to &#x27;/data/anr/traces.txt&#x27;
+
+11-25 16:41:11.133  3743  3778 E ActivityManager: ANR in com.viomi.fridge.vertical
+11-25 16:41:11.133  3743  3778 E ActivityManager: PID: 12462
+11-25 16:41:11.133  3743  3778 E ActivityManager: Reason: Broadcast of Intent &#123; act=android.intent.action.TIME_TICK flg=0x58000014 (has extras) &#125;
+
+11-25 16:41:11.137 12462 12741 D xcrash_dumper: memory info appended
+11-25 16:41:11.143 12462 12741 D xcrash_dumper: background / foreground appended
+11-25 16:41:11.145 12462 12741 D xcrash_dumper: process state: 2
+11-25 16:41:11.146 12462 12741 D xcrash_dumper: delete anr log file until 10
+11-25 16:41:11.147 12462 12741 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637829670125799_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637829670125799_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-25 16:41:11.147 12462 12741 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637829670125799_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-25 16:41:11.147 12462 12741 D xcrash_dumper: anr callback invoked
+11-25 16:41:11.147 12462 12741 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637829670125799_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash</code></pre></div>
+
+<h1 id="Galaxy-S7-edge-Android-6-0-1"><a href="#Galaxy-S7-edge-Android-6-0-1" class="headerlink" title="Galaxy S7 edge - Android 6.0.1"></a>Galaxy S7 edge - Android 6.0.1</h1><p>从下面的日志可以看到 AnrService 运行 30s 未返回的确触发了 ANR 并收到了 SIGQUIT（具体是用时 22s 触发 ANR），但是输出日志文件用时 14s 太长了（Runtime::DumpForSigQuit 用了 14s），当重新抛出 SIGQUIT 时 AnrService 已返回，主线程随即恢复运行，我猜测此时 APP 就不再处于 NOT_RESPONDING 状态，也就无法判别 APP 发生了 ANR</p>
+<p>HUAWEI Mate 30 时也出现过不能判别 ANR 的情况，当时是弹出通知权限的设置页，导致 APP 进入到后台（后台 ANR）</p>
+<p>系统 ANR 流程会输出 /data/anr/traces.txt，从 Signal Catcher 线程收到 SIGQUIT 到输出日志文件耗时 6s</p>
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:31:44.883 17149 17149 D xcrash_dumper: xcrash start
+11-25 11:31:44.913 17149 17149 D xcrash_dumper: xcrash native start
+11-25 11:31:44.913 17149 17149 D xcrash_dumper: ANR native start
+11-25 11:31:44.913 17149 17149 D xcrash_dumper: ANR native register SIGQUIT
+11-25 11:31:44.923 17149 17149 D xcrash_dumper: xcrash native end
+
+11-25 11:31:47.923 17149 17149 D xcrash_dumper: NativeHandler.anrTimeoutMs = 60s
+11-25 11:31:47.933 17149 17149 D xcrash_dumper: AnrService was started
+11-25 11:31:47.933 17149 17149 D xcrash_dumper: AnrService, delete 0 anr logs before anr
+
+11-25 11:32:10.173 17149 17149 D xcrash_dumper: SIGQUIT handler get 3, 150
+11-25 11:32:10.173 17149 17447 D xcrash_dumper: ANR native dumper awaken
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811130176482_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Tombstone maker: &#x27;xCrash 3.0.0&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Crash type: &#x27;anr&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Start time: &#x27;2021-11-25T11:31:44.917+0800&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Crash time: &#x27;2021-11-25T11:32:10.176+0800&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: App ID: &#x27;com.viomi.fridge.vertical&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: App version: &#x27;2.1.2.11.17&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Rooted: &#x27;No&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: API level: &#x27;23&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: OS version: &#x27;6.0.1&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Kernel version: &#x27;Linux version 3.18.20-9032921 #1 SMP PREEMPT Fri Dec 23 15:24:17 KST 2016 (armv8l)&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: ABI list: &#x27;arm64-v8a,armeabi-v7a,armeabi&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Manufacturer: &#x27;samsung&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Brand: &#x27;samsung&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Model: &#x27;SM-G9350&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Build fingerprint: &#x27;samsung/hero2qltezc/hero2qltechn:6.0.1/MMB29M/G9350ZCU2APL3:user/release-keys&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: ABI: &#x27;arm&#x27;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: pid: 17149  &gt;&gt;&gt; com.viomi.fridge.vertical &lt;&lt;&lt;
+11-25 11:32:10.543 17149 17447 D xcrash_dumper:
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-25 11:32:10.543 17149 17447 D xcrash_dumper: before dump
+11-25 11:32:17.933 17149 17149 D xcrash_dumper: AnrService, now 1637811137, found anr logs,
+11-25 11:32:24.053 17149 17447 D xcrash_dumper: after dump, print log file
+11-25 11:32:24.383 17149 17447 D xcrash_dumper: logcat added
+11-25 11:32:24.863 17149 17447 D xcrash_dumper: meminfo added
+11-25 11:32:24.863 17149 17447 D xcrash_dumper: close log fd
+11-25 11:32:24.863 17149 17447 D xcrash_dumper: rethrow SIGQUIT
+11-25 11:32:24.863 17149 17153 I art     : Thread[2,tid=17153,WaitingInMainSignalCatcherLoop,Thread*=0xee096000,peer=0x12c160a0,&quot;Signal Catcher&quot;]: reacting to signal 3
+
+11-25 11:32:24.863 17149 17447 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811130176482_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-25 11:32:25.163 17149 17447 D xcrash_dumper: memory info appended
+11-25 11:32:25.183 17149 17447 D xcrash_dumper: background / foreground appended
+11-25 11:32:50.103 17149 17447 D xcrash_dumper: not an ANR
+11-25 11:32:50.103 17149 17447 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001637811130176482_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+
+11-25 11:32:30.233 17149 17153 I art     : Wrote stack traces to &#x27;/data/anr/traces.txt&#x27;</code></pre></div>
+
+<h2 id="ANR-判别逻辑的缺陷"><a href="#ANR-判别逻辑的缺陷" class="headerlink" title="ANR 判别逻辑的缺陷"></a>ANR 判别逻辑的缺陷</h2><p>在 <code>NativeHandler.traceCallback</code> 里会检查当前进程的状态是否为 ANR，默认是在 15s 内轮询检查进程是否处于 <code>ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING</code></p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NativeHandler</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">traceCallback</span><span class="hljs-params">(String logPath, String emergency)</span> </span>&#123;
+        <span class="hljs-keyword">if</span> (TextUtils.isEmpty(logPath)) &#123;
+            <span class="hljs-keyword">return</span>;
+        &#125;
+
+        <span class="hljs-comment">//append memory info</span>
+        TombstoneManager.appendSection(logPath, <span class="hljs-string">&quot;memory info&quot;</span>, Util.getProcessMemoryInfo());
+
+        <span class="hljs-comment">//append background / foreground</span>
+        TombstoneManager.appendSection(logPath, <span class="hljs-string">&quot;foreground&quot;</span>, ActivityMonitor.getInstance().isApplicationForeground() ? <span class="hljs-string">&quot;yes&quot;</span> : <span class="hljs-string">&quot;no&quot;</span>);
+
+        <span class="hljs-comment">//check process ANR state</span>
+        <span class="hljs-keyword">if</span> (NativeHandler.getInstance().anrCheckProcessState) &#123;
+            <span class="hljs-keyword">if</span> (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, NativeHandler.getInstance().anrTimeoutMs)) &#123;
+                FileManager.getInstance().recycleLogFile(<span class="hljs-keyword">new</span> File(logPath));
+                <span class="hljs-keyword">return</span>; <span class="hljs-comment">//not an ANR</span>
+            &#125;
+        &#125;
+
+        <span class="hljs-comment">//delete extra ANR log files</span>
+        <span class="hljs-keyword">if</span> (!FileManager.getInstance().maintainAnr()) &#123;
+            <span class="hljs-keyword">return</span>;
+        &#125;
+
+        <span class="hljs-comment">//rename trace log file to ANR log file</span>
+        String anrLogPath = logPath.substring(<span class="hljs-number">0</span>, logPath.length() - Util.traceLogSuffix.length()) + Util.anrLogSuffix;
+        File traceFile = <span class="hljs-keyword">new</span> File(logPath);
+        File anrFile = <span class="hljs-keyword">new</span> File(anrLogPath);
+        <span class="hljs-keyword">if</span> (!traceFile.renameTo(anrFile)) &#123;
+            FileManager.getInstance().recycleLogFile(traceFile);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+
+        ICrashCallback callback = NativeHandler.getInstance().anrCallback;
+        <span class="hljs-keyword">if</span> (callback != <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">try</span> &#123;
+                callback.onCrash(anrLogPath, emergency);
+            &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+                XCrash.getLogger().w(Util.TAG, <span class="hljs-string">&quot;NativeHandler ANR callback.onCrash failed&quot;</span>, e);
+            &#125;
+        &#125;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">checkProcessAnrState</span><span class="hljs-params">(Context ctx, <span class="hljs-keyword">long</span> timeoutMs)</span> </span>&#123;
+        ActivityManager am = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
+        <span class="hljs-keyword">if</span> (am == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+
+        <span class="hljs-keyword">int</span> pid = android.os.Process.myPid();
+        <span class="hljs-keyword">long</span> poll = timeoutMs / <span class="hljs-number">500</span>;
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; poll; i++) &#123;
+            List&lt;ActivityManager.ProcessErrorStateInfo&gt; processErrorList = am.getProcessesInErrorState();
+            <span class="hljs-keyword">if</span> (processErrorList != <span class="hljs-keyword">null</span>) &#123;
+                <span class="hljs-keyword">for</span> (ActivityManager.ProcessErrorStateInfo errorStateInfo : processErrorList) &#123;
+                    <span class="hljs-keyword">if</span> (errorStateInfo.pid == pid) &#123;
+                        Log.d(<span class="hljs-string">&quot;xcrash_dumper&quot;</span>, String.format(<span class="hljs-string">&quot;process state: %s&quot;</span>, errorStateInfo.condition));
+                    &#125;
+                    <span class="hljs-keyword">if</span> (errorStateInfo.pid == pid &amp;&amp; errorStateInfo.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) &#123;
+                        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+                    &#125;
+                &#125;
+            &#125;
+
+            <span class="hljs-keyword">try</span> &#123;
+                Thread.sleep(<span class="hljs-number">500</span>);
+            &#125; <span class="hljs-keyword">catch</span> (Exception ignored) &#123;
+            &#125;
+        &#125;
+
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+    &#125;    
+&#125;</code></pre></div>
+
+<p>但是这个轮询时长很有问题，默认 15s 在 MI 9 Android 11 上不够长，ANR 对话框还没弹出来，此时进程并不是处于 ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING，导致 xCrash 判定不是 ANR，然后把日志删了，我把这个时长增加到 60s 是能判定 ANR 的</p>
+<p>所以这里有几个解决方案：</p>
+<p>1，增大 ANR 轮询时长到一个足够大的值，但此时 ANR 对话框已经弹出，用户可能直接 kill app，于是以下逻辑可能会无法执行（xcrash.NativeHandler#traceCallback check process ANR state 以下的代码）：<br>    1.清理 ANR 目录（维持最多 xcrash.XCrash.InitParameters#anrLogCountMax）<br>    2.日志文件后缀是 .trace.xcrash 而不是 .anr.xcrash，因为 anr 和 trace 的逻辑是一样的，最后通过上面的 ANR 判定逻辑来判断是不是 ANR，是的话把 .trace.xcrash 改名为 .anr.xcrash<br>    3.anr callback 无法执行（xcrash.XCrash.InitParameters#setAnrCallback）</p>
+<ol start="2">
+<li>关闭 ANR 检查（xcrash.XCrash.InitParameters#setAnrCheckProcessState）<br>这个看似最简单但是不行的，因为 SIGQUIT 对于 APP 来说是 Runtime::DumpForSigQuit，那么当其他 APP 发生 ANR 时系统是通过向所有其他进程发送 SIGQUIT 来收集 ANR 日志的（参考 ANR 日志的内容），当然我们的 APP 也会收到，但此时并不是我们的 APP 发生了 ANR</li>
+</ol>
+<p>所以检查是否当前 APP 发生了 ANR 这个校验是一定要做得，那么怎么优化第一个解决方案呢？</p>
+<ol>
+<li>清理操作可以放到其他地方，比如初始化后</li>
+<li>日志默认是 .anr.xcrash，轮询后发现 app 并没有处于 NOT_RESPONDING 则把日志删掉<br> 如果是 ANR 则足够长的轮询时长能够保证在弹出 ANR 对话框（处于 NOT_RESPONDING）后判定为 ANR<br> 即使用户即刻 kill app，ANR 日志还是保留下来，判定为 ANR</li>
+<li>anr callback 不要再 catch anr 后回调，因为此刻很有可能被 kill 而不能稳定调用，可以将 ANR 日志标为 unread，初始化后检查日志将 unread 的回调并置为 read</li>
+</ol>
+<p>xCrash 在绿联 6810</p>
+<p>捕获到 SIGQUIT 后，会卡在 Runtime::DumpForSigQuit，然后不断收到 SIGQUIT，APP 会一直卡顿一直弹出 ANR 对话框（即使一直点击等待），这里不确定是 xc_trace_libart_dbg_suspend 的问题还是 Runtime::DumpForSigQuit 的问题</p>
+<p>但是 Runtime::DumpForSigQuit 确实是有被执行的，APP 重启后可以发现上一次的 ANR dump 被输出到日志文件里了，但文件名还没改过来 tombstone_00001637663901079557_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash，从日志来看应该是后续代码没有执行，卡在 Runtime::DumpForSigQuit 里了</p>
+<div class="hljs code-wrapper"><pre><code>//is Android Lollipop (5.x)?
+xc_trace_is_lollipop = ((21 == xc_common_api_level || 22 == xc_common_api_level) ? 1 : 0);
+
+    if(sigsetjmp(jmpenv, 1) == 0) 
+    &#123;
+        if(xc_trace_is_lollipop)
+            xc_trace_libart_dbg_suspend();
+        XCD_LOG_DEBUG(&quot;before dump&quot;);
+        xc_trace_libart_runtime_dump(*xc_trace_libart_runtime_instance, xc_trace_libcpp_cerr);
+        XCD_LOG_DEBUG(&quot;after dump, print log file&quot;);
+        if(xc_trace_is_lollipop)
+            xc_trace_libart_dbg_resume();
+    &#125;
+</code></pre></div>
+<p>2021-11-23 18:20:10.580 4176-4477/com.viomi.fridge.vertical D/xcrash_dumper: before dump<br>2021-11-23 18:20:36.784 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:21:10.108 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:21:26.920 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:22:10.100 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:22:26.634 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:23:10.109 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/ANR/">ANR</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
+                    
+                      <a class="hover-with-bg" href="/tags/xCrash/">xCrash</a>
+                    
+                  </div>
+                
+              </div>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/07/20/kotlin-coroutine-2/">
+                        <span class="hidden-mobile">深入分析 Kotlin Coroutines 是如何实现的（二）</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
