@@ -672,6 +672,67 @@ class Util {
 11-25 11:31:25.920  8554  8554 D xcrash_dumper: AnrService, now 1637811085, found anr logs, tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
 ```
 
+# HUAWEI Mate 30 Android 10
+
+主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.7s 后完成 ANR 日志重启抛出 SIGQUIT，0.8s 后 APP 进入 NOT_RESPONDING 状态
+
+```logcat
+11-29 16:01:45.634 22368 22368 D xcrash_dumper: xcrash start
+11-29 16:01:45.657 22368 22368 D xcrash_dumper: xcrash native start
+11-29 16:01:45.658 22368 22368 D xcrash_dumper: ANR native start
+11-29 16:01:45.658 22368 22368 D xcrash_dumper: ANR native register SIGQUIT
+11-29 16:01:45.658 22368 22368 D xcrash_dumper: xcrash native end
+
+11-29 16:01:48.660 22368 22368 D xcrash_dumper: NativeHandler.anrTimeoutMs = 20s
+11-29 16:01:48.667 22368 22368 D xcrash_dumper: AnrService was started
+11-29 16:01:48.674 22368 22368 D xcrash_dumper: AnrService, delete 1 anr logs before anr
+
+11-29 16:02:09.330 22368 22368 D xcrash_dumper: SIGQUIT handler get 3, 259
+11-29 16:02:09.330 22368 22783 D xcrash_dumper: ANR native dumper awaken
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: read header from /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Tombstone maker: 'xCrash 3.0.0'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Crash type: 'anr'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Start time: '2021-11-29T16:01:45.658+0800'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Crash time: '2021-11-29T16:02:09.330+0800'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: App ID: 'com.viomi.fridge.vertical'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: App version: '2.1.2.11.17'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Rooted: 'No'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: API level: '29'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: OS version: '10'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Kernel version: 'Linux version 4.14.116 #1 SMP PREEMPT Mon Sep 27 15:35:43 CST 2021 (armv8l)'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: ABI list: 'arm64-v8a,armeabi-v7a,armeabi'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Manufacturer: 'HUAWEI'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Brand: 'HUAWEI'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Model: 'TAS-AL00'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Build fingerprint: 'HUAWEI/TAS-AL00/HWTAS:10/HUAWEITAS-AL00/102.0.0.209C00:user/release-keys'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: ABI: 'arm'
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: pid: 22368  >>> com.viomi.fridge.vertical <<<
+11-29 16:02:09.404 22368 22783 D xcrash_dumper:
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Cmd line: com.viomi.fridge.vertical
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: Mode: ART DumpForSigQuit
+
+11-29 16:02:09.404 22368 22783 D xcrash_dumper: before dump
+11-29 16:02:09.766 22368 22783 D xcrash_dumper: after dump, print log file
+11-29 16:02:09.882 22368 22783 D xcrash_dumper: logcat added
+11-29 16:02:10.002 22368 22783 D xcrash_dumper: meminfo added
+11-29 16:02:10.002 22368 22783 D xcrash_dumper: close log fd
+11-29 16:02:10.002 22368 22783 D xcrash_dumper: rethrow SIGQUIT
+
+11-29 16:02:10.003 22368 22783 D xcrash_dumper: traceCallback null /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-29 16:02:10.232 22368 22783 D xcrash_dumper: memory info appended
+11-29 16:02:10.232 22368 22783 D xcrash_dumper: background / foreground appended
+11-29 16:02:10.735 22368 22783 D xcrash_dumper: process state: 2
+11-29 16:02:10.735 22368 22783 D xcrash_dumper: delete anr log file until 10
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash rename to /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: ANR Callback, null, /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: anr callback invoked
+11-29 16:02:10.736 22368 22783 D xcrash_dumper: JNI callback /data/user/0/com.viomi.fridge.vertical/files/tombstones/tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash
+11-29 16:02:18.678 22368 22368 D xcrash_dumper: AnrService, now 1638172938, found anr logs, tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash
+```
+
 # Redmi K20 Android 9
 
 主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，4s 后 APP 进入 NOT_RESPONDING 状态
@@ -868,6 +929,8 @@ class Util {
 # SAMSUNG Galaxy S7 edge Android 6.0.1
 
 从下面的日志可以看到 AnrService 运行 30s 未返回的确触发了 ANR 并收到了 SIGQUIT（具体是用时 22s 触发 ANR），但是输出日志文件用时 14s 太长了（Runtime::DumpForSigQuit 用了 14s），当重新抛出 SIGQUIT 时 AnrService 已返回，主线程随即恢复运行，这样 APP 就不再处于 NOT_RESPONDING 状态，也就无法判别 APP 发生了 ANR
+
+HUAWEI Mate 30 时也出现过不能判别 ANR 的情况，当时是弹出通知权限的设置页，导致 APP 进入到后台
 
 那么只能选择监控 /data/anr/traces.txt 文件，从 Signal Catcher 线程收到 SIGQUIT 到输出日志文件耗时 6s
 
