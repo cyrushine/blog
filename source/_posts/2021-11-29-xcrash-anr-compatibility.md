@@ -8,13 +8,15 @@ tags: [xCrash, ANR, 崩溃]
 |--------|-------|
 | 目的             | 测试 `xCrash` 捕获 `ANR` 的能力在各个 Android 版本上的兼容性 |
 | 平台             | [WeTest](https://wetest.qq.com/) - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型 |
-| Apk              | Viomi Fridge Launcher |
+| Apk              | Viomi Fridge Launcher V2.1.2 |
 | xCrash Version   | 3.0.0 |
 | ANR 捕获机制      | 注册 `SIGQUIT` 信号处理器，`Runtime::DumpForSigQuit` 打印调用栈，一段时间内轮询 `ActivityManager.getProcessesInErrorState` 是否为 `ProcessErrorStateInfo.NOT_RESPONDING` 来判断当前 APP 是否发生 ANR |
 | 测试流程          | APP 启动后 5s 初始化 xCrash ANR，3s 后启动 `AnrService`，通过 `startService` 超时来触发 ANR |
 | 日志分析          | 将日志文件逐个下载，放到 [LogPad](https://cloudvyzor.com/) 上过滤出 tag 为 `xcrash_dumper` 的条目 |
 
 # 详细的日志埋点
+
+tag 为 `xcrash_dumper` 为插入的日志埋点
 
 ```kotlin
 fun initXCrash() {
@@ -997,7 +999,37 @@ HUAWEI Mate 30 时也出现过不能判别 ANR 的情况，当时是弹出通知
 11-25 11:32:30.233 17149 17153 I art     : Wrote stack traces to '/data/anr/traces.txt'
 ```
 
-## ANR 判别逻辑的缺陷
+# 绿联 6810 - Android 5.1
+
+捕获到 `SIGQUIT` 后，会卡在 `Runtime::DumpForSigQuit` 然后不断收到 `SIGQUIT`，APP 会一直卡顿一直弹出 ANR 对话框（即使一直点击等待），APP 重启后可以发现上一次的 ANR dump 被输出到日志文件里了，但文件名还没改过来 `tombstone_00001637663901079557_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash`，从日志来看应该是后续代码没有执行，卡在 `Runtime::DumpForSigQuit` 里了
+
+```cpp
+// is Android Lollipop (5.x)?
+xc_trace_is_lollipop = ((21 == xc_common_api_level || 22 == xc_common_api_level) ? 1 : 0);
+// ...
+if(sigsetjmp(jmpenv, 1) == 0) 
+{
+    if(xc_trace_is_lollipop)
+        xc_trace_libart_dbg_suspend();
+    XCD_LOG_DEBUG("before dump");
+    xc_trace_libart_runtime_dump(*xc_trace_libart_runtime_instance, xc_trace_libcpp_cerr);
+    XCD_LOG_DEBUG("after dump, print log file");
+    if(xc_trace_is_lollipop)
+        xc_trace_libart_dbg_resume();
+}
+```
+
+```logcat
+2021-11-23 18:20:10.580 4176-4477/com.viomi.fridge.vertical D/xcrash_dumper: before dump
+2021-11-23 18:20:36.784 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:21:10.108 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:21:26.920 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:22:10.100 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:22:26.634 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:23:10.109 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+```
+
+# NOT_RESPONDING 轮询时长的缺陷
 
 在 `NativeHandler.traceCallback` 里会检查当前进程的状态是否为 ANR，默认是在 15s 内轮询检查进程是否处于 `ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING`
 
@@ -1076,50 +1108,38 @@ class NativeHandler {
 }
 ```
 
-但是这个轮询时长很有问题，默认 15s 在 MI 9 Android 11 上不够长，ANR 对话框还没弹出来，此时进程并不是处于 ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING，导致 xCrash 判定不是 ANR，然后把日志删了，我把这个时长增加到 60s 是能判定 ANR 的
+但是这个轮询时长很有问题，默认 15s 在 MI 9 - Android 11 上不够长，ANR 对话框还没弹出来，此时进程并不处于 `ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING`，导致 xCrash 判定不是 ANR，然后把日志删了，我把这个时长增加到 60s 是能判定 ANR 的
 
-所以这里有几个解决方案：
+还有上面的 Galaxy S7 edge - Android 6.0.1，dump 耗时太长了以至于重新抛出 `SIGQUIT` 时主线程已经从阻塞中恢复过来，这样 APP 就不会进入 `NOT_RESPONDING` 状态
 
-1，增大 ANR 轮询时长到一个足够大的值，但此时 ANR 对话框已经弹出，用户可能直接 kill app，于是以下逻辑可能会无法执行（xcrash.NativeHandler#traceCallback check process ANR state 以下的代码）：
-    1.清理 ANR 目录（维持最多 xcrash.XCrash.InitParameters#anrLogCountMax）
-    2.日志文件后缀是 .trace.xcrash 而不是 .anr.xcrash，因为 anr 和 trace 的逻辑是一样的，最后通过上面的 ANR 判定逻辑来判断是不是 ANR，是的话把 .trace.xcrash 改名为 .anr.xcrash
-    3.anr callback 无法执行（xcrash.XCrash.InitParameters#setAnrCallback）
+可以想到有这么几个解决方案：
 
-2. 关闭 ANR 检查（xcrash.XCrash.InitParameters#setAnrCheckProcessState）    
-这个看似最简单但是不行的，因为 SIGQUIT 对于 APP 来说是 Runtime::DumpForSigQuit，那么当其他 APP 发生 ANR 时系统是通过向所有其他进程发送 SIGQUIT 来收集 ANR 日志的（参考 ANR 日志的内容），当然我们的 APP 也会收到，但此时并不是我们的 APP 发生了 ANR
+1. 增大 `NOT_RESPONDING` 轮询时长到一个足够大的值，但此时 ANR 对话框已经弹出，用户可能直接 kill app，于是以下逻辑可能会无法执行（`NativeHandler.traceCallback` `check process ANR state` 以下的代码）：
+
+    1. 清理 ANR 目录（维持最多 `XCrash.InitParameters.anrLogCountMax`）
+    2. 日志文件后缀是 `.trace.xcrash` 而不是 `.anr.xcrash`，因为 anr 和 trace 的逻辑是一样的，最后通过上面的 ANR 判定逻辑来判断是不是 ANR，是的话把 `.trace.xcrash` 改名为 `.anr.xcrash`
+    3. anr callback 无法执行（`XCrash.InitParameters.setAnrCallback`）
+
+2. 关闭 ANR 检查（`XCrash.InitParameters.setAnrCheckProcessState`）    
+
+这个看似最简单但是不行的，因为 `SIGQUIT` 对于 APP 来说是 `Runtime::DumpForSigQuit`，那么当其他 APP 发生 ANR 时系统是通过向所有其他进程发送 `SIGQUIT` 来收集 ANR 日志的（参考 [](../../../../2021/07/10/deep-drive-into-anr/#SignalCatcher-amp-SIGQUIT)），当然我们的 APP 也会收到，但此时并不是我们的 APP 发生了 ANR
 
 所以检查是否当前 APP 发生了 ANR 这个校验是一定要做得，那么怎么优化第一个解决方案呢？
+
 1. 清理操作可以放到其他地方，比如初始化后
-2. 日志默认是 .anr.xcrash，轮询后发现 app 并没有处于 NOT_RESPONDING 则把日志删掉
-    如果是 ANR 则足够长的轮询时长能够保证在弹出 ANR 对话框（处于 NOT_RESPONDING）后判定为 ANR
-    即使用户即刻 kill app，ANR 日志还是保留下来，判定为 ANR
-3. anr callback 不要再 catch anr 后回调，因为此刻很有可能被 kill 而不能稳定调用，可以将 ANR 日志标为 unread，初始化后检查日志将 unread 的回调并置为 read
+2. 日志默认是 `.anr.xcrash`，轮询后发现 app 并没有处于 `NOT_RESPONDING` 则把日志删掉，如果是 ANR 则足够长的轮询时长能够保证在弹出 ANR 对话框（处于 `NOT_RESPONDING`）后判定为 ANR，即使用户即刻 kill app，ANR 日志还是保留下来，判定为 ANR
+3. anr callback 不要在 catch anr 后回调，因为此刻很有可能被 kill 而不能稳定调用，可以将 ANR 日志标为 unread，初始化后检查日志将 unread 的回调并置为 read
 
+# NOT_RESPONDING 机制的缺陷
 
-xCrash 在绿联 6810
+HUAWEI Mate 30 出现过不能判别 ANR 的情况，当时是弹出通知权限的设置页，导致 APP 进入到后台（后台 ANR）
 
-捕获到 SIGQUIT 后，会卡在 Runtime::DumpForSigQuit，然后不断收到 SIGQUIT，APP 会一直卡顿一直弹出 ANR 对话框（即使一直点击等待），这里不确定是 xc_trace_libart_dbg_suspend 的问题还是 Runtime::DumpForSigQuit 的问题
+后台 ANR 的情况下除非在【开发者选项】里打开了【显示所有“应用程序无响应”】否则 APP 是不会进入 `NOT_RESPONDING` 状态的
 
-但是 Runtime::DumpForSigQuit 确实是有被执行的，APP 重启后可以发现上一次的 ANR dump 被输出到日志文件里了，但文件名还没改过来 tombstone_00001637663901079557_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash，从日志来看应该是后续代码没有执行，卡在 Runtime::DumpForSigQuit 里了
+# 总结
 
-    //is Android Lollipop (5.x)?
-    xc_trace_is_lollipop = ((21 == xc_common_api_level || 22 == xc_common_api_level) ? 1 : 0);
+[xCrash ANR](https://github.com/iqiyi/xCrash) 在 Android 7 API 24 及之后的版本上都是比较稳定的，Android 6 API 23 及之前的版本就效果比较差，可能是 ROM 的原因，也可能是机器性能太差了
 
-        if(sigsetjmp(jmpenv, 1) == 0) 
-        {
-            if(xc_trace_is_lollipop)
-                xc_trace_libart_dbg_suspend();
-            XCD_LOG_DEBUG("before dump");
-            xc_trace_libart_runtime_dump(*xc_trace_libart_runtime_instance, xc_trace_libcpp_cerr);
-            XCD_LOG_DEBUG("after dump, print log file");
-            if(xc_trace_is_lollipop)
-                xc_trace_libart_dbg_resume();
-        }
+利用 `SIGQUIT` 来捕获 ANR 的发生这一机制是稳定有效的
 
-2021-11-23 18:20:10.580 4176-4477/com.viomi.fridge.vertical D/xcrash_dumper: before dump
-2021-11-23 18:20:36.784 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
-2021-11-23 18:21:10.108 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
-2021-11-23 18:21:26.920 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
-2021-11-23 18:22:10.100 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
-2021-11-23 18:22:26.634 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
-2021-11-23 18:23:10.109 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+轮询 APP 是否处于 `NOT_RESPONDING` 来判别是不是当前 APP 发生了 ANR，这一手段不太可靠
