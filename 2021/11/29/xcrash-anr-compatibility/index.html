@@ -18,15 +18,15 @@
   <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
-  <meta name="description" content="Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT 信号处理器，R">
+  <meta name="description" content="Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher V2.1.2   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT">
 <meta property="og:type" content="article">
 <meta property="og:title" content="xCrash ANR 兼容性测试">
 <meta property="og:url" content="https://www.dalvik.work/2021/11/29/xcrash-anr-compatibility/index.html">
 <meta property="og:site_name" content="Cyrus Blog">
-<meta property="og:description" content="Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT 信号处理器，R">
+<meta property="og:description" content="Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher V2.1.2   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-11-29T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-11-29T10:34:21.496Z">
+<meta property="article:modified_time" content="2021-11-30T02:11:03.393Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="崩溃">
@@ -198,7 +198,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      167 分钟
+      168 分钟
     </span>
   
 
@@ -247,7 +247,7 @@
 </tr>
 <tr>
 <td>Apk</td>
-<td>Viomi Fridge Launcher</td>
+<td>Viomi Fridge Launcher V2.1.2</td>
 </tr>
 <tr>
 <td>xCrash Version</td>
@@ -266,7 +266,8 @@
 <td>将日志文件逐个下载，放到 <a target="_blank" rel="noopener" href="https://cloudvyzor.com/">LogPad</a> 上过滤出 tag 为 <code>xcrash_dumper</code> 的条目</td>
 </tr>
 </tbody></table>
-<h1 id="详细的日志埋点"><a href="#详细的日志埋点" class="headerlink" title="详细的日志埋点"></a>详细的日志埋点</h1><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">initXCrash</span><span class="hljs-params">()</span></span> &#123;
+<h1 id="详细的日志埋点"><a href="#详细的日志埋点" class="headerlink" title="详细的日志埋点"></a>详细的日志埋点</h1><p>tag 为 <code>xcrash_dumper</code> 为插入的日志埋点</p>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">initXCrash</span><span class="hljs-params">()</span></span> &#123;
     mainHandler.postDelayed(&#123;
         XCrash.<span class="hljs-keyword">init</span>(app, XCrash.InitParameters().apply &#123;
             setAnrCallback &#123; logPath, emergency -&gt;
@@ -1195,7 +1196,30 @@
 
 11-25 11:32:30.233 17149 17153 I art     : Wrote stack traces to &#x27;/data/anr/traces.txt&#x27;</code></pre></div>
 
-<h2 id="ANR-判别逻辑的缺陷"><a href="#ANR-判别逻辑的缺陷" class="headerlink" title="ANR 判别逻辑的缺陷"></a>ANR 判别逻辑的缺陷</h2><p>在 <code>NativeHandler.traceCallback</code> 里会检查当前进程的状态是否为 ANR，默认是在 15s 内轮询检查进程是否处于 <code>ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING</code></p>
+<h1 id="绿联-6810-Android-5-1"><a href="#绿联-6810-Android-5-1" class="headerlink" title="绿联 6810 - Android 5.1"></a>绿联 6810 - Android 5.1</h1><p>捕获到 <code>SIGQUIT</code> 后，会卡在 <code>Runtime::DumpForSigQuit</code> 然后不断收到 <code>SIGQUIT</code>，APP 会一直卡顿一直弹出 ANR 对话框（即使一直点击等待），APP 重启后可以发现上一次的 ANR dump 被输出到日志文件里了，但文件名还没改过来 <code>tombstone_00001637663901079557_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash</code>，从日志来看应该是后续代码没有执行，卡在 <code>Runtime::DumpForSigQuit</code> 里了</p>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// is Android Lollipop (5.x)?</span>
+xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_level || <span class="hljs-number">22</span> == xc_common_api_level) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>);
+<span class="hljs-comment">// ...</span>
+<span class="hljs-keyword">if</span>(<span class="hljs-built_in">sigsetjmp</span>(jmpenv, <span class="hljs-number">1</span>) == <span class="hljs-number">0</span>) 
+&#123;
+    <span class="hljs-keyword">if</span>(xc_trace_is_lollipop)
+        <span class="hljs-built_in">xc_trace_libart_dbg_suspend</span>();
+    <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;before dump&quot;</span>);
+    <span class="hljs-built_in">xc_trace_libart_runtime_dump</span>(*xc_trace_libart_runtime_instance, xc_trace_libcpp_cerr);
+    <span class="hljs-built_in">XCD_LOG_DEBUG</span>(<span class="hljs-string">&quot;after dump, print log file&quot;</span>);
+    <span class="hljs-keyword">if</span>(xc_trace_is_lollipop)
+        <span class="hljs-built_in">xc_trace_libart_dbg_resume</span>();
+&#125;</code></pre></div>
+
+<div class="hljs code-wrapper"><pre><code class="hljs logcat">2021-11-23 18:20:10.580 4176-4477/com.viomi.fridge.vertical D/xcrash_dumper: before dump
+2021-11-23 18:20:36.784 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:21:10.108 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:21:26.920 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:22:10.100 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:22:26.634 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
+2021-11-23 18:23:10.109 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255</code></pre></div>
+
+<h1 id="NOT-RESPONDING-轮询时长的缺陷"><a href="#NOT-RESPONDING-轮询时长的缺陷" class="headerlink" title="NOT_RESPONDING 轮询时长的缺陷"></a>NOT_RESPONDING 轮询时长的缺陷</h1><p>在 <code>NativeHandler.traceCallback</code> 里会检查当前进程的状态是否为 ANR，默认是在 15s 内轮询检查进程是否处于 <code>ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NativeHandler</span> </span>&#123;
     <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">traceCallback</span><span class="hljs-params">(String logPath, String emergency)</span> </span>&#123;
         <span class="hljs-keyword">if</span> (TextUtils.isEmpty(logPath)) &#123;
@@ -1269,36 +1293,32 @@
     &#125;    
 &#125;</code></pre></div>
 
-<p>但是这个轮询时长很有问题，默认 15s 在 MI 9 Android 11 上不够长，ANR 对话框还没弹出来，此时进程并不是处于 ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING，导致 xCrash 判定不是 ANR，然后把日志删了，我把这个时长增加到 60s 是能判定 ANR 的</p>
-<p>所以这里有几个解决方案：</p>
-<p>1，增大 ANR 轮询时长到一个足够大的值，但此时 ANR 对话框已经弹出，用户可能直接 kill app，于是以下逻辑可能会无法执行（xcrash.NativeHandler#traceCallback check process ANR state 以下的代码）：<br>    1.清理 ANR 目录（维持最多 xcrash.XCrash.InitParameters#anrLogCountMax）<br>    2.日志文件后缀是 .trace.xcrash 而不是 .anr.xcrash，因为 anr 和 trace 的逻辑是一样的，最后通过上面的 ANR 判定逻辑来判断是不是 ANR，是的话把 .trace.xcrash 改名为 .anr.xcrash<br>    3.anr callback 无法执行（xcrash.XCrash.InitParameters#setAnrCallback）</p>
-<ol start="2">
-<li>关闭 ANR 检查（xcrash.XCrash.InitParameters#setAnrCheckProcessState）<br>这个看似最简单但是不行的，因为 SIGQUIT 对于 APP 来说是 Runtime::DumpForSigQuit，那么当其他 APP 发生 ANR 时系统是通过向所有其他进程发送 SIGQUIT 来收集 ANR 日志的（参考 ANR 日志的内容），当然我们的 APP 也会收到，但此时并不是我们的 APP 发生了 ANR</li>
+<p>但是这个轮询时长很有问题，默认 15s 在 MI 9 - Android 11 上不够长，ANR 对话框还没弹出来，此时进程并不处于 <code>ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING</code>，导致 xCrash 判定不是 ANR，然后把日志删了，我把这个时长增加到 60s 是能判定 ANR 的</p>
+<p>还有上面的 Galaxy S7 edge - Android 6.0.1，dump 耗时太长了以至于重新抛出 <code>SIGQUIT</code> 时主线程已经从阻塞中恢复过来，这样 APP 就不会进入 <code>NOT_RESPONDING</code> 状态</p>
+<p>可以想到有这么几个解决方案：</p>
+<ol>
+<li><p>增大 <code>NOT_RESPONDING</code> 轮询时长到一个足够大的值，但此时 ANR 对话框已经弹出，用户可能直接 kill app，于是以下逻辑可能会无法执行（<code>NativeHandler.traceCallback</code> <code>check process ANR state</code> 以下的代码）：</p>
+<ol>
+<li>清理 ANR 目录（维持最多 <code>XCrash.InitParameters.anrLogCountMax</code>）</li>
+<li>日志文件后缀是 <code>.trace.xcrash</code> 而不是 <code>.anr.xcrash</code>，因为 anr 和 trace 的逻辑是一样的，最后通过上面的 ANR 判定逻辑来判断是不是 ANR，是的话把 <code>.trace.xcrash</code> 改名为 <code>.anr.xcrash</code></li>
+<li>anr callback 无法执行（<code>XCrash.InitParameters.setAnrCallback</code>）</li>
 </ol>
+</li>
+<li><p>关闭 ANR 检查（<code>XCrash.InitParameters.setAnrCheckProcessState</code>）    </p>
+</li>
+</ol>
+<p>这个看似最简单但是不行的，因为 <code>SIGQUIT</code> 对于 APP 来说是 <code>Runtime::DumpForSigQuit</code>，那么当其他 APP 发生 ANR 时系统是通过向所有其他进程发送 <code>SIGQUIT</code> 来收集 ANR 日志的（参考 <a href="../../../../2021/07/10/deep-drive-into-anr/#SignalCatcher-amp-SIGQUIT"></a>），当然我们的 APP 也会收到，但此时并不是我们的 APP 发生了 ANR</p>
 <p>所以检查是否当前 APP 发生了 ANR 这个校验是一定要做得，那么怎么优化第一个解决方案呢？</p>
 <ol>
 <li>清理操作可以放到其他地方，比如初始化后</li>
-<li>日志默认是 .anr.xcrash，轮询后发现 app 并没有处于 NOT_RESPONDING 则把日志删掉<br> 如果是 ANR 则足够长的轮询时长能够保证在弹出 ANR 对话框（处于 NOT_RESPONDING）后判定为 ANR<br> 即使用户即刻 kill app，ANR 日志还是保留下来，判定为 ANR</li>
-<li>anr callback 不要再 catch anr 后回调，因为此刻很有可能被 kill 而不能稳定调用，可以将 ANR 日志标为 unread，初始化后检查日志将 unread 的回调并置为 read</li>
+<li>日志默认是 <code>.anr.xcrash</code>，轮询后发现 app 并没有处于 <code>NOT_RESPONDING</code> 则把日志删掉，如果是 ANR 则足够长的轮询时长能够保证在弹出 ANR 对话框（处于 <code>NOT_RESPONDING</code>）后判定为 ANR，即使用户即刻 kill app，ANR 日志还是保留下来，判定为 ANR</li>
+<li>anr callback 不要在 catch anr 后回调，因为此刻很有可能被 kill 而不能稳定调用，可以将 ANR 日志标为 unread，初始化后检查日志将 unread 的回调并置为 read</li>
 </ol>
-<p>xCrash 在绿联 6810</p>
-<p>捕获到 SIGQUIT 后，会卡在 Runtime::DumpForSigQuit，然后不断收到 SIGQUIT，APP 会一直卡顿一直弹出 ANR 对话框（即使一直点击等待），这里不确定是 xc_trace_libart_dbg_suspend 的问题还是 Runtime::DumpForSigQuit 的问题</p>
-<p>但是 Runtime::DumpForSigQuit 确实是有被执行的，APP 重启后可以发现上一次的 ANR dump 被输出到日志文件里了，但文件名还没改过来 tombstone_00001637663901079557_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash，从日志来看应该是后续代码没有执行，卡在 Runtime::DumpForSigQuit 里了</p>
-<div class="hljs code-wrapper"><pre><code>//is Android Lollipop (5.x)?
-xc_trace_is_lollipop = ((21 == xc_common_api_level || 22 == xc_common_api_level) ? 1 : 0);
-
-    if(sigsetjmp(jmpenv, 1) == 0) 
-    &#123;
-        if(xc_trace_is_lollipop)
-            xc_trace_libart_dbg_suspend();
-        XCD_LOG_DEBUG(&quot;before dump&quot;);
-        xc_trace_libart_runtime_dump(*xc_trace_libart_runtime_instance, xc_trace_libcpp_cerr);
-        XCD_LOG_DEBUG(&quot;after dump, print log file&quot;);
-        if(xc_trace_is_lollipop)
-            xc_trace_libart_dbg_resume();
-    &#125;
-</code></pre></div>
-<p>2021-11-23 18:20:10.580 4176-4477/com.viomi.fridge.vertical D/xcrash_dumper: before dump<br>2021-11-23 18:20:36.784 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:21:10.108 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:21:26.920 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:22:10.100 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:22:26.634 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255<br>2021-11-23 18:23:10.109 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255</p>
+<h1 id="NOT-RESPONDING-机制的缺陷"><a href="#NOT-RESPONDING-机制的缺陷" class="headerlink" title="NOT_RESPONDING 机制的缺陷"></a>NOT_RESPONDING 机制的缺陷</h1><p>HUAWEI Mate 30 出现过不能判别 ANR 的情况，当时是弹出通知权限的设置页，导致 APP 进入到后台（后台 ANR）</p>
+<p>后台 ANR 的情况下除非在【开发者选项】里打开了【显示所有“应用程序无响应”】否则 APP 是不会进入 <code>NOT_RESPONDING</code> 状态的</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p><a target="_blank" rel="noopener" href="https://github.com/iqiyi/xCrash">xCrash ANR</a> 在 Android 7 API 24 及之后的版本上都是比较稳定的，Android 6 API 23 及之前的版本就效果比较差，可能是 ROM 的原因，也可能是机器性能太差了</p>
+<p>利用 <code>SIGQUIT</code> 来捕获 ANR 的发生这一机制是稳定有效的</p>
+<p>轮询 APP 是否处于 <code>NOT_RESPONDING</code> 来判别是不是当前 APP 发生了 ANR，这一手段不太可靠</p>
 
             </div>
             <hr>
