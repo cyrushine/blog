@@ -1,5 +1,5 @@
 ---
-title: Matrix - ANR 原理及与 xCrash ANR 的对比
+title: Matrix - ANR 原理解析
 date: 2021-12-03 12:00:00 +0800
 tags: [xCrash, ANR, 崩溃, matrix]
 ---
@@ -105,7 +105,7 @@ SignalHandler::Result AnrDumper::handleSignal(int sig, const siginfo_t *info, vo
 }
 ```
 
-## fromPid1 和 fromPid2 分别是哪些进程？
+## fromPid1 和 fromPid2
 
 经测试，如果自己发生 ANR 则 `fromPid1:0 fromPid2:1719 myPid:7414`，自己给自己发送 SIGQUIT 的话是 `fromPid1:0 fromPid2:7414 myPid:7414`，也就是说 `fromPid2` 表示发送信号的进程，正常情况下是走 `anrCallback`，下面先分析这种情况
 
