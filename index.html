@@ -177,6 +177,63 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/12/03/matrix-anr/" target="_self">
+          Matrix - ANR 原理及与 xCrash ANR 的对比
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/12/03/matrix-anr/" target="_self">
+          
+          
+            
+          
+          上两篇文章 崩溃日志收集库 xCrash 浅析 和 xCrash ANR 兼容性测试 介绍了 xCrash 是如何处理 ANR 事件的：
+
+注册 SIGQUIT 信号处理器捕获 ANR
+查询是否处于 NOT_RESPONDING 状态以判别是否自己发生了 ANR
+寻找符号 Runtime::DumpForSigQuit 并调用以打印 ANR 日志
+
+过程中提出了几个问题：
+
+NOT_RESPOND
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-12-03 04:00" pubdate>
+              2021-12-03
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+              <a href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
+            
+              <a href="/tags/xCrash/">xCrash</a>
+            
+              <a href="/tags/matrix/">matrix</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/11/29/xcrash-anr-compatibility/" target="_self">
           xCrash ANR 兼容性测试
         </a>
@@ -231,11 +288,11 @@ ANR 捕获机制
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/xCrash/">xCrash</a>
-            
               <a href="/tags/ANR/">ANR</a>
             
               <a href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
+            
+              <a href="/tags/xCrash/">xCrash</a>
             
           </div>
         
@@ -547,11 +604,11 @@ java crash、native crash 和 ANR 都会被捕获
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
-            
               <a href="/tags/uncaught-exception/">uncaught exception</a>
             
               <a href="/tags/exception/">exception</a>
+            
+              <a href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
             
               <a href="/tags/%E5%B4%A9%E6%BA%83%E6%97%A5%E5%BF%97/">崩溃日志</a>
             
@@ -653,94 +710,15 @@ Uncaught exception handling is controlled first by the thread, then by the threa
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
-            
               <a href="/tags/uncaught-exception/">uncaught exception</a>
             
               <a href="/tags/exception/">exception</a>
             
+              <a href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
+            
               <a href="/tags/%E5%B4%A9%E6%BA%83%E6%97%A5%E5%BF%97/">崩溃日志</a>
             
               <a href="/tags/crash/">crash</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/06/12/okio/" target="_self">
-          浅析 IO 框架：Okio
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/06/12/okio/" target="_self">
-          
-          
-            
-          
-          基本概念
-
-
-Okio
-java.io
-
-
-
-ByteString
-String
-
-
-Buffer
-ByteArray
-
-
-Source
-InputStream
-
-
-Sink
-OutputStream
-
-
-Segment
-
-
-
-SegmentPool
-
-
-
-ByteString虽然 okio.ByteString 对标的是 java.lang.String，但是它操作的对象却是 String 内部
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-06-12 04:00" pubdate>
-              2021-06-12
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/nio/">nio</a>
-            
-              <a href="/tags/okio/">okio</a>
-            
-              <a href="/tags/io/">io</a>
             
           </div>
         

@@ -177,6 +177,62 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/01/24/condition-by-lock/" target="_self">
+          Lock（三）利用 Lock 实现 Condition
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/01/24/condition-by-lock/" target="_self">
+          
+          
+            
+          
+          Condition 简介Condition 主要有两类方法：
+
+await，释放锁并阻塞线程直到 signal 被调用，恢复后会重新获得锁
+signal，唤醒阻塞在这个 Condition 上的一个或全部线程
+
+利用条件变量前需要先获得锁
+所以 Condition 的所有方法都需要加锁
+lock.lock();
+// ...
+condition.await();
+// ...
+lock.unloc
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-01-24 04:00" pubdate>
+              2021-01-24
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Lock/">Lock</a>
+            
+              <a href="/tags/Condition/">Condition</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/01/19/reviews/" target="_self">
           常见面试题备忘
         </a>
@@ -599,51 +655,6 @@ starting wind
             <i class="iconfont icon-tags"></i>
             
               <a href="/tags/Activity/">Activity</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2020/10/31/how-glide-work/" target="_self">
-          图解 Glide
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2020/10/31/how-glide-work/" target="_self">
-          
-          
-            
-          
-          网上讲解 Glide 的文章一搜一大把，但几乎都是以文字的形式来讲解；我自己也写过不少 Glide 的笔记，也是文字为主；但是时间长了经常忘了其中的细节，加上 Glide 的源码不太易懂，所以决定用时序图来分析和记录研究 Glide 的过程
-时序图下面两张图是一次图片加载的大体流程，有读过源码的同学基本上通过这两种图就能回忆起其中的细节；没读过源码的同学也可以先了解下 Glide 里各个类的作用
-
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2020-10-31 04:00" pubdate>
-              2020-10-31
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/Glide/">Glide</a>
             
           </div>
         

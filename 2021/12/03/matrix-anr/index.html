@@ -1,0 +1,782 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="description" content="">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  <meta name="description" content="上两篇文章 崩溃日志收集库 xCrash 浅析 和 xCrash ANR 兼容性测试 介绍了 xCrash 是如何处理 ANR 事件的：  注册 SIGQUIT 信号处理器捕获 ANR 查询是否处于 NOT_RESPONDING 状态以判别是否自己发生了 ANR 寻找符号 Runtime::DumpForSigQuit 并调用以打印 ANR 日志  过程中提出了几个问题：  NOT_RESPOND">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Matrix - ANR 原理及与 xCrash ANR 的对比">
+<meta property="og:url" content="https://www.dalvik.work/2021/12/03/matrix-anr/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="上两篇文章 崩溃日志收集库 xCrash 浅析 和 xCrash ANR 兼容性测试 介绍了 xCrash 是如何处理 ANR 事件的：  注册 SIGQUIT 信号处理器捕获 ANR 查询是否处于 NOT_RESPONDING 状态以判别是否自己发生了 ANR 寻找符号 Runtime::DumpForSigQuit 并调用以打印 ANR 日志  过程中提出了几个问题：  NOT_RESPOND">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-12-03T04:00:00.000Z">
+<meta property="article:modified_time" content="2021-12-03T07:51:47.910Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="ANR">
+<meta property="article:tag" content="崩溃">
+<meta property="article:tag" content="xCrash">
+<meta property="article:tag" content="matrix">
+<meta name="twitter:card" content="summary_large_image">
+  
+  <title>Matrix - ANR 原理及与 xCrash ANR 的对比 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="Matrix - ANR 原理及与 xCrash ANR 的对比">
+              
+                Matrix - ANR 原理及与 xCrash ANR 的对比
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-12-03 04:00" pubdate>
+        2021年12月3日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      10k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      32 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Matrix - ANR 原理及与 xCrash ANR 的对比</h1>
+            
+            <div class="markdown-body">
+              <p>上两篇文章 <a href="../../../../2021/06/22/xcrash/">崩溃日志收集库 xCrash 浅析</a> 和 <a href="../../../../2021/11/29/xcrash-anr-compatibility/">xCrash ANR 兼容性测试</a> 介绍了 <a target="_blank" rel="noopener" href="https://github.com/iqiyi/xCrash">xCrash</a> 是如何处理 ANR 事件的：</p>
+<ul>
+<li>注册 <code>SIGQUIT</code> 信号处理器捕获 ANR</li>
+<li>查询是否处于 <code>NOT_RESPONDING</code> 状态以判别是否自己发生了 ANR</li>
+<li>寻找符号 <code>Runtime::DumpForSigQuit</code> 并调用以打印 ANR 日志</li>
+</ul>
+<p>过程中提出了几个问题：</p>
+<ol>
+<li><code>NOT_RESPONDING</code> 不够准确，后台 ANR 和主线程从阻塞恢复的情况下会漏掉 ANR</li>
+<li>自己调用 <code>Runtime::DumpForSigQuit</code> 打印了一份 ANR 日志，重新抛出 <code>SIGQUIT</code> 后 <code>Signal Catcher</code> 线程又打印了一份 ANR 日志，重复打印了</li>
+</ol>
+<p>本文主要是分析 <a target="_blank" rel="noopener" href="https://github.com/Tencent/matrix">Matrix</a> 处理 ANR 的流程，顺带看看对于上述问题 Matrix 有没提出更好的解决方案</p>
+<h1 id="SIGQUIT-Signal-Handler"><a href="#SIGQUIT-Signal-Handler" class="headerlink" title="SIGQUIT Signal Handler"></a>SIGQUIT Signal Handler</h1><p>Matrix 也是通过注册 SIGQUIT 信号处理器来捕获 ANR 事件的，看来这种方法是比较稳定且被大家认可的，调用栈如下：</p>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp">TracePlugin.start
+SignalAnrTracer.onStartTrace
+SignalAnrTracer.onAlive
+SignalAnrTracer.nativeInitSignalAnrDetective
+
+<span class="hljs-keyword">static</span> std::optional&lt;AnrDumper&gt; sAnrDumper;
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">nativeInitSignalAnrDetective</span><span class="hljs-params">(JNIEnv *env, jclass, jstring anrTracePath, jstring printTracePath)</span> </span>&#123;
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* anrTracePathChar = env-&gt;<span class="hljs-built_in">GetStringUTFChars</span>(anrTracePath, <span class="hljs-literal">nullptr</span>);
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* printTracePathChar = env-&gt;<span class="hljs-built_in">GetStringUTFChars</span>(printTracePath, <span class="hljs-literal">nullptr</span>);
+    anrTracePathstring = std::<span class="hljs-built_in">string</span>(anrTracePathChar);
+    printTracePathstring = std::<span class="hljs-built_in">string</span>(printTracePathChar);
+    sAnrDumper.<span class="hljs-built_in">emplace</span>(anrTracePathChar, printTracePathChar, anrDumpCallback);
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AnrDumper</span> :</span> <span class="hljs-function"><span class="hljs-keyword">public</span> SignalHandler</span>
+<span class="hljs-function"></span>
+<span class="hljs-function"><span class="hljs-title">SignalHandler::SignalHandler</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-function">std::lock_guard&lt;std::mutex&gt; <span class="hljs-title">lock</span><span class="hljs-params">(sHandlerStackMutex)</span></span>;
+
+    <span class="hljs-keyword">if</span> (!sHandlerStack)
+        sHandlerStack = <span class="hljs-keyword">new</span> std::vector&lt;SignalHandler*&gt;;
+
+    <span class="hljs-built_in">installAlternateStackLocked</span>();
+    <span class="hljs-built_in">installHandlersLocked</span>();
+    sHandlerStack-&gt;<span class="hljs-built_in">push_back</span>(<span class="hljs-keyword">this</span>);
+&#125;
+
+<span class="hljs-comment">// 安装 SIGQUIT 信号处理器</span>
+<span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span> TARGET_SIG = SIGQUIT;
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SignalHandler::installHandlersLocked</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (sHandlerInstalled) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">sigaction</span>(TARGET_SIG, <span class="hljs-literal">nullptr</span>, &amp;sOldHandlers) == <span class="hljs-number">-1</span>) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sigaction</span> <span class="hljs-title">sa</span>&#123;</span>&#125;;
+    sa.sa_sigaction = signalHandler;
+    sa.sa_flags = SA_ONSTACK | SA_SIGINFO | SA_RESTART;
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">sigaction</span>(TARGET_SIG, &amp;sa, <span class="hljs-literal">nullptr</span>) == <span class="hljs-number">-1</span>) &#123;
+        <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;Signal handler cannot be installed&quot;</span>);
+    &#125;
+
+    sHandlerInstalled = <span class="hljs-literal">true</span>;
+    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;Signal handler installed.&quot;</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;
+
+<span class="hljs-comment">// 收到 SIGQUIT 信号后的回调</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SignalHandler::signalHandler</span><span class="hljs-params">(<span class="hljs-keyword">int</span> sig, <span class="hljs-keyword">siginfo_t</span>* info, <span class="hljs-keyword">void</span>* uc)</span> </span>&#123;
+    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;Entered signal handler.&quot;</span>);
+
+    <span class="hljs-function">std::unique_lock&lt;std::mutex&gt; <span class="hljs-title">lock</span><span class="hljs-params">(sHandlerStackMutex)</span></span>;
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">auto</span> it = sHandlerStack-&gt;<span class="hljs-built_in">rbegin</span>(); it != sHandlerStack-&gt;<span class="hljs-built_in">rend</span>(); ++it) &#123;
+        (*it)-&gt;<span class="hljs-built_in">handleSignal</span>(sig, info, uc);
+    &#125;
+
+    lock.<span class="hljs-built_in">unlock</span>();
+&#125;
+
+<span class="hljs-function">SignalHandler::Result <span class="hljs-title">AnrDumper::handleSignal</span><span class="hljs-params">(<span class="hljs-keyword">int</span> sig, <span class="hljs-keyword">const</span> <span class="hljs-keyword">siginfo_t</span> *info, <span class="hljs-keyword">void</span> *uc)</span> </span>&#123;
+    <span class="hljs-comment">// Only process SIGQUIT, which indicates an ANR.</span>
+    <span class="hljs-keyword">if</span> (sig != SIGQUIT) <span class="hljs-keyword">return</span> NOT_HANDLED;
+    <span class="hljs-keyword">int</span> fromPid1 = info-&gt;_si_pad[<span class="hljs-number">3</span>];
+    <span class="hljs-keyword">int</span> fromPid2 = info-&gt;_si_pad[<span class="hljs-number">4</span>]; <span class="hljs-comment">// sender pid</span>
+    <span class="hljs-keyword">int</span> myPid = <span class="hljs-built_in">getpid</span>();
+
+    <span class="hljs-keyword">pthread_t</span> thd;
+    <span class="hljs-keyword">if</span> (fromPid1 != myPid &amp;&amp; fromPid2 != myPid) &#123;
+        <span class="hljs-built_in">pthread_create</span>(&amp;thd, <span class="hljs-literal">nullptr</span>, anrCallback, <span class="hljs-literal">nullptr</span>);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-built_in">pthread_create</span>(&amp;thd, <span class="hljs-literal">nullptr</span>, siUserCallback, <span class="hljs-literal">nullptr</span>);
+    &#125;
+    <span class="hljs-built_in">pthread_detach</span>(thd);
+
+    <span class="hljs-keyword">return</span> HANDLED_NO_RETRIGGER;
+&#125;</code></pre></div>
+
+<h2 id="fromPid1-和-fromPid2-分别是哪些进程？"><a href="#fromPid1-和-fromPid2-分别是哪些进程？" class="headerlink" title="fromPid1 和 fromPid2 分别是哪些进程？"></a>fromPid1 和 fromPid2 分别是哪些进程？</h2><p>经测试，如果自己发生 ANR 则 <code>fromPid1:0 fromPid2:1719 myPid:7414</code>，自己给自己发送 SIGQUIT 的话是 <code>fromPid1:0 fromPid2:7414 myPid:7414</code>，也就是说 <code>fromPid2</code> 表示发送信号的进程，正常情况下是走 <code>anrCallback</code>，下面先分析这种情况</p>
+<div class="hljs code-wrapper"><pre><code class="hljs text">system         1719    703 9940960 199048 0                   0 S system_server
+u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent.matrix</code></pre></div>
+
+<h1 id="判别是否自己发生了-ANR"><a href="#判别是否自己发生了-ANR" class="headerlink" title="判别是否自己发生了 ANR"></a>判别是否自己发生了 ANR</h1><p>Matrix 在判别是否发生 ANR 事件时，在 <code>NOT_RESPONDING</code> 的基础上，增加了【主线程是否阻塞】这一条件，增大了 ANR 捕获率：</p>
+<ol>
+<li>首先检查主线程是否阻塞，如果阻塞则一定发生了 ANR</li>
+<li>20s 内每隔 500ms 轮询是否处于 <code>NOT_RESPONDING</code> 状态（<code>SignalAnrTracer.checkErrorState</code>），这跟 xCrash 的逻辑是一致的</li>
+</ol>
+<p><code>SignalAnrTracer.isMainThreadBlocked</code> 判断主线程是否阻塞了，可以先看看 <a href="../../../../2020/09/27/handler-messagequeue-looper/">面试官家常之Handler、MessageQueue 和 Looper</a> 回顾下 <code>MessageQueue</code> 的基础知识：</p>
+<ol>
+<li>MessageQueue 是个单向链表，按 <code>Message.when</code> 自然序排</li>
+<li>表头是 <code>MessageQueue.mMessages</code></li>
+</ol>
+<p>如果主线程阻塞了，那么表头一定是超时的（<code>when - SystemClock.uptimeMillis()</code> 为负），当超时时间大于阈值时（前台 2s，后台 10s，这个阈值是怎么来的呢？）就可以认定是发生阻塞了</p>
+<p>增加了这一条件，后台 ANR 也不会成为漏网之鱼了；而且判断过程发生在 dump anr 之前，不会因为 dump anr 耗时过长、主线程从阻塞及时恢复而导致的漏判</p>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> *<span class="hljs-title">anrCallback</span><span class="hljs-params">(<span class="hljs-keyword">void</span>* arg)</span> </span>&#123;
+    <span class="hljs-built_in">anrDumpCallback</span>();
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strlen</span>(mAnrTraceFile) &gt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-built_in">hookAnrTraceWrite</span>(<span class="hljs-literal">false</span>);
+    &#125;
+
+    <span class="hljs-built_in">sendSigToSignalCatcher</span>();
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">anrDumpCallback</span><span class="hljs-params">()</span> </span>&#123;
+    JNIEnv *env = JniInvocation::<span class="hljs-built_in">getEnv</span>();
+    <span class="hljs-keyword">if</span> (!env) <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    env-&gt;<span class="hljs-built_in">CallStaticVoidMethod</span>(gJ.AnrDetective, gJ.AnrDetector_onANRDumped);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;</code></pre></div>
+
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SignalAnrTracer</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Tracer</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String CHECK_ANR_STATE_THREAD_NAME = <span class="hljs-string">&quot;Check-ANR-State-Thread&quot;</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> CHECK_ERROR_STATE_INTERVAL = <span class="hljs-number">500</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> ANR_DUMP_MAX_TIME = <span class="hljs-number">20000</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> CHECK_ERROR_STATE_COUNT =
+            ANR_DUMP_MAX_TIME / CHECK_ERROR_STATE_INTERVAL;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> FOREGROUND_MSG_THRESHOLD = -<span class="hljs-number">2000</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> BACKGROUND_MSG_THRESHOLD = -<span class="hljs-number">10000</span>;                
+
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onANRDumped</span><span class="hljs-params">()</span> </span>&#123;
+        currentForeground = AppForegroundUtil.isInterestingToUser();
+        <span class="hljs-keyword">boolean</span> needReport = isMainThreadBlocked();
+
+        <span class="hljs-keyword">if</span> (needReport) &#123;
+            report(<span class="hljs-keyword">false</span>);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-keyword">new</span> Thread(<span class="hljs-keyword">new</span> Runnable() &#123;
+                <span class="hljs-meta">@Override</span>
+                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+                    checkErrorStateCycle();
+                &#125;
+            &#125;, CHECK_ANR_STATE_THREAD_NAME).start();
+        &#125;
+    &#125;   
+
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">checkErrorStateCycle</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">int</span> checkErrorStateCount = <span class="hljs-number">0</span>;
+        <span class="hljs-keyword">while</span> (checkErrorStateCount &lt; CHECK_ERROR_STATE_COUNT) &#123;
+            <span class="hljs-keyword">try</span> &#123;
+                checkErrorStateCount++;
+                <span class="hljs-keyword">boolean</span> myAnr = checkErrorState();
+                <span class="hljs-keyword">if</span> (myAnr) &#123;
+                    report(<span class="hljs-keyword">true</span>);
+                    <span class="hljs-keyword">break</span>;
+                &#125;
+
+                Thread.sleep(CHECK_ERROR_STATE_INTERVAL);
+            &#125; <span class="hljs-keyword">catch</span> (Throwable t) &#123;
+                MatrixLog.e(TAG, <span class="hljs-string">&quot;checkErrorStateCycle error, e : &quot;</span> + t.getMessage());
+                <span class="hljs-keyword">break</span>;
+            &#125;
+        &#125;
+    &#125;    
+
+    <span class="hljs-comment">// 轮询 NOT_RESPONDING 状态</span>
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">checkErrorState</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">try</span> &#123;
+            Application application =
+                    sApplication == <span class="hljs-keyword">null</span> ? Matrix.with().getApplication() : sApplication;
+            ActivityManager am = (ActivityManager) application
+                    .getSystemService(Context.ACTIVITY_SERVICE);
+
+            List&lt;ActivityManager.ProcessErrorStateInfo&gt; procs = am.getProcessesInErrorState();
+            <span class="hljs-keyword">if</span> (procs == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+
+            <span class="hljs-keyword">for</span> (ActivityManager.ProcessErrorStateInfo proc : procs) &#123;
+                MatrixLog.i(TAG, <span class="hljs-string">&quot;[checkErrorState] found Error State proccessName = %s, proc.condition = %d&quot;</span>, proc.processName, proc.condition);
+
+                <span class="hljs-keyword">if</span> (proc.uid != android.os.Process.myUid()
+                        &amp;&amp; proc.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) &#123;
+                    MatrixLog.i(TAG, <span class="hljs-string">&quot;maybe received other apps ANR signal&quot;</span>);
+                &#125;
+
+                <span class="hljs-keyword">if</span> (proc.pid != android.os.Process.myPid()) <span class="hljs-keyword">continue</span>;
+
+                <span class="hljs-keyword">if</span> (proc.condition != ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) &#123;
+                    <span class="hljs-keyword">continue</span>;
+                &#125;
+
+                <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+            &#125;
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+        &#125; <span class="hljs-keyword">catch</span> (Throwable t) &#123;
+            MatrixLog.e(TAG, <span class="hljs-string">&quot;[checkErrorState] error : %s&quot;</span>, t.getMessage());
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+    &#125;    
+
+    <span class="hljs-comment">// 判断主线程是否发生了阻塞</span>
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isMainThreadBlocked</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">try</span> &#123;
+            MessageQueue mainQueue = Looper.getMainLooper().getQueue();
+            Field field = mainQueue.getClass().getDeclaredField(<span class="hljs-string">&quot;mMessages&quot;</span>);
+            field.setAccessible(<span class="hljs-keyword">true</span>);
+            <span class="hljs-keyword">final</span> Message mMessage = (Message) field.get(mainQueue);
+            <span class="hljs-keyword">if</span> (mMessage != <span class="hljs-keyword">null</span>) &#123;
+                anrMessageString = mMessage.toString();
+                <span class="hljs-keyword">long</span> when = mMessage.getWhen();
+                <span class="hljs-keyword">if</span> (when == <span class="hljs-number">0</span>) &#123;
+                    <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+                &#125;
+                <span class="hljs-keyword">long</span> time = when - SystemClock.uptimeMillis();
+                anrMessageWhen = time;
+                <span class="hljs-keyword">long</span> timeThreshold = BACKGROUND_MSG_THRESHOLD;
+                <span class="hljs-keyword">if</span> (currentForeground) &#123;
+                    timeThreshold = FOREGROUND_MSG_THRESHOLD;
+                &#125;
+                <span class="hljs-keyword">return</span> time &lt; timeThreshold;
+            &#125;
+        &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+    &#125;     
+&#125;</code></pre></div>
+
+<h1 id="hook-Signal-Catcher"><a href="#hook-Signal-Catcher" class="headerlink" title="hook Signal Catcher"></a>hook Signal Catcher</h1><p>如何 dump anr 日志，Matrix 也与 xCrash 有着不同的实现方式，Matrix 并没有自己去 dump anr 日志，而是通过 hook 系统调用后重新发送 SIGQUIT 给 Signal Catcher 线程，让它去执行系统的 ANR 处理流程，从而自己也能拿到一份 ANR 日志，避免了重复 dump anr</p>
+<p>hook 用的是 <a target="_blank" rel="noopener" href="https://github.com/iqiyi/xHook">xHook</a></p>
+<p><code>Signal Catcher</code> 线程 ID 则是遍历 <code>/proc/[pid]/task/[tid]/comm</code> 对比线程名，以及对比 <code>/proc/[tid]/status</code> 里的 <code>magic code</code> 来确定的</p>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> *<span class="hljs-title">anrCallback</span><span class="hljs-params">(<span class="hljs-keyword">void</span>* arg)</span> </span>&#123;
+    <span class="hljs-built_in">anrDumpCallback</span>();
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strlen</span>(mAnrTraceFile) &gt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-built_in">hookAnrTraceWrite</span>(<span class="hljs-literal">false</span>);
+    &#125;
+
+    <span class="hljs-built_in">sendSigToSignalCatcher</span>();
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">hookAnrTraceWrite</span><span class="hljs-params">(<span class="hljs-keyword">bool</span> isSiUser)</span> </span>&#123;
+    <span class="hljs-keyword">int</span> apiLevel = <span class="hljs-built_in">getApiLevel</span>();
+    <span class="hljs-keyword">if</span> (apiLevel &lt; <span class="hljs-number">19</span>) &#123;
+        <span class="hljs-keyword">return</span>;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (!fromMyPrintTrace &amp;&amp; isSiUser) &#123;
+        <span class="hljs-keyword">return</span>;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isHooking) &#123;
+        <span class="hljs-keyword">return</span>;
+    &#125;
+
+    isHooking = <span class="hljs-literal">true</span>;
+
+    <span class="hljs-keyword">if</span> (apiLevel &gt;= <span class="hljs-number">27</span>) &#123;
+        <span class="hljs-keyword">void</span> *libcutils_info = <span class="hljs-built_in">xhook_elf_open</span>(<span class="hljs-string">&quot;/system/lib64/libcutils.so&quot;</span>);
+        <span class="hljs-keyword">if</span>(!libcutils_info) &#123;
+            libcutils_info = <span class="hljs-built_in">xhook_elf_open</span>(<span class="hljs-string">&quot;/system/lib/libcutils.so&quot;</span>);
+        &#125;
+        <span class="hljs-built_in">xhook_got_hook_symbol</span>(libcutils_info, <span class="hljs-string">&quot;connect&quot;</span>, (<span class="hljs-keyword">void</span>*) my_connect, (<span class="hljs-keyword">void</span>**) (&amp;original_connect));
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">void</span>* libart_info = <span class="hljs-built_in">xhook_elf_open</span>(<span class="hljs-string">&quot;libart.so&quot;</span>);
+        <span class="hljs-built_in">xhook_got_hook_symbol</span>(libart_info, <span class="hljs-string">&quot;open&quot;</span>, (<span class="hljs-keyword">void</span>*) my_open, (<span class="hljs-keyword">void</span>**) (&amp;original_open));
+    &#125;
+
+    <span class="hljs-keyword">if</span> (apiLevel &gt;= <span class="hljs-number">30</span> || apiLevel == <span class="hljs-number">25</span> || apiLevel == <span class="hljs-number">24</span>) &#123;
+        <span class="hljs-keyword">void</span>* libc_info = <span class="hljs-built_in">xhook_elf_open</span>(<span class="hljs-string">&quot;libc.so&quot;</span>);
+        <span class="hljs-built_in">xhook_got_hook_symbol</span>(libc_info, <span class="hljs-string">&quot;write&quot;</span>, (<span class="hljs-keyword">void</span>*) my_write, (<span class="hljs-keyword">void</span>**) (&amp;original_write));
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (apiLevel == <span class="hljs-number">29</span>) &#123;
+        <span class="hljs-keyword">void</span>* libbase_info = <span class="hljs-built_in">xhook_elf_open</span>(<span class="hljs-string">&quot;/system/lib64/libbase.so&quot;</span>);
+        <span class="hljs-keyword">if</span>(!libbase_info) &#123;
+            libbase_info = <span class="hljs-built_in">xhook_elf_open</span>(<span class="hljs-string">&quot;/system/lib/libbase.so&quot;</span>);
+        &#125;
+        <span class="hljs-built_in">xhook_got_hook_symbol</span>(libbase_info, <span class="hljs-string">&quot;write&quot;</span>, (<span class="hljs-keyword">void</span>*) my_write, (<span class="hljs-keyword">void</span>**) (&amp;original_write));
+        <span class="hljs-built_in">xhook_elf_close</span>(libbase_info);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">void</span>* libart_info = <span class="hljs-built_in">xhook_elf_open</span>(<span class="hljs-string">&quot;libart.so&quot;</span>);
+        <span class="hljs-built_in">xhook_got_hook_symbol</span>(libart_info, <span class="hljs-string">&quot;write&quot;</span>, (<span class="hljs-keyword">void</span>*) my_write, (<span class="hljs-keyword">void</span>**) (&amp;original_write));
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">sendSigToSignalCatcher</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">int</span> tid = <span class="hljs-built_in">getSignalCatcherThreadId</span>();
+    <span class="hljs-built_in">syscall</span>(SYS_tgkill, <span class="hljs-built_in">getpid</span>(), tid, SIGQUIT);
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> <span class="hljs-title">getSignalCatcherThreadId</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">char</span> taskDirPath[<span class="hljs-number">128</span>];
+    DIR *taskDir;
+    <span class="hljs-keyword">long</span> <span class="hljs-keyword">long</span> sigblk;
+    <span class="hljs-keyword">int</span> signalCatcherTid = <span class="hljs-number">-1</span>;
+    <span class="hljs-keyword">int</span> firstSignalCatcherTid = <span class="hljs-number">-1</span>;
+
+    <span class="hljs-built_in">snprintf</span>(taskDirPath, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(taskDirPath), <span class="hljs-string">&quot;/proc/%d/task&quot;</span>, <span class="hljs-built_in">getpid</span>());
+    <span class="hljs-keyword">if</span> ((taskDir = <span class="hljs-built_in">opendir</span>(taskDirPath)) == <span class="hljs-literal">nullptr</span>) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;
+    &#125;
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">dirent</span> *<span class="hljs-title">dent</span>;</span>
+    <span class="hljs-keyword">pid_t</span> tid;
+    <span class="hljs-keyword">while</span> ((dent = <span class="hljs-built_in">readdir</span>(taskDir)) != <span class="hljs-literal">nullptr</span>) &#123;
+        tid = <span class="hljs-built_in">atoi</span>(dent-&gt;d_name);
+        <span class="hljs-keyword">if</span> (tid &lt;= <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">continue</span>;
+        &#125;
+
+        <span class="hljs-keyword">char</span> threadName[<span class="hljs-number">1024</span>];
+        <span class="hljs-keyword">char</span> commFilePath[<span class="hljs-number">1024</span>];
+        <span class="hljs-built_in">snprintf</span>(commFilePath, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(commFilePath), <span class="hljs-string">&quot;/proc/%d/task/%d/comm&quot;</span>, <span class="hljs-built_in">getpid</span>(), tid);
+
+        Support::<span class="hljs-built_in">readFileAsString</span>(commFilePath, threadName, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(threadName));
+
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(SIGNAL_CATCHER_THREAD_NAME, threadName , <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(SIGNAL_CATCHER_THREAD_NAME)<span class="hljs-number">-1</span>) != <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">continue</span>;
+        &#125;
+
+        <span class="hljs-keyword">if</span> (firstSignalCatcherTid == <span class="hljs-number">-1</span>) &#123;
+            firstSignalCatcherTid = tid;
+        &#125;
+
+        sigblk = <span class="hljs-number">0</span>;
+        <span class="hljs-keyword">char</span> taskPath[<span class="hljs-number">128</span>];
+        <span class="hljs-built_in">snprintf</span>(taskPath, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(taskPath), <span class="hljs-string">&quot;/proc/%d/status&quot;</span>, tid);
+
+        <span class="hljs-function">ScopedFileDescriptor <span class="hljs-title">fd</span><span class="hljs-params">(open(taskPath, O_RDONLY, <span class="hljs-number">0</span>))</span></span>;
+        <span class="hljs-function">LineReader <span class="hljs-title">lr</span><span class="hljs-params">(fd.get())</span></span>;
+        <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *line;
+        <span class="hljs-keyword">size_t</span> len;
+        <span class="hljs-keyword">while</span> (lr.<span class="hljs-built_in">getNextLine</span>(&amp;line, &amp;len)) &#123;
+            <span class="hljs-keyword">if</span> (<span class="hljs-number">1</span> == <span class="hljs-built_in">sscanf</span>(line, <span class="hljs-string">&quot;SigBlk: %&quot;</span> SCNx64, &amp;sigblk)) &#123;
+                <span class="hljs-keyword">break</span>;
+            &#125;
+            lr.<span class="hljs-built_in">popLine</span>(len);
+        &#125;
+        <span class="hljs-keyword">if</span> (SIGNAL_CATCHER_THREAD_SIGBLK != sigblk) &#123;
+            <span class="hljs-keyword">continue</span>;
+        &#125;
+        signalCatcherTid = tid;
+        <span class="hljs-keyword">break</span>;
+    &#125;
+    <span class="hljs-built_in">closedir</span>(taskDir);
+
+    <span class="hljs-keyword">if</span> (signalCatcherTid == <span class="hljs-number">-1</span>) &#123;
+        signalCatcherTid = firstSignalCatcherTid;
+    &#125;
+    <span class="hljs-keyword">return</span> signalCatcherTid;
+&#125;</code></pre></div>
+
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>对比 xCrash 的 ANR 方案，Matrix 做了以下优化：</p>
+<ol>
+<li>提前判断是否发生 ANR，并增加【主线程是否阻塞】这一判断条件，提高 ANR 捕获率</li>
+<li>hook 系统调用拿到 <code>Signal Catcher</code> 输出的 ANR 日志，避免了重复 dump anr，属于性能优化</li>
+</ol>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=2649288031&idx=1&sn=91c94e16460a4685a9c0c8e1b9c362a6">微信Android客户端的ANR监控方案</a></li>
+</ul>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/ANR/">ANR</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
+                    
+                      <a class="hover-with-bg" href="/tags/xCrash/">xCrash</a>
+                    
+                      <a class="hover-with-bg" href="/tags/matrix/">matrix</a>
+                    
+                  </div>
+                
+              </div>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/11/29/xcrash-anr-compatibility/">
+                        <span class="hidden-mobile">xCrash ANR 兼容性测试</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
