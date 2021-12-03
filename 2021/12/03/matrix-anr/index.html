@@ -20,13 +20,13 @@
   <meta name="keywords" content="">
   <meta name="description" content="上两篇文章 崩溃日志收集库 xCrash 浅析 和 xCrash ANR 兼容性测试 介绍了 xCrash 是如何处理 ANR 事件的：  注册 SIGQUIT 信号处理器捕获 ANR 查询是否处于 NOT_RESPONDING 状态以判别是否自己发生了 ANR 寻找符号 Runtime::DumpForSigQuit 并调用以打印 ANR 日志  过程中提出了几个问题：  NOT_RESPOND">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Matrix - ANR 原理及与 xCrash ANR 的对比">
+<meta property="og:title" content="Matrix - ANR 原理解析">
 <meta property="og:url" content="https://www.dalvik.work/2021/12/03/matrix-anr/index.html">
 <meta property="og:site_name" content="Cyrus Blog">
 <meta property="og:description" content="上两篇文章 崩溃日志收集库 xCrash 浅析 和 xCrash ANR 兼容性测试 介绍了 xCrash 是如何处理 ANR 事件的：  注册 SIGQUIT 信号处理器捕获 ANR 查询是否处于 NOT_RESPONDING 状态以判别是否自己发生了 ANR 寻找符号 Runtime::DumpForSigQuit 并调用以打印 ANR 日志  过程中提出了几个问题：  NOT_RESPOND">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-12-03T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-03T07:51:47.910Z">
+<meta property="article:modified_time" content="2021-12-03T07:59:49.530Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="崩溃">
@@ -34,7 +34,7 @@
 <meta property="article:tag" content="matrix">
 <meta name="twitter:card" content="summary_large_image">
   
-  <title>Matrix - ANR 原理及与 xCrash ANR 的对比 - Cyrus Blog</title>
+  <title>Matrix - ANR 原理解析 - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
@@ -167,9 +167,9 @@
       <div class="full-bg-img">
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
           <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="Matrix - ANR 原理及与 xCrash ANR 的对比">
+            <span class="h2" id="subtitle" title="Matrix - ANR 原理解析">
               
-                Matrix - ANR 原理及与 xCrash ANR 的对比
+                Matrix - ANR 原理解析
               
             </span>
 
@@ -199,7 +199,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      32 分钟
+      31 分钟
     </span>
   
 
@@ -228,7 +228,7 @@
         <div class="py-5" id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">Matrix - ANR 原理及与 xCrash ANR 的对比</h1>
+            <h1 style="display: none">Matrix - ANR 原理解析</h1>
             
             <div class="markdown-body">
               <p>上两篇文章 <a href="../../../../2021/06/22/xcrash/">崩溃日志收集库 xCrash 浅析</a> 和 <a href="../../../../2021/11/29/xcrash-anr-compatibility/">xCrash ANR 兼容性测试</a> 介绍了 <a target="_blank" rel="noopener" href="https://github.com/iqiyi/xCrash">xCrash</a> 是如何处理 ANR 事件的：</p>
@@ -326,7 +326,7 @@ SignalAnrTracer.nativeInitSignalAnrDetective
     <span class="hljs-keyword">return</span> HANDLED_NO_RETRIGGER;
 &#125;</code></pre></div>
 
-<h2 id="fromPid1-和-fromPid2-分别是哪些进程？"><a href="#fromPid1-和-fromPid2-分别是哪些进程？" class="headerlink" title="fromPid1 和 fromPid2 分别是哪些进程？"></a>fromPid1 和 fromPid2 分别是哪些进程？</h2><p>经测试，如果自己发生 ANR 则 <code>fromPid1:0 fromPid2:1719 myPid:7414</code>，自己给自己发送 SIGQUIT 的话是 <code>fromPid1:0 fromPid2:7414 myPid:7414</code>，也就是说 <code>fromPid2</code> 表示发送信号的进程，正常情况下是走 <code>anrCallback</code>，下面先分析这种情况</p>
+<h2 id="fromPid1-和-fromPid2"><a href="#fromPid1-和-fromPid2" class="headerlink" title="fromPid1 和 fromPid2"></a>fromPid1 和 fromPid2</h2><p>经测试，如果自己发生 ANR 则 <code>fromPid1:0 fromPid2:1719 myPid:7414</code>，自己给自己发送 SIGQUIT 的话是 <code>fromPid1:0 fromPid2:7414 myPid:7414</code>，也就是说 <code>fromPid2</code> 表示发送信号的进程，正常情况下是走 <code>anrCallback</code>，下面先分析这种情况</p>
 <div class="hljs code-wrapper"><pre><code class="hljs text">system         1719    703 9940960 199048 0                   0 S system_server
 u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent.matrix</code></pre></div>
 
