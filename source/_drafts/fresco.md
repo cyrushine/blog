@@ -501,7 +501,7 @@ class NetworkFetchProducer implements Producer<EncodedImage> {
 
 Fresco 不能像 Glide 那样直接作用于 `ImageView`，必须用 `SimpleDraweeView` 替换掉布局里的 `ImageView`（感觉侵入性有点强呀？）
 
-还好 Fresco 内部逻辑并没有写到 UI 控件 `SimpleDraweeView` 里，而是放在 `DraweeController` 里
+还好 Fresco 内部逻辑并没有写到 UI 控件 `SimpleDraweeView` 里，而是抽离放在 `DraweeHolder` 和 `DraweeController` 里
 
 图像的加载和处理是一个流水线 `ImagePipeline`，`Producer / Consumer` 是流水线上的一个个节点，上一个节点的输出作为下一个节点的输出，各节点是一对一的，生产者和消费者是 callback 模式
 
@@ -510,5 +510,331 @@ Fresco 不能像 Glide 那样直接作用于 `ImageView`，必须用 `SimpleDraw
 # ImagePipeline
 
 ## NetworkFetchProducer
+
+顾名思义，执行网络请求（HTTP）的 ImagePipeline 节点，，也是是整个流水线的第一个节点
+
+它用接口 `NetworkFetcher` 抹平了底层各网络库的 API 差异，具体的实现有：
+
+* `OkHttpNetworkFetcher`
+* `VolleyNetworkFetcher`
+* `HttpUrlConnectionNetworkFetcher`
+* `PriorityNetworkFetcher`，它是一个装饰器（Decorator），具体的网络加载功能由上面的那些实现提供，它给请求提供了【优先队列】的特性，后续会说到
+
+```java
+/**
+ *  Interface that specifies network fetcher used by the image pipeline.
+ */
+public interface NetworkFetcher<FETCH_STATE extends FetchState> {
+  interface Callback {
+    void onResponse(InputStream response, int responseLength) throws IOException;
+    void onFailure(Throwable throwable);
+    void onCancellation();
+  }
+
+  /**
+   * Creates a new instance of the {@link FetchState}-derived object used to store state.
+   */
+  FETCH_STATE createFetchState(Consumer<EncodedImage> consumer, ProducerContext producerContext);
+  /**
+   * Gets a map containing extra parameters to pass to the listeners.
+   */
+  Map<String, String> getExtraMap(FETCH_STATE fetchState, int byteSize);  
+
+  void fetch(FETCH_STATE fetchState, Callback callback);
+  boolean shouldPropagate(FETCH_STATE fetchState);
+  void onFetchCompletion(FETCH_STATE fetchState, int byteSize);
+}
+```
+
+`NetworkFetchProducer` 从 Response 里读取 ByteArray 格式的内容，并包装为 `EncodedImage` 输出给下一节点；考虑到性能问题，在这一阶段 ByteArray 并没有 decode 为 `Bitmap`，而是通过解析前 N 个字节长度的数据来获取图片格式、尺寸等一些元信息
+
+同时加载进度 `Consumer.onProgressUpdate` 也是由 `NetworkFetchProducer` 在 Response Reading 时发出
+
+```java
+class NetworkFetchProducer {
+  public void produceResults(Consumer<EncodedImage> consumer, ProducerContext context) {    // 网络加载功能交由 NetworkFetcher 实现
+    context.getProducerListener().onProducerStart(context, PRODUCER_NAME);
+    final FetchState fetchState = mNetworkFetcher.createFetchState(consumer, context);
+    mNetworkFetcher.fetch(
+        fetchState,
+        new NetworkFetcher.Callback() {
+          @Override
+          public void onResponse(InputStream response, int responseLength) throws IOException {
+            if (FrescoSystrace.isTracing()) {
+              FrescoSystrace.beginSection("NetworkFetcher->onResponse");
+            }
+            NetworkFetchProducer.this.onResponse(fetchState, response, responseLength);
+            if (FrescoSystrace.isTracing()) {
+              FrescoSystrace.endSection();
+            }
+          }
+
+          @Override
+          public void onFailure(Throwable throwable) {
+            NetworkFetchProducer.this.onFailure(fetchState, throwable);
+          }
+
+          @Override
+          public void onCancellation() {
+            NetworkFetchProducer.this.onCancellation(fetchState);
+          }
+        });
+  }
+
+  protected void onResponse(
+      FetchState fetchState, InputStream responseData, int responseContentLength)
+      throws IOException {
+    final PooledByteBufferOutputStream pooledOutputStream;
+    if (responseContentLength > 0) {
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream(responseContentLength);
+    } else {
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream();
+    }
+    final byte[] ioArray = mByteArrayPool.get(READ_SIZE);
+    try {
+      int length;
+      while ((length = responseData.read(ioArray)) >= 0) {
+        if (length > 0) {
+          pooledOutputStream.write(ioArray, 0, length);
+          maybeHandleIntermediateResult(pooledOutputStream, fetchState);
+          float progress = calculateProgress(pooledOutputStream.size(), responseContentLength);
+          fetchState.getConsumer().onProgressUpdate(progress);    // 更新加载进度
+        }
+      }
+      mNetworkFetcher.onFetchCompletion(fetchState, pooledOutputStream.size());
+      handleFinalResult(pooledOutputStream, fetchState);
+    } finally {
+      mByteArrayPool.release(ioArray);
+      pooledOutputStream.close();
+    }
+  }    
+
+  protected void handleFinalResult(
+      PooledByteBufferOutputStream pooledOutputStream, FetchState fetchState) {
+    Map<String, String> extraMap = getExtraMap(fetchState, pooledOutputStream.size());
+    ProducerListener2 listener = fetchState.getListener();
+    listener.onProducerFinishWithSuccess(fetchState.getContext(), PRODUCER_NAME, extraMap);
+    listener.onUltimateProducerReached(fetchState.getContext(), PRODUCER_NAME, true);
+    fetchState.getContext().putOriginExtra("network");
+    notifyConsumer(
+        pooledOutputStream,
+        Consumer.IS_LAST | fetchState.getOnNewResultStatusFlags(),
+        fetchState.getResponseBytesRange(),
+        fetchState.getConsumer(),
+        fetchState.getContext());
+  }
+
+  protected static void notifyConsumer(
+      PooledByteBufferOutputStream pooledOutputStream,
+      @Consumer.Status int status,
+      @Nullable BytesRange responseBytesRange,
+      Consumer<EncodedImage> consumer,
+      ProducerContext context) {    // 将 ByteArray 包装为 EncodedImage 输出给消费者
+    CloseableReference<PooledByteBuffer> result =
+        CloseableReference.of(pooledOutputStream.toByteBuffer());
+    EncodedImage encodedImage = null;
+    try {
+      encodedImage = new EncodedImage(result);
+      encodedImage.setBytesRange(responseBytesRange);
+      encodedImage.parseMetaData();
+      context.setEncodedImageOrigin(EncodedImageOrigin.NETWORK);
+      consumer.onNewResult(encodedImage, status);
+    } finally {
+      EncodedImage.closeSafely(encodedImage);
+      CloseableReference.closeSafely(result);
+    }
+  }      
+}
+
+// 这里简单地看下 EncodedImage 是如何判断图片格式的，各种图片的格式和 SOI 可以深入代码细节，结合网上资料了解
+class EncodedImage {
+  public void parseMetaData() {
+    if (!sUseCachedMetadata) {
+      internalParseMetaData();
+      return;
+    }
+
+    if (mHasParsedMetadata) {
+      return;
+    }
+    internalParseMetaData();
+    mHasParsedMetadata = true;
+  }
+
+
+  /** Sets the encoded image meta data. */
+  private void internalParseMetaData() {
+    final ImageFormat imageFormat =
+        ImageFormatChecker.getImageFormat_WrapIOException(getInputStream());    // 解析图片格式
+    mImageFormat = imageFormat;
+    // BitmapUtil.decodeDimensions has a bug where it will return 100x100 for some WebPs even though
+    // those are not its actual dimensions
+    final Pair<Integer, Integer> dimensions;    // 解析尺寸
+    if (DefaultImageFormats.isWebpFormat(imageFormat)) {
+      dimensions = readWebPImageSize();
+    } else {
+      dimensions = readImageMetaData().getDimensions();
+    }
+    if (imageFormat == DefaultImageFormats.JPEG && mRotationAngle == UNKNOWN_ROTATION_ANGLE) {
+      // Load the JPEG rotation angle only if we have the dimensions
+      if (dimensions != null) {
+        mExifOrientation = JfifUtil.getOrientation(getInputStream());
+        mRotationAngle = JfifUtil.getAutoRotateAngleFromOrientation(mExifOrientation);
+      }
+    } else if (imageFormat == DefaultImageFormats.HEIF
+        && mRotationAngle == UNKNOWN_ROTATION_ANGLE) {
+      mExifOrientation = HeifExifUtil.getOrientation(getInputStream());
+      mRotationAngle = JfifUtil.getAutoRotateAngleFromOrientation(mExifOrientation);
+    } else if (mRotationAngle == UNKNOWN_ROTATION_ANGLE) {
+      mRotationAngle = 0;
+    }
+  }      
+}
+
+class ImageFormatChecker {
+  public static ImageFormat getImageFormat_WrapIOException(final InputStream is) {
+    try {
+      return getImageFormat(is);
+    } catch (IOException ioe) {
+      throw Throwables.propagate(ioe);
+    }
+  }
+
+
+  /**
+   * Tries to read up to MAX_HEADER_LENGTH bytes from InputStream is and use read bytes to determine
+   * type of the image contained in is. 
+   */
+  public static ImageFormat getImageFormat(final InputStream is) throws IOException {
+    return getInstance().determineImageFormat(is);
+  }      
+
+  public ImageFormat determineImageFormat(final InputStream is) throws IOException {
+    Preconditions.checkNotNull(is);
+    final byte[] imageHeaderBytes = new byte[mMaxHeaderLength];
+    final int headerSize = readHeaderFromStream(mMaxHeaderLength, is, imageHeaderBytes);
+
+    ImageFormat format = mDefaultFormatChecker.determineFormat(imageHeaderBytes, headerSize);
+    if (format != null && format != ImageFormat.UNKNOWN) {
+      return format;
+    }
+
+    if (mCustomImageFormatCheckers != null) {
+      for (ImageFormat.FormatChecker formatChecker : mCustomImageFormatCheckers) {
+        format = formatChecker.determineFormat(imageHeaderBytes, headerSize);
+        if (format != null && format != ImageFormat.UNKNOWN) {
+          return format;
+        }
+      }
+    }
+    return ImageFormat.UNKNOWN;
+  }  
+}
+
+class DefaultImageFormatChecker {
+  public final ImageFormat determineFormat(byte[] headerBytes, int headerSize) {
+    Preconditions.checkNotNull(headerBytes);
+
+    if (!mUseNewOrder && WebpSupportStatus.isWebpHeader(headerBytes, 0, headerSize)) {
+      return getWebpFormat(headerBytes, headerSize);
+    }
+
+    if (isJpegHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.JPEG;
+    }
+
+    if (isPngHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.PNG;
+    }
+
+    if (mUseNewOrder && WebpSupportStatus.isWebpHeader(headerBytes, 0, headerSize)) {
+      return getWebpFormat(headerBytes, headerSize);
+    }
+
+    if (isGifHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.GIF;
+    }
+
+    if (isBmpHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.BMP;
+    }
+
+    if (isIcoHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.ICO;
+    }
+
+    if (isHeifHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.HEIF;
+    }
+
+    if (isDngHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.DNG;
+    }
+
+    return ImageFormat.UNKNOWN;
+  }
+
+
+  /**
+   * Every JPEG image should start with SOI mark (0xFF, 0xD8) followed by beginning of another
+   * segment (0xFF)
+   */
+  private static final byte[] JPEG_HEADER = new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+
+  /**
+   * Checks if imageHeaderBytes starts with SOI (start of image) marker, followed by 0xFF. If
+   * headerSize is lower than 3 false is returned. Description of jpeg format can be found here: <a
+   * href="http://www.w3.org/Graphics/JPEG/itu-t81.pdf">
+   * http://www.w3.org/Graphics/JPEG/itu-t81.pdf</a> Annex B deals with compressed data format
+   */
+  private static boolean isJpegHeader(final byte[] imageHeaderBytes, final int headerSize) {
+    return headerSize >= JPEG_HEADER.length
+        && ImageFormatCheckerUtils.startsWithPattern(imageHeaderBytes, JPEG_HEADER);
+  }      
+}
+```
+
+### 内存池
+
+`NetworkFetchProducer` 要经常进行 IO 操作，如果使用局部 ByteArray 会导致频繁申请/回收内存，引起内存波动和内存碎片
+
+Fresco 使用内存池（`Pool`）或者说池化（`Pooled`）来解决这一问题：
+
+* 小块的内存用 `GenericByteArrayPool`，比如下面从 Response 里循环读数据用的临时内存块 `ioArray` 就是从 `mByteArrayPool` 里拿的
+* 大块的、不确定长度的内存用 `PooledByteBufferFactory`，比如将 Response 里的数据读到 `pooledOutputStream` 里去
+
+```java
+class NetworkFetchProducer {
+  protected void onResponse(
+      FetchState fetchState, InputStream responseData, int responseContentLength)
+      throws IOException {
+    final PooledByteBufferOutputStream pooledOutputStream;
+    if (responseContentLength > 0) {
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream(responseContentLength);
+    } else {
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream();
+    }
+    final byte[] ioArray = mByteArrayPool.get(READ_SIZE);
+    try {
+      int length;
+      while ((length = responseData.read(ioArray)) >= 0) {
+        if (length > 0) {
+          pooledOutputStream.write(ioArray, 0, length);
+          maybeHandleIntermediateResult(pooledOutputStream, fetchState);
+          float progress = calculateProgress(pooledOutputStream.size(), responseContentLength);
+          fetchState.getConsumer().onProgressUpdate(progress);    // 更新加载进度
+        }
+      }
+      mNetworkFetcher.onFetchCompletion(fetchState, pooledOutputStream.size());
+      handleFinalResult(pooledOutputStream, fetchState);
+    } finally {
+      mByteArrayPool.release(ioArray);
+      pooledOutputStream.close();
+    }
+  }    
+}
+```
+
+
 
 ## DiskCacheWriteProducer
