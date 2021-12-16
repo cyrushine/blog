@@ -177,6 +177,60 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/04/15/tailrec/" target="_self">
+          尾递归及尾递归优化
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/04/15/tailrec/" target="_self">
+          
+          
+            
+          
+          什么是尾递归
+这里有一篇文章讲得很好，转载自 浅谈Java中的递归与尾递归
+
+首先我们讲讲递归递归的本质是，某个方法中调用了自身。本质还是调用一个方法，只是这个方法正好是自身而已，递归因为是在自身中调用自身，所以会带来以下三个显著特点：
+
+调用的是同一个方法
+因为 1，所以只需要写一个方法，就可以让你轻松调用无数次（不用一个个写，你定个 n 就能有 n 个方法），所以调用的方法数可能非常巨大
+在自
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-04-15 04:00" pubdate>
+              2021-04-15
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/kotlin/">kotlin</a>
+            
+              <a href="/tags/tailrec/">tailrec</a>
+            
+              <a href="/tags/%E5%B0%BE%E9%80%92%E5%BD%92/">尾递归</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/04/12/leakcanary/" target="_self">
           LeakCanary 浅析
         </a>
@@ -621,52 +675,6 @@ ConditionVariable对 futex/mutex 的封装，宏 ART
               <a href="/tags/wait/">wait</a>
             
               <a href="/tags/notify/">notify</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/02/08/synchronized-implementation/" target="_self">
-          Lock（四）synchronized 的语言实现
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/02/08/synchronized-implementation/" target="_self">
-          
-          
-            
-          
-          monitor 指令在 Lock（二）AQS 源码分析以及 Lock 的实现 这篇文章里介绍了基于 AQS 的 Lock，它是双向链表的排队队列和系统调用 futex 实现的
-其实 java 语言规范里自带了 Lock 的实现：synchronized 关键字，下面看看 ART 是怎么实现它的
-先写一个使用了 synchronized 的测试方法
-package com.example.myapp
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-02-08 04:00" pubdate>
-              2021-02-08
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/synchronized/">synchronized</a>
             
           </div>
         
