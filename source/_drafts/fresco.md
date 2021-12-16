@@ -794,47 +794,47 @@ class DefaultImageFormatChecker {
 }
 ```
 
-### 内存池
+# 磁盘缓存
 
-`NetworkFetchProducer` 要经常进行 IO 操作，如果使用局部 ByteArray 会导致频繁申请/回收内存，引起内存波动和内存碎片
+磁盘缓存这一 feature 由 `ImagePipelineConfig.Builder.setDiskCacheEnabled` 开启，相关的 `ImagePipeline` 节点是紧邻着 `NetworkFetchProducer` 等头节点之后被添加的，包括三个个节点：
 
-Fresco 使用内存池（`Pool`）或者说池化（`Pooled`）来解决这一问题：
+1. PartialDiskCacheProducer，由 `ImagePipelineConfig.Builder.experiment().setPartialImageCachingEnabled` 开启
+2. DiskCacheWriteProducer
+3. DiskCacheReadProducer
 
-* 小块的内存用 `GenericByteArrayPool`，比如下面从 Response 里循环读数据用的临时内存块 `ioArray` 就是从 `mByteArrayPool` 里拿的
-* 大块的、不确定长度的内存用 `PooledByteBufferFactory`，比如将 Response 里的数据读到 `pooledOutputStream` 里去
+SimpleDraweeView.setImageURI(uri)
+SimpleDraweeView.setImageURI(uri, null)
+AbstractDraweeControllerBuilder.build
+AbstractDraweeController.buildController
+PipelineDraweeControllerBuilder.obtainController
+AbstractDraweeControllerBuilder.obtainDataSourceSupplier
+AbstractDraweeControllerBuilder.getDataSourceSupplierForRequest(controller, controllerId, imageRequest)
+AbstractDraweeControllerBuilder.getDataSourceSupplierForRequest(controller, controllerId, imageRequest, CacheLevel.FULL_FETCH)
+PipelineDraweeControllerBuilder.getDataSourceForRequest
+ImagePipeline.fetchDecodedImage
+ProducerSequenceFactory.getDecodedImageProducerSequence
+ProducerSequenceFactory.getBasicDecodedImageSequence
+ProducerSequenceFactory.getNetworkFetchSequence
+ProducerSequenceFactory.getCommonNetworkFetchToEncodedMemorySequence
+ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 
-```java
-class NetworkFetchProducer {
-  protected void onResponse(
-      FetchState fetchState, InputStream responseData, int responseContentLength)
-      throws IOException {
-    final PooledByteBufferOutputStream pooledOutputStream;
-    if (responseContentLength > 0) {
-      pooledOutputStream = mPooledByteBufferFactory.newOutputStream(responseContentLength);
+class ProducerSequenceFactory {
+  private Producer<EncodedImage> newDiskCacheSequence(Producer<EncodedImage> inputProducer) {
+    Producer<EncodedImage> cacheWriteProducer;
+    if (FrescoSystrace.isTracing()) {
+      FrescoSystrace.beginSection("ProducerSequenceFactory#newDiskCacheSequence");
+    }
+    if (mPartialImageCachingEnabled) {
+      Producer<EncodedImage> partialDiskCacheProducer =
+          mProducerFactory.newPartialDiskCacheProducer(inputProducer);
+      cacheWriteProducer = mProducerFactory.newDiskCacheWriteProducer(partialDiskCacheProducer);
     } else {
-      pooledOutputStream = mPooledByteBufferFactory.newOutputStream();
+      cacheWriteProducer = mProducerFactory.newDiskCacheWriteProducer(inputProducer);
     }
-    final byte[] ioArray = mByteArrayPool.get(READ_SIZE);
-    try {
-      int length;
-      while ((length = responseData.read(ioArray)) >= 0) {
-        if (length > 0) {
-          pooledOutputStream.write(ioArray, 0, length);
-          maybeHandleIntermediateResult(pooledOutputStream, fetchState);
-          float progress = calculateProgress(pooledOutputStream.size(), responseContentLength);
-          fetchState.getConsumer().onProgressUpdate(progress);    // 更新加载进度
-        }
-      }
-      mNetworkFetcher.onFetchCompletion(fetchState, pooledOutputStream.size());
-      handleFinalResult(pooledOutputStream, fetchState);
-    } finally {
-      mByteArrayPool.release(ioArray);
-      pooledOutputStream.close();
+    DiskCacheReadProducer result = mProducerFactory.newDiskCacheReadProducer(cacheWriteProducer);
+    if (FrescoSystrace.isTracing()) {
+      FrescoSystrace.endSection();
     }
+    return result;
   }    
 }
-```
-
-
-
-## DiskCacheWriteProducer
