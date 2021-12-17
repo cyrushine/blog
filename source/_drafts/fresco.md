@@ -509,7 +509,16 @@ Fresco 不能像 Glide 那样直接作用于 `ImageView`，必须用 `SimpleDraw
 
 # ImagePipeline
 
-## NetworkFetchProducer
+`ImagePipeline` 可以想象为一个栈（Stack），不断地往里边添加节点，第一个是头节点，最后一个是尾结点，先添加的节点在后添加节点的 `前面`，后添加节点在先添加节点的 `后面`
+
+发一个请求时先触达尾结点然后流向头节点，这叫 `去程`，响应从头结点开始流向尾结点，这叫 `回程`
+
+跟 OkHttp Interceptor Chain 和 Servlet Contianer Filter 一样，ImagePipeline 的一次工作包含 `去程` 和 `回程`，以 `[A, B, C, D]` 为例（`A` 是头节点）：
+
+* 去程从 `Producer.produceResults` 开始，`D.produceResults` -> `C.produceResults` -> `B.produceResults` -> `A.produceResults`，`A` 也许是个 NetworkFetchProducer 执行网络请求，拿到 Response 后执行回程
+* 回程从 `Consumer.onNewResult` 开始，`A.onNewResult` -> `B.onNewResult` -> `C.onNewResult` -> `D.onNewResult` -> `my.onNewResult`，当然可能会失败 `onFailure(throwable)`、取消 `onCancellation()` 等，一样是这个顺序
+
+# NetworkFetchProducer
 
 顾名思义，执行网络请求（HTTP）的 ImagePipeline 节点，，也是是整个流水线的第一个节点
 
@@ -794,14 +803,62 @@ class DefaultImageFormatChecker {
 }
 ```
 
+# 更多的资源加载器
+
+通过资源的 URI Scheme 来选择合适的加载器，`NetworkFetchProducer` 应该是最常用加载器之一了，它从网络获取资源，此外还有 `LocalResourceFetchProducer`、`LocalFileFetchProducer` 等
+
+| uri | producer | core api |
+|-----|----------|----------|
+| https://abc.com/avatar.jpg                 | NetworkFetchProducer           | OkHttp & Volley & HttpUrlConnection |
+| res://com.example/75281679                 | LocalResourceFetchProducer     | `Resources.openRawResource(resId)`，authority 部分是忽略掉的，直接取 path 作为资源 ID |
+| asset://com.example/avatar/default.jpg     | LocalAssetFetchProducer        | `AssetManager.open`，authority 部分是忽略掉的，直接取 path 作为 asset path |
+| file:///sdcard/DCIM/Camera/avatar.jpg      | LocalFileFetchProducer         | File API |
+| content://media/external/images/media/2283 | LocalContentUriFetchProducer & LocalThumbnailBitmapProducer | ContentResolver.openInputStream/loadThumbnail |
+| data://base64                              | DataFetchProducer              | Base64.decode |
+| android.resource://                        | QualifiedResourceFetchProducer | ContentResolver.openInputStream |
+
+```java
+class ImageRequest {
+  private static @SourceUriType int getSourceUriType(final Uri uri) {
+    if (uri == null) {
+      return SOURCE_TYPE_UNKNOWN;
+    }
+    if (UriUtil.isNetworkUri(uri)) {                                      // http:// & https://
+      return SOURCE_TYPE_NETWORK;
+    } else if (UriUtil.isLocalFileUri(uri)) {                             // file://
+      if (MediaUtils.isVideo(MediaUtils.extractMime(uri.getPath()))) {    // 通过文件后缀名判断是 image 还是 video
+        return SOURCE_TYPE_LOCAL_VIDEO_FILE;
+      } else {
+        return SOURCE_TYPE_LOCAL_IMAGE_FILE;                              
+      }
+    } else if (UriUtil.isLocalContentUri(uri)) {                          // content://
+      return SOURCE_TYPE_LOCAL_CONTENT;
+    } else if (UriUtil.isLocalAssetUri(uri)) {                            // asset://
+      return SOURCE_TYPE_LOCAL_ASSET;
+    } else if (UriUtil.isLocalResourceUri(uri)) {                         // res://
+      return SOURCE_TYPE_LOCAL_RESOURCE;
+    } else if (UriUtil.isDataUri(uri)) {                                  // data://
+      return SOURCE_TYPE_DATA;
+    } else if (UriUtil.isQualifiedResourceUri(uri)) {                     // android.resource://
+      return SOURCE_TYPE_QUALIFIED_RESOURCE;
+    } else {
+      return SOURCE_TYPE_UNKNOWN;
+    }
+  }    
+}
+```
+
 # 磁盘缓存
 
-磁盘缓存这一 feature 由 `ImagePipelineConfig.Builder.setDiskCacheEnabled` 开启，相关的 `ImagePipeline` 节点是紧邻着 `NetworkFetchProducer` 等头节点之后被添加的，包括三个个节点：
+磁盘缓存这一 feature 由 `ImagePipelineConfig.Builder.setDiskCacheEnabled` 开启，相关的 `ImagePipeline` 节点是紧邻着 `NetworkFetchProducer` 等头节点之后被添加的，包括三个个节点（按添加顺序）：
 
-1. PartialDiskCacheProducer，由 `ImagePipelineConfig.Builder.experiment().setPartialImageCachingEnabled` 开启
+1. PartialDiskCacheProducer
 2. DiskCacheWriteProducer
 3. DiskCacheReadProducer
 
+添加 `ImagePipeline` 节点的方法栈如下：
+
+```java
 SimpleDraweeView.setImageURI(uri)
 SimpleDraweeView.setImageURI(uri, null)
 AbstractDraweeControllerBuilder.build
@@ -838,3 +895,554 @@ class ProducerSequenceFactory {
     return result;
   }    
 }
+```
+
+## PartialDiskCacheProducer
+
+由 `ImagePipelineConfig.Builder.experiment().setPartialImageCachingEnabled` 开启
+
+继续前先了解下 [HTTP 分段下载](../../../../2021/12/16/http-range/) 的概念，可以看到分段下载是可以分多段（按需分段）的，但 `PartialDiskCacheProducer` 不太一样它只能分两段，看看它代码的逻辑：
+
+1. 发起 ImagePipeline 请求时（去程）
+    1. 先从 disk cache 里寻找 partial cache
+    2. 如果请求的是 partial content 并且 partial cache 包含这一 range，就不需要执行网络请求了，直接返回缓存
+    3. 否则 partial cache 作为 `IS_PARTIAL_RESULT` 返回，且执行网络请求获取剩下的内容
+    4. 没有 partial cache 那执行原请求
+2. 收到响应时（回程）
+    1. response header 里包含 `Content-Range`，说明是 partial content，设置 `IS_PARTIAL_RESULT` 标志
+    2. 存在 partial cache 且是 partial response，合并 cache 和 response 后传递给下一节点，删除 partial cache
+    3. 没有 partial cache 且是 partial response，将这部分内容缓存为 partical cache 以便后续合并
+
+那么业务逻辑就是这样的：
+
+1. 请求一个完整的资源服务器返回部分资源（206，Content-Range），或者请求资源的部分内容（Range 头部），总之就是服务器返回 partial content
+2. 发现 `IS_PARTIAL_RESULT` 标志，将 response 缓存起来
+3. 下次请求此资源时（Range 头部不是必须的），先返回缓存的部分内容，再请求剩下未获取的内容
+4. 收到响应后（必须包含 `Content-Range`，否则不认为是 partial content，没有 `IS_PARTIAL_RESULT` 标志），合并 partial content 和 partial cache 为完整的资源返回，删除 partial cache
+
+问题就来了，什么场景下会只请求部分内容（Range 头部）、请求一个完整的资源服务器却只返回部分资源（206，Content-Range）？不是很能理解它的使用场景
+
+```java
+class PartialDiskCacheProducer {
+  public void produceResults(
+      final Consumer<EncodedImage> consumer, final ProducerContext producerContext) {
+    final ImageRequest imageRequest = producerContext.getImageRequest();
+    final boolean isDiskCacheEnabledForRead =
+        producerContext
+            .getImageRequest()
+            .isCacheEnabled(ImageRequest.CachesLocationsMasks.DISK_READ);
+
+    final ProducerListener2 listener = producerContext.getProducerListener();
+    listener.onProducerStart(producerContext, PRODUCER_NAME);
+
+    final Uri uriForPartialCacheKey = createUriForPartialCacheKey(imageRequest);
+    final CacheKey partialImageCacheKey =
+        mCacheKeyFactory.getEncodedCacheKey(
+            imageRequest, uriForPartialCacheKey, producerContext.getCallerContext());
+
+    if (!isDiskCacheEnabledForRead) {
+      listener.onProducerFinishWithSuccess(
+          producerContext, PRODUCER_NAME, getExtraMap(listener, producerContext, false, 0));
+      startInputProducer(consumer, producerContext, partialImageCacheKey, null);
+      return;
+    }
+
+    // 发起请求时，先从 disk cache 里找 partial cache
+    final AtomicBoolean isCancelled = new AtomicBoolean(false);
+    final Task<EncodedImage> diskLookupTask =
+        mDefaultBufferedDiskCache.get(partialImageCacheKey, isCancelled);    
+    final Continuation<EncodedImage, Void> continuation =
+        onFinishDiskReads(consumer, producerContext, partialImageCacheKey);
+
+    diskLookupTask.continueWith(continuation);
+    subscribeTaskForRequestCancellation(isCancelled, producerContext);
+  }
+
+  private Continuation<EncodedImage, Void> onFinishDiskReads(
+      final Consumer<EncodedImage> consumer,
+      final ProducerContext producerContext,
+      final CacheKey partialImageCacheKey) {
+    final ProducerListener2 listener = producerContext.getProducerListener();
+    return new Continuation<EncodedImage, Void>() {
+      @Override
+      public Void then(Task<EncodedImage> task) throws Exception {
+        if (isTaskCancelled(task)) {
+          listener.onProducerFinishWithCancellation(producerContext, PRODUCER_NAME, null);
+          consumer.onCancellation();
+        } else if (task.isFaulted()) {
+          listener.onProducerFinishWithFailure(
+              producerContext, PRODUCER_NAME, task.getError(), null);
+          startInputProducer(consumer, producerContext, partialImageCacheKey, null);
+        } else {
+          EncodedImage cachedReference = task.getResult();
+          if (cachedReference != null) {
+            listener.onProducerFinishWithSuccess(
+                producerContext,
+                PRODUCER_NAME,
+                getExtraMap(listener, producerContext, true, cachedReference.getSize()));
+            final BytesRange cachedRange = BytesRange.toMax(cachedReference.getSize() - 1);
+            cachedReference.setBytesRange(cachedRange);
+
+            // Create a new ImageRequest for the remaining data
+            final int cachedLength = cachedReference.getSize();
+            final ImageRequest originalRequest = producerContext.getImageRequest();
+
+            // 如果请求的是 partial content 并且 partial cache 包含这一 range，就不需要执行网络请求了，直接返回缓存
+            if (cachedRange.contains(originalRequest.getBytesRange())) {
+              producerContext.putOriginExtra("disk", "partial");
+              listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, true);
+              consumer.onNewResult(cachedReference, Consumer.IS_LAST | Consumer.IS_PARTIAL_RESULT);
+            } else {
+
+              // 否则 partial cache 作为 IS_PARTIAL_RESULT 返回，且执行网络请求获取剩下的内容  
+              consumer.onNewResult(cachedReference, Consumer.IS_PARTIAL_RESULT);
+
+              // Pass the request on, but only for the remaining bytes
+              final ImageRequest remainingRequest =
+                  ImageRequestBuilder.fromRequest(originalRequest)
+                      .setBytesRange(BytesRange.from(cachedLength - 1))
+                      .build();
+              final SettableProducerContext contextForRemainingRequest =
+                  new SettableProducerContext(remainingRequest, producerContext);
+
+              startInputProducer(
+                  consumer, contextForRemainingRequest, partialImageCacheKey, cachedReference);
+            }
+          } else {
+
+            // 没有 partial cache 那执行原请求  
+            listener.onProducerFinishWithSuccess(
+                producerContext, PRODUCER_NAME, getExtraMap(listener, producerContext, false, 0));
+            startInputProducer(consumer, producerContext, partialImageCacheKey, cachedReference);
+          }
+        }
+        return null;
+      }
+    };
+  }      
+}
+
+class OkHttpNetworkFetcher {
+  protected void fetchWithRequest(
+      final OkHttpNetworkFetchState fetchState,
+      final NetworkFetcher.Callback callback,
+      final Request request) {
+    final Call call = mCallFactory.newCall(request);
+
+    fetchState
+        .getContext()
+        .addCallbacks(
+            new BaseProducerContextCallbacks() {
+              @Override
+              public void onCancellationRequested() {
+                if (Looper.myLooper() != Looper.getMainLooper()) {
+                  call.cancel();
+                } else {
+                  mCancellationExecutor.execute(
+                      new Runnable() {
+                        @Override
+                        public void run() {
+                          call.cancel();
+                        }
+                      });
+                }
+              }
+            });
+
+    call.enqueue(
+        new okhttp3.Callback() {
+          @Override
+          public void onResponse(Call call, Response response) throws IOException {
+            fetchState.responseTime = SystemClock.elapsedRealtime();
+            final ResponseBody body = response.body();
+            if (body == null) {
+              handleException(call, new IOException("Response body null: " + response), callback);
+              return;
+            }
+            try {
+              if (!response.isSuccessful()) {
+                handleException(
+                    call, new IOException("Unexpected HTTP code " + response), callback);
+                return;
+              }
+
+              // response header 里包含 Content-Range，说明是 partial content，设置 IS_PARTIAL_RESULT 标志
+              BytesRange responseRange =
+                  BytesRange.fromContentRangeHeader(response.header("Content-Range"));
+              if (responseRange != null
+                  && !(responseRange.from == 0
+                      && responseRange.to == BytesRange.TO_END_OF_CONTENT)) {
+                // Only treat as a partial image if the range is not all of the content
+                fetchState.setResponseBytesRange(responseRange);
+                fetchState.setOnNewResultStatusFlags(Consumer.IS_PARTIAL_RESULT);
+              }
+
+              long contentLength = body.contentLength();
+              if (contentLength < 0) {
+                contentLength = 0;
+              }
+              callback.onResponse(body.byteStream(), (int) contentLength);
+            } catch (Exception e) {
+              handleException(call, e, callback);
+            } finally {
+              body.close();
+            }
+          }
+
+          @Override
+          public void onFailure(Call call, IOException e) {
+            handleException(call, e, callback);
+          }
+        });
+  }    
+}
+
+class PartialDiskCacheConsumer {
+    public void onNewResultImpl(@Nullable EncodedImage newResult, @Status int status) {
+      if (isNotLast(status)) {
+        // TODO 19247361 Consider merging of non-final results
+        return;
+      }
+
+      // 存在 partial cache 且是 partial response，合并 cache 和 response 后传递给下一节点，删除 partial cache
+      if (mPartialEncodedImageFromCache != null
+          && newResult != null
+          && newResult.getBytesRange() != null) {
+        try {
+          final PooledByteBufferOutputStream pooledOutputStream =
+              merge(mPartialEncodedImageFromCache, newResult);
+          sendFinalResultToConsumer(pooledOutputStream);
+        } catch (IOException e) {
+          // TODO 19247425 Delete cached file and request full image
+          FLog.e(PRODUCER_NAME, "Error while merging image data", e);
+          getConsumer().onFailure(e);
+        } finally {
+          newResult.close();
+          mPartialEncodedImageFromCache.close();
+        }
+        mDefaultBufferedDiskCache.remove(mPartialImageCacheKey);
+
+        // 没有 partial cache 且是 partial response，将这部分内容缓存为 partical cache 以便后续合并
+      } else if (mIsDiskCacheEnabledForWrite
+          && statusHasFlag(status, IS_PARTIAL_RESULT)
+          && isLast(status)
+          && newResult != null
+          && newResult.getImageFormat() != ImageFormat.UNKNOWN) {
+        mDefaultBufferedDiskCache.put(mPartialImageCacheKey, newResult);
+        getConsumer().onNewResult(newResult, status);
+      } else {
+        getConsumer().onNewResult(newResult, status);
+      }
+    }    
+}
+```
+
+## read && write
+
+包含两个节点 `DiskCacheWriteProducer` 和 `DiskCacheReadProducer`，它们按顺序被添加到 ImagePipeline，那么：
+
+* 去程：`DiskCacheReadProducer.produceResults` -> `DiskCacheWriteProducer.produceResults`
+* 回程：`DiskCacheWriteProducer.onNewResult` -> `DiskCacheReadProducer.onNewResult`
+
+发起加载请求是，disk reader 从磁盘缓存里找是否有对应的缓存文件，有的话就无须做网络请求，加载缓存文件至内存后返回；因为是先添加 disk reader 后添加 disk writer 的，请求被 disk reader 截胡后就不经过 disk writer 和 network fetcher 了
+
+如果没能找到磁盘缓存，请求流转到 network fetcher，拿到 response 后 disk writer 将其保存为磁盘缓存
+
+```java
+class DiskCacheReadProducer {
+  public void produceResults(
+      final Consumer<EncodedImage> consumer, final ProducerContext producerContext) {
+    final ImageRequest imageRequest = producerContext.getImageRequest();
+    final boolean isDiskCacheEnabledForRead =
+        producerContext
+            .getImageRequest()
+            .isCacheEnabled(ImageRequest.CachesLocationsMasks.DISK_READ);
+    if (!isDiskCacheEnabledForRead) {
+      maybeStartInputProducer(consumer, producerContext);
+      return;
+    }
+
+    producerContext.getProducerListener().onProducerStart(producerContext, PRODUCER_NAME);
+
+    final CacheKey cacheKey =
+        mCacheKeyFactory.getEncodedCacheKey(imageRequest, producerContext.getCallerContext());
+    final boolean isSmallRequest = (imageRequest.getCacheChoice() == CacheChoice.SMALL);
+    final BufferedDiskCache preferredCache =
+        isSmallRequest ? mSmallImageBufferedDiskCache : mDefaultBufferedDiskCache;
+    final AtomicBoolean isCancelled = new AtomicBoolean(false);
+    final Task<EncodedImage> diskLookupTask = preferredCache.get(cacheKey, isCancelled);    // 去程，从磁盘缓存里查找
+    final Continuation<EncodedImage, Void> continuation =
+        onFinishDiskReads(consumer, producerContext);
+    diskLookupTask.continueWith(continuation);
+    subscribeTaskForRequestCancellation(isCancelled, producerContext);
+  }
+
+  private Continuation<EncodedImage, Void> onFinishDiskReads(
+      final Consumer<EncodedImage> consumer, final ProducerContext producerContext) {
+    final ProducerListener2 listener = producerContext.getProducerListener();
+    return new Continuation<EncodedImage, Void>() {
+      @Override
+      public Void then(Task<EncodedImage> task) throws Exception {
+        if (isTaskCancelled(task)) {
+          listener.onProducerFinishWithCancellation(producerContext, PRODUCER_NAME, null);
+          consumer.onCancellation();
+        } else if (task.isFaulted()) {
+          listener.onProducerFinishWithFailure(
+              producerContext, PRODUCER_NAME, task.getError(), null);
+          mInputProducer.produceResults(consumer, producerContext);
+        } else {
+          EncodedImage cachedReference = task.getResult();
+          if (cachedReference != null) {    // 找到磁盘缓存直接将去程截了，不继续流向下一节点（网络请求）
+            listener.onProducerFinishWithSuccess(
+                producerContext,
+                PRODUCER_NAME,
+                getExtraMap(listener, producerContext, true, cachedReference.getSize()));
+            listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, true);
+            producerContext.putOriginExtra("disk");
+            consumer.onProgressUpdate(1);
+            consumer.onNewResult(cachedReference, Consumer.IS_LAST);
+            cachedReference.close();
+          } else {                         // 否则将请求传递给下一节点
+            listener.onProducerFinishWithSuccess(
+                producerContext, PRODUCER_NAME, getExtraMap(listener, producerContext, false, 0));
+            mInputProducer.produceResults(consumer, producerContext);
+          }
+        }
+        return null;
+      }
+    };
+  }      
+}
+
+class DiskCacheWriteConsumer {
+    public void onNewResultImpl(@Nullable EncodedImage newResult, @Status int status) {
+      mProducerContext.getProducerListener().onProducerStart(mProducerContext, PRODUCER_NAME);
+      // intermediate, null or uncacheable results are not cached, so we just forward them
+      // as well as the images with unknown format which could be html response from the server
+      if (isNotLast(status)
+          || newResult == null
+          || statusHasAnyFlag(status, DO_NOT_CACHE_ENCODED | IS_PARTIAL_RESULT)
+          || newResult.getImageFormat() == ImageFormat.UNKNOWN) {
+        mProducerContext
+            .getProducerListener()
+            .onProducerFinishWithSuccess(mProducerContext, PRODUCER_NAME, null);
+        getConsumer().onNewResult(newResult, status);
+        return;
+      }
+
+      final ImageRequest imageRequest = mProducerContext.getImageRequest();
+      final CacheKey cacheKey =
+          mCacheKeyFactory.getEncodedCacheKey(imageRequest, mProducerContext.getCallerContext());
+
+      if (imageRequest.getCacheChoice() == ImageRequest.CacheChoice.SMALL) {    // 将 response 缓存起来
+        mSmallImageBufferedDiskCache.put(cacheKey, newResult);
+      } else {
+        mDefaultBufferedDiskCache.put(cacheKey, newResult);
+      }
+      mProducerContext
+          .getProducerListener()
+          .onProducerFinishWithSuccess(mProducerContext, PRODUCER_NAME, null);
+
+      getConsumer().onNewResult(newResult, status);
+    }    
+}
+```
+
+# 内存缓存（encoded）
+
+添加 `EncodedMemoryCacheProducer` 节点以实现内存缓存，这里缓存的对象是 `encoded`，也就是被图像压缩算法编码后的、各种图像格式的原始数据，尚未被 `decode` 为 `Bitmap`
+
+* `去程` 时从内存缓存里找，命中直接返回内存数据，未命中则交由下个节点处理
+* `回程` 时将原始数据添加到内存缓存中，然后继续往下传递原始数据
+
+默认开启，由 `ImageRequestBuilder.disableMemoryCache` 关闭 
+
+```java
+class EncodedMemoryCacheProducer {
+  public void produceResults(
+      final Consumer<EncodedImage> consumer, final ProducerContext producerContext) {
+    try {
+      if (FrescoSystrace.isTracing()) {
+        FrescoSystrace.beginSection("EncodedMemoryCacheProducer#produceResults");
+      }
+      final ProducerListener2 listener = producerContext.getProducerListener();
+      listener.onProducerStart(producerContext, PRODUCER_NAME);
+      final ImageRequest imageRequest = producerContext.getImageRequest();
+      final CacheKey cacheKey =
+          mCacheKeyFactory.getEncodedCacheKey(imageRequest, producerContext.getCallerContext());
+      final boolean isEncodedCacheEnabledForRead =
+          producerContext
+              .getImageRequest()
+              .isCacheEnabled(ImageRequest.CachesLocationsMasks.ENCODED_READ);
+      CloseableReference<PooledByteBuffer> cachedReference =
+          isEncodedCacheEnabledForRead ? mMemoryCache.get(cacheKey) : null;
+      try {
+        if (cachedReference != null) {    // 命中 encoded 内存缓存，将请求截胡，直接返回内存中的数据
+          EncodedImage cachedEncodedImage = new EncodedImage(cachedReference);
+          try {
+            listener.onProducerFinishWithSuccess(
+                producerContext,
+                PRODUCER_NAME,
+                listener.requiresExtraMap(producerContext, PRODUCER_NAME)
+                    ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, "true")
+                    : null);
+            listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, true);
+            producerContext.putOriginExtra("memory_encoded");
+            consumer.onProgressUpdate(1f);
+            consumer.onNewResult(cachedEncodedImage, Consumer.IS_LAST);
+            return;
+          } finally {
+            EncodedImage.closeSafely(cachedEncodedImage);
+          }
+        }
+
+        if (producerContext.getLowestPermittedRequestLevel().getValue()
+            >= ImageRequest.RequestLevel.ENCODED_MEMORY_CACHE.getValue()) {
+          listener.onProducerFinishWithSuccess(
+              producerContext,
+              PRODUCER_NAME,
+              listener.requiresExtraMap(producerContext, PRODUCER_NAME)
+                  ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, "false")
+                  : null);
+          listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, false);
+          producerContext.putOriginExtra("memory_encoded", "nil-result");
+          consumer.onNewResult(null, Consumer.IS_LAST);
+          return;
+        }
+
+        Consumer consumerOfInputProducer =
+            new EncodedMemoryCacheConsumer(
+                consumer,
+                mMemoryCache,
+                cacheKey,
+                producerContext
+                    .getImageRequest()
+                    .isCacheEnabled(ImageRequest.CachesLocationsMasks.ENCODED_WRITE),
+                producerContext.getImagePipelineConfig().getExperiments().isEncodedCacheEnabled());
+
+        listener.onProducerFinishWithSuccess(
+            producerContext,
+            PRODUCER_NAME,
+            listener.requiresExtraMap(producerContext, PRODUCER_NAME)
+                ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, "false")
+                : null);
+        mInputProducer.produceResults(consumerOfInputProducer, producerContext);
+      } finally {
+        CloseableReference.closeSafely(cachedReference);
+      }
+    } finally {
+      if (FrescoSystrace.isTracing()) {
+        FrescoSystrace.endSection();
+      }
+    }
+  }    
+}
+
+class EncodedMemoryCacheConsumer {
+  public void onNewResultImpl(@Nullable EncodedImage newResult, @Status int status) {
+    try {
+      if (FrescoSystrace.isTracing()) {
+        FrescoSystrace.beginSection("EncodedMemoryCacheProducer#onNewResultImpl");
+      }
+      // intermediate, null or uncacheable results are not cached, so we just forward them
+      // as well as the images with unknown format which could be html response from the server
+      if (isNotLast(status)
+          || newResult == null
+          || statusHasAnyFlag(status, DO_NOT_CACHE_ENCODED | IS_PARTIAL_RESULT)
+          || newResult.getImageFormat() == ImageFormat.UNKNOWN) {
+        getConsumer().onNewResult(newResult, status);
+        return;
+      }
+      // cache and forward the last result
+      CloseableReference<PooledByteBuffer> ref = newResult.getByteBufferRef();
+      if (ref != null) {
+        CloseableReference<PooledByteBuffer> cachedResult = null;
+        try {
+          if (mEncodedCacheEnabled && mIsEncodedCacheEnabledForWrite) {    // 将原始数据缓存至内存
+            cachedResult = mMemoryCache.cache(mRequestedCacheKey, ref);
+          }
+        } finally {
+          CloseableReference.closeSafely(ref);
+        }
+        if (cachedResult != null) {
+          EncodedImage cachedEncodedImage;
+          try {
+            cachedEncodedImage = new EncodedImage(cachedResult);
+            cachedEncodedImage.copyMetaDataFrom(newResult);
+          } finally {
+            CloseableReference.closeSafely(cachedResult);
+          }
+          try {
+            getConsumer().onProgressUpdate(1f);
+            getConsumer().onNewResult(cachedEncodedImage, status);
+            return;
+          } finally {
+            EncodedImage.closeSafely(cachedEncodedImage);
+          }
+        }
+      }
+      getConsumer().onNewResult(newResult, status);
+    } finally {
+      if (FrescoSystrace.isTracing()) {
+        FrescoSystrace.endSection();
+      }
+    }
+  }    
+}
+```
+
+# 其他 ImagePipeline 节点
+
+## MultiplexProducer
+
+`multiplex`：多路复用，`multiplexer`：多路复用器，顾名思义这个节点的作用是合并相同的 `ImageRequest` 以节约网络和 IO 资源，因为同一时刻相同的请求只需要执行一次，多个 consumer 可以等待和接收同一个 response，看看是如何实现的：
+
+1. 多路复用器有两个：`EncodedCacheKeyMultiplexProducer`（排在 encoded memory cache 后面） 和 `BitmapMemoryCacheKeyMultiplexProducer`（排在 bitmap memory cache 后面）
+2. 一个请求对应一个 `Multiplexer`，相同请求（`MultiplexProducer.getKey`）的 consumer 都挂在同一个 `Multiplexer` 里
+3. 第一个请求才会通过此节点，流向下一节点（执行真正的请求操作：网络、缓存），后续的相同的请求都被终止，它们的 consumer 被挂在同一 `Multiplexer` 里
+4. 第一个（也是唯一一个）请求的 response 将被分发给各个 consumer
+5. 涉及到多线程，创建 Multiplexer 和添加 consumer 的操作需要被 `synchronized` 保护
+
+```java
+class MultiplexProducer {
+  public void produceResults(Consumer<T> consumer, ProducerContext context) {
+    try {
+      if (FrescoSystrace.isTracing()) {
+        FrescoSystrace.beginSection("MultiplexProducer#produceResults");
+      }
+
+      context.getProducerListener().onProducerStart(context, mProducerName);
+
+      K key = getKey(context);
+      Multiplexer multiplexer;
+      boolean createdNewMultiplexer;
+      // We do want to limit scope of this lock to guard only accesses to mMultiplexers map.
+      // However what we would like to do here is to atomically lookup mMultiplexers, add new
+      // consumer to consumers set associated with the map's entry and call consumer's callback with
+      // last intermediate result. We should not do all of those things under this lock.
+      do {
+        createdNewMultiplexer = false;
+        synchronized (this) {
+          multiplexer = getExistingMultiplexer(key);
+          if (multiplexer == null) {
+            multiplexer = createAndPutNewMultiplexer(key);
+            createdNewMultiplexer = true;
+          }
+        }
+        // addNewConsumer may call consumer's onNewResult method immediately. For this reason
+        // we release "this" lock. If multiplexer is removed from mMultiplexers in the meantime,
+        // which is not very probable, then addNewConsumer will fail and we will be able to retry.
+      } while (!multiplexer.addNewConsumer(consumer, context));
+
+      if (createdNewMultiplexer) {
+        multiplexer.startInputProducerIfHasAttachedConsumers(
+            TriState.valueOf(context.isPrefetch()));
+      }
+    } finally {
+      if (FrescoSystrace.isTracing()) {
+        FrescoSystrace.endSection();
+      }
+    }
+  }    
+}
+```
