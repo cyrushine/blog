@@ -15,10 +15,10 @@
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
   <meta name="theme-color" content="#141414">
-  <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
-  <meta name="description" content="什么是尾递归 这里有一篇文章讲得很好，转载自 浅谈Java中的递归与尾递归  首先我们讲讲递归递归的本质是，某个方法中调用了自身。本质还是调用一个方法，只是这个方法正好是自身而已，递归因为是在自身中调用自身，所以会带来以下三个显著特点：  调用的是同一个方法 因为 1，所以只需要写一个方法，就可以让你轻松调用无数次（不用一个个写，你定个 n 就能有 n 个方法），所以调用的方法数可能非常巨大 在自">
+  
+    <meta name="description" content="什么是尾递归 这里有一篇文章讲得很好，转载自 浅谈Java中的递归与尾递归  首先我们讲讲递归递归的本质是，某个方法中调用了自身。本质还是调用一个方法，只是这个方法正好是自身而已，递归因为是在自身中调用自身，所以会带来以下三个显著特点：  调用的是同一个方法 因为 1，所以只需要写一个方法，就可以让你轻松调用无数次（不用一个个写，你定个 n 就能有 n 个方法），所以调用的方法数可能非常巨大 在自">
 <meta property="og:type" content="article">
 <meta property="og:title" content="尾递归及尾递归优化">
 <meta property="og:url" content="https://www.dalvik.work/2021/04/15/tailrec/index.html">
@@ -29,13 +29,14 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-15-tailrec/code.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-15-tailrec/java_output.png">
 <meta property="article:published_time" content="2021-04-15T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-17T10:58:56.171Z">
+<meta property="article:modified_time" content="2021-12-21T03:47:41.311Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="kotlin">
 <meta property="article:tag" content="tailrec">
 <meta property="article:tag" content="尾递归">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2021-04-15-tailrec/factorial_output.png">
+  
   
   <title>尾递归及尾递归优化 - Cyrus Blog</title>
 
@@ -78,7 +79,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -202,7 +203,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      12 分钟
+      34 分钟
     </span>
   
 

@@ -15,10 +15,10 @@
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
   <meta name="theme-color" content="#141414">
-  <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
-  <meta name="description" content="xCrash 是爱奇艺团队开源的一款崩溃日志收集库，可以收集 java crash、native crash 和 ANR 日志 日志格式为专用格式，内容还算丰富：机器信息、崩溃线程和其他线程的方法栈、logcat、打开的 fd 等等 … 默认配置为：  java crash、native crash 和 ANR 都会被捕获 日志目录在 &#x2F;data&#x2F;data&#x2F;[pkg]&#x2F;files&#x2F;tombston">
+  
+    <meta name="description" content="xCrash 是爱奇艺团队开源的一款崩溃日志收集库，可以收集 java crash、native crash 和 ANR 日志 日志格式为专用格式，内容还算丰富：机器信息、崩溃线程和其他线程的方法栈、logcat、打开的 fd 等等 … 默认配置为：  java crash、native crash 和 ANR 都会被捕获 日志目录在 &#x2F;data&#x2F;data&#x2F;[pkg]&#x2F;files&#x2F;tombston">
 <meta property="og:type" content="article">
 <meta property="og:title" content="崩溃日志收集库 xCrash 浅析">
 <meta property="og:url" content="https://www.dalvik.work/2021/06/22/xcrash/index.html">
@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-06-22-xcrash/elf.png">
 <meta property="article:published_time" content="2021-06-22T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-17T10:58:56.171Z">
+<meta property="article:modified_time" content="2021-12-21T03:47:41.311Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="uncaught exception">
 <meta property="article:tag" content="exception">
@@ -37,6 +37,7 @@
 <meta property="article:tag" content="xcrash">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2021-06-22-xcrash/elf.png">
+  
   
   <title>崩溃日志收集库 xCrash 浅析 - Cyrus Blog</title>
 
@@ -79,7 +80,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -203,7 +204,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      210 分钟
+      560 分钟
     </span>
   
 

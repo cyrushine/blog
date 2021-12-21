@@ -15,16 +15,17 @@
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
   <meta name="theme-color" content="#141414">
-  <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
-  <meta property="og:type" content="website">
+  
+    <meta property="og:type" content="website">
 <meta property="og:title" content="Cyrus Blog">
 <meta property="og:url" content="https://www.dalvik.work/page/4/index.html">
 <meta property="og:site_name" content="Cyrus Blog">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
+  
   
   <title>Cyrus Blog</title>
 
@@ -52,7 +53,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -185,13 +186,7 @@
       <p class="index-excerpt">
         <a href="/2021/02/08/synchronized-implementation/" target="_self">
           
-          
-            
-          
-          monitor 指令在 Lock（二）AQS 源码分析以及 Lock 的实现 这篇文章里介绍了基于 AQS 的 Lock，它是双向链表的排队队列和系统调用 futex 实现的
-其实 java 语言规范里自带了 Lock 的实现：synchronized 关键字，下面看看 ART 是怎么实现它的
-先写一个使用了 synchronized 的测试方法
-package com.example.myapp
+          monitor 指令在 Lock（二）AQS 源码分析以及 Lock 的实现 这篇文章里介绍了基于 AQS 的 Lock，它是双向链表的排队队列和系统调用 futex 实现的 其实 java 语言规范里自带了 Lock 的实现：synchronized 关键字，下面看看 ART 是怎么实现它的 先写一个使用了 synchronized 的测试方法 package com.example.myapp
         </a>
       </p>
 
@@ -231,21 +226,7 @@ package com.example.myapp
       <p class="index-excerpt">
         <a href="/2021/01/24/condition-by-lock/" target="_self">
           
-          
-            
-          
-          Condition 简介Condition 主要有两类方法：
-
-await，释放锁并阻塞线程直到 signal 被调用，恢复后会重新获得锁
-signal，唤醒阻塞在这个 Condition 上的一个或全部线程
-
-利用条件变量前需要先获得锁
-所以 Condition 的所有方法都需要加锁
-lock.lock();
-// ...
-condition.await();
-// ...
-lock.unloc
+          Condition 简介Condition 主要有两类方法：  await，释放锁并阻塞线程直到 signal 被调用，恢复后会重新获得锁 signal，唤醒阻塞在这个 Condition 上的一个或全部线程  利用条件变量前需要先获得锁 所以 Condition 的所有方法都需要加锁 lock.lock(); &#x2F;&#x2F; ... condition.await(); &#x2F;&#x2F; ... lock.unloc
         </a>
       </p>
 
@@ -287,17 +268,7 @@ lock.unloc
       <p class="index-excerpt">
         <a href="/2021/01/19/reviews/" target="_self">
           
-          
-            
-          
-          设计模式
-观察者（Observer），LiveData
-单例（Singleton），double check
-适配器（Adapter），RecyclerView.Adapter
-装饰器（Decorator），ContextWrapper
-代理模式（Proxy），例如 VPN、Retrofit
-责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式
-建造者（B
+          设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B
         </a>
       </p>
 
@@ -316,6 +287,12 @@ lock.unloc
             <i class="iconfont icon-tags"></i>
             
               <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>
+            
+              <a href="/tags/%E5%A4%87%E5%BF%98%E5%BD%95/">备忘录</a>
+            
+              <a href="/tags/%E7%AC%94%E8%AE%B0/">笔记</a>
+            
+              <a href="/tags/%E7%9F%A5%E8%AF%86%E7%82%B9/">知识点</a>
             
           </div>
         
@@ -337,11 +314,7 @@ lock.unloc
       <p class="index-excerpt">
         <a href="/2021/01/13/aqs-lock-implementation/" target="_self">
           
-          
-            
-          
-          AQS 是 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 的基础，它们紧密地结合在一块，分析 AQS 除了要明晰排队队列的操作，还要结合 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 看看是怎么利用排队队列实现锁和信号量的
-AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表publi
+          AQS 是 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 的基础，它们紧密地结合在一块，分析 AQS 除了要明晰排队队列的操作，还要结合 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 看看是怎么利用排队队列实现锁和信号量的 AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表publi
         </a>
       </p>
 
@@ -383,17 +356,7 @@ AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表publi
       <p class="index-excerpt">
         <a href="/2021/01/10/aqs-basic/" target="_self">
           
-          
-            
-          
-          自旋锁（Spin Lock）获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码/逻辑，那就是自旋锁；比如下面的 lock()
-// 一个简单的自旋锁的实现
-class SpinLock &#123;
-
-    private val cas = AtomicReference&lt;Thread&gt;()
-
-    fun lock() &#123;
-        w
+          自旋锁（Spin Lock）获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码&#x2F;逻辑，那就是自旋锁；比如下面的 lock() &#x2F;&#x2F; 一个简单的自旋锁的实现 class SpinLock &amp;#123;      private val cas &#x3D; AtomicReference&lt;Thread&gt;()      fun lock() &amp;#123;         w
         </a>
       </p>
 
@@ -435,11 +398,7 @@ class SpinLock &#123;
       <p class="index-excerpt">
         <a href="/2020/12/27/render-thread/" target="_self">
           
-          
-            
-          
-          接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法
-syncFrameState重要的方法有三个：makeCurrent，
+          接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法 syncFrameState重要的方法有三个：makeCurrent，
         </a>
       </p>
 
@@ -481,11 +440,7 @@ syncFrameState重要的方法有三个：makeCurrent，
       <p class="index-excerpt">
         <a href="/2020/12/13/ui-thread-in-vsync/" target="_self">
           
-          
-            
-          
-          从一段 systrace 开始
-这是一段 systrace 记录，看得出来页面是比较流畅的，ui thread 全都在一个 VSYNC_app 内完成绘制，surfaceflinger 也在一个 VSYNC_sf 内完成各个层的合成；但有没发现在 ui thread 完成 doFrame 后，总是会有一个 ReaderThread 跟在后面，看名字像是跟渲染相关的线程，它跟 ui 绘制有关系吗？平
+          从一段 systrace 开始 这是一段 systrace 记录，看得出来页面是比较流畅的，ui thread 全都在一个 VSYNC_app 内完成绘制，surfaceflinger 也在一个 VSYNC_sf 内完成各个层的合成；但有没发现在 ui thread 完成 doFrame 后，总是会有一个 ReaderThread 跟在后面，看名字像是跟渲染相关的线程，它跟 ui 绘制有关系吗？平
         </a>
       </p>
 
@@ -527,14 +482,7 @@ syncFrameState重要的方法有三个：makeCurrent，
       <p class="index-excerpt">
         <a href="/2020/12/02/vsync/" target="_self">
           
-          
-            
-          
-          android 的垂直同步模型（vsync）是隐藏在 view 系统后面的很重要的一块，它控制着 view 渲染的节奏；而且 vsync 还是比较复杂的，我们从下到上，先从最熟悉的 View.invalidate 讲起，看看简单的一个 invalidate 后面隐藏着多么复杂的工作
-从 View.invalidate() 说起
-看上图，View.invalidate() 主要做了两件事：
-
-将 V
+          android 的垂直同步模型（vsync）是隐藏在 view 系统后面的很重要的一块，它控制着 view 渲染的节奏；而且 vsync 还是比较复杂的，我们从下到上，先从最熟悉的 View.invalidate 讲起，看看简单的一个 invalidate 后面隐藏着多么复杂的工作 从 View.invalidate() 说起 看上图，View.invalidate() 主要做了两件事：  将 V
         </a>
       </p>
 
@@ -576,18 +524,7 @@ syncFrameState重要的方法有三个：makeCurrent，
       <p class="index-excerpt">
         <a href="/2020/11/19/scoped-storage/" target="_self">
           
-          
-            
-          
-          以前的存储访问权限先看看以前（ &lt; 10/Q ）的存储访问权限是怎样的
-从 APP 目录（app-specific directories）的角度看，可以分为：
-
-内部存储（app-specific directories in internal storage）
-对于 app 自己，无需申请任何读/写权限
-对于其他 app，没有访问权限
-
-
-外部存储（app-specific direct
+          以前的存储访问权限先看看以前（ &lt; 10&#x2F;Q ）的存储访问权限是怎样的 从 APP 目录（app-specific directories）的角度看，可以分为：  内部存储（app-specific directories in internal storage） 对于 app 自己，无需申请任何读&#x2F;写权限 对于其他 app，没有访问权限   外部存储（app-specific direct
         </a>
       </p>
 
@@ -627,15 +564,7 @@ syncFrameState重要的方法有三个：makeCurrent，
       <p class="index-excerpt">
         <a href="/2020/11/11/starting-window/" target="_self">
           
-          
-            
-          
-          问题中午和同事聊天时，提到一个问题：设计把爱范儿 app 的启动页改成暗黑样式，本来很简单的一个改动，测试却发现启动会有闪屏；下午我看了下效果，发现确实有问题：
-
-把启动页的图片换成暗黑主体的图片后，冷/热启动都会有从白色到黑色的闪动
-同事给的 bug fixed 是 windowDisablePreview = true，这导致 app 热启动时，会有很长的一段延迟
-
-starting wind
+          问题中午和同事聊天时，提到一个问题：设计把爱范儿 app 的启动页改成暗黑样式，本来很简单的一个改动，测试却发现启动会有闪屏；下午我看了下效果，发现确实有问题：  把启动页的图片换成暗黑主体的图片后，冷&#x2F;热启动都会有从白色到黑色的闪动 同事给的 bug fixed 是 windowDisablePreview &#x3D; true，这导致 app 热启动时，会有很长的一段延迟  starting wind
         </a>
       </p>
 

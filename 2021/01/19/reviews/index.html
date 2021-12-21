@@ -15,10 +15,10 @@
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
   <meta name="theme-color" content="#141414">
-  <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
-  <meta name="description" content="设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B">
+  
+    <meta name="description" content="设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B">
 <meta property="og:type" content="article">
 <meta property="og:title" content="常见面试题备忘">
 <meta property="og:url" content="https://www.dalvik.work/2021/01/19/reviews/index.html">
@@ -26,10 +26,14 @@
 <meta property="og:description" content="设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-01-19T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-17T10:58:56.167Z">
+<meta property="article:modified_time" content="2021-12-21T03:47:41.307Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="面试">
+<meta property="article:tag" content="备忘录">
+<meta property="article:tag" content="笔记">
+<meta property="article:tag" content="知识点">
 <meta name="twitter:card" content="summary_large_image">
+  
   
   <title>常见面试题备忘 - Cyrus Blog</title>
 
@@ -72,7 +76,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -187,7 +191,7 @@
   
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      9.6k 字
+      12k 字
     </span>
   
 
@@ -196,7 +200,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      30 分钟
+      99 分钟
     </span>
   
 
@@ -228,7 +232,7 @@
             <h1 style="display: none">常见面试题备忘</h1>
             
             <div class="markdown-body">
-              <h2 id="设计模式"><a href="#设计模式" class="headerlink" title="设计模式"></a>设计模式</h2><ul>
+              <h1 id="设计模式"><a href="#设计模式" class="headerlink" title="设计模式"></a>设计模式</h1><ul>
 <li>观察者（Observer），<code>LiveData</code></li>
 <li>单例（Singleton），double check</li>
 <li>适配器（Adapter），<code>RecyclerView.Adapter</code></li>
@@ -240,12 +244,12 @@
 </ul>
 <p>代理模式强调不能直接访问一个对象，只能通过代理间接访问，不能直接访问的原因比如：权限校验、操作日志、RPC</p>
 <p>装饰器模式强调增强对象的功能：把一个对象的功能拆分为几部分，在运行时按需组装</p>
-<h2 id="实现-LRU"><a href="#实现-LRU" class="headerlink" title="实现 LRU"></a>实现 LRU</h2><p><code>map</code> + 双端链表，链尾是最近使用过的，链头是最久未使用的</p>
+<h1 id="实现-LRU"><a href="#实现-LRU" class="headerlink" title="实现 LRU"></a>实现 LRU</h1><p><code>map</code> + 双端链表，链尾是最近使用过的，链头是最久未使用的</p>
 <ul>
 <li><code>get(key)</code>，通过 <code>map</code> 可以在 O(1) 时间内找到 <code>value</code>，然后把 <code>value</code> 从双端链表中断开并移到链尾，双端链表的特性使得「断开」操作很容易实现</li>
 <li><code>put(key, value)</code>，把 <code>value</code> 添加到链尾，当超过容量限制时，从链头逐个移除 <code>value</code> 直到满足容量限制</li>
 </ul>
-<h2 id="几个重要的排序算法"><a href="#几个重要的排序算法" class="headerlink" title="几个重要的排序算法"></a>几个重要的排序算法</h2><ul>
+<h1 id="几个重要的排序算法"><a href="#几个重要的排序算法" class="headerlink" title="几个重要的排序算法"></a>几个重要的排序算法</h1><ul>
 <li><p>归并排序 O(nlogn)<br><code>step</code> 从 1 逐步递增，合并两个长度为 <code>step</code> 的已排序区间，当 <code>step</code> &gt; length/2 时，已排序区间就等于整个数组<br>合并两个有序区间很简单，用「双指针法」即可</p>
 </li>
 <li><p>快速排序 O(nlogn)<br>双指针，一个在头一个在尾，取第一个元素为「基准」（挖出一个坑），从尾部找一个比「基准」小的填入坑，然后又从头部找一个比「基准」大的填入尾部的坑，循环往复直到双指针碰头，那么这个位置就是「基准」的位置<br>每一轮都可以找出一个元素的排序后的位置，从整体看，这个元素和它左右两块是已排序的<br>然后递归操作左右两块区间直到区间长度为 1</p>
@@ -253,7 +257,7 @@
 <li><p>堆排序 O(nlogn)<br>利用「堆」这个特殊的数据结构来排序（大顶堆、小顶堆）<br>恰好堆也是用数组实现的，初始已排序区间的长度为 1，逐步扩大长度相当于逐个添加一个新元素到堆<br>添加一个新元素到堆，相当于添加到数组尾部，逻辑上看就是添加到二叉树叶子那层最左边，为了让堆继续满足性质，需要把新元素逐层地跟它的父节点比较：新节点大于父节点则交换（大顶堆，小顶堆则相反）<br>当已排序区间 == 数组时，整个数组就排好序了</p>
 </li>
 </ul>
-<h2 id="五层网络"><a href="#五层网络" class="headerlink" title="五层网络"></a>五层网络</h2><table>
+<h1 id="五层网络"><a href="#五层网络" class="headerlink" title="五层网络"></a>五层网络</h1><table>
 <thead>
 <tr>
 <th></th>
@@ -281,21 +285,21 @@
 <td></td>
 </tr>
 </tbody></table>
-<h2 id="抽象类和接口的区别"><a href="#抽象类和接口的区别" class="headerlink" title="抽象类和接口的区别"></a>抽象类和接口的区别</h2><p>抽象类是对实体的抽象，而接口是对特征的抽象；所以 Java 类最多只能继承自一个抽象类，但却可是实现多个特征</p>
-<h2 id="多线程同步的方法"><a href="#多线程同步的方法" class="headerlink" title="多线程同步的方法"></a>多线程同步的方法</h2><ul>
+<h1 id="抽象类和接口的区别"><a href="#抽象类和接口的区别" class="headerlink" title="抽象类和接口的区别"></a>抽象类和接口的区别</h1><p>抽象类是对实体的抽象，而接口是对特征的抽象；所以 Java 类最多只能继承自一个抽象类，但却可是实现多个特征</p>
+<h1 id="多线程同步的方法"><a href="#多线程同步的方法" class="headerlink" title="多线程同步的方法"></a>多线程同步的方法</h1><ul>
 <li><code>synchronized</code></li>
 <li><code>volatile</code></li>
 <li><code>Lock</code> &amp; <code>Condition</code> &amp; <code>Atoimc</code></li>
 </ul>
-<h2 id="HashMap-和-HashTable-的区别"><a href="#HashMap-和-HashTable-的区别" class="headerlink" title="HashMap 和 HashTable 的区别"></a><code>HashMap</code> 和 <code>HashTable</code> 的区别</h2><ul>
+<h1 id="HashMap-和-HashTable-的区别"><a href="#HashMap-和-HashTable-的区别" class="headerlink" title="HashMap 和 HashTable 的区别"></a><code>HashMap</code> 和 <code>HashTable</code> 的区别</h1><ul>
 <li>都是数组 + 链表的实现（链表是为了解决 hash 冲突）</li>
 <li><code>HashTable</code> 是线程安全的（大多数方法都加了 <code>synchronized</code>），而 <code>HashMap</code> 不是</li>
 <li><code>HashMap</code> 允许为 <code>null</code> 的 key 和 value，而 <code>HashTable</code> 则不允许</li>
 <li><code>HashMap</code> 重算了 hash code：<code>(h = key.hashCode()) ^ (h &gt;&gt;&gt; 16)</code>，而 <code>HashTable</code> 直接使用 <code>hashCode()</code></li>
 </ul>
-<h2 id="怎么解决-ANR-问题"><a href="#怎么解决-ANR-问题" class="headerlink" title="怎么解决 ANR 问题"></a>怎么解决 ANR 问题</h2><p>先把 <code>/data/anr/trace.txt</code> 拉下来，搜索包名定位到 app 进程那一段，找到 <code>main</code> 线程，看看主线程是不是出于异常状态（比如 <code>Blocked</code>、<code>Sleeping</code>）<br>如果主线程状态异常，那么查看主线程的调用堆栈，看看是哪段代码导致主线程进入异常状态<br>像 <code>Blocked</code> 有可能是锁导致的，能看到主线程被哪个锁阻塞，那个锁被哪个线程持有<br>有时候主线程没发现异常，看调用堆栈发现主线程正在执行 binder 相关操作，此时有可能是阻塞在这里（等待 binder 对面那端的响应）</p>
+<h1 id="怎么解决-ANR-问题"><a href="#怎么解决-ANR-问题" class="headerlink" title="怎么解决 ANR 问题"></a>怎么解决 ANR 问题</h1><p>先把 <code>/data/anr/trace.txt</code> 拉下来，搜索包名定位到 app 进程那一段，找到 <code>main</code> 线程，看看主线程是不是出于异常状态（比如 <code>Blocked</code>、<code>Sleeping</code>）<br>如果主线程状态异常，那么查看主线程的调用堆栈，看看是哪段代码导致主线程进入异常状态<br>像 <code>Blocked</code> 有可能是锁导致的，能看到主线程被哪个锁阻塞，那个锁被哪个线程持有<br>有时候主线程没发现异常，看调用堆栈发现主线程正在执行 binder 相关操作，此时有可能是阻塞在这里（等待 binder 对面那端的响应）</p>
 <p>还找不到问题，就在 logcat 里搜索 anr 找到 anr 相关日志，它会有一个 CPU 负载统计，如果 io 占比很大说明卡在 io 上了，继续往上找找看当时正在做什么文件操作，或者在 trace 文件里找找</p>
-<h2 id="Double-Check-会有什么问题？"><a href="#Double-Check-会有什么问题？" class="headerlink" title="Double Check 会有什么问题？"></a>Double Check 会有什么问题？</h2><p><code>mSingleton = new Object();</code> 这行语句实际上会分解为多条 CPU 指令：</p>
+<h1 id="Double-Check-会有什么问题？"><a href="#Double-Check-会有什么问题？" class="headerlink" title="Double Check 会有什么问题？"></a>Double Check 会有什么问题？</h1><p><code>mSingleton = new Object();</code> 这行语句实际上会分解为多条 CPU 指令：</p>
 <ol>
 <li>为 <code>Object</code> 分配一块内存</li>
 <li>初始化 <code>Object</code> 实例</li>
@@ -303,8 +307,8 @@
 </ol>
 <p>但是「指令重排」可能导致第三部与第二部交换位置，也就是说把 <code>mSingleton</code> 指向了一块尚未初始化的内存区域；此时线程 B 在执行 <code>if (mSingleton == null)</code> 时就会发现 <code>mSingleton</code> 的确不为 null 并返回 <code>mSingleton</code>，从而导致程序异常（因为 <code>mSingleton</code> 指向的内存还没有初始化）</p>
 <p>使用 <code>volatile</code> 修饰 <code>mSingleton</code> 即可，<code>volatile</code> 可以防止相关指令的重排</p>
-<h2 id="IdleHandler-是怎么实现的？"><a href="#IdleHandler-是怎么实现的？" class="headerlink" title="IdleHandler 是怎么实现的？"></a><code>IdleHandler</code> 是怎么实现的？</h2><p>在 <code>MessageQueue.next</code> 里，当队列为空，或者还不到第一个消息的执行时间时（<code>Message</code> 是按照执行时间排序的），在 <code>MessageQueue.mIdleHandlers</code> 里的 <code>IdleHandler</code> 会被执行</p>
-<h2 id="Retrofit-是怎么接口的？"><a href="#Retrofit-是怎么接口的？" class="headerlink" title="Retrofit 是怎么接口的？"></a>Retrofit 是怎么接口的？</h2><p>使用动态代理 <code>Proxy.newProxyInstance</code>，其核心是方法拦截</p>
+<h1 id="IdleHandler-是怎么实现的？"><a href="#IdleHandler-是怎么实现的？" class="headerlink" title="IdleHandler 是怎么实现的？"></a><code>IdleHandler</code> 是怎么实现的？</h1><p>在 <code>MessageQueue.next</code> 里，当队列为空，或者还不到第一个消息的执行时间时（<code>Message</code> 是按照执行时间排序的），在 <code>MessageQueue.mIdleHandlers</code> 里的 <code>IdleHandler</code> 会被执行</p>
+<h1 id="Retrofit-是怎么接口的？"><a href="#Retrofit-是怎么接口的？" class="headerlink" title="Retrofit 是怎么接口的？"></a>Retrofit 是怎么接口的？</h1><p>使用动态代理 <code>Proxy.newProxyInstance</code>，其核心是方法拦截</p>
 <p>在运行时创建一个实现了所选接口的类，这个类的构造函数需要一个 <code>InvocationHandler</code>，接口所有的方法调用都会代理至 <code>InvocationHandler</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> &lt;T&gt; T Retrofit.create(<span class="hljs-keyword">final</span> Class&lt;T&gt; service) &#123;
   Utils.validateServiceInterface(service);
@@ -329,7 +333,7 @@
       &#125;);
 &#125;</code></pre></div>
 
-<h2 id="Activity-重建的过程"><a href="#Activity-重建的过程" class="headerlink" title="Activity 重建的过程"></a><code>Activity</code> 重建的过程</h2><p>旧的 <code>Activity</code> 走向死亡（<code>onPause</code> -&gt; <code>onStop</code> -&gt; <code>onDestroy</code>），新的 <code>Activity</code> 进入（<code>onCreate</code> -&gt; <code>onStart</code> -&gt; <code>onResume</code>）</p>
+<h1 id="Activity-重建的过程"><a href="#Activity-重建的过程" class="headerlink" title="Activity 重建的过程"></a><code>Activity</code> 重建的过程</h1><p>旧的 <code>Activity</code> 走向死亡（<code>onPause</code> -&gt; <code>onStop</code> -&gt; <code>onDestroy</code>），新的 <code>Activity</code> 进入（<code>onCreate</code> -&gt; <code>onStart</code> -&gt; <code>onResume</code>）</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleRelaunchActivity(...)
 
 <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleRelaunchActivityInner</span><span class="hljs-params">(ActivityClientRecord r, <span class="hljs-keyword">int</span> configChanges,</span></span>
@@ -373,7 +377,7 @@
     handleLaunchActivity(r, pendingActions, customIntent);
 &#125;</code></pre></div>
 
-<h3 id="ViewModel-和-Fragment-会随之重建吗"><a href="#ViewModel-和-Fragment-会随之重建吗" class="headerlink" title="ViewModel 和 Fragment 会随之重建吗?"></a><code>ViewModel</code> 和 <code>Fragment</code> 会随之重建吗?</h3><p>不会，在 <code>Activity.onStop</code> 之后 <code>Activity.onDestory</code> 之前，<code>FragmentActivity</code> 将 <code>Fragment</code> 和 <code>ViewModelStore</code> 借由方法 <code>onRetainNonConfigurationInstance</code> 传递给 <code>ActivityClientRecord</code> 保存<br>并在 <code>Activity.attach</code> 被重新赋值给新的 <code>Activity</code></p>
+<h2 id="ViewModel-和-Fragment-会随之重建吗"><a href="#ViewModel-和-Fragment-会随之重建吗" class="headerlink" title="ViewModel 和 Fragment 会随之重建吗?"></a><code>ViewModel</code> 和 <code>Fragment</code> 会随之重建吗?</h2><p>不会，在 <code>Activity.onStop</code> 之后 <code>Activity.onDestory</code> 之前，<code>FragmentActivity</code> 将 <code>Fragment</code> 和 <code>ViewModelStore</code> 借由方法 <code>onRetainNonConfigurationInstance</code> 传递给 <code>ActivityClientRecord</code> 保存<br>并在 <code>Activity.attach</code> 被重新赋值给新的 <code>Activity</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object FragmentActivity.onRetainNonConfigurationInstance() &#123;
     Object custom = onRetainCustomNonConfigurationInstance()
     FragmentManagerNonConfig fragments = mFragments.retainNestedNonConfig()
@@ -455,9 +459,9 @@
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
-<h2 id="CountDownLatch-和-CyclicBarrier-的区别"><a href="#CountDownLatch-和-CyclicBarrier-的区别" class="headerlink" title="CountDownLatch 和 CyclicBarrier 的区别"></a><code>CountDownLatch</code> 和 <code>CyclicBarrier</code> 的区别</h2><p>开始多个线程通过 <code>CountDownLatch.await()</code> 被它阻塞，然后其他线程执行完一个任务就通过 <code>countDown()</code> 把里面的计算器 <code>count</code> 减一，直到计数器归零阻塞的线程才被唤醒；它是 oneshot 不能重复使用，内部通过 <code>AQS</code> 实现</p>
+<h1 id="CountDownLatch-和-CyclicBarrier-的区别"><a href="#CountDownLatch-和-CyclicBarrier-的区别" class="headerlink" title="CountDownLatch 和 CyclicBarrier 的区别"></a><code>CountDownLatch</code> 和 <code>CyclicBarrier</code> 的区别</h1><p>开始多个线程通过 <code>CountDownLatch.await()</code> 被它阻塞，然后其他线程执行完一个任务就通过 <code>countDown()</code> 把里面的计算器 <code>count</code> 减一，直到计数器归零阻塞的线程才被唤醒；它是 oneshot 不能重复使用，内部通过 <code>AQS</code> 实现</p>
 <p>N 个并行线程执行任务，执行完就阻塞在 <code>CyclicBarrier.await()</code> 上面，直到 N 个线程都执行完任务，最后一个调用 <code>await()</code> 的线程执行完 <code>barrierCommand</code> 后，其他线程被唤醒，而 <code>CyclicBarrier</code> 被重置为初始状态；不同于 <code>CountDownLatch</code> 的一次性，<code>CyclicBarrier</code> 可以重复使用</p>
-<h2 id="如何让-N-个线程串行执行？"><a href="#如何让-N-个线程串行执行？" class="headerlink" title="如何让 N 个线程串行执行？"></a>如何让 N 个线程串行执行？</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JoinThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
+<h1 id="如何让-N-个线程串行执行？"><a href="#如何让-N-个线程串行执行？" class="headerlink" title="如何让 N 个线程串行执行？"></a>如何让 N 个线程串行执行？</h1><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JoinThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
     <span class="hljs-keyword">private</span> Runnable task;
     <span class="hljs-keyword">private</span> Thread prev;
 
@@ -476,8 +480,8 @@
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="5-个线程，前-4-个执行完后才执行第-5-个"><a href="#5-个线程，前-4-个执行完后才执行第-5-个" class="headerlink" title="5 个线程，前 4 个执行完后才执行第 5 个"></a>5 个线程，前 4 个执行完后才执行第 5 个</h2><p>用 <code>CountDownLatch</code>，计算器设为 4，第 5 个线程通过 <code>await()</code> 阻塞在计数器上面，前 4 个执行到最后一步时使计数器减一，当计数器为零时第 5 个线程被唤醒</p>
-<h2 id="两个线程交替输出-1-100"><a href="#两个线程交替输出-1-100" class="headerlink" title="两个线程交替输出 1 - 100"></a>两个线程交替输出 1 - 100</h2><h3 id="自旋-volatile"><a href="#自旋-volatile" class="headerlink" title="自旋 + volatile"></a>自旋 + <code>volatile</code></h3><p>既然是交替输出，那必然一个输出奇数一个输出偶数，输出日志这一操作是很快的，所以可以考虑乐观锁：自旋</p>
+<h1 id="5-个线程，前-4-个执行完后才执行第-5-个"><a href="#5-个线程，前-4-个执行完后才执行第-5-个" class="headerlink" title="5 个线程，前 4 个执行完后才执行第 5 个"></a>5 个线程，前 4 个执行完后才执行第 5 个</h1><p>用 <code>CountDownLatch</code>，计算器设为 4，第 5 个线程通过 <code>await()</code> 阻塞在计数器上面，前 4 个执行到最后一步时使计数器减一，当计数器为零时第 5 个线程被唤醒</p>
+<h1 id="两个线程交替输出-1-100"><a href="#两个线程交替输出-1-100" class="headerlink" title="两个线程交替输出 1 - 100"></a>两个线程交替输出 1 - 100</h1><h2 id="自旋-volatile"><a href="#自旋-volatile" class="headerlink" title="自旋 + volatile"></a>自旋 + <code>volatile</code></h2><p>既然是交替输出，那必然一个输出奇数一个输出偶数，输出日志这一操作是很快的，所以可以考虑乐观锁：自旋</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">int</span> count;
@@ -526,7 +530,7 @@
     &#125;
 &#125;</code></pre></div>
 
-<h3 id="基于条件变量-Condition"><a href="#基于条件变量-Condition" class="headerlink" title="基于条件变量 Condition"></a>基于条件变量 <code>Condition</code></h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
+<h2 id="基于条件变量-Condition"><a href="#基于条件变量-Condition" class="headerlink" title="基于条件变量 Condition"></a>基于条件变量 <code>Condition</code></h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">App</span> </span>&#123;
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">int</span> count;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ReentrantLock lock = <span class="hljs-keyword">new</span> ReentrantLock();
@@ -561,9 +565,110 @@
     &#125;
 &#125;</code></pre></div>
 
-<h3 id="思考：N-个线程按顺序输出-1-100-？"><a href="#思考：N-个线程按顺序输出-1-100-？" class="headerlink" title="思考：N 个线程按顺序输出 1 - 100 ？"></a>思考：N 个线程按顺序输出 1 - 100 ？</h3><p>不使用锁的情况下，把判断奇偶的逻辑改一下，通过 <code>(count % N) == i</code> 判断该数字是否应该由当前线程打印</p>
+<h2 id="思考：N-个线程按顺序输出-1-100-？"><a href="#思考：N-个线程按顺序输出-1-100-？" class="headerlink" title="思考：N 个线程按顺序输出 1 - 100 ？"></a>思考：N 个线程按顺序输出 1 - 100 ？</h2><p>不使用锁的情况下，把判断奇偶的逻辑改一下，通过 <code>(count % N) == i</code> 判断该数字是否应该由当前线程打印</p>
 <p>用条件变量的情况下，每个线程都在自己的条件变量上阻塞，前面的线程持有下一个线程的条件变量（形成一个环），打印完后唤醒下一个线程；开始时主线程主动唤醒第一个线程</p>
+<h1 id="LinkedHashMap"><a href="#LinkedHashMap" class="headerlink" title="LinkedHashMap"></a>LinkedHashMap</h1><p>在 HashMap 的基础上给 Entry 添加了先后次序，也就说它里面的 Entry 是有序的：LinkedHashMap = HashMap + LinkedList，是 <code>LRU</code> 算法的典型实现</p>
+<blockquote>
+<p>Least Recently Used，即最近最少使用，是一种常用的页面置换算法，选择最近最久未使用的页面予以淘汰</p>
+</blockquote>
+<ul>
+<li>Entry 的实现为 LinkedHashMapEntry，它增加了 <code>before</code> 和 <code>after</code> 两个成员变量分别指向上一节点和下一节点，这样所有的 Entry 都可以通过这两个指针串联成一个 LinkedList</li>
+<li><code>LinkedHashMapEntry</code> 增加了 <code>head</code> 和 <code>tail</code> 成员变量分别指向 LinkedList 的头节点和尾结点，这样 entry list 就变成了双向链表</li>
+<li><code>head</code> 是最旧的节点，而 <code>tail</code> 是最新的节点</li>
+<li>还增加了标识 <code>accessOrder</code>，<code>true</code>：entry list 按访问时间排序（最近访问的是尾结点），<code>false</code>：entry list 按插入次序排序（最近插入的是尾结点）</li>
+<li>迭代器（Iterator）从 <code>head</code> 开始遍历</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LinkedHashMapEntry</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">HashMap</span>.<span class="hljs-title">Node</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; </span>&#123;
+    LinkedHashMapEntry&lt;K,V&gt; before, after;
+    LinkedHashMapEntry(<span class="hljs-keyword">int</span> hash, K key, V value, Node&lt;K,V&gt; next) &#123;
+        <span class="hljs-keyword">super</span>(hash, key, value, next);
+    &#125;
+&#125;
 
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LinkedHashMap</span> </span>&#123;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * The head (eldest) of the doubly linked list.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">transient</span> LinkedHashMapEntry&lt;K,V&gt; head;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * The tail (youngest) of the doubly linked list.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">transient</span> LinkedHashMapEntry&lt;K,V&gt; tail;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * The iteration ordering method for this linked hash map: &lt;tt&gt;true&lt;/tt&gt;</span>
+<span class="hljs-comment">     * for access-order, &lt;tt&gt;false&lt;/tt&gt; for insertion-order.</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@serial</span></span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> accessOrder;    
+&#125;</code></pre></div>
+
+<ul>
+<li>新插入的节点作为新的尾结点 <code>tail</code>，相当于 <code>append</code> 到 LinkedList 上，新插入的节点也可以认为是最近访问的节点</li>
+<li>当按访问时间排序时（<code>accessOrder == true</code>），<code>get(key)</code> 会导致 Entry 成为新的 <code>tail</code></li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LinkedHashMap</span> </span>&#123;
+    <span class="hljs-function">Node&lt;K,V&gt; <span class="hljs-title">newNode</span><span class="hljs-params">(<span class="hljs-keyword">int</span> hash, K key, V value, Node&lt;K,V&gt; e)</span> </span>&#123;
+        LinkedHashMapEntry&lt;K,V&gt; p =
+            <span class="hljs-keyword">new</span> LinkedHashMapEntry&lt;K,V&gt;(hash, key, value, e);
+        linkNodeLast(p);
+        <span class="hljs-keyword">return</span> p;
+    &#125;
+
+    <span class="hljs-function">TreeNode&lt;K,V&gt; <span class="hljs-title">newTreeNode</span><span class="hljs-params">(<span class="hljs-keyword">int</span> hash, K key, V value, Node&lt;K,V&gt; next)</span> </span>&#123;
+        TreeNode&lt;K,V&gt; p = <span class="hljs-keyword">new</span> TreeNode&lt;K,V&gt;(hash, key, value, next);
+        linkNodeLast(p);
+        <span class="hljs-keyword">return</span> p;
+    &#125;
+
+    <span class="hljs-comment">// link at the end of list</span>
+    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">linkNodeLast</span><span class="hljs-params">(LinkedHashMapEntry&lt;K,V&gt; p)</span> </span>&#123;
+        LinkedHashMapEntry&lt;K,V&gt; last = tail;
+        tail = p;
+        <span class="hljs-keyword">if</span> (last == <span class="hljs-keyword">null</span>)
+            head = p;
+        <span class="hljs-keyword">else</span> &#123;
+            p.before = last;
+            last.after = p;
+        &#125;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> V <span class="hljs-title">get</span><span class="hljs-params">(Object key)</span> </span>&#123;
+        Node&lt;K,V&gt; e;
+        <span class="hljs-keyword">if</span> ((e = getNode(hash(key), key)) == <span class="hljs-keyword">null</span>)
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+        <span class="hljs-keyword">if</span> (accessOrder)
+            afterNodeAccess(e);
+        <span class="hljs-keyword">return</span> e.value;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">afterNodeAccess</span><span class="hljs-params">(Node&lt;K,V&gt; e)</span> </span>&#123; <span class="hljs-comment">// move node to last</span>
+        LinkedHashMapEntry&lt;K,V&gt; last;
+        <span class="hljs-keyword">if</span> (accessOrder &amp;&amp; (last = tail) != e) &#123;
+            LinkedHashMapEntry&lt;K,V&gt; p =
+                (LinkedHashMapEntry&lt;K,V&gt;)e, b = p.before, a = p.after;
+            p.after = <span class="hljs-keyword">null</span>;
+            <span class="hljs-keyword">if</span> (b == <span class="hljs-keyword">null</span>)
+                head = a;
+            <span class="hljs-keyword">else</span>
+                b.after = a;
+            <span class="hljs-keyword">if</span> (a != <span class="hljs-keyword">null</span>)
+                a.before = b;
+            <span class="hljs-keyword">else</span>
+                last = b;
+            <span class="hljs-keyword">if</span> (last == <span class="hljs-keyword">null</span>)
+                head = p;
+            <span class="hljs-keyword">else</span> &#123;
+                p.before = last;
+                last.after = p;
+            &#125;
+            tail = p;
+            ++modCount;
+        &#125;
+    &#125;                    
+&#125;</code></pre></div>
             </div>
             <hr>
             <div>
@@ -574,6 +679,12 @@
                     <i class="iconfont icon-tags"></i>
                     
                       <a class="hover-with-bg" href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%A4%87%E5%BF%98%E5%BD%95/">备忘录</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E7%AC%94%E8%AE%B0/">笔记</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E7%9F%A5%E8%AF%86%E7%82%B9/">知识点</a>
                     
                   </div>
                 

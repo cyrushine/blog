@@ -15,10 +15,10 @@
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   
   <meta name="theme-color" content="#141414">
-  <meta name="description" content="">
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
-  <meta name="description" content="在团队合作中，毫无疑问，我们需要一个版本管理工具，相对于 SVN 这种在我们看来是老古董的工具，Git 在年轻化的团队中更受欢迎。并不仅仅是跟着大神们（Linux系）的路子在走，所以感觉很牛逼，而是 Git 真的很牛逼，当然，牛逼的同时你需要的学习曲线也是很陡的。这几天我就遇到了一个问题，其实也不是遇到问题，而是遇到了疑惑，那就是我在 github 系统中 merge 同时的 PR 的时候发现有好">
+  
+    <meta name="description" content="在团队合作中，毫无疑问，我们需要一个版本管理工具，相对于 SVN 这种在我们看来是老古董的工具，Git 在年轻化的团队中更受欢迎。并不仅仅是跟着大神们（Linux系）的路子在走，所以感觉很牛逼，而是 Git 真的很牛逼，当然，牛逼的同时你需要的学习曲线也是很陡的。这几天我就遇到了一个问题，其实也不是遇到问题，而是遇到了疑惑，那就是我在 github 系统中 merge 同时的 PR 的时候发现有好">
 <meta property="og:type" content="article">
 <meta property="og:title" content="git 的 merge, rebase 和 squash">
 <meta property="og:url" content="https://www.dalvik.work/2020/09/05/merge-rebase-squash/index.html">
@@ -33,11 +33,12 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-09-05-merge-rebase-squash/05.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-09-05-merge-rebase-squash/06.png">
 <meta property="article:published_time" content="2020-09-05T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-17T10:58:56.167Z">
+<meta property="article:modified_time" content="2021-12-21T03:47:41.307Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="git">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2020-09-05-merge-rebase-squash/00.png">
+  
   
   <title>git 的 merge, rebase 和 squash - Cyrus Blog</title>
 
@@ -80,7 +81,7 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
@@ -204,7 +205,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      6 分钟
+      18 分钟
     </span>
   
 
