@@ -1391,6 +1391,251 @@ class EncodedMemoryCacheConsumer {
 }
 ```
 
+# 内存缓存（decoded, Bitmap）
+
+`BitmapMemoryCacheProducer` 实现了 `Bitmap` 的内存缓存，整个逻辑比较简单：
+
+* 默认开启，可以通过 `ImageRequestBuilder.disableMemoryCache` 关闭
+* 去程时从缓存里读，命中的话截胡，返回缓存在内存中的 `Bitmap`
+* 回程时写入缓存
+
+```java
+class BitmapMemoryCacheProducer {
+  public void produceResults(
+      final Consumer<CloseableReference<CloseableImage>> consumer,
+      final ProducerContext producerContext) {
+    try {
+      if (FrescoSystrace.isTracing()) {
+        FrescoSystrace.beginSection("BitmapMemoryCacheProducer#produceResults");
+      }
+      final ProducerListener2 listener = producerContext.getProducerListener();
+      listener.onProducerStart(producerContext, getProducerName());
+      final ImageRequest imageRequest = producerContext.getImageRequest();
+      final Object callerContext = producerContext.getCallerContext();
+      final CacheKey cacheKey = mCacheKeyFactory.getBitmapCacheKey(imageRequest, callerContext);
+      final boolean isBitmapCacheEnabledForRead =
+          producerContext
+              .getImageRequest()
+              .isCacheEnabled(ImageRequest.CachesLocationsMasks.BITMAP_READ);
+
+      CloseableReference<CloseableImage> cachedReference =
+          isBitmapCacheEnabledForRead ? mMemoryCache.get(cacheKey) : null;
+
+      if (cachedReference != null) {
+        maybeSetExtrasFromCloseableImage(cachedReference.get(), producerContext);
+        boolean isFinal = cachedReference.get().getQualityInfo().isOfFullQuality();
+        if (isFinal) {
+          listener.onProducerFinishWithSuccess(
+              producerContext,
+              getProducerName(),
+              listener.requiresExtraMap(producerContext, getProducerName())
+                  ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, "true")
+                  : null);
+          listener.onUltimateProducerReached(producerContext, getProducerName(), true);
+          producerContext.putOriginExtra("memory_bitmap", getOriginSubcategory());
+          consumer.onProgressUpdate(1f);
+        }
+        consumer.onNewResult(cachedReference, BaseConsumer.simpleStatusForIsLast(isFinal));
+        cachedReference.close();
+        if (isFinal) {
+          return;
+        }
+      }
+      // ...
+  }
+
+  protected Consumer<CloseableReference<CloseableImage>> wrapConsumer(
+      final Consumer<CloseableReference<CloseableImage>> consumer,
+      final CacheKey cacheKey,
+      final boolean isBitmapCacheEnabledForWrite) {
+    return new DelegatingConsumer<
+        CloseableReference<CloseableImage>, CloseableReference<CloseableImage>>(consumer) {
+      @Override
+      public void onNewResultImpl(
+          @Nullable CloseableReference<CloseableImage> newResult, @Status int status) {
+        try {
+          // ...
+          // cache, if needed, and forward the new result
+          CloseableReference<CloseableImage> newCachedResult = null;
+          if (isBitmapCacheEnabledForWrite) {
+            newCachedResult = mMemoryCache.cache(cacheKey, newResult);
+          }
+          try {
+            if (isLast) getConsumer().onProgressUpdate(1f);
+            getConsumer().onNewResult((newCachedResult != null) ? newCachedResult : newResult, status);
+          } finally { CloseableReference.closeSafely(newCachedResult); }
+        } finally {
+          if (FrescoSystrace.isTracing()) FrescoSystrace.endSection();
+        }
+      }
+    };
+  }    
+}
+```
+
+`Bitmap` 内存缓存的实现是 `LruCountingMemoryCache<CacheKey, CloseableImage>`
+
+
+
+# DecodeProducer - 解码
+
+负责将各种压缩图片格式（JPEG、WEBP 等）解码（比如 `Bitmap`）的 ImagePipeline 节点，它通过 `SOI` 识别其格式并交由对应的 `ImageDecoder` 处理，方法栈如下：
+
+```java
+DecodeProducer.produceResults
+ProgressiveDecoder.onNewResultImpl
+NetworkImagesProgressiveDecoder.updateDecodeJob
+ProgressiveDecoder.doDecode
+ProgressiveDecoder.internalDecode
+
+class DefaultImageDecoder {
+  public CloseableImage decode(
+      final EncodedImage encodedImage,
+      final int length,
+      final QualityInfo qualityInfo,
+      final ImageDecodeOptions options) {
+    
+    // 自定义的解码器
+    if (options.customImageDecoder != null) {
+      return options.customImageDecoder.decode(encodedImage, length, qualityInfo, options);
+    }
+    ImageFormat imageFormat = encodedImage.getImageFormat();
+    if (imageFormat == null || imageFormat == ImageFormat.UNKNOWN) {
+      InputStream inputStream = encodedImage.getInputStream();
+      if (inputStream != null) {
+        imageFormat = ImageFormatChecker.getImageFormat_WrapIOException(inputStream);
+        encodedImage.setImageFormat(imageFormat);
+      }
+    }
+    if (mCustomDecoders != null) {
+      ImageDecoder decoder = mCustomDecoders.get(imageFormat);
+      if (decoder != null) {
+        return decoder.decode(encodedImage, length, qualityInfo, options);
+      }
+    }
+
+    // Fresco 内置的解码器
+    return mDefaultDecoder.decode(encodedImage, length, qualityInfo, options);
+  }  
+}
+```
+
+Fresco 内置了对常用图片格式如：JPEG、GIF、WEBP 等的支持，这些图片格式定义在 `DefaultImageFormats`，并在 `DefaultImageFormatChecker.determineFormat(headerBytes, headerSize)` 实现了高效的、基于 `SOI` 的图片格式判别逻辑（start of image，也就是图片文件头几个字节的内容，作为特征码进行识别）
+
+对于 Fresco 不支持的格式，可以通过 `ImageDecoderConfig.Builder.addDecodingCapability(imageFormat, imageFormatChecker, decoder)` 添加自定义解码器
+
+```java
+class DefaultImageFormats {
+  public static final ImageFormat JPEG = new ImageFormat("JPEG", "jpeg");
+  public static final ImageFormat PNG = new ImageFormat("PNG", "png");
+  public static final ImageFormat GIF = new ImageFormat("GIF", "gif");
+  public static final ImageFormat BMP = new ImageFormat("BMP", "bmp");
+  public static final ImageFormat ICO = new ImageFormat("ICO", "ico");
+  public static final ImageFormat WEBP_SIMPLE = new ImageFormat("WEBP_SIMPLE", "webp");
+  public static final ImageFormat WEBP_LOSSLESS = new ImageFormat("WEBP_LOSSLESS", "webp");
+  public static final ImageFormat WEBP_EXTENDED = new ImageFormat("WEBP_EXTENDED", "webp");
+  public static final ImageFormat WEBP_EXTENDED_WITH_ALPHA =
+      new ImageFormat("WEBP_EXTENDED_WITH_ALPHA", "webp");
+  public static final ImageFormat WEBP_ANIMATED = new ImageFormat("WEBP_ANIMATED", "webp");
+  public static final ImageFormat HEIF = new ImageFormat("HEIF", "heif");
+  public static final ImageFormat DNG = new ImageFormat("DNG", "dng");  
+}
+
+class ImageFormatChecker {
+  public static ImageFormat getImageFormat(final InputStream is) throws IOException {
+    return getInstance().determineImageFormat(is);
+  }
+
+  public ImageFormat determineImageFormat(final InputStream is) throws IOException {
+    Preconditions.checkNotNull(is);
+    final byte[] imageHeaderBytes = new byte[mMaxHeaderLength];
+    final int headerSize = readHeaderFromStream(mMaxHeaderLength, is, imageHeaderBytes);
+
+    ImageFormat format = mDefaultFormatChecker.determineFormat(imageHeaderBytes, headerSize);
+    if (format != null && format != ImageFormat.UNKNOWN) {
+      return format;
+    }
+
+    if (mCustomImageFormatCheckers != null) {
+      for (ImageFormat.FormatChecker formatChecker : mCustomImageFormatCheckers) {
+        format = formatChecker.determineFormat(imageHeaderBytes, headerSize);
+        if (format != null && format != ImageFormat.UNKNOWN) {
+          return format;
+        }
+      }
+    }
+    return ImageFormat.UNKNOWN;
+  }    
+}
+
+class DefaultImageFormatChecker {
+
+  /**
+   * Every JPEG image should start with SOI mark (0xFF, 0xD8) followed by beginning of another
+   * segment (0xFF)
+   */
+  private static final byte[] JPEG_HEADER = new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+
+  public final ImageFormat determineFormat(byte[] headerBytes, int headerSize) {
+    Preconditions.checkNotNull(headerBytes);
+
+    if (!mUseNewOrder && WebpSupportStatus.isWebpHeader(headerBytes, 0, headerSize)) {
+      return getWebpFormat(headerBytes, headerSize);
+    }
+
+    if (isJpegHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.JPEG;
+    }
+
+    if (isPngHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.PNG;
+    }
+
+    if (mUseNewOrder && WebpSupportStatus.isWebpHeader(headerBytes, 0, headerSize)) {
+      return getWebpFormat(headerBytes, headerSize);
+    }
+
+    if (isGifHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.GIF;
+    }
+
+    if (isBmpHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.BMP;
+    }
+
+    if (isIcoHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.ICO;
+    }
+
+    if (isHeifHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.HEIF;
+    }
+
+    if (isDngHeader(headerBytes, headerSize)) {
+      return DefaultImageFormats.DNG;
+    }
+
+    return ImageFormat.UNKNOWN;
+  }
+
+  private static boolean isJpegHeader(final byte[] imageHeaderBytes, final int headerSize) {
+    return headerSize >= JPEG_HEADER.length
+        && ImageFormatCheckerUtils.startsWithPattern(imageHeaderBytes, JPEG_HEADER);
+  }
+}
+```
+
+## JPEG
+
+| Condition | Decoder | Core API |
+|-----------|---------|----------|
+| >= Android 8 Oreo API 26     | OreoDecoder: DefaultDecoder                    | BitmapFactory.decodeStream <br /> BitmapRegionDecoder.decodeRegion |
+| >= Android 5 Lolipop API 21  | ArtDecoder: DefaultDecoder                     | BitmapFactory.decodeStream <br /> BitmapRegionDecoder.decodeRegion |
+| <= Android 4.4 KitKat API 19 | KitKatPurgeableDecoder: DalvikPurgeableDecoder | BitmapFactory.decodeByteArray |
+| < Android 4.4 KitKat API 19 & <br /> `ImagePipelineExperiments.isGingerbreadDecoderEnabled` | GingerbreadPurgeableDecoder: DalvikPurgeableDecoder | MemoryFile <br /> BitmapFactory.decodeStream <br /> native webp decoder |
+
+
+
 # 其他 ImagePipeline 节点
 
 ## MultiplexProducer
