@@ -1473,9 +1473,239 @@ class BitmapMemoryCacheProducer {
 }
 ```
 
-`Bitmap` 内存缓存的实现是 `LruCountingMemoryCache<CacheKey, CloseableImage>`
+# LruCountingMemoryCache
 
+内存缓存（包括 encoded 和 decoded）的实现是 `LruCountingMemoryCache<CacheKey, CloseableImage>`，它有一些参数（可通过 `ImagePipelineConfig.Builder.setBitmapMemoryCacheParamsSupplier` 配置）：
 
+| Name | Description | 默认值 |
+|------|-------------|------|
+| MemoryCacheParams.maxCacheSize            | 整个缓存的容量（字节），包括空闲的和使用中的 | 堆内存 < 32M 则取 4M，< 64M 则取 6M，Android 3.0 HONEYCOMB API 11 以下则取 8M，否则取 1/4 堆内存大小 |
+| MemoryCacheParams.maxCacheEntries         | 整个缓存里 Entry 数量的上限                | 256               |
+| MemoryCacheParams.maxEvictionQueueSize    | eviction queue 的容量上限                 | Integer.MAX_VALUE |
+| MemoryCacheParams.maxEvictionQueueEntries | eviction queue 里 Entry 数量的上限        | Integer.MAX_VALUE |
+| MemoryCacheParams.maxCacheEntrySize       | 单个 Entry 的大小上限，超过此阈值不缓存     | Integer.MAX_VALUE |
+
+> eviction queue 指没有被使用、可被安全回收（evict）的缓存对象的集合
+
+`LruCountingMemoryCache` 的核心数据结构、也是实现 `LRU` 算法和 key-value 映射的是 [LinkedHashMap](../../../../2021/01/19/reviews/)，它内部有两个 Map：
+
+* `mCachedEntries`：存放所有的缓存条目，按最近访问排序（虽然它里面的 `LruCountingMemoryCache` 是按插入顺序排序，但 `取缓存` 和 `回收缓存` 两个操作对应的 `LinkedHashMap` API 是删除和插入，所以最终效果还是按最近访问排序），这里就实现了 `LRU`
+* `mExclusiveEntries`：存放空闲的、未被使用、可被安全回收的缓存条目，它是 `mCachedEntries` 的一个子集，也是上面所说的 `eviction queue`
+
+通过 `cache(key, valueRef)` 放入缓存或者 `get(key)` 取得缓存对象，会返回一个 `CloseableReference`，直到 `CloseableReference.close` 释放/回收缓存对象前，此时缓存条目都只存在于 `mCachedEntries`；只有当缓存条目不再被任何人持有/引用（`CountingMemoryCache.Entry.clientCount == 0`），它才会被添加到 `mExclusiveEntries`，表示它可以被安全释放
+
+```java
+class LruCountingMemoryCache {
+
+  // Contains the items that are not being used by any client and are hence viable for eviction.
+  final CountingLruMap<K, Entry<K, V>> mExclusiveEntries;
+
+  // Contains all the cached items including the exclusively owned ones.
+  final CountingLruMap<K, Entry<K, V>> mCachedEntries;  
+
+  public CloseableReference<V> cache(final K key, final CloseableReference<V> valueRef)
+
+  public CloseableReference<V> get(final K key)  
+}
+```
+
+添加缓存的逻辑：
+1. key 下有无使用中的旧值，有的话将其标识为孤儿（`Entry.isOrphan = true`），那么当旧值用完、调用 `CloseableReference.close` 时（最终会调用 `LruCountingMemoryCache.releaseClientReference(entry)`）就不会再添加到 `mExclusiveEntries` 而是释放对象，因为此 key 对应的值已被替换为新值
+2. 当满足以下条件时，value 被添加到 `mCachedEntries`，新添加的 Entry 的初始值 isOrphan == false && clientCount == 1，解释下：不是孤儿 Entry 且引用计数为 1
+  1. value size 要小于等于 `maxCacheEntrySize`
+  2. 使用中的 Entry 数量要小于 `maxCacheEntries`，`使用中` 是指存在于 `mCachedEntries` 但不在 `mExclusiveEntries`
+  3. 使用中的 Entry 的总大小加上 value 大小要小于等于 `maxCacheSize`
+3. 执行 `evict` 逻辑，淘汰/释放一些 `mExclusiveEntries` 中的 Entry 以满足约束条件
+3. 返回一个 `CloseableReference`，当它的 `CloseableReference.close` 被调用的同时 `LruCountingMemoryCache.releaseClientReference(entry)` 也被执行
+
+```java
+class LruCountingMemoryCache {
+  public @Nullable CloseableReference<V> cache(
+      final K key,
+      final CloseableReference<V> valueRef,
+      final @Nullable EntryStateObserver<K> observer) {
+    Preconditions.checkNotNull(key);
+    Preconditions.checkNotNull(valueRef);
+
+    maybeUpdateCacheParams();
+
+    Entry<K, V> oldExclusive;
+    CloseableReference<V> oldRefToClose = null;
+    CloseableReference<V> clientRef = null;
+    synchronized (this) {
+      // remove the old item (if any) as it is stale now
+      oldExclusive = mExclusiveEntries.remove(key);
+      Entry<K, V> oldEntry = mCachedEntries.remove(key);
+      if (oldEntry != null) {
+        makeOrphan(oldEntry);
+        oldRefToClose = referenceToClose(oldEntry);
+      }
+
+      V value = valueRef.get();
+      int size = mValueDescriptor.getSizeInBytes(value);
+      if (canCacheNewValueOfSize(size)) {
+        Entry<K, V> newEntry;
+        if (mStoreEntrySize) {
+          newEntry = Entry.of(key, valueRef, size, observer);
+        } else {
+          newEntry = Entry.of(key, valueRef, observer);
+        }
+        mCachedEntries.put(key, newEntry);
+        clientRef = newClientReference(newEntry);
+      }
+    }
+    CloseableReference.closeSafely(oldRefToClose);
+    maybeNotifyExclusiveEntryRemoval(oldExclusive);
+
+    maybeEvictEntries();
+    return clientRef;
+  }
+
+  private synchronized void makeOrphan(Entry<K, V> entry) {
+    Preconditions.checkNotNull(entry);
+    Preconditions.checkState(!entry.isOrphan);
+    entry.isOrphan = true;
+  }
+
+  private synchronized boolean canCacheNewValueOfSize(int newValueSize) {
+    return (newValueSize <= mMemoryCacheParams.maxCacheEntrySize)
+        && (getInUseCount() <= mMemoryCacheParams.maxCacheEntries - 1)
+        && (getInUseSizeInBytes() <= mMemoryCacheParams.maxCacheSize - newValueSize);
+  }
+
+  private synchronized CloseableReference<V> newClientReference(final Entry<K, V> entry) {
+    increaseClientCount(entry);
+    return CloseableReference.of(
+        entry.valueRef.get(),
+        new ResourceReleaser<V>() {
+          @Override
+          public void release(V unused) {
+            releaseClientReference(entry);
+          }
+        });
+  }         
+}
+```
+
+释放一个 Entry 的逻辑：
+
+1. 引用数减一（`Entry.clientCount--`）
+2. 如果没有被引用且不是孤儿（`Entry.isOrphan == false`），说明此 Entry 没有从 MemoryCache 中被移除（`evict` 或者被相同 key 的新值覆盖都会导致 Entry 被移除，成为孤儿），添加到空闲集合 `mExclusiveEntries`
+3. 如果没有被引用且是孤儿，则将引用置空释放对象
+4. 往空闲集合添加了元素后可能会不符合 MemoryCache 的约束条件，需要执行一次 `evict` 逻辑
+
+```java
+private void releaseClientReference(final Entry<K, V> entry) {
+  Preconditions.checkNotNull(entry);
+  boolean isExclusiveAdded;
+  CloseableReference<V> oldRefToClose;
+  synchronized (this) {
+    decreaseClientCount(entry);
+    isExclusiveAdded = maybeAddToExclusives(entry);
+    oldRefToClose = referenceToClose(entry);
+  }
+  CloseableReference.closeSafely(oldRefToClose);
+  maybeNotifyExclusiveEntryInsertion(isExclusiveAdded ? entry : null);
+  maybeUpdateCacheParams();
+  maybeEvictEntries();
+}
+```
+
+淘汰逻辑（`evict`），针对的是存在于 `mExclusiveEntries` 中的无人引用的 Entry：
+
+1. 两个方面的约束：Entry 的数量和 Entry 的总大小，从多个阈值中取最小值：
+  1. maxEvictionQueueEntries/maxEvictionQueueSize，专门针对空闲 Entry 的约束
+  2. maxCacheEntries/maxCacheSize，针对整个 memory cache（包括空闲的 Entry 和使用中的 Entry）的约束，减去使用中的就是针对空闲 Entry 的约束
+2. 从 `mExclusiveEntries` 逐个剔除 Entry 直到满足上面的容量和大小的约束条件，而剔除的顺序就是 `LinkedHashMap` 迭代器的顺序，上面说过最终顺序是按访问排序（也就实现了 `LRU`）
+3. 将剔除的 Entry 集合标识为 `孤儿` 并删除（`CloseableReference.close` 最终会调用 `LruCountingMemoryCache.releaseClientReference(entry)`）
+
+```java
+class LruCountingMemoryCache {
+  public void maybeEvictEntries() {
+    ArrayList<Entry<K, V>> oldEntries;
+    synchronized (this) {
+      int maxCount =
+          Math.min(
+              mMemoryCacheParams.maxEvictionQueueEntries,
+              mMemoryCacheParams.maxCacheEntries - getInUseCount());
+      int maxSize =
+          Math.min(
+              mMemoryCacheParams.maxEvictionQueueSize,
+              mMemoryCacheParams.maxCacheSize - getInUseSizeInBytes());
+      oldEntries = trimExclusivelyOwnedEntries(maxCount, maxSize);
+      makeOrphans(oldEntries);
+    }
+    maybeClose(oldEntries);
+    maybeNotifyExclusiveEntryRemoval(oldEntries);
+  }
+
+  private synchronized ArrayList<Entry<K, V>> trimExclusivelyOwnedEntries(int count, int size) {
+    count = Math.max(count, 0);
+    size = Math.max(size, 0);
+    // fast path without array allocation if no eviction is necessary
+    if (mExclusiveEntries.getCount() <= count && mExclusiveEntries.getSizeInBytes() <= size) {
+      return null;
+    }
+    ArrayList<Entry<K, V>> oldEntries = new ArrayList<>();
+    while (mExclusiveEntries.getCount() > count || mExclusiveEntries.getSizeInBytes() > size) {
+      @Nullable K key = mExclusiveEntries.getFirstKey();
+      if (key == null) {
+        if (mIgnoreSizeMismatch) {
+          mExclusiveEntries.resetSize();
+          break;
+        }
+        throw new IllegalStateException(
+            String.format(
+                "key is null, but exclusiveEntries count: %d, size: %d",
+                mExclusiveEntries.getCount(), mExclusiveEntries.getSizeInBytes()));
+      }
+      mExclusiveEntries.remove(key);
+      oldEntries.add(mCachedEntries.remove(key));
+    }
+    return oldEntries;
+  }    
+}
+
+class CountingLruMap<K, V> {
+  private final LinkedHashMap<K, V> mMap = new LinkedHashMap<>();  
+
+  public synchronized K getFirstKey() {
+    return mMap.isEmpty() ? null : mMap.keySet().iterator().next();
+  }  
+}
+```
+
+取缓存时，是直接从 `mExclusiveEntries` 删除，`CloseableReference.close` 的时候再重新插入到 `mExclusiveEntries` 里，所以虽然 `mExclusiveEntries` 里的 `LinkedHashMap` 是按插入排序的，但从 MemoryCache 的角度看 `mExclusiveEntries` 是按访问排序的，`evict` 时就从最久未访问的 Entry 迭代起
+
+```java
+public CloseableReference<V> get(final K key) {
+  Preconditions.checkNotNull(key);
+  Entry<K, V> oldExclusive;
+  CloseableReference<V> clientRef = null;
+  synchronized (this) {
+    oldExclusive = mExclusiveEntries.remove(key);
+    Entry<K, V> entry = mCachedEntries.get(key);
+    if (entry != null) {
+      clientRef = newClientReference(entry);
+    }
+  }
+  maybeNotifyExclusiveEntryRemoval(oldExclusive);
+  maybeUpdateCacheParams();
+  maybeEvictEntries();
+  return clientRef;
+}
+```
+
+此外 `LruCountingMemoryCache` 还提供了以下方法
+
+| API | Description | 
+|-----|-------------|
+| inspect(key)      | 返回 key 对应的缓存，但不影响它在 LRU 中的次序 |
+| probe(key)        | 碰一下 key 对应的缓存但不获取，这个操作主要是改变它在 LRU 中的次序 |
+| reuse(key)        | 从 MemoryCache 里获取并移除 key 对应的缓存，这个缓存必须是空闲的（存在于 `mExclusiveEntries`） |
+| maybeEvictEntries | 手动淘汰一些 Entry |
+| getCount()        | Entry 总数，包括空闲和使用的 Entry |
+| getSizeInBytes()  | MemoryCache 的总大小，包括空闲和使用的 Entry |
 
 # DecodeProducer - 解码
 
