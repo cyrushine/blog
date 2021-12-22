@@ -26,7 +26,7 @@
 <meta property="og:description" content="第一行代码Fresco 最简单和入门级的 API 是 SimpleDraweeView.setImageURI(uri)，那就先从这个方法走下去看看会遇到哪些概念 SimpleDraweeView.setImageURI(uri) SimpleDraweeView.setImageURI(uri, null) DraweeView.setController DraweeHolder.setCon">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-12-22T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:23:36.362Z">
+<meta property="article:modified_time" content="2021-12-22T08:43:17.945Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="glide">
 <meta property="article:tag" content="fresco">
@@ -200,7 +200,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      634 分钟
+      632 分钟
     </span>
   
 
@@ -726,24 +726,24 @@ AbstractDraweeController.submitRequest
   &#125;        
 &#125;</code></pre></div>
 
-<h1 id="一些概念"><a href="#一些概念" class="headerlink" title="一些概念"></a>一些概念</h1><p>Fresco 不能像 Glide 那样直接作用于 <code>ImageView</code>，必须用 <code>SimpleDraweeView</code> 替换掉布局里的 <code>ImageView</code>（感觉侵入性有点强呀？）</p>
+<h1 id="一些概念"><a href="#一些概念" class="headerlink" title="一些概念"></a>一些概念</h1><p>Fresco 不能像 Glide 那样直接作用于 <code>ImageView</code>，必须用 <code>SimpleDraweeView</code> 替换掉布局里的 ImageView（感觉侵入性有点强呀？）</p>
 <p>还好 Fresco 内部逻辑并没有写到 UI 控件 <code>SimpleDraweeView</code> 里，而是抽离放在 <code>DraweeHolder</code> 和 <code>DraweeController</code> 里</p>
 <p>图像的加载和处理是一个流水线 <code>ImagePipeline</code>，<code>Producer / Consumer</code> 是流水线上的一个个节点，上一个节点的输出作为下一个节点的输出，各节点是一对一的，生产者和消费者是 callback 模式</p>
-<p><code>ImagePipeline</code> 的最终输出是一个 <code>DataSource</code>，类似于 <code>Future</code> 的概念，可以用 <code>DataSubscriber</code> 订阅它的各种事件：成功（或者是一个新的结果）、失败、取消和进度更新，数据源和订阅者是一对多的</p>
-<h1 id="ImagePipeline"><a href="#ImagePipeline" class="headerlink" title="ImagePipeline"></a>ImagePipeline</h1><p><code>ImagePipeline</code> 可以想象为一个栈（Stack），不断地往里边添加节点，第一个是头节点，最后一个是尾结点，先添加的节点在后添加节点的 <code>前面</code>，后添加节点在先添加节点的 <code>后面</code></p>
-<p>发一个请求时先触达尾结点然后流向头节点，这叫 <code>去程</code>，响应从头结点开始流向尾结点，这叫 <code>回程</code></p>
-<p>跟 OkHttp Interceptor Chain 和 Servlet Contianer Filter 一样，ImagePipeline 的一次工作包含 <code>去程</code> 和 <code>回程</code>，以 <code>[A, B, C, D]</code> 为例（<code>A</code> 是头节点）：</p>
+<p>ImagePipeline 的最终输出是一个 <code>DataSource</code>，类似于 <code>Future</code> 的概念，可以用 <code>DataSubscriber</code> 订阅它的各种事件：成功（或者是一个新的结果）、失败、取消和进度更新，数据源和订阅者是一对多的</p>
+<h1 id="ImagePipeline"><a href="#ImagePipeline" class="headerlink" title="ImagePipeline"></a>ImagePipeline</h1><p><code>ImagePipeline</code> 可以想象为一个栈（Stack），不断地往里边添加节点，第一个是头节点，最后一个是尾结点，先添加的节点在后添加节点的前面，后添加节点在先添加节点的后面</p>
+<p>发一个请求时先触达尾结点然后流向头节点，这叫去程，响应从头结点开始流向尾结点，这叫回程</p>
+<p>跟 OkHttp Interceptor Chain 和 Servlet Contianer Filter 一样，ImagePipeline 的一次工作包含去程和回程，以 [A, B, C, D] 为例（A 是头节点）：</p>
 <ul>
-<li>去程从 <code>Producer.produceResults</code> 开始，<code>D.produceResults</code> -&gt; <code>C.produceResults</code> -&gt; <code>B.produceResults</code> -&gt; <code>A.produceResults</code>，<code>A</code> 也许是个 NetworkFetchProducer 执行网络请求，拿到 Response 后执行回程</li>
-<li>回程从 <code>Consumer.onNewResult</code> 开始，<code>A.onNewResult</code> -&gt; <code>B.onNewResult</code> -&gt; <code>C.onNewResult</code> -&gt; <code>D.onNewResult</code> -&gt; <code>my.onNewResult</code>，当然可能会失败 <code>onFailure(throwable)</code>、取消 <code>onCancellation()</code> 等，一样是这个顺序</li>
+<li>去程从 <code>Producer.produceResults</code> 开始，D.produceResults -&gt; C.produceResults -&gt; B.produceResults -&gt; A.produceResults，A 也许是个 NetworkFetchProducer 执行网络请求，拿到 Response 后执行回程</li>
+<li>回程从 <code>Consumer.onNewResult</code> 开始，A.onNewResult -&gt; B.onNewResult -&gt; C.onNewResult -&gt; D.onNewResult -&gt; my.onNewResult，当然可能会失败 <code>onFailure(throwable)</code>、取消 <code>onCancellation()</code> 等，一样是这个顺序</li>
 </ul>
 <h1 id="NetworkFetchProducer"><a href="#NetworkFetchProducer" class="headerlink" title="NetworkFetchProducer"></a>NetworkFetchProducer</h1><p>顾名思义，执行网络请求（HTTP）的 ImagePipeline 节点，，也是是整个流水线的第一个节点</p>
 <p>它用接口 <code>NetworkFetcher</code> 抹平了底层各网络库的 API 差异，具体的实现有：</p>
 <ul>
-<li><code>OkHttpNetworkFetcher</code></li>
-<li><code>VolleyNetworkFetcher</code></li>
-<li><code>HttpUrlConnectionNetworkFetcher</code></li>
-<li><code>PriorityNetworkFetcher</code>，它是一个装饰器（Decorator），具体的网络加载功能由上面的那些实现提供，它给请求提供了【优先队列】的特性，后续会说到</li>
+<li>OkHttpNetworkFetcher</li>
+<li>VolleyNetworkFetcher</li>
+<li>HttpUrlConnectionNetworkFetcher</li>
+<li>PriorityNetworkFetcher，它是一个装饰器（Decorator），具体的网络加载功能由上面的那些实现提供，它给请求提供了【优先队列】的特性，后续会说到</li>
 </ul>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> *  Interface that specifies network fetcher used by the image pipeline.</span>
@@ -770,7 +770,7 @@ AbstractDraweeController.submitRequest
 &#125;</code></pre></div>
 
 <p><code>NetworkFetchProducer</code> 从 Response 里读取 ByteArray 格式的内容，并包装为 <code>EncodedImage</code> 输出给下一节点；考虑到性能问题，在这一阶段 ByteArray 并没有 decode 为 <code>Bitmap</code>，而是通过解析前 N 个字节长度的数据来获取图片格式、尺寸等一些元信息</p>
-<p>同时加载进度 <code>Consumer.onProgressUpdate</code> 也是由 <code>NetworkFetchProducer</code> 在 Response Reading 时发出</p>
+<p>同时加载进度 <code>Consumer.onProgressUpdate</code> 也是由 NetworkFetchProducer 在 Response Reading 时发出</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NetworkFetchProducer</span> </span>&#123;
   <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(Consumer&lt;EncodedImage&gt; consumer, ProducerContext context)</span> </span>&#123;    <span class="hljs-comment">// 网络加载功能交由 NetworkFetcher 实现</span>
     context.getProducerListener().onProducerStart(context, PRODUCER_NAME);
@@ -1030,21 +1030,21 @@ AbstractDraweeController.submitRequest
 <tr>
 <td>res://com.example/75281679</td>
 <td>LocalResourceFetchProducer</td>
-<td><code>Resources.openRawResource(resId)</code>，authority 部分是忽略掉的，直接取 path 作为资源 ID</td>
+<td>Resources.openRawResource(resId) <br /> authority 部分是忽略掉的，直接取 path 作为资源 ID</td>
 </tr>
 <tr>
-<td>asset://com.example/avatar/default.jpg</td>
+<td>asset://com.example/default.jpg</td>
 <td>LocalAssetFetchProducer</td>
-<td><code>AssetManager.open</code>，authority 部分是忽略掉的，直接取 path 作为 asset path</td>
+<td>AssetManager.open <br /> authority 部分是忽略掉的，直接取 path 作为 asset path</td>
 </tr>
 <tr>
-<td>file:///sdcard/DCIM/Camera/avatar.jpg</td>
+<td>file:///sdcard/DCIM/avatar.jpg</td>
 <td>LocalFileFetchProducer</td>
 <td>File API</td>
 </tr>
 <tr>
-<td>content://media/external/images/media/2283</td>
-<td>LocalContentUriFetchProducer &amp; LocalThumbnailBitmapProducer</td>
+<td>content://media/images/2283</td>
+<td>LocalContentUriFetchProducer <br /> LocalThumbnailBitmapProducer</td>
 <td>ContentResolver.openInputStream/loadThumbnail</td>
 </tr>
 <tr>
@@ -1093,7 +1093,7 @@ AbstractDraweeController.submitRequest
 <li>DiskCacheWriteProducer</li>
 <li>DiskCacheReadProducer</li>
 </ol>
-<p>添加 <code>ImagePipeline</code> 节点的方法栈如下：</p>
+<p>添加 ImagePipeline 节点的方法栈如下：</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
 SimpleDraweeView.setImageURI(uri, <span class="hljs-keyword">null</span>)
 AbstractDraweeControllerBuilder.build
@@ -1371,8 +1371,8 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 
 <h2 id="read-amp-amp-write"><a href="#read-amp-amp-write" class="headerlink" title="read &amp;&amp; write"></a>read &amp;&amp; write</h2><p>包含两个节点 <code>DiskCacheWriteProducer</code> 和 <code>DiskCacheReadProducer</code>，它们按顺序被添加到 ImagePipeline，那么：</p>
 <ul>
-<li>去程：<code>DiskCacheReadProducer.produceResults</code> -&gt; <code>DiskCacheWriteProducer.produceResults</code></li>
-<li>回程：<code>DiskCacheWriteProducer.onNewResult</code> -&gt; <code>DiskCacheReadProducer.onNewResult</code></li>
+<li>去程：DiskCacheReadProducer.produceResults -&gt; DiskCacheWriteProducer.produceResults</li>
+<li>回程：DiskCacheWriteProducer.onNewResult -&gt; DiskCacheReadProducer.onNewResult</li>
 </ul>
 <p>发起加载请求是，disk reader 从磁盘缓存里找是否有对应的缓存文件，有的话就无须做网络请求，加载缓存文件至内存后返回；因为是先添加 disk reader 后添加 disk writer 的，请求被 disk reader 截胡后就不经过 disk writer 和 network fetcher 了</p>
 <p>如果没能找到磁盘缓存，请求流转到 network fetcher，拿到 response 后 disk writer 将其保存为磁盘缓存</p>
@@ -1474,7 +1474,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
     &#125;    
 &#125;</code></pre></div>
 
-<h1 id="内存缓存（encoded）"><a href="#内存缓存（encoded）" class="headerlink" title="内存缓存（encoded）"></a>内存缓存（encoded）</h1><p>添加 <code>EncodedMemoryCacheProducer</code> 节点以实现内存缓存，这里缓存的对象是 <code>encoded</code>，也就是被图像压缩算法编码后的、各种图像格式的原始数据，尚未被 <code>decode</code> 为 <code>Bitmap</code></p>
+<h1 id="内存缓存（encoded）"><a href="#内存缓存（encoded）" class="headerlink" title="内存缓存（encoded）"></a>内存缓存（encoded）</h1><p>添加 <code>EncodedMemoryCacheProducer</code> 节点以实现内存缓存，这里缓存的对象是 <code>encoded</code>，也就是被图像压缩算法编码后的、各种图像格式的原始数据，尚未被 decode 为 Bitmap</p>
 <ul>
 <li><code>去程</code> 时从内存缓存里找，命中直接返回内存数据，未命中则交由下个节点处理</li>
 <li><code>回程</code> 时将原始数据添加到内存缓存中，然后继续往下传递原始数据</li>
@@ -1612,10 +1612,10 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
   &#125;    
 &#125;</code></pre></div>
 
-<h1 id="内存缓存（decoded-Bitmap）"><a href="#内存缓存（decoded-Bitmap）" class="headerlink" title="内存缓存（decoded, Bitmap）"></a>内存缓存（decoded, Bitmap）</h1><p><code>BitmapMemoryCacheProducer</code> 实现了 <code>Bitmap</code> 的内存缓存，整个逻辑比较简单：</p>
+<h1 id="内存缓存（decoded-Bitmap）"><a href="#内存缓存（decoded-Bitmap）" class="headerlink" title="内存缓存（decoded, Bitmap）"></a>内存缓存（decoded, Bitmap）</h1><p><code>BitmapMemoryCacheProducer</code> 实现了 Bitmap 的内存缓存，整个逻辑比较简单：</p>
 <ul>
 <li>默认开启，可以通过 <code>ImageRequestBuilder.disableMemoryCache</code> 关闭</li>
-<li>去程时从缓存里读，命中的话截胡，返回缓存在内存中的 <code>Bitmap</code></li>
+<li>去程时从缓存里读，命中的话截胡，返回缓存在内存中的 Bitmap</li>
 <li>回程时写入缓存</li>
 </ul>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BitmapMemoryCacheProducer</span> </span>&#123;
@@ -1728,19 +1728,19 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <blockquote>
 <p>eviction queue 指没有被使用、可被安全回收（evict）的缓存对象的集合</p>
 </blockquote>
-<p><code>LruCountingMemoryCache</code> 的核心数据结构、也是实现 <code>LRU</code> 算法和 key-value 映射的是 <a href="../../../../2021/01/19/reviews/#LinkedHashMap">LinkedHashMap</a>，它内部有两个 Map：</p>
+<p>核心数据结构、也是实现 <code>LRU</code> 算法和 key-value 映射的是 <a href="../../../../2021/01/19/reviews/#LinkedHashMap">LinkedHashMap</a>，它内部有两个 Map：</p>
 <ul>
-<li><code>mCachedEntries</code>：存放所有的缓存条目，按最近访问排序（虽然它里面的 <code>LruCountingMemoryCache</code> 是按插入顺序排序，但 <code>取缓存</code> 和 <code>回收缓存</code> 两个操作对应的 <code>LinkedHashMap</code> API 是删除和插入，所以最终效果还是按最近访问排序），这里就实现了 <code>LRU</code></li>
-<li><code>mExclusiveEntries</code>：存放空闲的、未被使用、可被安全回收的缓存条目，它是 <code>mCachedEntries</code> 的一个子集，也是上面所说的 <code>eviction queue</code></li>
+<li><code>mCachedEntries</code>：存放所有的缓存条目</li>
+<li><code>mExclusiveEntries</code>：存放空闲的、未被使用、可被安全回收的缓存条目，它是 mCachedEntries 的一个子集，也是上面所说的 <code>eviction queue</code></li>
 </ul>
 <p>通过 <code>cache(key, valueRef)</code> 放入缓存或者 <code>get(key)</code> 取得缓存对象，会返回一个 <code>CloseableReference</code>，直到 <code>CloseableReference.close</code> 释放/回收缓存对象前，此时缓存条目都只存在于 <code>mCachedEntries</code>；只有当缓存条目不再被任何人持有/引用（<code>CountingMemoryCache.Entry.clientCount == 0</code>），它才会被添加到 <code>mExclusiveEntries</code>，表示它可以被安全释放</p>
-<p>返回 <code>CloseableReference</code> （需要通过 <code>close</code> 释放）这一特性使它跟一般的 LRU 缓存有所不同：</p>
+<p>返回 CloseableReference （需要通过 <code>close</code> 释放）这一特性使它跟一般的 LRU 缓存有所不同：</p>
 <ul>
-<li><code>maxCacheSize</code> 容量上限和 <code>maxCacheEntries</code> Entry 数量上限，针对的是 <code>使用中的 Entry 集合</code>，也即 <code>mCachedEntries - mExclusiveEntries</code>，这是因为 <code>mExclusiveEntries</code> 是空闲的 Entry 集合，没有人引用意味这可以被 <code>evict</code>，新增缓存条目后可以通过 <code>evict</code> 淘汰空闲的 Entry 以使缓存满足约束</li>
+<li><code>maxCacheSize</code> 容量上限和 <code>maxCacheEntries</code> Entry 数量上限，针对的是使用中的 Entry 集合，也即 mCachedEntries - mExclusiveEntries，这是因为 mExclusiveEntries 是空闲的 Entry 集合，没有人引用意味这可以被 <code>evict</code>，新增缓存条目后可以通过 evict 淘汰空闲的 Entry 以使缓存满足约束</li>
 <li>Entry 是可以被多人持有的（被多人借出，用一个引用计数 <code>Entry.clientCount</code> 表示借出的次数，归还后减一）</li>
-<li>取出的 Entry 用完后执行下 <code>close</code> 就可以了，由缓存决定是继续保留这个 Entry 还是淘汰掉（满足容量等限制条件时会保留在空闲集合中，超过容量限制时如果引用计数为零则释放掉，否则等引用计数归零再释放）</li>
-<li>Entry 有 <code>isOrphan</code> 和 <code>clientCount</code> 两个特征，<code>isOrphan == true</code> 表示 Entry 已经从缓存中移除，但此时如果还有人持有这个 Entry（<code>Entry.clientCount &gt; 0</code>）则暂时还不能释放它，要等到引用计数归零才能释放，有些情况会导致引用计数不为零时强行将 Entry 变为孤儿：<ol>
-<li><code>cache</code> 放入相同的 key 导致旧 Entry 被强制移除出缓存</li>
+<li>取出的 Entry 用完后执行下 close 就可以了，由缓存决定是继续保留这个 Entry 还是淘汰掉（满足容量等限制条件时会保留在空闲集合中，超过容量限制时如果引用计数为零则释放掉，否则等引用计数归零再释放）</li>
+<li>Entry 有 <code>isOrphan</code> 和 <code>clientCount</code> 两个特征，isOrphan == true 表示 Entry 已经从缓存中移除，但此时如果还有人持有这个 Entry（Entry.clientCount &gt; 0）则暂时还不能释放它，要等到引用计数归零才能释放，有些情况会导致引用计数不为零时强行将 Entry 变为孤儿：<ol>
+<li>放入相同的 key 导致旧 Entry 被强制移除出缓存</li>
 <li>手动执行 <code>MemoryCache.removeAll</code>、<code>CountingMemoryCache.clear</code> 将 Entry 从缓存中移除</li>
 <li>内存不足的情况下执行 <code>MemoryTrimmable.trim(trimType)</code> 强制移除一定比例的 Entry</li>
 </ol>
@@ -1976,7 +1976,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li>通过 <code>ProducerSequenceFactory.getEncodedImageProducerSequence</code>，<code>ImageRequest</code> 转变为一个合适的图像流水线（<code>ImagePipeline</code>，实际上是流水线上最后的那个节点）</li>
 <li>将 <code>Producer</code> 适配为 <code>DataSource</code>（就在此时，request 被添加到线程池里开始流水处理）</li>
 <li><code>PipelineDraweeController.mDataSourceSupplier</code> 保存了 <code>Supplier&lt;DataSource&gt;</code>，而 <code>AbstractDraweeController.mDataSource</code> 保存了 <code>DataSource</code></li>
-<li><code>DataSource</code> 是一个异步的结果（类似于 <code>Future</code>），通过订阅获得异步的结果（成功 or 失败），在 <code>AbstractDraweeController.submitRequest</code> 订阅之，从而拿到 <code>Bitmap</code></li>
+<li>DataSource 是一个异步的结果（类似于 <code>Future</code>），通过订阅获得异步的结果（成功 or 失败），在 <code>AbstractDraweeController.submitRequest</code> 订阅之，从而拿到 <code>Bitmap</code></li>
 <li>也就说一个图像加载请求是保存在 <code>DraweeView.mDraweeHolder.mController.mDataSource</code></li>
 </ol>
 <div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
@@ -2486,8 +2486,8 @@ ProgressiveDecoder.internalDecode
 <h1 id="其他-ImagePipeline-节点"><a href="#其他-ImagePipeline-节点" class="headerlink" title="其他 ImagePipeline 节点"></a>其他 ImagePipeline 节点</h1><h2 id="MultiplexProducer"><a href="#MultiplexProducer" class="headerlink" title="MultiplexProducer"></a>MultiplexProducer</h2><p><code>multiplex</code>：多路复用，<code>multiplexer</code>：多路复用器，顾名思义这个节点的作用是合并相同的 <code>ImageRequest</code> 以节约网络和 IO 资源，因为同一时刻相同的请求只需要执行一次，多个 consumer 可以等待和接收同一个 response，看看是如何实现的：</p>
 <ol>
 <li>多路复用器有两个：<code>EncodedCacheKeyMultiplexProducer</code>（排在 encoded memory cache 后面） 和 <code>BitmapMemoryCacheKeyMultiplexProducer</code>（排在 bitmap memory cache 后面）</li>
-<li>一个请求对应一个 <code>Multiplexer</code>，相同请求（<code>MultiplexProducer.getKey</code>）的 consumer 都挂在同一个 <code>Multiplexer</code> 里</li>
-<li>第一个请求才会通过此节点，流向下一节点（执行真正的请求操作：网络、缓存），后续的相同的请求都被终止，它们的 consumer 被挂在同一 <code>Multiplexer</code> 里</li>
+<li>一个请求对应一个 <code>Multiplexer</code>，相同请求（<code>MultiplexProducer.getKey</code>）的 consumer 都挂在同一个 Multiplexer 里</li>
+<li>第一个请求才会通过此节点，流向下一节点（执行真正的请求操作：网络、缓存），后续的相同的请求都被终止，它们的 consumer 被挂在同一 Multiplexer 里</li>
 <li>第一个（也是唯一一个）请求的 response 将被分发给各个 consumer</li>
 <li>涉及到多线程，创建 Multiplexer 和添加 consumer 的操作需要被 <code>synchronized</code> 保护</li>
 </ol>
