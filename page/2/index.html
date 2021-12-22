@@ -178,6 +178,48 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/06/20/kill-exit/" target="_self">
+          killProcess 和 exit 的区别
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/06/20/kill-exit/" target="_self">
+          
+          Process.killProcess(pid)最终执行系统调用 kill class Process &amp;#123;     public static final int SIGNAL_KILL &#x3D; 9;      public static final void killProcess(int pid) &amp;#123;         sendSignal(pid, SIGNAL_KILL);
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-06-20 04:00" pubdate>
+              2021-06-20
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/kill/">kill</a>
+            
+              <a href="/tags/exit/">exit</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/06/18/uncaught-exception-handler/" target="_self">
           Uncaught Exception Handling
         </a>
@@ -557,46 +599,6 @@
               <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
             
               <a href="/tags/APM/">APM</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/04/16/looking-into-oom/" target="_self">
-          深入 OOM
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/04/16/looking-into-oom/" target="_self">
-          
-          堆内存分配失败导致的 OOM度量采用下述 API 来度量 APP 或系统的内存使用情况    类别 API 说明    APP Runtime.maxMemory() JVM 可以从系统那申请到的内存的最大值，ActivityManager.getMemoryClass() 和 ActivityManager.getLargeMemoryClass() 其中之一，超过此阈值会发生 OOM    R
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-04-16 04:00" pubdate>
-              2021-04-16
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/OOM/">OOM</a>
             
           </div>
         

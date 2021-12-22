@@ -1,0 +1,2716 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="第一行代码Fresco 最简单和入门级的 API 是 SimpleDraweeView.setImageURI(uri)，那就先从这个方法走下去看看会遇到哪些概念 SimpleDraweeView.setImageURI(uri) SimpleDraweeView.setImageURI(uri, null) DraweeView.setController DraweeHolder.setCon">
+<meta property="og:type" content="article">
+<meta property="og:title" content="初识 Fresco">
+<meta property="og:url" content="https://www.dalvik.work/2021/12/22/fresco/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="第一行代码Fresco 最简单和入门级的 API 是 SimpleDraweeView.setImageURI(uri)，那就先从这个方法走下去看看会遇到哪些概念 SimpleDraweeView.setImageURI(uri) SimpleDraweeView.setImageURI(uri, null) DraweeView.setController DraweeHolder.setCon">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-12-22T04:00:00.000Z">
+<meta property="article:modified_time" content="2021-12-22T08:15:21.871Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="glide">
+<meta property="article:tag" content="fresco">
+<meta property="article:tag" content="imageloader">
+<meta property="article:tag" content="图片加载">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  <title>初识 Fresco - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="初识 Fresco">
+              
+                初识 Fresco
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-12-22 04:00" pubdate>
+        2021年12月22日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      76k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      634 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">初识 Fresco</h1>
+            
+            <div class="markdown-body">
+              <h1 id="第一行代码"><a href="#第一行代码" class="headerlink" title="第一行代码"></a>第一行代码</h1><p><a target="_blank" rel="noopener" href="https://github.com/facebook/fresco">Fresco</a> 最简单和入门级的 API 是 <code>SimpleDraweeView.setImageURI(uri)</code>，那就先从这个方法走下去看看会遇到哪些概念</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+SimpleDraweeView.setImageURI(uri, <span class="hljs-keyword">null</span>)
+DraweeView.setController
+DraweeHolder.setController
+DraweeHolder.attachController
+AbstractDraweeController.onAttach
+AbstractDraweeController.submitRequest
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractDraweeController</span> </span>&#123;  
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">submitRequest</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractDraweeController#submitRequest&quot;</span>);
+    &#125;
+
+    <span class="hljs-comment">// 检查缓存，有则直接返回缓存数据，没有则执行抓取操作；现在先不理缓存逻辑</span>
+    <span class="hljs-keyword">final</span> T closeableImage = getCachedImage();    
+    <span class="hljs-keyword">if</span> (closeableImage != <span class="hljs-keyword">null</span>) &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractDraweeController#submitRequest-&gt;cache&quot;</span>);
+      &#125;
+      mDataSource = <span class="hljs-keyword">null</span>;
+      mIsRequestSubmitted = <span class="hljs-keyword">true</span>;
+      mHasFetchFailed = <span class="hljs-keyword">false</span>;
+      mEventTracker.recordEvent(Event.ON_SUBMIT_CACHE_HIT);
+      reportSubmit(mDataSource, getImageInfo(closeableImage));
+      onImageLoadedFromCacheImmediately(mId, closeableImage);
+      onNewResultInternal(mId, mDataSource, closeableImage, <span class="hljs-number">1.0f</span>, <span class="hljs-keyword">true</span>, <span class="hljs-keyword">true</span>, <span class="hljs-keyword">true</span>);
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+      <span class="hljs-keyword">return</span>;
+    &#125;
+    mEventTracker.recordEvent(Event.ON_DATASOURCE_SUBMIT);
+    mSettableDraweeHierarchy.setProgress(<span class="hljs-number">0</span>, <span class="hljs-keyword">true</span>);
+    mIsRequestSubmitted = <span class="hljs-keyword">true</span>;
+    mHasFetchFailed = <span class="hljs-keyword">false</span>;
+    mDataSource = getDataSource();    <span class="hljs-comment">// 重要</span>
+    reportSubmit(mDataSource, <span class="hljs-keyword">null</span>);
+    <span class="hljs-keyword">if</span> (FLog.isLoggable(FLog.VERBOSE)) &#123;
+      FLog.v(
+          TAG,
+          <span class="hljs-string">&quot;controller %x %s: submitRequest: dataSource: %x&quot;</span>,
+          System.identityHashCode(<span class="hljs-keyword">this</span>),
+          mId,
+          System.identityHashCode(mDataSource));
+    &#125;
+
+    <span class="hljs-comment">// 从数据源抓取，callback 模式，有三种情况：成功、失败和更新进度</span>
+    <span class="hljs-keyword">final</span> String id = mId;
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> wasImmediate = mDataSource.hasResult();
+    <span class="hljs-keyword">final</span> DataSubscriber&lt;T&gt; dataSubscriber =
+        <span class="hljs-keyword">new</span> BaseDataSubscriber&lt;T&gt;() &#123;
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNewResultImpl</span><span class="hljs-params">(DataSource&lt;T&gt; dataSource)</span> </span>&#123;
+            <span class="hljs-comment">// isFinished must be obtained before image, otherwise we might set intermediate result</span>
+            <span class="hljs-comment">// as final image.</span>
+            <span class="hljs-keyword">boolean</span> isFinished = dataSource.isFinished();
+            <span class="hljs-keyword">boolean</span> hasMultipleResults = dataSource.hasMultipleResults();
+            <span class="hljs-keyword">float</span> progress = dataSource.getProgress();
+            T image = dataSource.getResult();
+            <span class="hljs-keyword">if</span> (image != <span class="hljs-keyword">null</span>) &#123;
+              onNewResultInternal(
+                  id, dataSource, image, progress, isFinished, wasImmediate, hasMultipleResults);
+            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (isFinished) &#123;
+              onFailureInternal(id, dataSource, <span class="hljs-keyword">new</span> NullPointerException(), <span class="hljs-comment">/* isFinished */</span> <span class="hljs-keyword">true</span>);
+            &#125;
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onFailureImpl</span><span class="hljs-params">(DataSource&lt;T&gt; dataSource)</span> </span>&#123;
+            onFailureInternal(id, dataSource, dataSource.getFailureCause(), <span class="hljs-comment">/* isFinished */</span> <span class="hljs-keyword">true</span>);
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onProgressUpdate</span><span class="hljs-params">(DataSource&lt;T&gt; dataSource)</span> </span>&#123;
+            <span class="hljs-keyword">boolean</span> isFinished = dataSource.isFinished();
+            <span class="hljs-keyword">float</span> progress = dataSource.getProgress();
+            onProgressUpdateInternal(id, dataSource, progress, isFinished);
+          &#125;
+        &#125;;
+    mDataSource.subscribe(dataSubscriber, mUiThreadImmediateExecutor);
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractDataSource</span> </span>&#123;
+  <span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">DataSourceStatus</span> </span>&#123;
+    <span class="hljs-comment">// data source has not finished yet</span>
+    IN_PROGRESS,
+
+    <span class="hljs-comment">// data source has finished with success</span>
+    SUCCESS,
+
+    <span class="hljs-comment">// data source has finished with failure</span>
+    FAILURE,
+  &#125;
+
+  <span class="hljs-comment">// 数据源有三种状态：行进中、成功和失败，一般情况下会是还没开始抓取操作也就是【行进中】</span>
+  <span class="hljs-comment">// callback 也就是订阅者被数据源保存起来以便后续通知</span>
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">subscribe</span><span class="hljs-params">(<span class="hljs-keyword">final</span> DataSubscriber&lt;T&gt; dataSubscriber, <span class="hljs-keyword">final</span> Executor executor)</span> </span>&#123;
+    Preconditions.checkNotNull(dataSubscriber);
+    Preconditions.checkNotNull(executor);
+    <span class="hljs-keyword">boolean</span> shouldNotify;
+
+    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+      <span class="hljs-keyword">if</span> (mIsClosed) &#123;
+        <span class="hljs-keyword">return</span>;
+      &#125;
+
+      <span class="hljs-keyword">if</span> (mDataSourceStatus == DataSourceStatus.IN_PROGRESS) &#123;
+        mSubscribers.add(Pair.create(dataSubscriber, executor));
+      &#125;
+
+      shouldNotify = hasResult() || isFinished() || wasCancelled();
+    &#125;
+
+    <span class="hljs-keyword">if</span> (shouldNotify) &#123;
+      notifyDataSubscriber(dataSubscriber, executor, hasFailed(), wasCancelled());
+    &#125;
+  &#125;    
+&#125;
+
+<span class="hljs-comment">// 到目前为止，只看到了 callback 但没看到是什么时候开始抓取数据（比如网络请求操作）</span>
+<span class="hljs-comment">// 但看到 DataSource 的描述，隐隐感觉到网络请求操作很可能已经发出，而 DataSource 就是代表这个异步操作（类似于 Future）</span>
+<span class="hljs-comment">// 它作为绳子的一端连接着另一端的 fetch task，从这端出发按图索骥即可找到 fetch task</span>
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * An alternative to Java Futures for the image pipeline.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">DataSource</span>&lt;<span class="hljs-title">T</span>&gt;</span>
+<span class="hljs-class"></span>
+<span class="hljs-class"><span class="hljs-title">SimpleDraweeView</span>.<span class="hljs-title">setImageURI</span>(<span class="hljs-title">uri</span>)</span>
+<span class="hljs-class"><span class="hljs-title">SimpleDraweeView</span>.<span class="hljs-title">setImageURI</span>(<span class="hljs-title">uri</span>, <span class="hljs-title">null</span>)</span>
+<span class="hljs-class"><span class="hljs-title">AbstractDraweeControllerBuilder</span>.<span class="hljs-title">build</span></span>
+<span class="hljs-class"><span class="hljs-title">AbstractDraweeControllerBuilder</span>.<span class="hljs-title">buildController</span></span>
+<span class="hljs-class"><span class="hljs-title">PipelineDraweeControllerBuilder</span>.<span class="hljs-title">obtainController</span></span>
+<span class="hljs-class"><span class="hljs-title">AbstractDraweeControllerBuilder</span>.<span class="hljs-title">obtainDataSourceSupplier</span></span>
+<span class="hljs-class"><span class="hljs-title">AbstractDraweeControllerBuilder</span>.<span class="hljs-title">getDataSourceSupplierForRequest</span>(<span class="hljs-title">controller</span>, <span class="hljs-title">controllerId</span>, <span class="hljs-title">imageRequest</span>)</span>
+<span class="hljs-class"><span class="hljs-title">AbstractDraweeControllerBuilder</span>.<span class="hljs-title">getDataSourceSupplierForRequest</span>(<span class="hljs-title">controller</span>, <span class="hljs-title">controllerId</span>, <span class="hljs-title">imageRequest</span>, <span class="hljs-title">CacheLevel</span>.<span class="hljs-title">FULL_FETCH</span>)</span>
+<span class="hljs-class"><span class="hljs-title">PipelineDraweeControllerBuilder</span>.<span class="hljs-title">getDataSourceForRequest</span></span>
+<span class="hljs-class"></span>
+<span class="hljs-class"><span class="hljs-title">class</span> <span class="hljs-title">ImagePipeline</span> </span>&#123;
+  <span class="hljs-keyword">public</span> DataSource&lt;CloseableReference&lt;CloseableImage&gt;&gt; fetchDecodedImage(
+      ImageRequest imageRequest,
+      <span class="hljs-meta">@Nullable</span> Object callerContext,
+      ImageRequest.RequestLevel lowestPermittedRequestLevelOnSubmit,
+      <span class="hljs-meta">@Nullable</span> RequestListener requestListener,
+      <span class="hljs-meta">@Nullable</span> String uiComponentId) &#123;
+    <span class="hljs-keyword">try</span> &#123;
+      Producer&lt;CloseableReference&lt;CloseableImage&gt;&gt; producerSequence =
+          mProducerSequenceFactory.getDecodedImageProducerSequence(imageRequest);    <span class="hljs-comment">// Producer 生产者负责从网络抓取图片</span>
+      <span class="hljs-keyword">return</span> submitFetchRequest(                                                     <span class="hljs-comment">// 在这里将任务提交到任务队列等待执行</span>
+          producerSequence,
+          imageRequest,
+          lowestPermittedRequestLevelOnSubmit,
+          callerContext,
+          requestListener,
+          uiComponentId);
+    &#125; <span class="hljs-keyword">catch</span> (Exception exception) &#123;
+      <span class="hljs-keyword">return</span> DataSources.immediateFailedDataSource(exception);
+    &#125;
+  &#125;
+
+  <span class="hljs-keyword">private</span> &lt;T&gt; DataSource&lt;CloseableReference&lt;T&gt;&gt; submitFetchRequest(
+      Producer&lt;CloseableReference&lt;T&gt;&gt; producerSequence,
+      ImageRequest imageRequest,
+      ImageRequest.RequestLevel lowestPermittedRequestLevelOnSubmit,
+      <span class="hljs-meta">@Nullable</span> Object callerContext,
+      <span class="hljs-meta">@Nullable</span> RequestListener requestListener,
+      <span class="hljs-meta">@Nullable</span> String uiComponentId) &#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;ImagePipeline#submitFetchRequest&quot;</span>);
+    &#125;
+    <span class="hljs-keyword">final</span> RequestListener2 requestListener2 =
+        <span class="hljs-keyword">new</span> InternalRequestListener(
+            getRequestListenerForRequest(imageRequest, requestListener), mRequestListener2);
+
+    <span class="hljs-keyword">if</span> (mCallerContextVerifier != <span class="hljs-keyword">null</span>) &#123;
+      mCallerContextVerifier.verifyCallerContext(callerContext, <span class="hljs-keyword">false</span>);
+    &#125;
+
+    <span class="hljs-keyword">try</span> &#123;
+      ImageRequest.RequestLevel lowestPermittedRequestLevel =
+          ImageRequest.RequestLevel.getMax(
+              imageRequest.getLowestPermittedRequestLevel(), lowestPermittedRequestLevelOnSubmit);
+      SettableProducerContext settableProducerContext =
+          <span class="hljs-keyword">new</span> SettableProducerContext(
+              imageRequest,
+              generateUniqueFutureId(),
+              uiComponentId,
+              requestListener2,
+              callerContext,
+              lowestPermittedRequestLevel,
+              <span class="hljs-comment">/* isPrefetch */</span> <span class="hljs-keyword">false</span>,
+              imageRequest.getProgressiveRenderingEnabled()
+                  || !UriUtil.isNetworkUri(imageRequest.getSourceUri()),
+              imageRequest.getPriority(),
+              mConfig);
+      <span class="hljs-keyword">return</span> CloseableProducerToDataSourceAdapter.create(
+          producerSequence, settableProducerContext, requestListener2);
+    &#125; <span class="hljs-keyword">catch</span> (Exception exception) &#123;
+      <span class="hljs-keyword">return</span> DataSources.immediateFailedDataSource(exception);
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+    &#125;
+  &#125;  
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CloseableProducerToDataSourceAdapter</span> </span>&#123;
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T&gt; DataSource&lt;CloseableReference&lt;T&gt;&gt; create(
+      Producer&lt;CloseableReference&lt;T&gt;&gt; producer,
+      SettableProducerContext settableProducerContext,
+      RequestListener2 listener) &#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;CloseableProducerToDataSourceAdapter#create&quot;</span>);
+    &#125;
+    CloseableProducerToDataSourceAdapter&lt;T&gt; result =
+        <span class="hljs-keyword">new</span> CloseableProducerToDataSourceAdapter&lt;T&gt;(producer, settableProducerContext, listener);
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">return</span> result;
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractProducerToDataSourceAdapter</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-title">AbstractProducerToDataSourceAdapter</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      Producer&lt;T&gt; producer,</span></span>
+<span class="hljs-params"><span class="hljs-function">      SettableProducerContext settableProducerContext,</span></span>
+<span class="hljs-params"><span class="hljs-function">      RequestListener2 requestListener)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractProducerToDataSourceAdapter()&quot;</span>);
+    &#125;
+    mSettableProducerContext = settableProducerContext;
+    mRequestListener = requestListener;
+    setInitialExtras();
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractProducerToDataSourceAdapter()-&gt;onRequestStart&quot;</span>);
+    &#125;
+    mRequestListener.onRequestStart(mSettableProducerContext);
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractProducerToDataSourceAdapter()-&gt;produceResult&quot;</span>);
+    &#125;
+    producer.produceResults(createConsumer(), settableProducerContext);                     <span class="hljs-comment">// 提交任务到任务队列的操作隐藏在这里</span>
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+  &#125;    
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * Fresco 设计了生产者这么一个概念来组合/组装整个图形处理流水线（ImagePipeline），上一个生产者的输出可以作为下一个生产者的输入</span>
+<span class="hljs-comment"> * Building block for image processing in the image pipeline</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Producer</span>&lt;<span class="hljs-title">T</span>&gt; </span>&#123;
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * 此方法用以启动整个图像流水线，结果是通过 callback 模式（Consumer）回传的</span>
+<span class="hljs-comment">   * Start producing results for given context. Provided consumer is notified whenever progress is</span>
+<span class="hljs-comment">   * made (new value is ready or error occurs).</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(Consumer&lt;T&gt; consumer, ProducerContext context)</span></span>;
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Consumer</span>&lt;<span class="hljs-title">T</span>&gt; </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onNewResult</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> T newResult, <span class="hljs-meta">@Status</span> <span class="hljs-keyword">int</span> status)</span></span>;
+  <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onFailure</span><span class="hljs-params">(Throwable t)</span></span>;
+  <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onCancellation</span><span class="hljs-params">()</span></span>;
+  <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onProgressUpdate</span><span class="hljs-params">(<span class="hljs-keyword">float</span> progress)</span></span>;
+&#125;
+
+<span class="hljs-comment">// 回到 ImagePipeline.fetchDecodedImage 看看整个流水线是怎么组装起来的</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProducerSequenceFactory</span> </span>&#123;
+  <span class="hljs-keyword">public</span> Producer&lt;CloseableReference&lt;CloseableImage&gt;&gt; getDecodedImageProducerSequence(
+      ImageRequest imageRequest) &#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;ProducerSequenceFactory#getDecodedImageProducerSequence&quot;</span>);
+    &#125;
+    Producer&lt;CloseableReference&lt;CloseableImage&gt;&gt; pipelineSequence =
+        getBasicDecodedImageSequence(imageRequest);
+    <span class="hljs-comment">// 后处理器、预加载为 Bitmap 和延迟加载</span>
+    <span class="hljs-keyword">if</span> (imageRequest.getPostprocessor() != <span class="hljs-keyword">null</span>) &#123;    
+      pipelineSequence = getPostprocessorSequence(pipelineSequence);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mUseBitmapPrepareToDraw) &#123;
+      pipelineSequence = getBitmapPrepareSequence(pipelineSequence);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mAllowDelay &amp;&amp; imageRequest.getDelayMs() &gt; <span class="hljs-number">0</span>) &#123;
+      pipelineSequence = getDelaySequence(pipelineSequence);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">return</span> pipelineSequence;
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProducerSequenceFactory</span> </span>&#123;
+  <span class="hljs-keyword">private</span> Producer&lt;CloseableReference&lt;CloseableImage&gt;&gt; getBasicDecodedImageSequence(
+      ImageRequest imageRequest) &#123;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(<span class="hljs-string">&quot;ProducerSequenceFactory#getBasicDecodedImageSequence&quot;</span>);
+      &#125;
+      Preconditions.checkNotNull(imageRequest);
+
+      Uri uri = imageRequest.getSourceUri();
+      Preconditions.checkNotNull(uri, <span class="hljs-string">&quot;Uri is null.&quot;</span>);
+
+      <span class="hljs-keyword">switch</span> (imageRequest.getSourceUriType()) &#123;
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_NETWORK:    <span class="hljs-comment">// 网络数据源</span>
+          <span class="hljs-keyword">return</span> getNetworkFetchSequence();
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_LOCAL_VIDEO_FILE:
+          <span class="hljs-keyword">return</span> getLocalVideoFileFetchSequence();
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_LOCAL_IMAGE_FILE:
+          <span class="hljs-keyword">return</span> getLocalImageFileFetchSequence();
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_LOCAL_CONTENT:
+          <span class="hljs-keyword">if</span> (imageRequest.getLoadThumbnailOnly()
+              &amp;&amp; Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) &#123;
+            <span class="hljs-keyword">return</span> getLocalContentUriThumbnailFetchSequence();
+          &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (MediaUtils.isVideo(mContentResolver.getType(uri))) &#123;
+            <span class="hljs-keyword">return</span> getLocalVideoFileFetchSequence();
+          &#125;
+          <span class="hljs-keyword">return</span> getLocalContentUriFetchSequence();
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_LOCAL_ASSET:
+          <span class="hljs-keyword">return</span> getLocalAssetFetchSequence();
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_LOCAL_RESOURCE:
+          <span class="hljs-keyword">return</span> getLocalResourceFetchSequence();
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_QUALIFIED_RESOURCE:
+          <span class="hljs-keyword">return</span> getQualifiedResourceFetchSequence();
+        <span class="hljs-keyword">case</span> SOURCE_TYPE_DATA:
+          <span class="hljs-keyword">return</span> getDataFetchSequence();
+        <span class="hljs-keyword">default</span>:
+          <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalArgumentException(
+              <span class="hljs-string">&quot;Unsupported uri scheme! Uri is: &quot;</span> + getShortenedUriString(uri));
+      &#125;
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+    &#125;
+  &#125;  
+
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> Producer&lt;CloseableReference&lt;CloseableImage&gt;&gt; getNetworkFetchSequence() &#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;ProducerSequenceFactory#getNetworkFetchSequence&quot;</span>);
+    &#125;
+    <span class="hljs-keyword">if</span> (mNetworkFetchSequence == <span class="hljs-keyword">null</span>) &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(<span class="hljs-string">&quot;ProducerSequenceFactory#getNetworkFetchSequence:init&quot;</span>);
+      &#125;
+      mNetworkFetchSequence =
+          newBitmapCacheGetToDecodeSequence(getCommonNetworkFetchToEncodedMemorySequence());
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+    &#125;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">return</span> mNetworkFetchSequence;
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> Producer&lt;EncodedImage&gt; <span class="hljs-title">getCommonNetworkFetchToEncodedMemorySequence</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(
+          <span class="hljs-string">&quot;ProducerSequenceFactory#getCommonNetworkFetchToEncodedMemorySequence&quot;</span>);
+    &#125;
+    <span class="hljs-keyword">if</span> (mCommonNetworkFetchToEncodedMemorySequence == <span class="hljs-keyword">null</span>) &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(
+            <span class="hljs-string">&quot;ProducerSequenceFactory#getCommonNetworkFetchToEncodedMemorySequence:init&quot;</span>);
+      &#125;
+      Producer&lt;EncodedImage&gt; inputProducer =
+          Preconditions.checkNotNull(
+              newEncodedCacheMultiplexToTranscodeSequence(                        <span class="hljs-comment">// decode 和 cache</span>
+                  mProducerFactory.newNetworkFetchProducer(mNetworkFetcher)));    <span class="hljs-comment">// 从网络获取 byte array</span>
+      mCommonNetworkFetchToEncodedMemorySequence =
+          ProducerFactory.newAddImageTransformMetaDataProducer(inputProducer);
+
+      mCommonNetworkFetchToEncodedMemorySequence =
+          mProducerFactory.newResizeAndRotateProducer(                            <span class="hljs-comment">// 缩放和选择</span>
+              mCommonNetworkFetchToEncodedMemorySequence,
+              mResizeAndRotateEnabledForNetwork &amp;&amp; !mDownsampleEnabled,
+              mImageTranscoderFactory);
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+    &#125;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">return</span> mCommonNetworkFetchToEncodedMemorySequence;
+  &#125;      
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProducerFactory</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> Producer&lt;EncodedImage&gt; <span class="hljs-title">newNetworkFetchProducer</span><span class="hljs-params">(NetworkFetcher networkFetcher)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> NetworkFetchProducer(mPooledByteBufferFactory, mByteArrayPool, networkFetcher);
+  &#125;    
+&#125;
+
+<span class="hljs-comment">// NetworkFetchProducer.produceResults 会将网络请求任务提交到任务队列</span>
+<span class="hljs-comment">// 得到的数据（byte array）包装为 EncodedImage（并没有立刻 decode）交给下一个 Producer</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NetworkFetchProducer</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Producer</span>&lt;<span class="hljs-title">EncodedImage</span>&gt; </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(Consumer&lt;EncodedImage&gt; consumer, ProducerContext context)</span> </span>&#123;
+    context.getProducerListener().onProducerStart(context, PRODUCER_NAME);
+    <span class="hljs-keyword">final</span> FetchState fetchState = mNetworkFetcher.createFetchState(consumer, context);
+    mNetworkFetcher.fetch(
+        fetchState,
+        <span class="hljs-keyword">new</span> NetworkFetcher.Callback() &#123;
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onResponse</span><span class="hljs-params">(InputStream response, <span class="hljs-keyword">int</span> responseLength)</span> <span class="hljs-keyword">throws</span> IOException </span>&#123;
+            <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+              FrescoSystrace.beginSection(<span class="hljs-string">&quot;NetworkFetcher-&gt;onResponse&quot;</span>);
+            &#125;
+            NetworkFetchProducer.<span class="hljs-keyword">this</span>.onResponse(fetchState, response, responseLength);
+            <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+              FrescoSystrace.endSection();
+            &#125;
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onFailure</span><span class="hljs-params">(Throwable throwable)</span> </span>&#123;
+            NetworkFetchProducer.<span class="hljs-keyword">this</span>.onFailure(fetchState, throwable);
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onCancellation</span><span class="hljs-params">()</span> </span>&#123;
+            NetworkFetchProducer.<span class="hljs-keyword">this</span>.onCancellation(fetchState);
+          &#125;
+        &#125;);
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onResponse</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      FetchState fetchState, InputStream responseData, <span class="hljs-keyword">int</span> responseContentLength)</span></span>
+<span class="hljs-function">      <span class="hljs-keyword">throws</span> IOException </span>&#123;
+    <span class="hljs-keyword">final</span> PooledByteBufferOutputStream pooledOutputStream;
+    <span class="hljs-keyword">if</span> (responseContentLength &gt; <span class="hljs-number">0</span>) &#123;
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream(responseContentLength);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream();
+    &#125;
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] ioArray = mByteArrayPool.get(READ_SIZE);
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">int</span> length;
+      <span class="hljs-keyword">while</span> ((length = responseData.read(ioArray)) &gt;= <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">if</span> (length &gt; <span class="hljs-number">0</span>) &#123;
+          pooledOutputStream.write(ioArray, <span class="hljs-number">0</span>, length);
+          maybeHandleIntermediateResult(pooledOutputStream, fetchState);
+          <span class="hljs-keyword">float</span> progress = calculateProgress(pooledOutputStream.size(), responseContentLength);
+          fetchState.getConsumer().onProgressUpdate(progress);
+        &#125;
+      &#125;
+      mNetworkFetcher.onFetchCompletion(fetchState, pooledOutputStream.size());
+      handleFinalResult(pooledOutputStream, fetchState);
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      mByteArrayPool.release(ioArray);
+      pooledOutputStream.close();
+    &#125;
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleFinalResult</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      PooledByteBufferOutputStream pooledOutputStream, FetchState fetchState)</span> </span>&#123;
+    Map&lt;String, String&gt; extraMap = getExtraMap(fetchState, pooledOutputStream.size());
+    ProducerListener2 listener = fetchState.getListener();
+    listener.onProducerFinishWithSuccess(fetchState.getContext(), PRODUCER_NAME, extraMap);
+    listener.onUltimateProducerReached(fetchState.getContext(), PRODUCER_NAME, <span class="hljs-keyword">true</span>);
+    fetchState.getContext().putOriginExtra(<span class="hljs-string">&quot;network&quot;</span>);
+    notifyConsumer(
+        pooledOutputStream,
+        Consumer.IS_LAST | fetchState.getOnNewResultStatusFlags(),
+        fetchState.getResponseBytesRange(),
+        fetchState.getConsumer(),
+        fetchState.getContext());
+  &#125;        
+&#125;</code></pre></div>
+
+<h1 id="一些概念"><a href="#一些概念" class="headerlink" title="一些概念"></a>一些概念</h1><p>Fresco 不能像 Glide 那样直接作用于 <code>ImageView</code>，必须用 <code>SimpleDraweeView</code> 替换掉布局里的 <code>ImageView</code>（感觉侵入性有点强呀？）</p>
+<p>还好 Fresco 内部逻辑并没有写到 UI 控件 <code>SimpleDraweeView</code> 里，而是抽离放在 <code>DraweeHolder</code> 和 <code>DraweeController</code> 里</p>
+<p>图像的加载和处理是一个流水线 <code>ImagePipeline</code>，<code>Producer / Consumer</code> 是流水线上的一个个节点，上一个节点的输出作为下一个节点的输出，各节点是一对一的，生产者和消费者是 callback 模式</p>
+<p><code>ImagePipeline</code> 的最终输出是一个 <code>DataSource</code>，类似于 <code>Future</code> 的概念，可以用 <code>DataSubscriber</code> 订阅它的各种事件：成功（或者是一个新的结果）、失败、取消和进度更新，数据源和订阅者是一对多的</p>
+<h1 id="ImagePipeline"><a href="#ImagePipeline" class="headerlink" title="ImagePipeline"></a>ImagePipeline</h1><p><code>ImagePipeline</code> 可以想象为一个栈（Stack），不断地往里边添加节点，第一个是头节点，最后一个是尾结点，先添加的节点在后添加节点的 <code>前面</code>，后添加节点在先添加节点的 <code>后面</code></p>
+<p>发一个请求时先触达尾结点然后流向头节点，这叫 <code>去程</code>，响应从头结点开始流向尾结点，这叫 <code>回程</code></p>
+<p>跟 OkHttp Interceptor Chain 和 Servlet Contianer Filter 一样，ImagePipeline 的一次工作包含 <code>去程</code> 和 <code>回程</code>，以 <code>[A, B, C, D]</code> 为例（<code>A</code> 是头节点）：</p>
+<ul>
+<li>去程从 <code>Producer.produceResults</code> 开始，<code>D.produceResults</code> -&gt; <code>C.produceResults</code> -&gt; <code>B.produceResults</code> -&gt; <code>A.produceResults</code>，<code>A</code> 也许是个 NetworkFetchProducer 执行网络请求，拿到 Response 后执行回程</li>
+<li>回程从 <code>Consumer.onNewResult</code> 开始，<code>A.onNewResult</code> -&gt; <code>B.onNewResult</code> -&gt; <code>C.onNewResult</code> -&gt; <code>D.onNewResult</code> -&gt; <code>my.onNewResult</code>，当然可能会失败 <code>onFailure(throwable)</code>、取消 <code>onCancellation()</code> 等，一样是这个顺序</li>
+</ul>
+<h1 id="NetworkFetchProducer"><a href="#NetworkFetchProducer" class="headerlink" title="NetworkFetchProducer"></a>NetworkFetchProducer</h1><p>顾名思义，执行网络请求（HTTP）的 ImagePipeline 节点，，也是是整个流水线的第一个节点</p>
+<p>它用接口 <code>NetworkFetcher</code> 抹平了底层各网络库的 API 差异，具体的实现有：</p>
+<ul>
+<li><code>OkHttpNetworkFetcher</code></li>
+<li><code>VolleyNetworkFetcher</code></li>
+<li><code>HttpUrlConnectionNetworkFetcher</code></li>
+<li><code>PriorityNetworkFetcher</code>，它是一个装饰器（Decorator），具体的网络加载功能由上面的那些实现提供，它给请求提供了【优先队列】的特性，后续会说到</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<span class="hljs-comment"> *  Interface that specifies network fetcher used by the image pipeline.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">NetworkFetcher</span>&lt;<span class="hljs-title">FETCH_STATE</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FetchState</span>&gt; </span>&#123;
+  <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Callback</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onResponse</span><span class="hljs-params">(InputStream response, <span class="hljs-keyword">int</span> responseLength)</span> <span class="hljs-keyword">throws</span> IOException</span>;
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onFailure</span><span class="hljs-params">(Throwable throwable)</span></span>;
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onCancellation</span><span class="hljs-params">()</span></span>;
+  &#125;
+
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * Creates a new instance of the &#123;<span class="hljs-doctag">@link</span> FetchState&#125;-derived object used to store state.</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-function">FETCH_STATE <span class="hljs-title">createFetchState</span><span class="hljs-params">(Consumer&lt;EncodedImage&gt; consumer, ProducerContext producerContext)</span></span>;
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * Gets a map containing extra parameters to pass to the listeners.</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-function">Map&lt;String, String&gt; <span class="hljs-title">getExtraMap</span><span class="hljs-params">(FETCH_STATE fetchState, <span class="hljs-keyword">int</span> byteSize)</span></span>;  
+
+  <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">fetch</span><span class="hljs-params">(FETCH_STATE fetchState, Callback callback)</span></span>;
+  <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">shouldPropagate</span><span class="hljs-params">(FETCH_STATE fetchState)</span></span>;
+  <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onFetchCompletion</span><span class="hljs-params">(FETCH_STATE fetchState, <span class="hljs-keyword">int</span> byteSize)</span></span>;
+&#125;</code></pre></div>
+
+<p><code>NetworkFetchProducer</code> 从 Response 里读取 ByteArray 格式的内容，并包装为 <code>EncodedImage</code> 输出给下一节点；考虑到性能问题，在这一阶段 ByteArray 并没有 decode 为 <code>Bitmap</code>，而是通过解析前 N 个字节长度的数据来获取图片格式、尺寸等一些元信息</p>
+<p>同时加载进度 <code>Consumer.onProgressUpdate</code> 也是由 <code>NetworkFetchProducer</code> 在 Response Reading 时发出</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NetworkFetchProducer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(Consumer&lt;EncodedImage&gt; consumer, ProducerContext context)</span> </span>&#123;    <span class="hljs-comment">// 网络加载功能交由 NetworkFetcher 实现</span>
+    context.getProducerListener().onProducerStart(context, PRODUCER_NAME);
+    <span class="hljs-keyword">final</span> FetchState fetchState = mNetworkFetcher.createFetchState(consumer, context);
+    mNetworkFetcher.fetch(
+        fetchState,
+        <span class="hljs-keyword">new</span> NetworkFetcher.Callback() &#123;
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onResponse</span><span class="hljs-params">(InputStream response, <span class="hljs-keyword">int</span> responseLength)</span> <span class="hljs-keyword">throws</span> IOException </span>&#123;
+            <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+              FrescoSystrace.beginSection(<span class="hljs-string">&quot;NetworkFetcher-&gt;onResponse&quot;</span>);
+            &#125;
+            NetworkFetchProducer.<span class="hljs-keyword">this</span>.onResponse(fetchState, response, responseLength);
+            <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+              FrescoSystrace.endSection();
+            &#125;
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onFailure</span><span class="hljs-params">(Throwable throwable)</span> </span>&#123;
+            NetworkFetchProducer.<span class="hljs-keyword">this</span>.onFailure(fetchState, throwable);
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onCancellation</span><span class="hljs-params">()</span> </span>&#123;
+            NetworkFetchProducer.<span class="hljs-keyword">this</span>.onCancellation(fetchState);
+          &#125;
+        &#125;);
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onResponse</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      FetchState fetchState, InputStream responseData, <span class="hljs-keyword">int</span> responseContentLength)</span></span>
+<span class="hljs-function">      <span class="hljs-keyword">throws</span> IOException </span>&#123;
+    <span class="hljs-keyword">final</span> PooledByteBufferOutputStream pooledOutputStream;
+    <span class="hljs-keyword">if</span> (responseContentLength &gt; <span class="hljs-number">0</span>) &#123;
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream(responseContentLength);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      pooledOutputStream = mPooledByteBufferFactory.newOutputStream();
+    &#125;
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] ioArray = mByteArrayPool.get(READ_SIZE);
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">int</span> length;
+      <span class="hljs-keyword">while</span> ((length = responseData.read(ioArray)) &gt;= <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">if</span> (length &gt; <span class="hljs-number">0</span>) &#123;
+          pooledOutputStream.write(ioArray, <span class="hljs-number">0</span>, length);
+          maybeHandleIntermediateResult(pooledOutputStream, fetchState);
+          <span class="hljs-keyword">float</span> progress = calculateProgress(pooledOutputStream.size(), responseContentLength);
+          fetchState.getConsumer().onProgressUpdate(progress);    <span class="hljs-comment">// 更新加载进度</span>
+        &#125;
+      &#125;
+      mNetworkFetcher.onFetchCompletion(fetchState, pooledOutputStream.size());
+      handleFinalResult(pooledOutputStream, fetchState);
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      mByteArrayPool.release(ioArray);
+      pooledOutputStream.close();
+    &#125;
+  &#125;    
+
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleFinalResult</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      PooledByteBufferOutputStream pooledOutputStream, FetchState fetchState)</span> </span>&#123;
+    Map&lt;String, String&gt; extraMap = getExtraMap(fetchState, pooledOutputStream.size());
+    ProducerListener2 listener = fetchState.getListener();
+    listener.onProducerFinishWithSuccess(fetchState.getContext(), PRODUCER_NAME, extraMap);
+    listener.onUltimateProducerReached(fetchState.getContext(), PRODUCER_NAME, <span class="hljs-keyword">true</span>);
+    fetchState.getContext().putOriginExtra(<span class="hljs-string">&quot;network&quot;</span>);
+    notifyConsumer(
+        pooledOutputStream,
+        Consumer.IS_LAST | fetchState.getOnNewResultStatusFlags(),
+        fetchState.getResponseBytesRange(),
+        fetchState.getConsumer(),
+        fetchState.getContext());
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">notifyConsumer</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      PooledByteBufferOutputStream pooledOutputStream,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-meta">@Consumer</span>.Status <span class="hljs-keyword">int</span> status,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-meta">@Nullable</span> BytesRange responseBytesRange,</span></span>
+<span class="hljs-params"><span class="hljs-function">      Consumer&lt;EncodedImage&gt; consumer,</span></span>
+<span class="hljs-params"><span class="hljs-function">      ProducerContext context)</span> </span>&#123;    <span class="hljs-comment">// 将 ByteArray 包装为 EncodedImage 输出给消费者</span>
+    CloseableReference&lt;PooledByteBuffer&gt; result =
+        CloseableReference.of(pooledOutputStream.toByteBuffer());
+    EncodedImage encodedImage = <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">try</span> &#123;
+      encodedImage = <span class="hljs-keyword">new</span> EncodedImage(result);
+      encodedImage.setBytesRange(responseBytesRange);
+      encodedImage.parseMetaData();
+      context.setEncodedImageOrigin(EncodedImageOrigin.NETWORK);
+      consumer.onNewResult(encodedImage, status);
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      EncodedImage.closeSafely(encodedImage);
+      CloseableReference.closeSafely(result);
+    &#125;
+  &#125;      
+&#125;
+
+<span class="hljs-comment">// 这里简单地看下 EncodedImage 是如何判断图片格式的，各种图片的格式和 SOI 可以深入代码细节，结合网上资料了解</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EncodedImage</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">parseMetaData</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (!sUseCachedMetadata) &#123;
+      internalParseMetaData();
+      <span class="hljs-keyword">return</span>;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mHasParsedMetadata) &#123;
+      <span class="hljs-keyword">return</span>;
+    &#125;
+    internalParseMetaData();
+    mHasParsedMetadata = <span class="hljs-keyword">true</span>;
+  &#125;
+
+
+  <span class="hljs-comment">/** Sets the encoded image meta data. */</span>
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">internalParseMetaData</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">final</span> ImageFormat imageFormat =
+        ImageFormatChecker.getImageFormat_WrapIOException(getInputStream());    <span class="hljs-comment">// 解析图片格式</span>
+    mImageFormat = imageFormat;
+    <span class="hljs-comment">// BitmapUtil.decodeDimensions has a bug where it will return 100x100 for some WebPs even though</span>
+    <span class="hljs-comment">// those are not its actual dimensions</span>
+    <span class="hljs-keyword">final</span> Pair&lt;Integer, Integer&gt; dimensions;    <span class="hljs-comment">// 解析尺寸</span>
+    <span class="hljs-keyword">if</span> (DefaultImageFormats.isWebpFormat(imageFormat)) &#123;
+      dimensions = readWebPImageSize();
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      dimensions = readImageMetaData().getDimensions();
+    &#125;
+    <span class="hljs-keyword">if</span> (imageFormat == DefaultImageFormats.JPEG &amp;&amp; mRotationAngle == UNKNOWN_ROTATION_ANGLE) &#123;
+      <span class="hljs-comment">// Load the JPEG rotation angle only if we have the dimensions</span>
+      <span class="hljs-keyword">if</span> (dimensions != <span class="hljs-keyword">null</span>) &#123;
+        mExifOrientation = JfifUtil.getOrientation(getInputStream());
+        mRotationAngle = JfifUtil.getAutoRotateAngleFromOrientation(mExifOrientation);
+      &#125;
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (imageFormat == DefaultImageFormats.HEIF
+        &amp;&amp; mRotationAngle == UNKNOWN_ROTATION_ANGLE) &#123;
+      mExifOrientation = HeifExifUtil.getOrientation(getInputStream());
+      mRotationAngle = JfifUtil.getAutoRotateAngleFromOrientation(mExifOrientation);
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (mRotationAngle == UNKNOWN_ROTATION_ANGLE) &#123;
+      mRotationAngle = <span class="hljs-number">0</span>;
+    &#125;
+  &#125;      
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ImageFormatChecker</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ImageFormat <span class="hljs-title">getImageFormat_WrapIOException</span><span class="hljs-params">(<span class="hljs-keyword">final</span> InputStream is)</span> </span>&#123;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">return</span> getImageFormat(is);
+    &#125; <span class="hljs-keyword">catch</span> (IOException ioe) &#123;
+      <span class="hljs-keyword">throw</span> Throwables.propagate(ioe);
+    &#125;
+  &#125;
+
+
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * Tries to read up to MAX_HEADER_LENGTH bytes from InputStream is and use read bytes to determine</span>
+<span class="hljs-comment">   * type of the image contained in is. </span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ImageFormat <span class="hljs-title">getImageFormat</span><span class="hljs-params">(<span class="hljs-keyword">final</span> InputStream is)</span> <span class="hljs-keyword">throws</span> IOException </span>&#123;
+    <span class="hljs-keyword">return</span> getInstance().determineImageFormat(is);
+  &#125;      
+
+  <span class="hljs-function"><span class="hljs-keyword">public</span> ImageFormat <span class="hljs-title">determineImageFormat</span><span class="hljs-params">(<span class="hljs-keyword">final</span> InputStream is)</span> <span class="hljs-keyword">throws</span> IOException </span>&#123;
+    Preconditions.checkNotNull(is);
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] imageHeaderBytes = <span class="hljs-keyword">new</span> <span class="hljs-keyword">byte</span>[mMaxHeaderLength];
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> headerSize = readHeaderFromStream(mMaxHeaderLength, is, imageHeaderBytes);
+
+    ImageFormat format = mDefaultFormatChecker.determineFormat(imageHeaderBytes, headerSize);
+    <span class="hljs-keyword">if</span> (format != <span class="hljs-keyword">null</span> &amp;&amp; format != ImageFormat.UNKNOWN) &#123;
+      <span class="hljs-keyword">return</span> format;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mCustomImageFormatCheckers != <span class="hljs-keyword">null</span>) &#123;
+      <span class="hljs-keyword">for</span> (ImageFormat.FormatChecker formatChecker : mCustomImageFormatCheckers) &#123;
+        format = formatChecker.determineFormat(imageHeaderBytes, headerSize);
+        <span class="hljs-keyword">if</span> (format != <span class="hljs-keyword">null</span> &amp;&amp; format != ImageFormat.UNKNOWN) &#123;
+          <span class="hljs-keyword">return</span> format;
+        &#125;
+      &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> ImageFormat.UNKNOWN;
+  &#125;  
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DefaultImageFormatChecker</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> ImageFormat <span class="hljs-title">determineFormat</span><span class="hljs-params">(<span class="hljs-keyword">byte</span>[] headerBytes, <span class="hljs-keyword">int</span> headerSize)</span> </span>&#123;
+    Preconditions.checkNotNull(headerBytes);
+
+    <span class="hljs-keyword">if</span> (!mUseNewOrder &amp;&amp; WebpSupportStatus.isWebpHeader(headerBytes, <span class="hljs-number">0</span>, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> getWebpFormat(headerBytes, headerSize);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isJpegHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.JPEG;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isPngHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.PNG;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mUseNewOrder &amp;&amp; WebpSupportStatus.isWebpHeader(headerBytes, <span class="hljs-number">0</span>, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> getWebpFormat(headerBytes, headerSize);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isGifHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.GIF;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isBmpHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.BMP;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isIcoHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.ICO;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isHeifHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.HEIF;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isDngHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.DNG;
+    &#125;
+
+    <span class="hljs-keyword">return</span> ImageFormat.UNKNOWN;
+  &#125;
+
+
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * Every JPEG image should start with SOI mark (0xFF, 0xD8) followed by beginning of another</span>
+<span class="hljs-comment">   * segment (0xFF)</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] JPEG_HEADER = <span class="hljs-keyword">new</span> <span class="hljs-keyword">byte</span>[] &#123;(<span class="hljs-keyword">byte</span>) <span class="hljs-number">0xFF</span>, (<span class="hljs-keyword">byte</span>) <span class="hljs-number">0xD8</span>, (<span class="hljs-keyword">byte</span>) <span class="hljs-number">0xFF</span>&#125;;
+
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * Checks if imageHeaderBytes starts with SOI (start of image) marker, followed by 0xFF. If</span>
+<span class="hljs-comment">   * headerSize is lower than 3 false is returned. Description of jpeg format can be found here: &lt;a</span>
+<span class="hljs-comment">   * href=&quot;http://www.w3.org/Graphics/JPEG/itu-t81.pdf&quot;&gt;</span>
+<span class="hljs-comment">   * http://www.w3.org/Graphics/JPEG/itu-t81.pdf&lt;/a&gt; Annex B deals with compressed data format</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isJpegHeader</span><span class="hljs-params">(<span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] imageHeaderBytes, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> headerSize)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> headerSize &gt;= JPEG_HEADER.length
+        &amp;&amp; ImageFormatCheckerUtils.startsWithPattern(imageHeaderBytes, JPEG_HEADER);
+  &#125;      
+&#125;</code></pre></div>
+
+<h1 id="更多的资源加载器"><a href="#更多的资源加载器" class="headerlink" title="更多的资源加载器"></a>更多的资源加载器</h1><p>通过资源的 URI Scheme 来选择合适的加载器，<code>NetworkFetchProducer</code> 应该是最常用加载器之一了，它从网络获取资源，此外还有 <code>LocalResourceFetchProducer</code>、<code>LocalFileFetchProducer</code> 等</p>
+<table>
+<thead>
+<tr>
+<th>uri</th>
+<th>producer</th>
+<th>core api</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a target="_blank" rel="noopener" href="https://abc.com/avatar.jpg">https://abc.com/avatar.jpg</a></td>
+<td>NetworkFetchProducer</td>
+<td>OkHttp &amp; Volley &amp; HttpUrlConnection</td>
+</tr>
+<tr>
+<td>res://com.example/75281679</td>
+<td>LocalResourceFetchProducer</td>
+<td><code>Resources.openRawResource(resId)</code>，authority 部分是忽略掉的，直接取 path 作为资源 ID</td>
+</tr>
+<tr>
+<td>asset://com.example/avatar/default.jpg</td>
+<td>LocalAssetFetchProducer</td>
+<td><code>AssetManager.open</code>，authority 部分是忽略掉的，直接取 path 作为 asset path</td>
+</tr>
+<tr>
+<td>file:///sdcard/DCIM/Camera/avatar.jpg</td>
+<td>LocalFileFetchProducer</td>
+<td>File API</td>
+</tr>
+<tr>
+<td>content://media/external/images/media/2283</td>
+<td>LocalContentUriFetchProducer &amp; LocalThumbnailBitmapProducer</td>
+<td>ContentResolver.openInputStream/loadThumbnail</td>
+</tr>
+<tr>
+<td>data://base64</td>
+<td>DataFetchProducer</td>
+<td>Base64.decode</td>
+</tr>
+<tr>
+<td>android.resource://</td>
+<td>QualifiedResourceFetchProducer</td>
+<td>ContentResolver.openInputStream</td>
+</tr>
+</tbody></table>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ImageRequest</span> </span>&#123;
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-meta">@SourceUriType</span> <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">getSourceUriType</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Uri uri)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (uri == <span class="hljs-keyword">null</span>) &#123;
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_UNKNOWN;
+    &#125;
+    <span class="hljs-keyword">if</span> (UriUtil.isNetworkUri(uri)) &#123;                                      <span class="hljs-comment">// http:// &amp; https://</span>
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_NETWORK;
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (UriUtil.isLocalFileUri(uri)) &#123;                             <span class="hljs-comment">// file://</span>
+      <span class="hljs-keyword">if</span> (MediaUtils.isVideo(MediaUtils.extractMime(uri.getPath()))) &#123;    <span class="hljs-comment">// 通过文件后缀名判断是 image 还是 video</span>
+        <span class="hljs-keyword">return</span> SOURCE_TYPE_LOCAL_VIDEO_FILE;
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">return</span> SOURCE_TYPE_LOCAL_IMAGE_FILE;                              
+      &#125;
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (UriUtil.isLocalContentUri(uri)) &#123;                          <span class="hljs-comment">// content://</span>
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_LOCAL_CONTENT;
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (UriUtil.isLocalAssetUri(uri)) &#123;                            <span class="hljs-comment">// asset://</span>
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_LOCAL_ASSET;
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (UriUtil.isLocalResourceUri(uri)) &#123;                         <span class="hljs-comment">// res://</span>
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_LOCAL_RESOURCE;
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (UriUtil.isDataUri(uri)) &#123;                                  <span class="hljs-comment">// data://</span>
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_DATA;
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (UriUtil.isQualifiedResourceUri(uri)) &#123;                     <span class="hljs-comment">// android.resource://</span>
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_QUALIFIED_RESOURCE;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      <span class="hljs-keyword">return</span> SOURCE_TYPE_UNKNOWN;
+    &#125;
+  &#125;    
+&#125;</code></pre></div>
+
+<h1 id="磁盘缓存"><a href="#磁盘缓存" class="headerlink" title="磁盘缓存"></a>磁盘缓存</h1><p>磁盘缓存这一 feature 由 <code>ImagePipelineConfig.Builder.setDiskCacheEnabled</code> 开启，相关的 <code>ImagePipeline</code> 节点是紧邻着 <code>NetworkFetchProducer</code> 等头节点之后被添加的，包括三个个节点（按添加顺序）：</p>
+<ol>
+<li>PartialDiskCacheProducer</li>
+<li>DiskCacheWriteProducer</li>
+<li>DiskCacheReadProducer</li>
+</ol>
+<p>添加 <code>ImagePipeline</code> 节点的方法栈如下：</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+SimpleDraweeView.setImageURI(uri, <span class="hljs-keyword">null</span>)
+AbstractDraweeControllerBuilder.build
+AbstractDraweeControllerBuilder.buildController
+PipelineDraweeControllerBuilder.obtainController
+AbstractDraweeControllerBuilder.obtainDataSourceSupplier
+AbstractDraweeControllerBuilder.getDataSourceSupplierForRequest(controller, controllerId, imageRequest)
+AbstractDraweeControllerBuilder.getDataSourceSupplierForRequest(controller, controllerId, imageRequest, CacheLevel.FULL_FETCH)
+PipelineDraweeControllerBuilder.getDataSourceForRequest
+ImagePipeline.fetchDecodedImage
+ProducerSequenceFactory.getDecodedImageProducerSequence
+ProducerSequenceFactory.getBasicDecodedImageSequence
+ProducerSequenceFactory.getNetworkFetchSequence
+ProducerSequenceFactory.getCommonNetworkFetchToEncodedMemorySequence
+ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ProducerSequenceFactory</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">private</span> Producer&lt;EncodedImage&gt; <span class="hljs-title">newDiskCacheSequence</span><span class="hljs-params">(Producer&lt;EncodedImage&gt; inputProducer)</span> </span>&#123;
+    Producer&lt;EncodedImage&gt; cacheWriteProducer;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;ProducerSequenceFactory#newDiskCacheSequence&quot;</span>);
+    &#125;
+    <span class="hljs-keyword">if</span> (mPartialImageCachingEnabled) &#123;
+      Producer&lt;EncodedImage&gt; partialDiskCacheProducer =
+          mProducerFactory.newPartialDiskCacheProducer(inputProducer);
+      cacheWriteProducer = mProducerFactory.newDiskCacheWriteProducer(partialDiskCacheProducer);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      cacheWriteProducer = mProducerFactory.newDiskCacheWriteProducer(inputProducer);
+    &#125;
+    DiskCacheReadProducer result = mProducerFactory.newDiskCacheReadProducer(cacheWriteProducer);
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">return</span> result;
+  &#125;    
+&#125;</code></pre></div>
+
+<h2 id="PartialDiskCacheProducer"><a href="#PartialDiskCacheProducer" class="headerlink" title="PartialDiskCacheProducer"></a>PartialDiskCacheProducer</h2><p>由 <code>ImagePipelineConfig.Builder.experiment().setPartialImageCachingEnabled</code> 开启</p>
+<p>继续前先了解下 <a href="../../../../2021/12/16/http-range/">HTTP 分段下载</a> 的概念，可以看到分段下载是可以分多段（按需分段）的，但 <code>PartialDiskCacheProducer</code> 不太一样它只能分两段，看看它代码的逻辑：</p>
+<ol>
+<li>发起 ImagePipeline 请求时（去程）<ol>
+<li>先从 disk cache 里寻找 partial cache</li>
+<li>如果请求的是 partial content 并且 partial cache 包含这一 range，就不需要执行网络请求了，直接返回缓存</li>
+<li>否则 partial cache 作为 <code>IS_PARTIAL_RESULT</code> 返回，且执行网络请求获取剩下的内容</li>
+<li>没有 partial cache 那执行原请求</li>
+</ol>
+</li>
+<li>收到响应时（回程）<ol>
+<li>response header 里包含 <code>Content-Range</code>，说明是 partial content，设置 <code>IS_PARTIAL_RESULT</code> 标志</li>
+<li>存在 partial cache 且是 partial response，合并 cache 和 response 后传递给下一节点，删除 partial cache</li>
+<li>没有 partial cache 且是 partial response，将这部分内容缓存为 partical cache 以便后续合并</li>
+</ol>
+</li>
+</ol>
+<p>那么业务逻辑就是这样的：</p>
+<ol>
+<li>请求一个完整的资源服务器返回部分资源（206，Content-Range），或者请求资源的部分内容（Range 头部），总之就是服务器返回 partial content</li>
+<li>发现 <code>IS_PARTIAL_RESULT</code> 标志，将 response 缓存起来</li>
+<li>下次请求此资源时（Range 头部不是必须的），先返回缓存的部分内容，再请求剩下未获取的内容</li>
+<li>收到响应后（必须包含 <code>Content-Range</code>，否则不认为是 partial content，没有 <code>IS_PARTIAL_RESULT</code> 标志），合并 partial content 和 partial cache 为完整的资源返回，删除 partial cache</li>
+</ol>
+<p>问题就来了，什么场景下会只请求部分内容（Range 头部）、请求一个完整的资源服务器却只返回部分资源（206，Content-Range）？不是很能理解它的使用场景</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PartialDiskCacheProducer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> </span>&#123;
+    <span class="hljs-keyword">final</span> ImageRequest imageRequest = producerContext.getImageRequest();
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isDiskCacheEnabledForRead =
+        producerContext
+            .getImageRequest()
+            .isCacheEnabled(ImageRequest.CachesLocationsMasks.DISK_READ);
+
+    <span class="hljs-keyword">final</span> ProducerListener2 listener = producerContext.getProducerListener();
+    listener.onProducerStart(producerContext, PRODUCER_NAME);
+
+    <span class="hljs-keyword">final</span> Uri uriForPartialCacheKey = createUriForPartialCacheKey(imageRequest);
+    <span class="hljs-keyword">final</span> CacheKey partialImageCacheKey =
+        mCacheKeyFactory.getEncodedCacheKey(
+            imageRequest, uriForPartialCacheKey, producerContext.getCallerContext());
+
+    <span class="hljs-keyword">if</span> (!isDiskCacheEnabledForRead) &#123;
+      listener.onProducerFinishWithSuccess(
+          producerContext, PRODUCER_NAME, getExtraMap(listener, producerContext, <span class="hljs-keyword">false</span>, <span class="hljs-number">0</span>));
+      startInputProducer(consumer, producerContext, partialImageCacheKey, <span class="hljs-keyword">null</span>);
+      <span class="hljs-keyword">return</span>;
+    &#125;
+
+    <span class="hljs-comment">// 发起请求时，先从 disk cache 里找 partial cache</span>
+    <span class="hljs-keyword">final</span> AtomicBoolean isCancelled = <span class="hljs-keyword">new</span> AtomicBoolean(<span class="hljs-keyword">false</span>);
+    <span class="hljs-keyword">final</span> Task&lt;EncodedImage&gt; diskLookupTask =
+        mDefaultBufferedDiskCache.get(partialImageCacheKey, isCancelled);    
+    <span class="hljs-keyword">final</span> Continuation&lt;EncodedImage, Void&gt; continuation =
+        onFinishDiskReads(consumer, producerContext, partialImageCacheKey);
+
+    diskLookupTask.continueWith(continuation);
+    subscribeTaskForRequestCancellation(isCancelled, producerContext);
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> Continuation&lt;EncodedImage, Void&gt; <span class="hljs-title">onFinishDiskReads</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> ProducerContext producerContext,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> CacheKey partialImageCacheKey)</span> </span>&#123;
+    <span class="hljs-keyword">final</span> ProducerListener2 listener = producerContext.getProducerListener();
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Continuation&lt;EncodedImage, Void&gt;() &#123;
+      <span class="hljs-meta">@Override</span>
+      <span class="hljs-function"><span class="hljs-keyword">public</span> Void <span class="hljs-title">then</span><span class="hljs-params">(Task&lt;EncodedImage&gt; task)</span> <span class="hljs-keyword">throws</span> Exception </span>&#123;
+        <span class="hljs-keyword">if</span> (isTaskCancelled(task)) &#123;
+          listener.onProducerFinishWithCancellation(producerContext, PRODUCER_NAME, <span class="hljs-keyword">null</span>);
+          consumer.onCancellation();
+        &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (task.isFaulted()) &#123;
+          listener.onProducerFinishWithFailure(
+              producerContext, PRODUCER_NAME, task.getError(), <span class="hljs-keyword">null</span>);
+          startInputProducer(consumer, producerContext, partialImageCacheKey, <span class="hljs-keyword">null</span>);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+          EncodedImage cachedReference = task.getResult();
+          <span class="hljs-keyword">if</span> (cachedReference != <span class="hljs-keyword">null</span>) &#123;
+            listener.onProducerFinishWithSuccess(
+                producerContext,
+                PRODUCER_NAME,
+                getExtraMap(listener, producerContext, <span class="hljs-keyword">true</span>, cachedReference.getSize()));
+            <span class="hljs-keyword">final</span> BytesRange cachedRange = BytesRange.toMax(cachedReference.getSize() - <span class="hljs-number">1</span>);
+            cachedReference.setBytesRange(cachedRange);
+
+            <span class="hljs-comment">// Create a new ImageRequest for the remaining data</span>
+            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> cachedLength = cachedReference.getSize();
+            <span class="hljs-keyword">final</span> ImageRequest originalRequest = producerContext.getImageRequest();
+
+            <span class="hljs-comment">// 如果请求的是 partial content 并且 partial cache 包含这一 range，就不需要执行网络请求了，直接返回缓存</span>
+            <span class="hljs-keyword">if</span> (cachedRange.contains(originalRequest.getBytesRange())) &#123;
+              producerContext.putOriginExtra(<span class="hljs-string">&quot;disk&quot;</span>, <span class="hljs-string">&quot;partial&quot;</span>);
+              listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, <span class="hljs-keyword">true</span>);
+              consumer.onNewResult(cachedReference, Consumer.IS_LAST | Consumer.IS_PARTIAL_RESULT);
+            &#125; <span class="hljs-keyword">else</span> &#123;
+
+              <span class="hljs-comment">// 否则 partial cache 作为 IS_PARTIAL_RESULT 返回，且执行网络请求获取剩下的内容  </span>
+              consumer.onNewResult(cachedReference, Consumer.IS_PARTIAL_RESULT);
+
+              <span class="hljs-comment">// Pass the request on, but only for the remaining bytes</span>
+              <span class="hljs-keyword">final</span> ImageRequest remainingRequest =
+                  ImageRequestBuilder.fromRequest(originalRequest)
+                      .setBytesRange(BytesRange.from(cachedLength - <span class="hljs-number">1</span>))
+                      .build();
+              <span class="hljs-keyword">final</span> SettableProducerContext contextForRemainingRequest =
+                  <span class="hljs-keyword">new</span> SettableProducerContext(remainingRequest, producerContext);
+
+              startInputProducer(
+                  consumer, contextForRemainingRequest, partialImageCacheKey, cachedReference);
+            &#125;
+          &#125; <span class="hljs-keyword">else</span> &#123;
+
+            <span class="hljs-comment">// 没有 partial cache 那执行原请求  </span>
+            listener.onProducerFinishWithSuccess(
+                producerContext, PRODUCER_NAME, getExtraMap(listener, producerContext, <span class="hljs-keyword">false</span>, <span class="hljs-number">0</span>));
+            startInputProducer(consumer, producerContext, partialImageCacheKey, cachedReference);
+          &#125;
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+      &#125;
+    &#125;;
+  &#125;      
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">OkHttpNetworkFetcher</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">fetchWithRequest</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> OkHttpNetworkFetchState fetchState,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> NetworkFetcher.Callback callback,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Request request)</span> </span>&#123;
+    <span class="hljs-keyword">final</span> Call call = mCallFactory.newCall(request);
+
+    fetchState
+        .getContext()
+        .addCallbacks(
+            <span class="hljs-keyword">new</span> BaseProducerContextCallbacks() &#123;
+              <span class="hljs-meta">@Override</span>
+              <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onCancellationRequested</span><span class="hljs-params">()</span> </span>&#123;
+                <span class="hljs-keyword">if</span> (Looper.myLooper() != Looper.getMainLooper()) &#123;
+                  call.cancel();
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                  mCancellationExecutor.execute(
+                      <span class="hljs-keyword">new</span> Runnable() &#123;
+                        <span class="hljs-meta">@Override</span>
+                        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+                          call.cancel();
+                        &#125;
+                      &#125;);
+                &#125;
+              &#125;
+            &#125;);
+
+    call.enqueue(
+        <span class="hljs-keyword">new</span> okhttp3.Callback() &#123;
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onResponse</span><span class="hljs-params">(Call call, Response response)</span> <span class="hljs-keyword">throws</span> IOException </span>&#123;
+            fetchState.responseTime = SystemClock.elapsedRealtime();
+            <span class="hljs-keyword">final</span> ResponseBody body = response.body();
+            <span class="hljs-keyword">if</span> (body == <span class="hljs-keyword">null</span>) &#123;
+              handleException(call, <span class="hljs-keyword">new</span> IOException(<span class="hljs-string">&quot;Response body null: &quot;</span> + response), callback);
+              <span class="hljs-keyword">return</span>;
+            &#125;
+            <span class="hljs-keyword">try</span> &#123;
+              <span class="hljs-keyword">if</span> (!response.isSuccessful()) &#123;
+                handleException(
+                    call, <span class="hljs-keyword">new</span> IOException(<span class="hljs-string">&quot;Unexpected HTTP code &quot;</span> + response), callback);
+                <span class="hljs-keyword">return</span>;
+              &#125;
+
+              <span class="hljs-comment">// response header 里包含 Content-Range，说明是 partial content，设置 IS_PARTIAL_RESULT 标志</span>
+              BytesRange responseRange =
+                  BytesRange.fromContentRangeHeader(response.header(<span class="hljs-string">&quot;Content-Range&quot;</span>));
+              <span class="hljs-keyword">if</span> (responseRange != <span class="hljs-keyword">null</span>
+                  &amp;&amp; !(responseRange.from == <span class="hljs-number">0</span>
+                      &amp;&amp; responseRange.to == BytesRange.TO_END_OF_CONTENT)) &#123;
+                <span class="hljs-comment">// Only treat as a partial image if the range is not all of the content</span>
+                fetchState.setResponseBytesRange(responseRange);
+                fetchState.setOnNewResultStatusFlags(Consumer.IS_PARTIAL_RESULT);
+              &#125;
+
+              <span class="hljs-keyword">long</span> contentLength = body.contentLength();
+              <span class="hljs-keyword">if</span> (contentLength &lt; <span class="hljs-number">0</span>) &#123;
+                contentLength = <span class="hljs-number">0</span>;
+              &#125;
+              callback.onResponse(body.byteStream(), (<span class="hljs-keyword">int</span>) contentLength);
+            &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+              handleException(call, e, callback);
+            &#125; <span class="hljs-keyword">finally</span> &#123;
+              body.close();
+            &#125;
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onFailure</span><span class="hljs-params">(Call call, IOException e)</span> </span>&#123;
+            handleException(call, e, callback);
+          &#125;
+        &#125;);
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PartialDiskCacheConsumer</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNewResultImpl</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> EncodedImage newResult, <span class="hljs-meta">@Status</span> <span class="hljs-keyword">int</span> status)</span> </span>&#123;
+      <span class="hljs-keyword">if</span> (isNotLast(status)) &#123;
+        <span class="hljs-comment">// TODO 19247361 Consider merging of non-final results</span>
+        <span class="hljs-keyword">return</span>;
+      &#125;
+
+      <span class="hljs-comment">// 存在 partial cache 且是 partial response，合并 cache 和 response 后传递给下一节点，删除 partial cache</span>
+      <span class="hljs-keyword">if</span> (mPartialEncodedImageFromCache != <span class="hljs-keyword">null</span>
+          &amp;&amp; newResult != <span class="hljs-keyword">null</span>
+          &amp;&amp; newResult.getBytesRange() != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">try</span> &#123;
+          <span class="hljs-keyword">final</span> PooledByteBufferOutputStream pooledOutputStream =
+              merge(mPartialEncodedImageFromCache, newResult);
+          sendFinalResultToConsumer(pooledOutputStream);
+        &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;
+          <span class="hljs-comment">// TODO 19247425 Delete cached file and request full image</span>
+          FLog.e(PRODUCER_NAME, <span class="hljs-string">&quot;Error while merging image data&quot;</span>, e);
+          getConsumer().onFailure(e);
+        &#125; <span class="hljs-keyword">finally</span> &#123;
+          newResult.close();
+          mPartialEncodedImageFromCache.close();
+        &#125;
+        mDefaultBufferedDiskCache.remove(mPartialImageCacheKey);
+
+        <span class="hljs-comment">// 没有 partial cache 且是 partial response，将这部分内容缓存为 partical cache 以便后续合并</span>
+      &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (mIsDiskCacheEnabledForWrite
+          &amp;&amp; statusHasFlag(status, IS_PARTIAL_RESULT)
+          &amp;&amp; isLast(status)
+          &amp;&amp; newResult != <span class="hljs-keyword">null</span>
+          &amp;&amp; newResult.getImageFormat() != ImageFormat.UNKNOWN) &#123;
+        mDefaultBufferedDiskCache.put(mPartialImageCacheKey, newResult);
+        getConsumer().onNewResult(newResult, status);
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        getConsumer().onNewResult(newResult, status);
+      &#125;
+    &#125;    
+&#125;</code></pre></div>
+
+<h2 id="read-amp-amp-write"><a href="#read-amp-amp-write" class="headerlink" title="read &amp;&amp; write"></a>read &amp;&amp; write</h2><p>包含两个节点 <code>DiskCacheWriteProducer</code> 和 <code>DiskCacheReadProducer</code>，它们按顺序被添加到 ImagePipeline，那么：</p>
+<ul>
+<li>去程：<code>DiskCacheReadProducer.produceResults</code> -&gt; <code>DiskCacheWriteProducer.produceResults</code></li>
+<li>回程：<code>DiskCacheWriteProducer.onNewResult</code> -&gt; <code>DiskCacheReadProducer.onNewResult</code></li>
+</ul>
+<p>发起加载请求是，disk reader 从磁盘缓存里找是否有对应的缓存文件，有的话就无须做网络请求，加载缓存文件至内存后返回；因为是先添加 disk reader 后添加 disk writer 的，请求被 disk reader 截胡后就不经过 disk writer 和 network fetcher 了</p>
+<p>如果没能找到磁盘缓存，请求流转到 network fetcher，拿到 response 后 disk writer 将其保存为磁盘缓存</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DiskCacheReadProducer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> </span>&#123;
+    <span class="hljs-keyword">final</span> ImageRequest imageRequest = producerContext.getImageRequest();
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isDiskCacheEnabledForRead =
+        producerContext
+            .getImageRequest()
+            .isCacheEnabled(ImageRequest.CachesLocationsMasks.DISK_READ);
+    <span class="hljs-keyword">if</span> (!isDiskCacheEnabledForRead) &#123;
+      maybeStartInputProducer(consumer, producerContext);
+      <span class="hljs-keyword">return</span>;
+    &#125;
+
+    producerContext.getProducerListener().onProducerStart(producerContext, PRODUCER_NAME);
+
+    <span class="hljs-keyword">final</span> CacheKey cacheKey =
+        mCacheKeyFactory.getEncodedCacheKey(imageRequest, producerContext.getCallerContext());
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isSmallRequest = (imageRequest.getCacheChoice() == CacheChoice.SMALL);
+    <span class="hljs-keyword">final</span> BufferedDiskCache preferredCache =
+        isSmallRequest ? mSmallImageBufferedDiskCache : mDefaultBufferedDiskCache;
+    <span class="hljs-keyword">final</span> AtomicBoolean isCancelled = <span class="hljs-keyword">new</span> AtomicBoolean(<span class="hljs-keyword">false</span>);
+    <span class="hljs-keyword">final</span> Task&lt;EncodedImage&gt; diskLookupTask = preferredCache.get(cacheKey, isCancelled);    <span class="hljs-comment">// 去程，从磁盘缓存里查找</span>
+    <span class="hljs-keyword">final</span> Continuation&lt;EncodedImage, Void&gt; continuation =
+        onFinishDiskReads(consumer, producerContext);
+    diskLookupTask.continueWith(continuation);
+    subscribeTaskForRequestCancellation(isCancelled, producerContext);
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> Continuation&lt;EncodedImage, Void&gt; <span class="hljs-title">onFinishDiskReads</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> </span>&#123;
+    <span class="hljs-keyword">final</span> ProducerListener2 listener = producerContext.getProducerListener();
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Continuation&lt;EncodedImage, Void&gt;() &#123;
+      <span class="hljs-meta">@Override</span>
+      <span class="hljs-function"><span class="hljs-keyword">public</span> Void <span class="hljs-title">then</span><span class="hljs-params">(Task&lt;EncodedImage&gt; task)</span> <span class="hljs-keyword">throws</span> Exception </span>&#123;
+        <span class="hljs-keyword">if</span> (isTaskCancelled(task)) &#123;
+          listener.onProducerFinishWithCancellation(producerContext, PRODUCER_NAME, <span class="hljs-keyword">null</span>);
+          consumer.onCancellation();
+        &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (task.isFaulted()) &#123;
+          listener.onProducerFinishWithFailure(
+              producerContext, PRODUCER_NAME, task.getError(), <span class="hljs-keyword">null</span>);
+          mInputProducer.produceResults(consumer, producerContext);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+          EncodedImage cachedReference = task.getResult();
+          <span class="hljs-keyword">if</span> (cachedReference != <span class="hljs-keyword">null</span>) &#123;    <span class="hljs-comment">// 找到磁盘缓存直接将去程截了，不继续流向下一节点（网络请求）</span>
+            listener.onProducerFinishWithSuccess(
+                producerContext,
+                PRODUCER_NAME,
+                getExtraMap(listener, producerContext, <span class="hljs-keyword">true</span>, cachedReference.getSize()));
+            listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, <span class="hljs-keyword">true</span>);
+            producerContext.putOriginExtra(<span class="hljs-string">&quot;disk&quot;</span>);
+            consumer.onProgressUpdate(<span class="hljs-number">1</span>);
+            consumer.onNewResult(cachedReference, Consumer.IS_LAST);
+            cachedReference.close();
+          &#125; <span class="hljs-keyword">else</span> &#123;                         <span class="hljs-comment">// 否则将请求传递给下一节点</span>
+            listener.onProducerFinishWithSuccess(
+                producerContext, PRODUCER_NAME, getExtraMap(listener, producerContext, <span class="hljs-keyword">false</span>, <span class="hljs-number">0</span>));
+            mInputProducer.produceResults(consumer, producerContext);
+          &#125;
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+      &#125;
+    &#125;;
+  &#125;      
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DiskCacheWriteConsumer</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNewResultImpl</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> EncodedImage newResult, <span class="hljs-meta">@Status</span> <span class="hljs-keyword">int</span> status)</span> </span>&#123;
+      mProducerContext.getProducerListener().onProducerStart(mProducerContext, PRODUCER_NAME);
+      <span class="hljs-comment">// intermediate, null or uncacheable results are not cached, so we just forward them</span>
+      <span class="hljs-comment">// as well as the images with unknown format which could be html response from the server</span>
+      <span class="hljs-keyword">if</span> (isNotLast(status)
+          || newResult == <span class="hljs-keyword">null</span>
+          || statusHasAnyFlag(status, DO_NOT_CACHE_ENCODED | IS_PARTIAL_RESULT)
+          || newResult.getImageFormat() == ImageFormat.UNKNOWN) &#123;
+        mProducerContext
+            .getProducerListener()
+            .onProducerFinishWithSuccess(mProducerContext, PRODUCER_NAME, <span class="hljs-keyword">null</span>);
+        getConsumer().onNewResult(newResult, status);
+        <span class="hljs-keyword">return</span>;
+      &#125;
+
+      <span class="hljs-keyword">final</span> ImageRequest imageRequest = mProducerContext.getImageRequest();
+      <span class="hljs-keyword">final</span> CacheKey cacheKey =
+          mCacheKeyFactory.getEncodedCacheKey(imageRequest, mProducerContext.getCallerContext());
+
+      <span class="hljs-keyword">if</span> (imageRequest.getCacheChoice() == ImageRequest.CacheChoice.SMALL) &#123;    <span class="hljs-comment">// 将 response 缓存起来</span>
+        mSmallImageBufferedDiskCache.put(cacheKey, newResult);
+      &#125; <span class="hljs-keyword">else</span> &#123;
+        mDefaultBufferedDiskCache.put(cacheKey, newResult);
+      &#125;
+      mProducerContext
+          .getProducerListener()
+          .onProducerFinishWithSuccess(mProducerContext, PRODUCER_NAME, <span class="hljs-keyword">null</span>);
+
+      getConsumer().onNewResult(newResult, status);
+    &#125;    
+&#125;</code></pre></div>
+
+<h1 id="内存缓存（encoded）"><a href="#内存缓存（encoded）" class="headerlink" title="内存缓存（encoded）"></a>内存缓存（encoded）</h1><p>添加 <code>EncodedMemoryCacheProducer</code> 节点以实现内存缓存，这里缓存的对象是 <code>encoded</code>，也就是被图像压缩算法编码后的、各种图像格式的原始数据，尚未被 <code>decode</code> 为 <code>Bitmap</code></p>
+<ul>
+<li><code>去程</code> 时从内存缓存里找，命中直接返回内存数据，未命中则交由下个节点处理</li>
+<li><code>回程</code> 时将原始数据添加到内存缓存中，然后继续往下传递原始数据</li>
+</ul>
+<p>默认开启，由 <code>ImageRequestBuilder.disableMemoryCache</code> 关闭 </p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EncodedMemoryCacheProducer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> </span>&#123;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(<span class="hljs-string">&quot;EncodedMemoryCacheProducer#produceResults&quot;</span>);
+      &#125;
+      <span class="hljs-keyword">final</span> ProducerListener2 listener = producerContext.getProducerListener();
+      listener.onProducerStart(producerContext, PRODUCER_NAME);
+      <span class="hljs-keyword">final</span> ImageRequest imageRequest = producerContext.getImageRequest();
+      <span class="hljs-keyword">final</span> CacheKey cacheKey =
+          mCacheKeyFactory.getEncodedCacheKey(imageRequest, producerContext.getCallerContext());
+      <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isEncodedCacheEnabledForRead =
+          producerContext
+              .getImageRequest()
+              .isCacheEnabled(ImageRequest.CachesLocationsMasks.ENCODED_READ);
+      CloseableReference&lt;PooledByteBuffer&gt; cachedReference =
+          isEncodedCacheEnabledForRead ? mMemoryCache.get(cacheKey) : <span class="hljs-keyword">null</span>;
+      <span class="hljs-keyword">try</span> &#123;
+        <span class="hljs-keyword">if</span> (cachedReference != <span class="hljs-keyword">null</span>) &#123;    <span class="hljs-comment">// 命中 encoded 内存缓存，将请求截胡，直接返回内存中的数据</span>
+          EncodedImage cachedEncodedImage = <span class="hljs-keyword">new</span> EncodedImage(cachedReference);
+          <span class="hljs-keyword">try</span> &#123;
+            listener.onProducerFinishWithSuccess(
+                producerContext,
+                PRODUCER_NAME,
+                listener.requiresExtraMap(producerContext, PRODUCER_NAME)
+                    ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, <span class="hljs-string">&quot;true&quot;</span>)
+                    : <span class="hljs-keyword">null</span>);
+            listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, <span class="hljs-keyword">true</span>);
+            producerContext.putOriginExtra(<span class="hljs-string">&quot;memory_encoded&quot;</span>);
+            consumer.onProgressUpdate(<span class="hljs-number">1f</span>);
+            consumer.onNewResult(cachedEncodedImage, Consumer.IS_LAST);
+            <span class="hljs-keyword">return</span>;
+          &#125; <span class="hljs-keyword">finally</span> &#123;
+            EncodedImage.closeSafely(cachedEncodedImage);
+          &#125;
+        &#125;
+
+        <span class="hljs-keyword">if</span> (producerContext.getLowestPermittedRequestLevel().getValue()
+            &gt;= ImageRequest.RequestLevel.ENCODED_MEMORY_CACHE.getValue()) &#123;
+          listener.onProducerFinishWithSuccess(
+              producerContext,
+              PRODUCER_NAME,
+              listener.requiresExtraMap(producerContext, PRODUCER_NAME)
+                  ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, <span class="hljs-string">&quot;false&quot;</span>)
+                  : <span class="hljs-keyword">null</span>);
+          listener.onUltimateProducerReached(producerContext, PRODUCER_NAME, <span class="hljs-keyword">false</span>);
+          producerContext.putOriginExtra(<span class="hljs-string">&quot;memory_encoded&quot;</span>, <span class="hljs-string">&quot;nil-result&quot;</span>);
+          consumer.onNewResult(<span class="hljs-keyword">null</span>, Consumer.IS_LAST);
+          <span class="hljs-keyword">return</span>;
+        &#125;
+
+        Consumer consumerOfInputProducer =
+            <span class="hljs-keyword">new</span> EncodedMemoryCacheConsumer(
+                consumer,
+                mMemoryCache,
+                cacheKey,
+                producerContext
+                    .getImageRequest()
+                    .isCacheEnabled(ImageRequest.CachesLocationsMasks.ENCODED_WRITE),
+                producerContext.getImagePipelineConfig().getExperiments().isEncodedCacheEnabled());
+
+        listener.onProducerFinishWithSuccess(
+            producerContext,
+            PRODUCER_NAME,
+            listener.requiresExtraMap(producerContext, PRODUCER_NAME)
+                ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, <span class="hljs-string">&quot;false&quot;</span>)
+                : <span class="hljs-keyword">null</span>);
+        mInputProducer.produceResults(consumerOfInputProducer, producerContext);
+      &#125; <span class="hljs-keyword">finally</span> &#123;
+        CloseableReference.closeSafely(cachedReference);
+      &#125;
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+    &#125;
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EncodedMemoryCacheConsumer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNewResultImpl</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> EncodedImage newResult, <span class="hljs-meta">@Status</span> <span class="hljs-keyword">int</span> status)</span> </span>&#123;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(<span class="hljs-string">&quot;EncodedMemoryCacheProducer#onNewResultImpl&quot;</span>);
+      &#125;
+      <span class="hljs-comment">// intermediate, null or uncacheable results are not cached, so we just forward them</span>
+      <span class="hljs-comment">// as well as the images with unknown format which could be html response from the server</span>
+      <span class="hljs-keyword">if</span> (isNotLast(status)
+          || newResult == <span class="hljs-keyword">null</span>
+          || statusHasAnyFlag(status, DO_NOT_CACHE_ENCODED | IS_PARTIAL_RESULT)
+          || newResult.getImageFormat() == ImageFormat.UNKNOWN) &#123;
+        getConsumer().onNewResult(newResult, status);
+        <span class="hljs-keyword">return</span>;
+      &#125;
+      <span class="hljs-comment">// cache and forward the last result</span>
+      CloseableReference&lt;PooledByteBuffer&gt; ref = newResult.getByteBufferRef();
+      <span class="hljs-keyword">if</span> (ref != <span class="hljs-keyword">null</span>) &#123;
+        CloseableReference&lt;PooledByteBuffer&gt; cachedResult = <span class="hljs-keyword">null</span>;
+        <span class="hljs-keyword">try</span> &#123;
+          <span class="hljs-keyword">if</span> (mEncodedCacheEnabled &amp;&amp; mIsEncodedCacheEnabledForWrite) &#123;    <span class="hljs-comment">// 将原始数据缓存至内存</span>
+            cachedResult = mMemoryCache.cache(mRequestedCacheKey, ref);
+          &#125;
+        &#125; <span class="hljs-keyword">finally</span> &#123;
+          CloseableReference.closeSafely(ref);
+        &#125;
+        <span class="hljs-keyword">if</span> (cachedResult != <span class="hljs-keyword">null</span>) &#123;
+          EncodedImage cachedEncodedImage;
+          <span class="hljs-keyword">try</span> &#123;
+            cachedEncodedImage = <span class="hljs-keyword">new</span> EncodedImage(cachedResult);
+            cachedEncodedImage.copyMetaDataFrom(newResult);
+          &#125; <span class="hljs-keyword">finally</span> &#123;
+            CloseableReference.closeSafely(cachedResult);
+          &#125;
+          <span class="hljs-keyword">try</span> &#123;
+            getConsumer().onProgressUpdate(<span class="hljs-number">1f</span>);
+            getConsumer().onNewResult(cachedEncodedImage, status);
+            <span class="hljs-keyword">return</span>;
+          &#125; <span class="hljs-keyword">finally</span> &#123;
+            EncodedImage.closeSafely(cachedEncodedImage);
+          &#125;
+        &#125;
+      &#125;
+      getConsumer().onNewResult(newResult, status);
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+    &#125;
+  &#125;    
+&#125;</code></pre></div>
+
+<h1 id="内存缓存（decoded-Bitmap）"><a href="#内存缓存（decoded-Bitmap）" class="headerlink" title="内存缓存（decoded, Bitmap）"></a>内存缓存（decoded, Bitmap）</h1><p><code>BitmapMemoryCacheProducer</code> 实现了 <code>Bitmap</code> 的内存缓存，整个逻辑比较简单：</p>
+<ul>
+<li>默认开启，可以通过 <code>ImageRequestBuilder.disableMemoryCache</code> 关闭</li>
+<li>去程时从缓存里读，命中的话截胡，返回缓存在内存中的 <code>Bitmap</code></li>
+<li>回程时写入缓存</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BitmapMemoryCacheProducer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Consumer&lt;CloseableReference&lt;CloseableImage&gt;&gt; consumer,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> </span>&#123;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(<span class="hljs-string">&quot;BitmapMemoryCacheProducer#produceResults&quot;</span>);
+      &#125;
+      <span class="hljs-keyword">final</span> ProducerListener2 listener = producerContext.getProducerListener();
+      listener.onProducerStart(producerContext, getProducerName());
+      <span class="hljs-keyword">final</span> ImageRequest imageRequest = producerContext.getImageRequest();
+      <span class="hljs-keyword">final</span> Object callerContext = producerContext.getCallerContext();
+      <span class="hljs-keyword">final</span> CacheKey cacheKey = mCacheKeyFactory.getBitmapCacheKey(imageRequest, callerContext);
+      <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isBitmapCacheEnabledForRead =
+          producerContext
+              .getImageRequest()
+              .isCacheEnabled(ImageRequest.CachesLocationsMasks.BITMAP_READ);
+
+      CloseableReference&lt;CloseableImage&gt; cachedReference =
+          isBitmapCacheEnabledForRead ? mMemoryCache.get(cacheKey) : <span class="hljs-keyword">null</span>;
+
+      <span class="hljs-keyword">if</span> (cachedReference != <span class="hljs-keyword">null</span>) &#123;
+        maybeSetExtrasFromCloseableImage(cachedReference.get(), producerContext);
+        <span class="hljs-keyword">boolean</span> isFinal = cachedReference.get().getQualityInfo().isOfFullQuality();
+        <span class="hljs-keyword">if</span> (isFinal) &#123;
+          listener.onProducerFinishWithSuccess(
+              producerContext,
+              getProducerName(),
+              listener.requiresExtraMap(producerContext, getProducerName())
+                  ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, <span class="hljs-string">&quot;true&quot;</span>)
+                  : <span class="hljs-keyword">null</span>);
+          listener.onUltimateProducerReached(producerContext, getProducerName(), <span class="hljs-keyword">true</span>);
+          producerContext.putOriginExtra(<span class="hljs-string">&quot;memory_bitmap&quot;</span>, getOriginSubcategory());
+          consumer.onProgressUpdate(<span class="hljs-number">1f</span>);
+        &#125;
+        consumer.onNewResult(cachedReference, BaseConsumer.simpleStatusForIsLast(isFinal));
+        cachedReference.close();
+        <span class="hljs-keyword">if</span> (isFinal) &#123;
+          <span class="hljs-keyword">return</span>;
+        &#125;
+      &#125;
+      <span class="hljs-comment">// ...</span>
+  &#125;
+
+  <span class="hljs-keyword">protected</span> Consumer&lt;CloseableReference&lt;CloseableImage&gt;&gt; wrapConsumer(
+      <span class="hljs-keyword">final</span> Consumer&lt;CloseableReference&lt;CloseableImage&gt;&gt; consumer,
+      <span class="hljs-keyword">final</span> CacheKey cacheKey,
+      <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isBitmapCacheEnabledForWrite) &#123;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> DelegatingConsumer&lt;
+        CloseableReference&lt;CloseableImage&gt;, CloseableReference&lt;CloseableImage&gt;&gt;(consumer) &#123;
+      <span class="hljs-meta">@Override</span>
+      <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNewResultImpl</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">          <span class="hljs-meta">@Nullable</span> CloseableReference&lt;CloseableImage&gt; newResult, <span class="hljs-meta">@Status</span> <span class="hljs-keyword">int</span> status)</span> </span>&#123;
+        <span class="hljs-keyword">try</span> &#123;
+          <span class="hljs-comment">// ...</span>
+          <span class="hljs-comment">// cache, if needed, and forward the new result</span>
+          CloseableReference&lt;CloseableImage&gt; newCachedResult = <span class="hljs-keyword">null</span>;
+          <span class="hljs-keyword">if</span> (isBitmapCacheEnabledForWrite) &#123;
+            newCachedResult = mMemoryCache.cache(cacheKey, newResult);
+          &#125;
+          <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-keyword">if</span> (isLast) getConsumer().onProgressUpdate(<span class="hljs-number">1f</span>);
+            getConsumer().onNewResult((newCachedResult != <span class="hljs-keyword">null</span>) ? newCachedResult : newResult, status);
+          &#125; <span class="hljs-keyword">finally</span> &#123; CloseableReference.closeSafely(newCachedResult); &#125;
+        &#125; <span class="hljs-keyword">finally</span> &#123;
+          <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) FrescoSystrace.endSection();
+        &#125;
+      &#125;
+    &#125;;
+  &#125;    
+&#125;</code></pre></div>
+
+<h1 id="LruCountingMemoryCache"><a href="#LruCountingMemoryCache" class="headerlink" title="LruCountingMemoryCache"></a>LruCountingMemoryCache</h1><p>内存缓存（包括 encoded 和 decoded）的实现是 <code>LruCountingMemoryCache&lt;CacheKey, CloseableImage&gt;</code>，它有一些参数（可通过 <code>ImagePipelineConfig.Builder.setBitmapMemoryCacheParamsSupplier</code> 配置）：</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MemoryCacheParams.maxCacheSize</td>
+<td>整个缓存的容量（字节），只包括使用中的</td>
+<td>堆内存 &lt; 32M 则取 4M，&lt; 64M 则取 6M，Android 3.0 HONEYCOMB API 11 以下则取 8M，否则取 1/4 堆内存大小</td>
+</tr>
+<tr>
+<td>MemoryCacheParams.maxCacheEntries</td>
+<td>整个缓存里 Entry 数量的上限，只包括使用中的</td>
+<td>256</td>
+</tr>
+<tr>
+<td>MemoryCacheParams.maxEvictionQueueSize</td>
+<td>eviction queue 的容量上限</td>
+<td>Integer.MAX_VALUE</td>
+</tr>
+<tr>
+<td>MemoryCacheParams.maxEvictionQueueEntries</td>
+<td>eviction queue 里 Entry 数量的上限</td>
+<td>Integer.MAX_VALUE</td>
+</tr>
+<tr>
+<td>MemoryCacheParams.maxCacheEntrySize</td>
+<td>单个 Entry 的大小上限，超过此阈值不缓存</td>
+<td>Integer.MAX_VALUE</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>eviction queue 指没有被使用、可被安全回收（evict）的缓存对象的集合</p>
+</blockquote>
+<p><code>LruCountingMemoryCache</code> 的核心数据结构、也是实现 <code>LRU</code> 算法和 key-value 映射的是 <a href="../../../../2021/01/19/reviews/">LinkedHashMap</a>，它内部有两个 Map：</p>
+<ul>
+<li><code>mCachedEntries</code>：存放所有的缓存条目，按最近访问排序（虽然它里面的 <code>LruCountingMemoryCache</code> 是按插入顺序排序，但 <code>取缓存</code> 和 <code>回收缓存</code> 两个操作对应的 <code>LinkedHashMap</code> API 是删除和插入，所以最终效果还是按最近访问排序），这里就实现了 <code>LRU</code></li>
+<li><code>mExclusiveEntries</code>：存放空闲的、未被使用、可被安全回收的缓存条目，它是 <code>mCachedEntries</code> 的一个子集，也是上面所说的 <code>eviction queue</code></li>
+</ul>
+<p>通过 <code>cache(key, valueRef)</code> 放入缓存或者 <code>get(key)</code> 取得缓存对象，会返回一个 <code>CloseableReference</code>，直到 <code>CloseableReference.close</code> 释放/回收缓存对象前，此时缓存条目都只存在于 <code>mCachedEntries</code>；只有当缓存条目不再被任何人持有/引用（<code>CountingMemoryCache.Entry.clientCount == 0</code>），它才会被添加到 <code>mExclusiveEntries</code>，表示它可以被安全释放</p>
+<p>返回 <code>CloseableReference</code> （需要通过 <code>close</code> 释放）这一特性使它跟一般的 LRU 缓存有所不同：</p>
+<ul>
+<li><code>maxCacheSize</code> 容量上限和 <code>maxCacheEntries</code> Entry 数量上限，针对的是 <code>使用中的 Entry 集合</code>，也即 <code>mCachedEntries - mExclusiveEntries</code>，这是因为 <code>mExclusiveEntries</code> 是空闲的 Entry 集合，没有人引用意味这可以被 <code>evict</code>，新增缓存条目后可以通过 <code>evict</code> 淘汰空闲的 Entry 以使缓存满足约束</li>
+<li>Entry 是可以被多人持有的（被多人借出，用一个引用计数 <code>Entry.clientCount</code> 表示借出的次数，归还后减一）</li>
+<li>取出的 Entry 用完后执行下 <code>close</code> 就可以了，由缓存决定是继续保留这个 Entry 还是淘汰掉（满足容量等限制条件时会保留在空闲集合中，超过容量限制时如果引用计数为零则释放掉，否则等引用计数归零再释放）</li>
+<li>Entry 有 <code>isOrphan</code> 和 <code>clientCount</code> 两个特征，<code>isOrphan == true</code> 表示 Entry 已经从缓存中移除，但此时如果还有人持有这个 Entry（<code>Entry.clientCount &gt; 0</code>）则暂时还不能释放它，要等到引用计数归零才能释放，有些情况会导致引用计数不为零时强行将 Entry 变为孤儿：<ol>
+<li><code>cache</code> 放入相同的 key 导致旧 Entry 被强制移除出缓存</li>
+<li>手动执行 <code>MemoryCache.removeAll</code>、<code>CountingMemoryCache.clear</code> 将 Entry 从缓存中移除</li>
+<li>内存不足的情况下执行 <code>MemoryTrimmable.trim(trimType)</code> 强制移除一定比例的 Entry</li>
+</ol>
+</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LruCountingMemoryCache</span> </span>&#123;
+
+  <span class="hljs-comment">// Contains the items that are not being used by any client and are hence viable for eviction.</span>
+  <span class="hljs-keyword">final</span> CountingLruMap&lt;K, Entry&lt;K, V&gt;&gt; mExclusiveEntries;
+
+  <span class="hljs-comment">// Contains all the cached items including the exclusively owned ones.</span>
+  <span class="hljs-keyword">final</span> CountingLruMap&lt;K, Entry&lt;K, V&gt;&gt; mCachedEntries;  
+
+  <span class="hljs-function"><span class="hljs-keyword">public</span> CloseableReference&lt;V&gt; <span class="hljs-title">cache</span><span class="hljs-params">(<span class="hljs-keyword">final</span> K key, <span class="hljs-keyword">final</span> CloseableReference&lt;V&gt; valueRef)</span></span>
+<span class="hljs-function"></span>
+<span class="hljs-function">  <span class="hljs-keyword">public</span> CloseableReference&lt;V&gt; <span class="hljs-title">get</span><span class="hljs-params">(<span class="hljs-keyword">final</span> K key)</span>  </span>
+<span class="hljs-function">&#125;</span></code></pre></div>
+
+<p>添加缓存的逻辑：</p>
+<ol>
+<li>key 下有无使用中的旧值，有的话将其标识为孤儿（<code>Entry.isOrphan = true</code>），那么当旧值用完、调用 <code>CloseableReference.close</code> 时（最终会调用 <code>LruCountingMemoryCache.releaseClientReference(entry)</code>）就不会再添加到 <code>mExclusiveEntries</code> 而是释放对象，因为此 key 对应的值已被替换为新值</li>
+<li>当满足以下条件时，value 被添加到 <code>mCachedEntries</code>，新添加的 Entry 的初始值 isOrphan == false &amp;&amp; clientCount == 1，解释下：不是孤儿 Entry 且引用计数为 1</li>
+<li>value size 要小于等于 <code>maxCacheEntrySize</code></li>
+<li>使用中的 Entry 数量要小于 <code>maxCacheEntries</code>，<code>使用中</code> 是指存在于 <code>mCachedEntries</code> 但不在 <code>mExclusiveEntries</code></li>
+<li>使用中的 Entry 的总大小加上 value 大小要小于等于 <code>maxCacheSize</code></li>
+<li>执行 <code>evict</code> 逻辑，淘汰/释放一些 <code>mExclusiveEntries</code> 中的 Entry 以满足约束条件</li>
+<li>返回一个 <code>CloseableReference</code>，当它的 <code>CloseableReference.close</code> 被调用的同时 <code>LruCountingMemoryCache.releaseClientReference(entry)</code> 也被执行</li>
+</ol>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LruCountingMemoryCache</span> </span>&#123;
+  <span class="hljs-keyword">public</span> <span class="hljs-meta">@Nullable</span> <span class="hljs-function">CloseableReference&lt;V&gt; <span class="hljs-title">cache</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> K key,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> CloseableReference&lt;V&gt; valueRef,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> <span class="hljs-meta">@Nullable</span> EntryStateObserver&lt;K&gt; observer)</span> </span>&#123;
+    Preconditions.checkNotNull(key);
+    Preconditions.checkNotNull(valueRef);
+
+    maybeUpdateCacheParams();
+
+    Entry&lt;K, V&gt; oldExclusive;
+    CloseableReference&lt;V&gt; oldRefToClose = <span class="hljs-keyword">null</span>;
+    CloseableReference&lt;V&gt; clientRef = <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+      <span class="hljs-comment">// remove the old item (if any) as it is stale now</span>
+      oldExclusive = mExclusiveEntries.remove(key);
+      Entry&lt;K, V&gt; oldEntry = mCachedEntries.remove(key);
+      <span class="hljs-keyword">if</span> (oldEntry != <span class="hljs-keyword">null</span>) &#123;
+        makeOrphan(oldEntry);
+        oldRefToClose = referenceToClose(oldEntry);
+      &#125;
+
+      V value = valueRef.get();
+      <span class="hljs-keyword">int</span> size = mValueDescriptor.getSizeInBytes(value);
+      <span class="hljs-keyword">if</span> (canCacheNewValueOfSize(size)) &#123;
+        Entry&lt;K, V&gt; newEntry;
+        <span class="hljs-keyword">if</span> (mStoreEntrySize) &#123;
+          newEntry = Entry.of(key, valueRef, size, observer);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+          newEntry = Entry.of(key, valueRef, observer);
+        &#125;
+        mCachedEntries.put(key, newEntry);
+        clientRef = newClientReference(newEntry);
+      &#125;
+    &#125;
+    CloseableReference.closeSafely(oldRefToClose);
+    maybeNotifyExclusiveEntryRemoval(oldExclusive);
+
+    maybeEvictEntries();
+    <span class="hljs-keyword">return</span> clientRef;
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> <span class="hljs-title">makeOrphan</span><span class="hljs-params">(Entry&lt;K, V&gt; entry)</span> </span>&#123;
+    Preconditions.checkNotNull(entry);
+    Preconditions.checkState(!entry.isOrphan);
+    entry.isOrphan = <span class="hljs-keyword">true</span>;
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">canCacheNewValueOfSize</span><span class="hljs-params">(<span class="hljs-keyword">int</span> newValueSize)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> (newValueSize &lt;= mMemoryCacheParams.maxCacheEntrySize)
+        &amp;&amp; (getInUseCount() &lt;= mMemoryCacheParams.maxCacheEntries - <span class="hljs-number">1</span>)
+        &amp;&amp; (getInUseSizeInBytes() &lt;= mMemoryCacheParams.maxCacheSize - newValueSize);
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> CloseableReference&lt;V&gt; <span class="hljs-title">newClientReference</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Entry&lt;K, V&gt; entry)</span> </span>&#123;
+    increaseClientCount(entry);
+    <span class="hljs-keyword">return</span> CloseableReference.of(
+        entry.valueRef.get(),
+        <span class="hljs-keyword">new</span> ResourceReleaser&lt;V&gt;() &#123;
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">release</span><span class="hljs-params">(V unused)</span> </span>&#123;
+            releaseClientReference(entry);
+          &#125;
+        &#125;);
+  &#125;         
+&#125;</code></pre></div>
+
+<p>释放一个 Entry 的逻辑：</p>
+<ol>
+<li>引用数减一（<code>Entry.clientCount--</code>）</li>
+<li>如果没有被引用且不是孤儿（<code>Entry.isOrphan == false</code>），说明此 Entry 没有从 MemoryCache 中被移除（<code>evict</code> 或者被相同 key 的新值覆盖都会导致 Entry 被移除，成为孤儿），添加到空闲集合 <code>mExclusiveEntries</code></li>
+<li>如果没有被引用且是孤儿，则将引用置空释放对象</li>
+<li>往空闲集合添加了元素后可能会不符合 MemoryCache 的约束条件，需要执行一次 <code>evict</code> 逻辑</li>
+</ol>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">releaseClientReference</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Entry&lt;K, V&gt; entry)</span> </span>&#123;
+  Preconditions.checkNotNull(entry);
+  <span class="hljs-keyword">boolean</span> isExclusiveAdded;
+  CloseableReference&lt;V&gt; oldRefToClose;
+  <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+    decreaseClientCount(entry);
+    isExclusiveAdded = maybeAddToExclusives(entry);
+    oldRefToClose = referenceToClose(entry);
+  &#125;
+  CloseableReference.closeSafely(oldRefToClose);
+  maybeNotifyExclusiveEntryInsertion(isExclusiveAdded ? entry : <span class="hljs-keyword">null</span>);
+  maybeUpdateCacheParams();
+  maybeEvictEntries();
+&#125;</code></pre></div>
+
+<p>淘汰逻辑（<code>evict</code>），针对的是存在于 <code>mExclusiveEntries</code> 中的无人引用的 Entry：</p>
+<ol>
+<li>两个方面的约束：Entry 的数量和 Entry 的总大小，从多个阈值中取最小值：</li>
+<li>maxEvictionQueueEntries/maxEvictionQueueSize，专门针对空闲 Entry 的约束</li>
+<li>maxCacheEntries/maxCacheSize，针对整个 memory cache（包括空闲的 Entry 和使用中的 Entry）的约束，减去使用中的就是针对空闲 Entry 的约束</li>
+<li>从 <code>mExclusiveEntries</code> 逐个剔除 Entry 直到满足上面的容量和大小的约束条件，而剔除的顺序就是 <code>LinkedHashMap</code> 迭代器的顺序，上面说过最终顺序是按访问排序（也就实现了 <code>LRU</code>）</li>
+<li>将剔除的 Entry 集合标识为 <code>孤儿</code> 并删除（<code>CloseableReference.close</code> 最终会调用 <code>LruCountingMemoryCache.releaseClientReference(entry)</code>）</li>
+</ol>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LruCountingMemoryCache</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">maybeEvictEntries</span><span class="hljs-params">()</span> </span>&#123;
+    ArrayList&lt;Entry&lt;K, V&gt;&gt; oldEntries;
+    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+      <span class="hljs-keyword">int</span> maxCount =
+          Math.min(
+              mMemoryCacheParams.maxEvictionQueueEntries,
+              mMemoryCacheParams.maxCacheEntries - getInUseCount());
+      <span class="hljs-keyword">int</span> maxSize =
+          Math.min(
+              mMemoryCacheParams.maxEvictionQueueSize,
+              mMemoryCacheParams.maxCacheSize - getInUseSizeInBytes());
+      oldEntries = trimExclusivelyOwnedEntries(maxCount, maxSize);
+      makeOrphans(oldEntries);
+    &#125;
+    maybeClose(oldEntries);
+    maybeNotifyExclusiveEntryRemoval(oldEntries);
+  &#125;
+
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> ArrayList&lt;Entry&lt;K, V&gt;&gt; trimExclusivelyOwnedEntries(<span class="hljs-keyword">int</span> count, <span class="hljs-keyword">int</span> size) &#123;
+    count = Math.max(count, <span class="hljs-number">0</span>);
+    size = Math.max(size, <span class="hljs-number">0</span>);
+    <span class="hljs-comment">// fast path without array allocation if no eviction is necessary</span>
+    <span class="hljs-keyword">if</span> (mExclusiveEntries.getCount() &lt;= count &amp;&amp; mExclusiveEntries.getSizeInBytes() &lt;= size) &#123;
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+    &#125;
+    ArrayList&lt;Entry&lt;K, V&gt;&gt; oldEntries = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();
+    <span class="hljs-keyword">while</span> (mExclusiveEntries.getCount() &gt; count || mExclusiveEntries.getSizeInBytes() &gt; size) &#123;
+      <span class="hljs-meta">@Nullable</span> K key = mExclusiveEntries.getFirstKey();
+      <span class="hljs-keyword">if</span> (key == <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (mIgnoreSizeMismatch) &#123;
+          mExclusiveEntries.resetSize();
+          <span class="hljs-keyword">break</span>;
+        &#125;
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalStateException(
+            String.format(
+                <span class="hljs-string">&quot;key is null, but exclusiveEntries count: %d, size: %d&quot;</span>,
+                mExclusiveEntries.getCount(), mExclusiveEntries.getSizeInBytes()));
+      &#125;
+      mExclusiveEntries.remove(key);
+      oldEntries.add(mCachedEntries.remove(key));
+    &#125;
+    <span class="hljs-keyword">return</span> oldEntries;
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CountingLruMap</span>&lt;<span class="hljs-title">K</span>, <span class="hljs-title">V</span>&gt; </span>&#123;
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> LinkedHashMap&lt;K, V&gt; mMap = <span class="hljs-keyword">new</span> LinkedHashMap&lt;&gt;();  
+
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> K <span class="hljs-title">getFirstKey</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">return</span> mMap.isEmpty() ? <span class="hljs-keyword">null</span> : mMap.keySet().iterator().next();
+  &#125;  
+&#125;</code></pre></div>
+
+<p>取缓存时，是直接从 <code>mExclusiveEntries</code> 删除，<code>CloseableReference.close</code> 的时候再重新插入到 <code>mExclusiveEntries</code> 里，所以虽然 <code>mExclusiveEntries</code> 里的 <code>LinkedHashMap</code> 是按插入排序的，但从 MemoryCache 的角度看 <code>mExclusiveEntries</code> 是按访问排序的，<code>evict</code> 时就从最久未访问的 Entry 迭代起</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> CloseableReference&lt;V&gt; <span class="hljs-title">get</span><span class="hljs-params">(<span class="hljs-keyword">final</span> K key)</span> </span>&#123;
+  Preconditions.checkNotNull(key);
+  Entry&lt;K, V&gt; oldExclusive;
+  CloseableReference&lt;V&gt; clientRef = <span class="hljs-keyword">null</span>;
+  <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+    oldExclusive = mExclusiveEntries.remove(key);
+    Entry&lt;K, V&gt; entry = mCachedEntries.get(key);
+    <span class="hljs-keyword">if</span> (entry != <span class="hljs-keyword">null</span>) &#123;
+      clientRef = newClientReference(entry);
+    &#125;
+  &#125;
+  maybeNotifyExclusiveEntryRemoval(oldExclusive);
+  maybeUpdateCacheParams();
+  maybeEvictEntries();
+  <span class="hljs-keyword">return</span> clientRef;
+&#125;</code></pre></div>
+
+<p>此外 <code>LruCountingMemoryCache</code> 还提供了以下方法</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>inspect(key)</td>
+<td>返回 key 对应的缓存，但不影响它在 LRU 中的次序</td>
+</tr>
+<tr>
+<td>probe(key)</td>
+<td>碰一下 key 对应的缓存但不获取，这个操作主要是改变它在 LRU 中的次序</td>
+</tr>
+<tr>
+<td>reuse(key)</td>
+<td>从 MemoryCache 里获取并移除 key 对应的缓存，这个缓存必须是空闲的（存在于 <code>mExclusiveEntries</code>）</td>
+</tr>
+<tr>
+<td>maybeEvictEntries</td>
+<td>手动淘汰一些 Entry</td>
+</tr>
+<tr>
+<td>getCount()</td>
+<td>Entry 总数，包括空闲和使用的 Entry</td>
+</tr>
+<tr>
+<td>getSizeInBytes()</td>
+<td>MemoryCache 的总大小，包括空闲和使用的 Entry</td>
+</tr>
+</tbody></table>
+<h1 id="绑定-View-生命周期"><a href="#绑定-View-生命周期" class="headerlink" title="绑定 View 生命周期"></a>绑定 View 生命周期</h1><p>先让我们来看看 Fresco 是如何处理和保存 ImageRequest：</p>
+<ol>
+<li>通过 <code>ProducerSequenceFactory.getEncodedImageProducerSequence</code>，<code>ImageRequest</code> 转变为一个合适的图像流水线（<code>ImagePipeline</code>，实际上是流水线上最后的那个节点）</li>
+<li>将 <code>Producer</code> 适配为 <code>DataSource</code>（就在此时，request 被添加到线程池里开始流水处理）</li>
+<li><code>PipelineDraweeController.mDataSourceSupplier</code> 保存了 <code>Supplier&lt;DataSource&gt;</code>，而 <code>AbstractDraweeController.mDataSource</code> 保存了 <code>DataSource</code></li>
+<li><code>DataSource</code> 是一个异步的结果（类似于 <code>Future</code>），通过订阅获得异步的结果（成功 or 失败），在 <code>AbstractDraweeController.submitRequest</code> 订阅之，从而拿到 <code>Bitmap</code></li>
+<li>也就说一个图像加载请求是保存在 <code>DraweeView.mDraweeHolder.mController.mDataSource</code></li>
+</ol>
+<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+SimpleDraweeView.setImageURI(uri, <span class="hljs-keyword">null</span>)
+AbstractDraweeControllerBuilder.build
+AbstractDraweeControllerBuilder.buildController
+PipelineDraweeControllerBuilder.obtainController
+AbstractDraweeControllerBuilder.obtainDataSourceSupplier
+AbstractDraweeControllerBuilder.getDataSourceSupplierForRequest(controller, controllerId, imageRequest)
+AbstractDraweeControllerBuilder.getDataSourceSupplierForRequest(controller, controllerId, imageRequest, cacheLevel)
+PipelineDraweeControllerBuilder.getDataSourceForRequest
+ImagePipeline.fetchDecodedImage
+ImagePipeline.submitFetchRequest
+CloseableProducerToDataSourceAdapter.create
+
+<span class="hljs-comment">// 最终在这里启动流水线，并把流水线包装为 DataSource</span>
+<span class="hljs-comment">// DataSource 其后被包装为 Supplier&lt;DataSource&gt;，保存在 PipelineDraweeController.mDataSourceSupplier</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractProducerToDataSourceAdapter</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-title">AbstractProducerToDataSourceAdapter</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      Producer&lt;T&gt; producer,</span></span>
+<span class="hljs-params"><span class="hljs-function">      SettableProducerContext settableProducerContext,</span></span>
+<span class="hljs-params"><span class="hljs-function">      RequestListener2 requestListener)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractProducerToDataSourceAdapter()&quot;</span>);
+    &#125;
+    mSettableProducerContext = settableProducerContext;
+    mRequestListener = requestListener;
+    setInitialExtras();
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractProducerToDataSourceAdapter()-&gt;onRequestStart&quot;</span>);
+    &#125;
+    mRequestListener.onRequestStart(mSettableProducerContext);
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;AbstractProducerToDataSourceAdapter()-&gt;produceResult&quot;</span>);
+    &#125;
+    producer.produceResults(createConsumer(), settableProducerContext);
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+  &#125;  
+&#125;
+
+<span class="hljs-comment">// 继续走下去来到 submitRequest</span>
+<span class="hljs-comment">// 从 PipelineDraweeController.mDataSourceSupplier 获得 DataSource 并将其保存在 AbstractDraweeController.mDataSource</span>
+<span class="hljs-comment">// 订阅 DataSource 从而在 callback 里拿到 Bitmap</span>
+DraweeView.setController
+DraweeHolder.setController
+DraweeHolder.attachController
+AbstractDraweeController.onAttach
+AbstractDraweeController.submitRequest
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractDraweeController</span> </span>&#123;  
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">submitRequest</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-comment">// ...</span>
+    mDataSource = getDataSource();
+    reportSubmit(mDataSource, <span class="hljs-keyword">null</span>);
+    <span class="hljs-keyword">if</span> (FLog.isLoggable(FLog.VERBOSE)) &#123;
+      FLog.v(
+          TAG,
+          <span class="hljs-string">&quot;controller %x %s: submitRequest: dataSource: %x&quot;</span>,
+          System.identityHashCode(<span class="hljs-keyword">this</span>),
+          mId,
+          System.identityHashCode(mDataSource));
+    &#125;
+
+    <span class="hljs-keyword">final</span> String id = mId;
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> wasImmediate = mDataSource.hasResult();
+    <span class="hljs-keyword">final</span> DataSubscriber&lt;T&gt; dataSubscriber =
+        <span class="hljs-keyword">new</span> BaseDataSubscriber&lt;T&gt;() &#123;
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNewResultImpl</span><span class="hljs-params">(DataSource&lt;T&gt; dataSource)</span> </span>&#123;
+            <span class="hljs-comment">// isFinished must be obtained before image, otherwise we might set intermediate result</span>
+            <span class="hljs-comment">// as final image.</span>
+            <span class="hljs-keyword">boolean</span> isFinished = dataSource.isFinished();
+            <span class="hljs-keyword">boolean</span> hasMultipleResults = dataSource.hasMultipleResults();
+            <span class="hljs-keyword">float</span> progress = dataSource.getProgress();
+            T image = dataSource.getResult();
+            <span class="hljs-keyword">if</span> (image != <span class="hljs-keyword">null</span>) &#123;
+              onNewResultInternal(
+                  id, dataSource, image, progress, isFinished, wasImmediate, hasMultipleResults);
+            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (isFinished) &#123;
+              onFailureInternal(id, dataSource, <span class="hljs-keyword">new</span> NullPointerException(), <span class="hljs-comment">/* isFinished */</span> <span class="hljs-keyword">true</span>);
+            &#125;
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onFailureImpl</span><span class="hljs-params">(DataSource&lt;T&gt; dataSource)</span> </span>&#123;
+            onFailureInternal(id, dataSource, dataSource.getFailureCause(), <span class="hljs-comment">/* isFinished */</span> <span class="hljs-keyword">true</span>);
+          &#125;
+
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onProgressUpdate</span><span class="hljs-params">(DataSource&lt;T&gt; dataSource)</span> </span>&#123;
+            <span class="hljs-keyword">boolean</span> isFinished = dataSource.isFinished();
+            <span class="hljs-keyword">float</span> progress = dataSource.getProgress();
+            onProgressUpdateInternal(id, dataSource, progress, isFinished);
+          &#125;
+        &#125;;
+    mDataSource.subscribe(dataSubscriber, mUiThreadImmediateExecutor);
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PipelineDraweeController</span> </span>&#123;
+  <span class="hljs-keyword">protected</span> DataSource&lt;CloseableReference&lt;CloseableImage&gt;&gt; getDataSource() &#123;
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.beginSection(<span class="hljs-string">&quot;PipelineDraweeController#getDataSource&quot;</span>);
+    &#125;
+    <span class="hljs-keyword">if</span> (FLog.isLoggable(FLog.VERBOSE)) &#123;
+      FLog.v(TAG, <span class="hljs-string">&quot;controller %x: getDataSource&quot;</span>, System.identityHashCode(<span class="hljs-keyword">this</span>));
+    &#125;
+    DataSource&lt;CloseableReference&lt;CloseableImage&gt;&gt; result = mDataSourceSupplier.get();
+    <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+      FrescoSystrace.endSection();
+    &#125;
+    <span class="hljs-keyword">return</span> result;
+  &#125;  
+&#125;</code></pre></div>
+
+<p>跟 <code>Glide</code> 不同的是，<code>Fresco</code> 并不能直接用在 <code>ImageView</code> 上，而是需要更换 UI 组件为 <code>SimpleDraweeView</code>，然后通过 <code>SimpleDraweeView.setImageURI(uri, callerContext)</code> 发起图像加载请求，整个过程并没有看到有 Activity/Fragment/LifecycleOwner 等组件参加</p>
+<p>通过 <code>DraweeView</code> 可以看出，Fresco image request 绑定的是 UI 层 <code>View</code> 组件的生命周期：<code>onAttachedToWindow</code> 和 <code>onDetachedFromWindow</code></p>
+<p>当 <code>onDetachedFromWindow</code> 触发时，事件会沿着 <code>DraweeView -&gt; DraweeHolder -&gt; DraweeController -&gt; DataSource -&gt; ProducerContext -&gt; ProducerContextCallbacks</code> 的方向传递，凡是注册了 <code>ProducerContextCallbacks</code> 的都能收到 <code>onCancellationRequested</code></p>
+<p>上面介绍过的 ImagePipeline 节点随便拿两个看看（<code>OkHttpNetworkFetcher</code> 和 <code>DiskCacheReadProducer</code>）都能够发现它们是注册了 callback 的，这样无论 request 流转至哪个节点都能及时响应 cancel 事件停止工作，从而实现 image request 与 <code>View</code> 生命周期的绑定</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DraweeView</span> </span>&#123;
+
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onAttachedToWindow</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">super</span>.onAttachedToWindow();
+    maybeOverrideVisibilityHandling();
+    onAttach();
+  &#125;
+
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onDetachedFromWindow</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">super</span>.onDetachedFromWindow();
+    maybeOverrideVisibilityHandling();
+    onDetach();
+  &#125;
+
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onStartTemporaryDetach</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">super</span>.onStartTemporaryDetach();
+    maybeOverrideVisibilityHandling();
+    onDetach();
+  &#125;
+
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onFinishTemporaryDetach</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">super</span>.onFinishTemporaryDetach();
+    maybeOverrideVisibilityHandling();
+    onAttach();
+  &#125;
+&#125;
+
+DraweeView.onDetach
+DraweeView.doDetach
+DraweeHolder.onDetach
+DraweeHolder.attachOrDetachController
+DraweeHolder.detachController
+AbstractDraweeController.onDetach
+AbstractDraweeController.release
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractDraweeController</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">releaseFetch</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">boolean</span> wasRequestSubmitted = mIsRequestSubmitted;
+    mIsRequestSubmitted = <span class="hljs-keyword">false</span>;
+    mHasFetchFailed = <span class="hljs-keyword">false</span>;
+    Map&lt;String, Object&gt; datasourceExtras = <span class="hljs-keyword">null</span>, imageExtras = <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">if</span> (mDataSource != <span class="hljs-keyword">null</span>) &#123;
+      datasourceExtras = mDataSource.getExtras();
+      mDataSource.close();    <span class="hljs-comment">// 关闭并置空 mDataSource</span>
+      mDataSource = <span class="hljs-keyword">null</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (mDrawable != <span class="hljs-keyword">null</span>) &#123;
+      releaseDrawable(mDrawable);
+    &#125;
+    <span class="hljs-keyword">if</span> (mContentDescription != <span class="hljs-keyword">null</span>) &#123;
+      mContentDescription = <span class="hljs-keyword">null</span>;
+    &#125;
+    mDrawable = <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">if</span> (mFetchedImage != <span class="hljs-keyword">null</span>) &#123;
+      imageExtras = obtainExtrasFromImage(getImageInfo(mFetchedImage));
+      logMessageAndImage(<span class="hljs-string">&quot;release&quot;</span>, mFetchedImage);
+      releaseImage(mFetchedImage);
+      mFetchedImage = <span class="hljs-keyword">null</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (wasRequestSubmitted) &#123;
+      reportRelease(datasourceExtras, imageExtras);
+    &#125;
+  &#125;      
+&#125;
+
+AbstractProducerToDataSourceAdapter.close           <span class="hljs-comment">// 还记得上面介绍过 DataSource 是适配自 Producer (ImagePipeline 节点)</span>
+BaseProducerContext.cancel
+ProducerContextCallbacks.onCancellationRequested    <span class="hljs-comment">// 谁会往这里添加 callback 呢？</span>
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">OkHttpNetworkFetcher</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">fetchWithRequest</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> OkHttpNetworkFetchState fetchState,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> NetworkFetcher.Callback callback,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Request request)</span> </span>&#123;
+    <span class="hljs-keyword">final</span> Call call = mCallFactory.newCall(request);
+
+    fetchState
+        .getContext()
+        .addCallbacks(
+            <span class="hljs-keyword">new</span> BaseProducerContextCallbacks() &#123;
+              <span class="hljs-meta">@Override</span>
+              <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onCancellationRequested</span><span class="hljs-params">()</span> </span>&#123;    <span class="hljs-comment">// 注册一个 callback 接收 cancel request 事件</span>
+                <span class="hljs-keyword">if</span> (Looper.myLooper() != Looper.getMainLooper()) &#123;
+                  call.cancel();
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                  mCancellationExecutor.execute(
+                      <span class="hljs-keyword">new</span> Runnable() &#123;
+                        <span class="hljs-meta">@Override</span>
+                        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+                          call.cancel();
+                        &#125;
+                      &#125;);
+                &#125;
+              &#125;
+            &#125;);
+    call.enqueue(...);
+  &#125;  
+&#125;
+
+<span class="hljs-comment">// 几乎所有的 ImagePipeline 节点都会注册 callback 接收 request cancel 事件</span>
+<span class="hljs-comment">// 这样无论 request 流转至哪个节点，都能及时响应 cancel 事件停止工作</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DiskCacheReadProducer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> </span>&#123;
+    <span class="hljs-keyword">final</span> ImageRequest imageRequest = producerContext.getImageRequest();
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isDiskCacheEnabledForRead =
+        producerContext
+            .getImageRequest()
+            .isCacheEnabled(ImageRequest.CachesLocationsMasks.DISK_READ);
+    <span class="hljs-keyword">if</span> (!isDiskCacheEnabledForRead) &#123;
+      maybeStartInputProducer(consumer, producerContext);
+      <span class="hljs-keyword">return</span>;
+    &#125;
+
+    producerContext.getProducerListener().onProducerStart(producerContext, PRODUCER_NAME);
+
+    <span class="hljs-keyword">final</span> CacheKey cacheKey =
+        mCacheKeyFactory.getEncodedCacheKey(imageRequest, producerContext.getCallerContext());
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isSmallRequest = (imageRequest.getCacheChoice() == CacheChoice.SMALL);
+    <span class="hljs-keyword">final</span> BufferedDiskCache preferredCache =
+        isSmallRequest ? mSmallImageBufferedDiskCache : mDefaultBufferedDiskCache;
+    <span class="hljs-keyword">final</span> AtomicBoolean isCancelled = <span class="hljs-keyword">new</span> AtomicBoolean(<span class="hljs-keyword">false</span>);
+    <span class="hljs-keyword">final</span> Task&lt;EncodedImage&gt; diskLookupTask = preferredCache.get(cacheKey, isCancelled);
+    <span class="hljs-keyword">final</span> Continuation&lt;EncodedImage, Void&gt; continuation =
+        onFinishDiskReads(consumer, producerContext);
+    diskLookupTask.continueWith(continuation);
+    subscribeTaskForRequestCancellation(isCancelled, producerContext);
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">subscribeTaskForRequestCancellation</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> AtomicBoolean isCancelled, ProducerContext producerContext)</span> </span>&#123;
+    producerContext.addCallbacks(
+        <span class="hljs-keyword">new</span> BaseProducerContextCallbacks() &#123;
+          <span class="hljs-meta">@Override</span>
+          <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onCancellationRequested</span><span class="hljs-params">()</span> </span>&#123;
+            isCancelled.set(<span class="hljs-keyword">true</span>);
+          &#125;
+        &#125;);
+  &#125;    
+&#125;</code></pre></div>
+
+<h1 id="请求错乱的问题"><a href="#请求错乱的问题" class="headerlink" title="请求错乱的问题"></a>请求错乱的问题</h1><p>比如在 <code>RecyclerView</code> 里快速地滑动，同一个 <code>DraweeView</code> 会在短时间内多次设置网络图像，但网络加载是需要较长时间的，如何保证旧的 request 不会覆盖掉新的 request？</p>
+<p>如下面所示，通过 <code>setImageURI</code> 设置图片的同时会 <code>close</code> 旧的 <code>DataSource</code></p>
+<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+SimpleDraweeView.setImageURI(uri, <span class="hljs-keyword">null</span>)
+DraweeView.setController
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DraweeHolder</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setController</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> DraweeController draweeController)</span> </span>&#123;
+    <span class="hljs-keyword">boolean</span> wasAttached = mIsControllerAttached;
+    <span class="hljs-keyword">if</span> (wasAttached) &#123;
+      detachController();
+    &#125;
+
+    <span class="hljs-comment">// Clear the old controller</span>
+    <span class="hljs-keyword">if</span> (isControllerValid()) &#123;
+      mEventTracker.recordEvent(Event.ON_CLEAR_OLD_CONTROLLER);
+      mController.setHierarchy(<span class="hljs-keyword">null</span>);
+    &#125;
+    mController = draweeController;
+    <span class="hljs-keyword">if</span> (mController != <span class="hljs-keyword">null</span>) &#123;
+      mEventTracker.recordEvent(Event.ON_SET_CONTROLLER);
+      mController.setHierarchy(mHierarchy);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      mEventTracker.recordEvent(Event.ON_CLEAR_CONTROLLER);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (wasAttached) &#123;
+      attachController();
+    &#125;
+  &#125;  
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbstractDraweeController</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setHierarchy</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> DraweeHierarchy hierarchy)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (FLog.isLoggable(FLog.VERBOSE)) &#123;
+      FLog.v(
+          TAG, <span class="hljs-string">&quot;controller %x %s: setHierarchy: %s&quot;</span>, System.identityHashCode(<span class="hljs-keyword">this</span>), mId, hierarchy);
+    &#125;
+    mEventTracker.recordEvent(
+        (hierarchy != <span class="hljs-keyword">null</span>) ? Event.ON_SET_HIERARCHY : Event.ON_CLEAR_HIERARCHY);
+    <span class="hljs-comment">// force release in case request was submitted</span>
+    <span class="hljs-keyword">if</span> (mIsRequestSubmitted) &#123;
+      mDeferredReleaser.cancelDeferredRelease(<span class="hljs-keyword">this</span>);
+      release();    <span class="hljs-comment">// 这里</span>
+    &#125;
+    <span class="hljs-comment">// clear the existing hierarchy</span>
+    <span class="hljs-keyword">if</span> (mSettableDraweeHierarchy != <span class="hljs-keyword">null</span>) &#123;
+      mSettableDraweeHierarchy.setControllerOverlay(<span class="hljs-keyword">null</span>);
+      mSettableDraweeHierarchy = <span class="hljs-keyword">null</span>;
+    &#125;
+    <span class="hljs-comment">// set the new hierarchy</span>
+    <span class="hljs-keyword">if</span> (hierarchy != <span class="hljs-keyword">null</span>) &#123;
+      Preconditions.checkArgument(hierarchy <span class="hljs-keyword">instanceof</span> SettableDraweeHierarchy);
+      mSettableDraweeHierarchy = (SettableDraweeHierarchy) hierarchy;
+      mSettableDraweeHierarchy.setControllerOverlay(mControllerOverlay);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mLoggingListener != <span class="hljs-keyword">null</span>) &#123;
+      setUpLoggingListener();
+    &#125;
+  &#125;  
+&#125;</code></pre></div>
+
+<h1 id="DecodeProducer-解码"><a href="#DecodeProducer-解码" class="headerlink" title="DecodeProducer - 解码"></a>DecodeProducer - 解码</h1><p>负责将各种压缩图片格式（JPEG、WEBP 等）解码（比如 <code>Bitmap</code>）的 ImagePipeline 节点，它通过 <code>SOI</code> 识别其格式并交由对应的 <code>ImageDecoder</code> 处理，方法栈如下：</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java">DecodeProducer.produceResults
+ProgressiveDecoder.onNewResultImpl
+NetworkImagesProgressiveDecoder.updateDecodeJob
+ProgressiveDecoder.doDecode
+ProgressiveDecoder.internalDecode
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DefaultImageDecoder</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> CloseableImage <span class="hljs-title">decode</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> EncodedImage encodedImage,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> length,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> QualityInfo qualityInfo,</span></span>
+<span class="hljs-params"><span class="hljs-function">      <span class="hljs-keyword">final</span> ImageDecodeOptions options)</span> </span>&#123;
+    
+    <span class="hljs-comment">// 自定义的解码器</span>
+    <span class="hljs-keyword">if</span> (options.customImageDecoder != <span class="hljs-keyword">null</span>) &#123;
+      <span class="hljs-keyword">return</span> options.customImageDecoder.decode(encodedImage, length, qualityInfo, options);
+    &#125;
+    ImageFormat imageFormat = encodedImage.getImageFormat();
+    <span class="hljs-keyword">if</span> (imageFormat == <span class="hljs-keyword">null</span> || imageFormat == ImageFormat.UNKNOWN) &#123;
+      InputStream inputStream = encodedImage.getInputStream();
+      <span class="hljs-keyword">if</span> (inputStream != <span class="hljs-keyword">null</span>) &#123;
+        imageFormat = ImageFormatChecker.getImageFormat_WrapIOException(inputStream);
+        encodedImage.setImageFormat(imageFormat);
+      &#125;
+    &#125;
+    <span class="hljs-keyword">if</span> (mCustomDecoders != <span class="hljs-keyword">null</span>) &#123;
+      ImageDecoder decoder = mCustomDecoders.get(imageFormat);
+      <span class="hljs-keyword">if</span> (decoder != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">return</span> decoder.decode(encodedImage, length, qualityInfo, options);
+      &#125;
+    &#125;
+
+    <span class="hljs-comment">// Fresco 内置的解码器</span>
+    <span class="hljs-keyword">return</span> mDefaultDecoder.decode(encodedImage, length, qualityInfo, options);
+  &#125;  
+&#125;</code></pre></div>
+
+<p>Fresco 内置了对常用图片格式如：JPEG、GIF、WEBP 等的支持，这些图片格式定义在 <code>DefaultImageFormats</code>，并在 <code>DefaultImageFormatChecker.determineFormat(headerBytes, headerSize)</code> 实现了高效的、基于 <code>SOI</code> 的图片格式判别逻辑（start of image，也就是图片文件头几个字节的内容，作为特征码进行识别）</p>
+<p>对于 Fresco 不支持的格式，可以通过 <code>ImageDecoderConfig.Builder.addDecodingCapability(imageFormat, imageFormatChecker, decoder)</code> 添加自定义解码器</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DefaultImageFormats</span> </span>&#123;
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat JPEG = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;JPEG&quot;</span>, <span class="hljs-string">&quot;jpeg&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat PNG = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;PNG&quot;</span>, <span class="hljs-string">&quot;png&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat GIF = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;GIF&quot;</span>, <span class="hljs-string">&quot;gif&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat BMP = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;BMP&quot;</span>, <span class="hljs-string">&quot;bmp&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat ICO = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;ICO&quot;</span>, <span class="hljs-string">&quot;ico&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat WEBP_SIMPLE = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;WEBP_SIMPLE&quot;</span>, <span class="hljs-string">&quot;webp&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat WEBP_LOSSLESS = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;WEBP_LOSSLESS&quot;</span>, <span class="hljs-string">&quot;webp&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat WEBP_EXTENDED = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;WEBP_EXTENDED&quot;</span>, <span class="hljs-string">&quot;webp&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat WEBP_EXTENDED_WITH_ALPHA =
+      <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;WEBP_EXTENDED_WITH_ALPHA&quot;</span>, <span class="hljs-string">&quot;webp&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat WEBP_ANIMATED = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;WEBP_ANIMATED&quot;</span>, <span class="hljs-string">&quot;webp&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat HEIF = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;HEIF&quot;</span>, <span class="hljs-string">&quot;heif&quot;</span>);
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> ImageFormat DNG = <span class="hljs-keyword">new</span> ImageFormat(<span class="hljs-string">&quot;DNG&quot;</span>, <span class="hljs-string">&quot;dng&quot;</span>);  
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ImageFormatChecker</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ImageFormat <span class="hljs-title">getImageFormat</span><span class="hljs-params">(<span class="hljs-keyword">final</span> InputStream is)</span> <span class="hljs-keyword">throws</span> IOException </span>&#123;
+    <span class="hljs-keyword">return</span> getInstance().determineImageFormat(is);
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">public</span> ImageFormat <span class="hljs-title">determineImageFormat</span><span class="hljs-params">(<span class="hljs-keyword">final</span> InputStream is)</span> <span class="hljs-keyword">throws</span> IOException </span>&#123;
+    Preconditions.checkNotNull(is);
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] imageHeaderBytes = <span class="hljs-keyword">new</span> <span class="hljs-keyword">byte</span>[mMaxHeaderLength];
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> headerSize = readHeaderFromStream(mMaxHeaderLength, is, imageHeaderBytes);
+
+    ImageFormat format = mDefaultFormatChecker.determineFormat(imageHeaderBytes, headerSize);
+    <span class="hljs-keyword">if</span> (format != <span class="hljs-keyword">null</span> &amp;&amp; format != ImageFormat.UNKNOWN) &#123;
+      <span class="hljs-keyword">return</span> format;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mCustomImageFormatCheckers != <span class="hljs-keyword">null</span>) &#123;
+      <span class="hljs-keyword">for</span> (ImageFormat.FormatChecker formatChecker : mCustomImageFormatCheckers) &#123;
+        format = formatChecker.determineFormat(imageHeaderBytes, headerSize);
+        <span class="hljs-keyword">if</span> (format != <span class="hljs-keyword">null</span> &amp;&amp; format != ImageFormat.UNKNOWN) &#123;
+          <span class="hljs-keyword">return</span> format;
+        &#125;
+      &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> ImageFormat.UNKNOWN;
+  &#125;    
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DefaultImageFormatChecker</span> </span>&#123;
+
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * Every JPEG image should start with SOI mark (0xFF, 0xD8) followed by beginning of another</span>
+<span class="hljs-comment">   * segment (0xFF)</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] JPEG_HEADER = <span class="hljs-keyword">new</span> <span class="hljs-keyword">byte</span>[] &#123;(<span class="hljs-keyword">byte</span>) <span class="hljs-number">0xFF</span>, (<span class="hljs-keyword">byte</span>) <span class="hljs-number">0xD8</span>, (<span class="hljs-keyword">byte</span>) <span class="hljs-number">0xFF</span>&#125;;
+
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> ImageFormat <span class="hljs-title">determineFormat</span><span class="hljs-params">(<span class="hljs-keyword">byte</span>[] headerBytes, <span class="hljs-keyword">int</span> headerSize)</span> </span>&#123;
+    Preconditions.checkNotNull(headerBytes);
+
+    <span class="hljs-keyword">if</span> (!mUseNewOrder &amp;&amp; WebpSupportStatus.isWebpHeader(headerBytes, <span class="hljs-number">0</span>, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> getWebpFormat(headerBytes, headerSize);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isJpegHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.JPEG;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isPngHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.PNG;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (mUseNewOrder &amp;&amp; WebpSupportStatus.isWebpHeader(headerBytes, <span class="hljs-number">0</span>, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> getWebpFormat(headerBytes, headerSize);
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isGifHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.GIF;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isBmpHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.BMP;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isIcoHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.ICO;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isHeifHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.HEIF;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (isDngHeader(headerBytes, headerSize)) &#123;
+      <span class="hljs-keyword">return</span> DefaultImageFormats.DNG;
+    &#125;
+
+    <span class="hljs-keyword">return</span> ImageFormat.UNKNOWN;
+  &#125;
+
+  <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isJpegHeader</span><span class="hljs-params">(<span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] imageHeaderBytes, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> headerSize)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> headerSize &gt;= JPEG_HEADER.length
+        &amp;&amp; ImageFormatCheckerUtils.startsWithPattern(imageHeaderBytes, JPEG_HEADER);
+  &#125;
+&#125;</code></pre></div>
+
+<h2 id="JPEG"><a href="#JPEG" class="headerlink" title="JPEG"></a>JPEG</h2><table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Decoder</th>
+<th>Core API</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&gt;= Android 8 Oreo API 26</td>
+<td>OreoDecoder: DefaultDecoder</td>
+<td>BitmapFactory.decodeStream <br /> BitmapRegionDecoder.decodeRegion</td>
+</tr>
+<tr>
+<td>&gt;= Android 5 Lolipop API 21</td>
+<td>ArtDecoder: DefaultDecoder</td>
+<td>BitmapFactory.decodeStream <br /> BitmapRegionDecoder.decodeRegion</td>
+</tr>
+<tr>
+<td>&lt;= Android 4.4 KitKat API 19</td>
+<td>KitKatPurgeableDecoder: DalvikPurgeableDecoder</td>
+<td>BitmapFactory.decodeByteArray</td>
+</tr>
+<tr>
+<td>&lt; Android 4.4 KitKat API 19 &amp; <br /> <code>ImagePipelineExperiments.isGingerbreadDecoderEnabled</code></td>
+<td>GingerbreadPurgeableDecoder: DalvikPurgeableDecoder</td>
+<td>MemoryFile <br /> BitmapFactory.decodeStream <br /> native webp decoder</td>
+</tr>
+</tbody></table>
+<h1 id="其他-ImagePipeline-节点"><a href="#其他-ImagePipeline-节点" class="headerlink" title="其他 ImagePipeline 节点"></a>其他 ImagePipeline 节点</h1><h2 id="MultiplexProducer"><a href="#MultiplexProducer" class="headerlink" title="MultiplexProducer"></a>MultiplexProducer</h2><p><code>multiplex</code>：多路复用，<code>multiplexer</code>：多路复用器，顾名思义这个节点的作用是合并相同的 <code>ImageRequest</code> 以节约网络和 IO 资源，因为同一时刻相同的请求只需要执行一次，多个 consumer 可以等待和接收同一个 response，看看是如何实现的：</p>
+<ol>
+<li>多路复用器有两个：<code>EncodedCacheKeyMultiplexProducer</code>（排在 encoded memory cache 后面） 和 <code>BitmapMemoryCacheKeyMultiplexProducer</code>（排在 bitmap memory cache 后面）</li>
+<li>一个请求对应一个 <code>Multiplexer</code>，相同请求（<code>MultiplexProducer.getKey</code>）的 consumer 都挂在同一个 <code>Multiplexer</code> 里</li>
+<li>第一个请求才会通过此节点，流向下一节点（执行真正的请求操作：网络、缓存），后续的相同的请求都被终止，它们的 consumer 被挂在同一 <code>Multiplexer</code> 里</li>
+<li>第一个（也是唯一一个）请求的 response 将被分发给各个 consumer</li>
+<li>涉及到多线程，创建 Multiplexer 和添加 consumer 的操作需要被 <code>synchronized</code> 保护</li>
+</ol>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MultiplexProducer</span> </span>&#123;
+  <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">produceResults</span><span class="hljs-params">(Consumer&lt;T&gt; consumer, ProducerContext context)</span> </span>&#123;
+    <span class="hljs-keyword">try</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.beginSection(<span class="hljs-string">&quot;MultiplexProducer#produceResults&quot;</span>);
+      &#125;
+
+      context.getProducerListener().onProducerStart(context, mProducerName);
+
+      K key = getKey(context);
+      Multiplexer multiplexer;
+      <span class="hljs-keyword">boolean</span> createdNewMultiplexer;
+      <span class="hljs-comment">// We do want to limit scope of this lock to guard only accesses to mMultiplexers map.</span>
+      <span class="hljs-comment">// However what we would like to do here is to atomically lookup mMultiplexers, add new</span>
+      <span class="hljs-comment">// consumer to consumers set associated with the map&#x27;s entry and call consumer&#x27;s callback with</span>
+      <span class="hljs-comment">// last intermediate result. We should not do all of those things under this lock.</span>
+      <span class="hljs-keyword">do</span> &#123;
+        createdNewMultiplexer = <span class="hljs-keyword">false</span>;
+        <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+          multiplexer = getExistingMultiplexer(key);
+          <span class="hljs-keyword">if</span> (multiplexer == <span class="hljs-keyword">null</span>) &#123;
+            multiplexer = createAndPutNewMultiplexer(key);
+            createdNewMultiplexer = <span class="hljs-keyword">true</span>;
+          &#125;
+        &#125;
+        <span class="hljs-comment">// addNewConsumer may call consumer&#x27;s onNewResult method immediately. For this reason</span>
+        <span class="hljs-comment">// we release &quot;this&quot; lock. If multiplexer is removed from mMultiplexers in the meantime,</span>
+        <span class="hljs-comment">// which is not very probable, then addNewConsumer will fail and we will be able to retry.</span>
+      &#125; <span class="hljs-keyword">while</span> (!multiplexer.addNewConsumer(consumer, context));
+
+      <span class="hljs-keyword">if</span> (createdNewMultiplexer) &#123;
+        multiplexer.startInputProducerIfHasAttachedConsumers(
+            TriState.valueOf(context.isPrefetch()));
+      &#125;
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+      <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
+        FrescoSystrace.endSection();
+      &#125;
+    &#125;
+  &#125;    
+&#125;</code></pre></div>
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/glide/">glide</a>
+                    
+                      <a class="hover-with-bg" href="/tags/fresco/">fresco</a>
+                    
+                      <a class="hover-with-bg" href="/tags/imageloader/">imageloader</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%9B%BE%E7%89%87%E5%8A%A0%E8%BD%BD/">图片加载</a>
+                    
+                  </div>
+                
+              </div>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/12/16/http-range/">
+                        <span class="hidden-mobile">HTTP Range - 分段下载</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
