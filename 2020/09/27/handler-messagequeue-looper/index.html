@@ -26,7 +26,7 @@
 <meta property="og:description" content="MessageQueue 是个单向链表，按 Message.when 自然序排 它有类似于「生产者 - 消费者」模型的阻塞队列：没有 Message 时，阻塞直到新 Message 入队；否则阻塞到下一个 Message.when &#x2F;&#x2F; 这里会阻塞 nativePollOnce(ptr, nextPollTimeoutMillis);  synchronized (this) &amp;#123;">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-09-27T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="Handler">
 <meta property="article:tag" content="Looper">
@@ -74,11 +74,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -235,22 +235,22 @@
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 这里会阻塞</span>
 nativePollOnce(ptr, nextPollTimeoutMillis);
 
-<span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+<span class="hljs-keyword">synchronized</span> (<span class="hljs-built_in">this</span>) &#123;
     <span class="hljs-comment">// ... ...</span>
-    <span class="hljs-keyword">if</span> (msg != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">if</span> (msg != <span class="hljs-literal">null</span>) &#123;
         <span class="hljs-keyword">if</span> (now &lt; msg.when) &#123;
             <span class="hljs-comment">// Next message is not ready.  Set a timeout to wake up when it is ready.</span>
             <span class="hljs-comment">// 阻塞一段时间，直到时间到达下一个 message.when</span>
-            nextPollTimeoutMillis = (<span class="hljs-keyword">int</span>) Math.min(msg.when - now, Integer.MAX_VALUE);
+            nextPollTimeoutMillis = (<span class="hljs-type">int</span>) Math.min(msg.when - now, Integer.MAX_VALUE);
         &#125; <span class="hljs-keyword">else</span> &#123;
             <span class="hljs-comment">// Got a message.</span>
-            mBlocked = <span class="hljs-keyword">false</span>;
-            <span class="hljs-keyword">if</span> (prevMsg != <span class="hljs-keyword">null</span>) &#123;
+            mBlocked = <span class="hljs-literal">false</span>;
+            <span class="hljs-keyword">if</span> (prevMsg != <span class="hljs-literal">null</span>) &#123;
                 prevMsg.next = msg.next;
             &#125; <span class="hljs-keyword">else</span> &#123;
                 mMessages = msg.next;
             &#125;
-            msg.next = <span class="hljs-keyword">null</span>;
+            msg.next = <span class="hljs-literal">null</span>;
             <span class="hljs-keyword">if</span> (DEBUG) Log.v(TAG, <span class="hljs-string">&quot;Returning message: &quot;</span> + msg);
             msg.markInUse();
             <span class="hljs-keyword">return</span> msg;
@@ -279,7 +279,7 @@ MessageQueue.nativeWake -&gt;
 android_os_MessageQueue_nativeWake -&gt;
 NativeMessageQueue::wake -&gt;
 Looper::wake -&gt;
-<span class="hljs-built_in">write</span>(mWakeEventFd.<span class="hljs-built_in">get</span>(), &amp;inc, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">uint64_t</span>));</code></pre></div>
+<span class="hljs-built_in">write</span>(mWakeEventFd.<span class="hljs-built_in">get</span>(), &amp;inc, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint64_t</span>));</code></pre></div>
 
 <p>与 <code>NativeMessageQueue</code>、<code>NativeLooper</code> 的关系</p>
 <ol>
@@ -293,13 +293,13 @@ Looper::wake -&gt;
 <p>同步栅栏（<code>SyncBarrier</code>）</p>
 <p>开启同步栅栏后，“栅栏”将会把 sync message 过滤掉，仅处理 async message，是一种提高 <code>Message</code> 优先级的方法</p>
 <p><code>postSyncBarrier</code> 开启同步栅栏，<code>removeSyncBarrier</code> 关闭同步栅栏，“栅栏”就是一个 target == null 的 <code>Message</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">Message msg = mMessages;    <span class="hljs-comment">// head of linked list</span>
-<span class="hljs-keyword">if</span> (msg != <span class="hljs-keyword">null</span> &amp;&amp; msg.target == <span class="hljs-keyword">null</span>) &#123;    <span class="hljs-comment">// it is a barrier</span>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-type">Message</span> <span class="hljs-variable">msg</span> <span class="hljs-operator">=</span> mMessages;    <span class="hljs-comment">// head of linked list</span>
+<span class="hljs-keyword">if</span> (msg != <span class="hljs-literal">null</span> &amp;&amp; msg.target == <span class="hljs-literal">null</span>) &#123;    <span class="hljs-comment">// it is a barrier</span>
     <span class="hljs-comment">// Stalled by a barrier.  Find the next asynchronous message in the queue.</span>
     <span class="hljs-keyword">do</span> &#123;
         prevMsg = msg;
         msg = msg.next;
-    &#125; <span class="hljs-keyword">while</span> (msg != <span class="hljs-keyword">null</span> &amp;&amp; !msg.isAsynchronous());
+    &#125; <span class="hljs-keyword">while</span> (msg != <span class="hljs-literal">null</span> &amp;&amp; !msg.isAsynchronous());
 &#125;</code></pre></div>
 
 <p>主线程 <code>Looper</code> 与子线程 <code>Looper</code> 有什么不同？</p>
@@ -308,26 +308,26 @@ Looper::wake -&gt;
 <p><code>quit</code> 直接回收所有 message；而 <code>quitSafely</code> 则只回收 future message（还未到执行时间），继续执行完所有已到时间的 message 才结束</p>
 <p>既然可以存在多个 <code>Handler</code> 往 <code>MessageQueue</code> 中添加数据（发消息时各个 <code>Handler</code> 可能处于不同线程），那它内部是如何确保线程安全的？</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 加了锁</span>
-<span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">enqueueMessage</span><span class="hljs-params">(Message msg, <span class="hljs-keyword">long</span> when)</span> </span>&#123;
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">enqueueMessage</span><span class="hljs-params">(Message msg, <span class="hljs-type">long</span> when)</span> &#123;
     <span class="hljs-comment">// ... ...</span>
-    <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>) &#123;
+    <span class="hljs-keyword">synchronized</span> (<span class="hljs-built_in">this</span>) &#123;
         <span class="hljs-comment">// ... ...</span>
     &#125;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
 &#125;</code></pre></div>
 
 <p><code>Looper.loop()</code> 为什么不会导致死循环？</p>
 <p>queue 是个阻塞队列，（当前时间点）没有 message 时，会阻塞 thread 而不消耗 cpu；当有新 message 入队时，会唤醒 thread；参考上面阻塞和唤醒的代码片段</p>
 <p><code>Handler </code>造成泄露的原因</p>
 <p>非静态内部类会持有一个外部类的隐式引用，比如下述写法：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">Handler handler = <span class="hljs-keyword">new</span> Handler() &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-type">Handler</span> <span class="hljs-variable">handler</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Handler</span>() &#123;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleMessage</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> Message msg)</span> </span>&#123;&#125;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">handleMessage</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> Message msg)</span> &#123;&#125;
 &#125;;
 
-handler.post(<span class="hljs-keyword">new</span> Runnable() &#123;
+handler.post(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;&#125;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;&#125;
 &#125;);</code></pre></div>
 
 <p>那么我们可以追溯出一条完整的 gc root path：</p>

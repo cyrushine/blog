@@ -26,7 +26,7 @@
 <meta property="og:description" content="基础知识线程池有几个重要的参数：  maximumPoolSize 最大线程数量，如果新提交的任务因为 workQueue 的容量限制而无法入队，则会尝试新开一个线程执行任务，而如果此时总线程数超过 maximumPoolSize 的限制，那么不再新开一个线程而是提交失败 corePoolSize 核心线程数量，当任务执行完毕，线程也将结束它的生命周期，但最少不会低于 corePoolSize k">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-02-19T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="threadpool">
 <meta name="twitter:card" content="summary_large_image">
@@ -73,11 +73,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -245,9 +245,9 @@
 <li><code>TERMINATED</code>，<code>terminated()</code> 执行完毕</li>
 </ul>
 <h2 id="生产者-消费者模式的-worker"><a href="#生产者-消费者模式的-worker" class="headerlink" title="生产者 - 消费者模式的 worker"></a>生产者 - 消费者模式的 worker</h2><p>线程（worker）作为消费者，不断地从任务队列（workQueue）里获取任务并执行</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Worker</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueuedSynchronizer</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
-        runWorker(<span class="hljs-keyword">this</span>);
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Worker</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractQueuedSynchronizer</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Runnable</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+        runWorker(<span class="hljs-built_in">this</span>);
     &#125;	
 &#125;
 
@@ -255,13 +255,13 @@
 <span class="hljs-comment">// 用一个 while 循环不断地从 workQueue 里获取任务（blocked &amp; timeouted）</span>
 <span class="hljs-comment">// getTask 返回 null 导致当前线程结束生命</span>
 <span class="hljs-keyword">void</span> ThreadPoolExecutor.runWorker(Worker w) &#123;
-    Thread wt = Thread.currentThread();
-    Runnable task = w.firstTask;
-    w.firstTask = <span class="hljs-keyword">null</span>;
+    <span class="hljs-type">Thread</span> <span class="hljs-variable">wt</span> <span class="hljs-operator">=</span> Thread.currentThread();
+    <span class="hljs-type">Runnable</span> <span class="hljs-variable">task</span> <span class="hljs-operator">=</span> w.firstTask;
+    w.firstTask = <span class="hljs-literal">null</span>;
     w.unlock(); <span class="hljs-comment">// allow interrupts</span>
-    <span class="hljs-keyword">boolean</span> completedAbruptly = <span class="hljs-keyword">true</span>;
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">completedAbruptly</span> <span class="hljs-operator">=</span> <span class="hljs-literal">true</span>;
     <span class="hljs-keyword">try</span> &#123;
-        <span class="hljs-keyword">while</span> (task != <span class="hljs-keyword">null</span> || (task = getTask()) != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">while</span> (task != <span class="hljs-literal">null</span> || (task = getTask()) != <span class="hljs-literal">null</span>) &#123;
             w.lock();
             <span class="hljs-comment">// If pool is stopping, ensure thread is interrupted;</span>
             <span class="hljs-comment">// if not, ensure thread is not interrupted.  This</span>
@@ -274,7 +274,7 @@
                 wt.interrupt();
             <span class="hljs-keyword">try</span> &#123;
                 beforeExecute(wt, task);
-                Throwable thrown = <span class="hljs-keyword">null</span>;
+                <span class="hljs-type">Throwable</span> <span class="hljs-variable">thrown</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
                 <span class="hljs-keyword">try</span> &#123;
                     task.run();
                 &#125; <span class="hljs-keyword">catch</span> (RuntimeException x) &#123;
@@ -282,17 +282,17 @@
                 &#125; <span class="hljs-keyword">catch</span> (Error x) &#123;
                     thrown = x; <span class="hljs-keyword">throw</span> x;
                 &#125; <span class="hljs-keyword">catch</span> (Throwable x) &#123;
-                    thrown = x; <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(x);
+                    thrown = x; <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(x);
                 &#125; <span class="hljs-keyword">finally</span> &#123;
                     afterExecute(task, thrown);
                 &#125;
             &#125; <span class="hljs-keyword">finally</span> &#123;
-                task = <span class="hljs-keyword">null</span>;
+                task = <span class="hljs-literal">null</span>;
                 w.completedTasks++;
                 w.unlock();
             &#125;
         &#125;
-        completedAbruptly = <span class="hljs-keyword">false</span>;
+        completedAbruptly = <span class="hljs-literal">false</span>;
     &#125; <span class="hljs-keyword">finally</span> &#123;
         processWorkerExit(w, completedAbruptly);
     &#125;
@@ -300,82 +300,82 @@
 
 <span class="hljs-comment">// 从 workQueue 获取任务（blocked &amp; timeouted）</span>
 Runnable ThreadPoolExecutor.getTask() &#123;
-    <span class="hljs-keyword">boolean</span> timedOut = <span class="hljs-keyword">false</span>; <span class="hljs-comment">// Did the last poll() time out?</span>
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">timedOut</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>; <span class="hljs-comment">// Did the last poll() time out?</span>
     <span class="hljs-keyword">for</span> (;;) &#123;
-        <span class="hljs-keyword">int</span> c = ctl.get();
-        <span class="hljs-keyword">int</span> rs = runStateOf(c);
+        <span class="hljs-type">int</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> ctl.get();
+        <span class="hljs-type">int</span> <span class="hljs-variable">rs</span> <span class="hljs-operator">=</span> runStateOf(c);
         
         <span class="hljs-comment">// 1. 线程池已 shutdown（只需把 workQueue 执行完毕），但 workQueue 已清空</span>
         <span class="hljs-comment">// 2. 线程池已 stop，无需执行 workQueue 剩下的任务</span>
         <span class="hljs-comment">// 此时返回 null 结束线程 </span>
         <span class="hljs-keyword">if</span> (rs &gt;= SHUTDOWN &amp;&amp; (rs &gt;= STOP || workQueue.isEmpty())) &#123;
             decrementWorkerCount();
-            <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
         &#125;
 
         <span class="hljs-comment">// 当线程数 &gt; corePoolSize，如果阻塞 keepAliveTime 时间段都没有新任务进来，则返回 null 结束当前线程</span>
         <span class="hljs-comment">// 当线程数 &gt; maximumPoolSize 且 workQueue 为空，也要结束当前线程，从而降低线程数</span>
-        <span class="hljs-keyword">int</span> wc = workerCountOf(c);
-        <span class="hljs-keyword">boolean</span> timed = allowCoreThreadTimeOut || wc &gt; corePoolSize;
+        <span class="hljs-type">int</span> <span class="hljs-variable">wc</span> <span class="hljs-operator">=</span> workerCountOf(c);
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">timed</span> <span class="hljs-operator">=</span> allowCoreThreadTimeOut || wc &gt; corePoolSize;
         <span class="hljs-keyword">if</span> ((wc &gt; maximumPoolSize || (timed &amp;&amp; timedOut))
             &amp;&amp; (wc &gt; <span class="hljs-number">1</span> || workQueue.isEmpty())) &#123;
             <span class="hljs-keyword">if</span> (compareAndDecrementWorkerCount(c))
-                <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
             <span class="hljs-keyword">continue</span>;
         &#125;
         <span class="hljs-keyword">try</span> &#123;
-            Runnable r = timed ?
+            <span class="hljs-type">Runnable</span> <span class="hljs-variable">r</span> <span class="hljs-operator">=</span> timed ?
                 workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS) :
                 workQueue.take();
-            <span class="hljs-keyword">if</span> (r != <span class="hljs-keyword">null</span>)
+            <span class="hljs-keyword">if</span> (r != <span class="hljs-literal">null</span>)
                 <span class="hljs-keyword">return</span> r;
-            timedOut = <span class="hljs-keyword">true</span>;
+            timedOut = <span class="hljs-literal">true</span>;
         &#125; <span class="hljs-keyword">catch</span> (InterruptedException retry) &#123;
-            timedOut = <span class="hljs-keyword">false</span>;
+            timedOut = <span class="hljs-literal">false</span>;
         &#125;
     &#125;
 &#125;</code></pre></div>
 
 <h2 id="corePoolSize，workQueue-和-maximumPoolSize-之间的关系"><a href="#corePoolSize，workQueue-和-maximumPoolSize-之间的关系" class="headerlink" title="corePoolSize，workQueue 和 maximumPoolSize 之间的关系"></a><code>corePoolSize</code>，<code>workQueue</code> 和 <code>maximumPoolSize</code> 之间的关系</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">void</span> ThreadPoolExecutor.execute(Runnable command) &#123;
     <span class="hljs-comment">// 如果线程数 &lt; corePoolSize，则新开一个线程执行任务</span>
-    <span class="hljs-keyword">int</span> c = ctl.get();
+    <span class="hljs-type">int</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> ctl.get();
     <span class="hljs-keyword">if</span> (workerCountOf(c) &lt; corePoolSize) &#123;
-        <span class="hljs-keyword">if</span> (addWorker(command, <span class="hljs-keyword">true</span>))
+        <span class="hljs-keyword">if</span> (addWorker(command, <span class="hljs-literal">true</span>))
             <span class="hljs-keyword">return</span>;
         c = ctl.get();
     &#125;
 
     <span class="hljs-comment">// 否则放入 workQueue 等待执行</span>
     <span class="hljs-keyword">if</span> (isRunning(c) &amp;&amp; workQueue.offer(command)) &#123;
-        <span class="hljs-keyword">int</span> recheck = ctl.get();
+        <span class="hljs-type">int</span> <span class="hljs-variable">recheck</span> <span class="hljs-operator">=</span> ctl.get();
         <span class="hljs-keyword">if</span> (! isRunning(recheck) &amp;&amp; remove(command))
             reject(command);
         <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (workerCountOf(recheck) == <span class="hljs-number">0</span>)
-            addWorker(<span class="hljs-keyword">null</span>, <span class="hljs-keyword">false</span>);
+            addWorker(<span class="hljs-literal">null</span>, <span class="hljs-literal">false</span>);
     &#125;
 
     <span class="hljs-comment">// 如果超过 workQueue 容量限制，则尝试新开一个线程执行任务</span>
     <span class="hljs-comment">// 从下面的 addWorker 可以知道，如果新开线程的时候发现当前线程总数 &gt;= maximumPoolSize，那么任务提交失败</span>
-    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!addWorker(command, <span class="hljs-keyword">false</span>))
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!addWorker(command, <span class="hljs-literal">false</span>))
         reject(command);
 &#125;
 
-<span class="hljs-keyword">boolean</span> ThreadPoolExecutor.addWorker(Runnable firstTask, <span class="hljs-keyword">boolean</span> core) &#123;
+<span class="hljs-type">boolean</span> ThreadPoolExecutor.addWorker(Runnable firstTask, <span class="hljs-type">boolean</span> core) &#123;
     retry:
     <span class="hljs-keyword">for</span> (;;) &#123;
-        <span class="hljs-keyword">int</span> c = ctl.get();
-        <span class="hljs-keyword">int</span> rs = runStateOf(c);
+        <span class="hljs-type">int</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> ctl.get();
+        <span class="hljs-type">int</span> <span class="hljs-variable">rs</span> <span class="hljs-operator">=</span> runStateOf(c);
         <span class="hljs-comment">// Check if queue empty only if necessary.</span>
         <span class="hljs-keyword">if</span> (rs &gt;= SHUTDOWN &amp;&amp;
             ! (rs == SHUTDOWN &amp;&amp;
-               firstTask == <span class="hljs-keyword">null</span> &amp;&amp;
+               firstTask == <span class="hljs-literal">null</span> &amp;&amp;
                ! workQueue.isEmpty()))
-            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
         <span class="hljs-keyword">for</span> (;;) &#123;
-            <span class="hljs-keyword">int</span> wc = workerCountOf(c);
+            <span class="hljs-type">int</span> <span class="hljs-variable">wc</span> <span class="hljs-operator">=</span> workerCountOf(c);
             <span class="hljs-keyword">if</span> (wc &gt;= CAPACITY ||
                 wc &gt;= (core ? corePoolSize : maximumPoolSize))
-                <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
             <span class="hljs-keyword">if</span> (compareAndIncrementWorkerCount(c))
                 <span class="hljs-keyword">break</span> retry;
             c = ctl.get();  <span class="hljs-comment">// Re-read ctl</span>
@@ -384,36 +384,36 @@ Runnable ThreadPoolExecutor.getTask() &#123;
             <span class="hljs-comment">// else CAS failed due to workerCount change; retry inner loop</span>
         &#125;
     &#125;
-    <span class="hljs-keyword">boolean</span> workerStarted = <span class="hljs-keyword">false</span>;
-    <span class="hljs-keyword">boolean</span> workerAdded = <span class="hljs-keyword">false</span>;
-    Worker w = <span class="hljs-keyword">null</span>;
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">workerStarted</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">workerAdded</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+    <span class="hljs-type">Worker</span> <span class="hljs-variable">w</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
     <span class="hljs-keyword">try</span> &#123;
-        w = <span class="hljs-keyword">new</span> Worker(firstTask);
-        <span class="hljs-keyword">final</span> Thread t = w.thread;
-        <span class="hljs-keyword">if</span> (t != <span class="hljs-keyword">null</span>) &#123;
-            <span class="hljs-keyword">final</span> ReentrantLock mainLock = <span class="hljs-keyword">this</span>.mainLock;
+        w = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Worker</span>(firstTask);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">Thread</span> <span class="hljs-variable">t</span> <span class="hljs-operator">=</span> w.thread;
+        <span class="hljs-keyword">if</span> (t != <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">mainLock</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.mainLock;
             mainLock.lock();
             <span class="hljs-keyword">try</span> &#123;
                 <span class="hljs-comment">// Recheck while holding lock.</span>
                 <span class="hljs-comment">// Back out on ThreadFactory failure or if</span>
                 <span class="hljs-comment">// shut down before lock acquired.</span>
-                <span class="hljs-keyword">int</span> rs = runStateOf(ctl.get());
+                <span class="hljs-type">int</span> <span class="hljs-variable">rs</span> <span class="hljs-operator">=</span> runStateOf(ctl.get());
                 <span class="hljs-keyword">if</span> (rs &lt; SHUTDOWN ||
-                    (rs == SHUTDOWN &amp;&amp; firstTask == <span class="hljs-keyword">null</span>)) &#123;
+                    (rs == SHUTDOWN &amp;&amp; firstTask == <span class="hljs-literal">null</span>)) &#123;
                     <span class="hljs-keyword">if</span> (t.isAlive()) <span class="hljs-comment">// precheck that t is startable</span>
-                        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalThreadStateException();
+                        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalThreadStateException</span>();
                     workers.add(w);
-                    <span class="hljs-keyword">int</span> s = workers.size();
+                    <span class="hljs-type">int</span> <span class="hljs-variable">s</span> <span class="hljs-operator">=</span> workers.size();
                     <span class="hljs-keyword">if</span> (s &gt; largestPoolSize)
                         largestPoolSize = s;
-                    workerAdded = <span class="hljs-keyword">true</span>;
+                    workerAdded = <span class="hljs-literal">true</span>;
                 &#125;
             &#125; <span class="hljs-keyword">finally</span> &#123;
                 mainLock.unlock();
             &#125;
             <span class="hljs-keyword">if</span> (workerAdded) &#123;
                 t.start();
-                workerStarted = <span class="hljs-keyword">true</span>;
+                workerStarted = <span class="hljs-literal">true</span>;
             &#125;
         &#125;
     &#125; <span class="hljs-keyword">finally</span> &#123;
@@ -441,11 +441,11 @@ Runnable ThreadPoolExecutor.getTask() &#123;
 <h3 id="DelayedWorkQueue-按执行时间优先级排序的阻塞队列"><a href="#DelayedWorkQueue-按执行时间优先级排序的阻塞队列" class="headerlink" title="DelayedWorkQueue 按执行时间优先级排序的阻塞队列"></a><code>DelayedWorkQueue</code> 按执行时间优先级排序的阻塞队列</h3><p>提交一个新任务到 <code>DelayedWorkQueue</code>，重排 workQueue</p>
 <p>workQueue 是按执行时间点排序的，leader 是在队头任务上挂起的线程，leader 未唤醒时新来的出队请求将在 available 上挂起</p>
 <p>队列为空时线程也在 available 上挂起</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ScheduledFuture&lt;?&gt; ScheduledThreadPoolExecutor.schedule(Runnable command, <span class="hljs-keyword">long</span> delay, TimeUnit unit) &#123;
-    <span class="hljs-keyword">if</span> (command == <span class="hljs-keyword">null</span> || unit == <span class="hljs-keyword">null</span>)
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException();
+<div class="hljs code-wrapper"><pre><code class="hljs java">ScheduledFuture&lt;?&gt; ScheduledThreadPoolExecutor.schedule(Runnable command, <span class="hljs-type">long</span> delay, TimeUnit unit) &#123;
+    <span class="hljs-keyword">if</span> (command == <span class="hljs-literal">null</span> || unit == <span class="hljs-literal">null</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
     RunnableScheduledFuture&lt;Void&gt; t = decorateTask(command,
-        <span class="hljs-keyword">new</span> ScheduledFutureTask&lt;Void&gt;(command, <span class="hljs-keyword">null</span>, triggerTime(delay, unit), sequencer.getAndIncrement()));
+        <span class="hljs-keyword">new</span> <span class="hljs-title class_">ScheduledFutureTask</span>&lt;Void&gt;(command, <span class="hljs-literal">null</span>, triggerTime(delay, unit), sequencer.getAndIncrement()));
     delayedExecute(t);
     <span class="hljs-keyword">return</span> t;
 &#125;
@@ -454,30 +454,30 @@ Runnable ThreadPoolExecutor.getTask() &#123;
     <span class="hljs-keyword">if</span> (isShutdown())
         reject(task);
     <span class="hljs-keyword">else</span> &#123;
-        <span class="hljs-keyword">super</span>.getQueue().add(task);
+        <span class="hljs-built_in">super</span>.getQueue().add(task);
         <span class="hljs-keyword">if</span> (isShutdown() &amp;&amp;
             !canRunInCurrentRunState(task.isPeriodic()) &amp;&amp;
             remove(task))
-            task.cancel(<span class="hljs-keyword">false</span>);
+            task.cancel(<span class="hljs-literal">false</span>);
         <span class="hljs-keyword">else</span>
             ensurePrestart();
     &#125;
 &#125;
 
-<span class="hljs-keyword">boolean</span> DelayedWorkQueue.add(Runnable e) &#123;
+<span class="hljs-type">boolean</span> DelayedWorkQueue.add(Runnable e) &#123;
     <span class="hljs-keyword">return</span> offer(e);
 &#125;
 
 <span class="hljs-comment">// 插入小顶堆</span>
-<span class="hljs-keyword">boolean</span> DelayedWorkQueue.offer(Runnable x) &#123;
-    <span class="hljs-keyword">if</span> (x == <span class="hljs-keyword">null</span>)
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException();
+<span class="hljs-type">boolean</span> DelayedWorkQueue.offer(Runnable x) &#123;
+    <span class="hljs-keyword">if</span> (x == <span class="hljs-literal">null</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
     RunnableScheduledFuture&lt;?&gt; e = (RunnableScheduledFuture&lt;?&gt;)x;
-    <span class="hljs-keyword">final</span> ReentrantLock lock = <span class="hljs-keyword">this</span>.lock;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.lock;
     lock.lock();
     <span class="hljs-keyword">try</span> &#123;
         <span class="hljs-comment">// 小顶堆底层是数组，数组容量不足需要扩容（扩容 50%）</span>
-        <span class="hljs-keyword">int</span> i = size;
+        <span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> size;
         <span class="hljs-keyword">if</span> (i &gt;= queue.length)
             grow();
         <span class="hljs-comment">// 小顶堆的插入操作 siftUp</span>
@@ -491,21 +491,21 @@ Runnable ThreadPoolExecutor.getTask() &#123;
         <span class="hljs-comment">// 新加入的任务排在队头，它的执行时间点最近</span>
         <span class="hljs-comment">// 此时 leader 是挂起在上一个队头上的，要置空（有更近的执行时间点进来了）并唤醒 available 上的线程来争抢新的队头任务</span>
         <span class="hljs-keyword">if</span> (queue[<span class="hljs-number">0</span>] == e) &#123;
-            leader = <span class="hljs-keyword">null</span>;
+            leader = <span class="hljs-literal">null</span>;
             available.signal();
         &#125;
     &#125; <span class="hljs-keyword">finally</span> &#123;
         lock.unlock();
     &#125;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
 &#125;
 
 <span class="hljs-comment">// 堆是一个二叉树，广度优先、从左到右存储为数组</span>
 <span class="hljs-comment">// 新元素添加到数组尾部（相当于二叉树中的叶子节点），k 是它的索引，为了继续满足小顶堆的要求，需要重新排序</span>
-<span class="hljs-keyword">void</span> DelayedWorkQueue.siftUp(<span class="hljs-keyword">int</span> k, RunnableScheduledFuture&lt;?&gt; key) &#123;
+<span class="hljs-keyword">void</span> DelayedWorkQueue.siftUp(<span class="hljs-type">int</span> k, RunnableScheduledFuture&lt;?&gt; key) &#123;
 		<span class="hljs-comment">// 从下往上比较，如果它比父节点小，交换之</span>
     <span class="hljs-keyword">while</span> (k &gt; <span class="hljs-number">0</span>) &#123;
-        <span class="hljs-keyword">int</span> parent = (k - <span class="hljs-number">1</span>) &gt;&gt;&gt; <span class="hljs-number">1</span>;
+        <span class="hljs-type">int</span> <span class="hljs-variable">parent</span> <span class="hljs-operator">=</span> (k - <span class="hljs-number">1</span>) &gt;&gt;&gt; <span class="hljs-number">1</span>;
         RunnableScheduledFuture&lt;?&gt; e = queue[parent];
         <span class="hljs-keyword">if</span> (key.compareTo(e) &gt;= <span class="hljs-number">0</span>)
             <span class="hljs-keyword">break</span>;
@@ -521,60 +521,60 @@ Runnable ThreadPoolExecutor.getTask() &#123;
 <p>上面说过 <code>worker</code> 是一个「生产者-消费者」模型，通过 <code>getTask</code> 不断地从 <code>workQueue</code> 获取任务</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 从 workQueue 获取任务（blocked &amp; timeouted）</span>
 Runnable ThreadPoolExecutor.getTask() &#123;
-    <span class="hljs-keyword">boolean</span> timedOut = <span class="hljs-keyword">false</span>; <span class="hljs-comment">// Did the last poll() time out?</span>
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">timedOut</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>; <span class="hljs-comment">// Did the last poll() time out?</span>
     <span class="hljs-keyword">for</span> (;;) &#123;
         <span class="hljs-comment">// ...</span>
         <span class="hljs-keyword">try</span> &#123;
-            Runnable r = timed ?
+            <span class="hljs-type">Runnable</span> <span class="hljs-variable">r</span> <span class="hljs-operator">=</span> timed ?
                 workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS) :
                 workQueue.take();
-            <span class="hljs-keyword">if</span> (r != <span class="hljs-keyword">null</span>)
+            <span class="hljs-keyword">if</span> (r != <span class="hljs-literal">null</span>)
                 <span class="hljs-keyword">return</span> r;
-            timedOut = <span class="hljs-keyword">true</span>;
+            timedOut = <span class="hljs-literal">true</span>;
         &#125; <span class="hljs-keyword">catch</span> (InterruptedException retry) &#123;
-            timedOut = <span class="hljs-keyword">false</span>;
+            timedOut = <span class="hljs-literal">false</span>;
         &#125;
     &#125;
 &#125;
 
 <span class="hljs-comment">// 任务出队（blocked）</span>
 RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.take() <span class="hljs-keyword">throws</span> InterruptedException &#123;
-    <span class="hljs-keyword">final</span> ReentrantLock lock = <span class="hljs-keyword">this</span>.lock;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.lock;
     lock.lockInterruptibly();
     <span class="hljs-keyword">try</span> &#123;
         <span class="hljs-keyword">for</span> (;;) &#123;
 
             <span class="hljs-comment">// 任务队列为空，在 available 挂起</span>
             RunnableScheduledFuture&lt;?&gt; first = queue[<span class="hljs-number">0</span>];
-            <span class="hljs-keyword">if</span> (first == <span class="hljs-keyword">null</span>)
+            <span class="hljs-keyword">if</span> (first == <span class="hljs-literal">null</span>)
                 available.await();
             <span class="hljs-keyword">else</span> &#123;
 
                 <span class="hljs-comment">// 到达执行时间点的才能出队</span>
-                <span class="hljs-keyword">long</span> delay = first.getDelay(NANOSECONDS);
+                <span class="hljs-type">long</span> <span class="hljs-variable">delay</span> <span class="hljs-operator">=</span> first.getDelay(NANOSECONDS);
                 <span class="hljs-keyword">if</span> (delay &lt;= <span class="hljs-number">0L</span>)
                     <span class="hljs-keyword">return</span> finishPoll(first);
 
                 <span class="hljs-comment">// leader 是挂起在 first 上的线程，它将在 first 执行时间点上恢复</span>
                 <span class="hljs-comment">// 如果已有线程在 first 上挂起，则当前线程在 available 上挂起</span>
-                first = <span class="hljs-keyword">null</span>;
-                <span class="hljs-keyword">if</span> (leader != <span class="hljs-keyword">null</span>)
+                first = <span class="hljs-literal">null</span>;
+                <span class="hljs-keyword">if</span> (leader != <span class="hljs-literal">null</span>)
                     available.await();
                 <span class="hljs-keyword">else</span> &#123;
-                    Thread thisThread = Thread.currentThread();
+                    <span class="hljs-type">Thread</span> <span class="hljs-variable">thisThread</span> <span class="hljs-operator">=</span> Thread.currentThread();
                     leader = thisThread;
                     <span class="hljs-keyword">try</span> &#123;
                         available.awaitNanos(delay);
                     &#125; <span class="hljs-keyword">finally</span> &#123;
                         <span class="hljs-keyword">if</span> (leader == thisThread)
-                            leader = <span class="hljs-keyword">null</span>;
+                            leader = <span class="hljs-literal">null</span>;
                     &#125;
                 &#125;
             &#125;
         &#125;
     &#125; <span class="hljs-keyword">finally</span> &#123;
         <span class="hljs-comment">// 出队后，唤醒在 available 上挂起的线程</span>
-        <span class="hljs-keyword">if</span> (leader == <span class="hljs-keyword">null</span> &amp;&amp; queue[<span class="hljs-number">0</span>] != <span class="hljs-keyword">null</span>)
+        <span class="hljs-keyword">if</span> (leader == <span class="hljs-literal">null</span> &amp;&amp; queue[<span class="hljs-number">0</span>] != <span class="hljs-literal">null</span>)
             available.signal();
         lock.unlock();
     &#125;
@@ -584,20 +584,20 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.take() <span class="hljs-keywo
 <span class="hljs-comment">// 1. 将最后一个数组元素转移到根节点</span>
 <span class="hljs-comment">// 2. 从上往下重排：比较父节点和子节点，如果父节点大于子节点则交换之</span>
 RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.finishPoll(RunnableScheduledFuture&lt;?&gt; f) &#123;
-    <span class="hljs-keyword">int</span> s = --size;
+    <span class="hljs-type">int</span> <span class="hljs-variable">s</span> <span class="hljs-operator">=</span> --size;
     RunnableScheduledFuture&lt;?&gt; x = queue[s];
-    queue[s] = <span class="hljs-keyword">null</span>;
+    queue[s] = <span class="hljs-literal">null</span>;
     <span class="hljs-keyword">if</span> (s != <span class="hljs-number">0</span>)
         siftDown(<span class="hljs-number">0</span>, x);
     setIndex(f, -<span class="hljs-number">1</span>);
     <span class="hljs-keyword">return</span> f;
 &#125;
-<span class="hljs-keyword">void</span> DelayedWorkQueue.siftDown(<span class="hljs-keyword">int</span> k, RunnableScheduledFuture&lt;?&gt; key) &#123;
-    <span class="hljs-keyword">int</span> half = size &gt;&gt;&gt; <span class="hljs-number">1</span>;
+<span class="hljs-keyword">void</span> DelayedWorkQueue.siftDown(<span class="hljs-type">int</span> k, RunnableScheduledFuture&lt;?&gt; key) &#123;
+    <span class="hljs-type">int</span> <span class="hljs-variable">half</span> <span class="hljs-operator">=</span> size &gt;&gt;&gt; <span class="hljs-number">1</span>;
     <span class="hljs-keyword">while</span> (k &lt; half) &#123;
-        <span class="hljs-keyword">int</span> child = (k &lt;&lt; <span class="hljs-number">1</span>) + <span class="hljs-number">1</span>;
+        <span class="hljs-type">int</span> <span class="hljs-variable">child</span> <span class="hljs-operator">=</span> (k &lt;&lt; <span class="hljs-number">1</span>) + <span class="hljs-number">1</span>;
         RunnableScheduledFuture&lt;?&gt; c = queue[child];
-        <span class="hljs-keyword">int</span> right = child + <span class="hljs-number">1</span>;
+        <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> child + <span class="hljs-number">1</span>;
         <span class="hljs-keyword">if</span> (right &lt; size &amp;&amp; c.compareTo(queue[right]) &gt; <span class="hljs-number">0</span>)
             c = queue[child = right];
         <span class="hljs-keyword">if</span> (key.compareTo(c) &lt;= <span class="hljs-number">0</span>)
@@ -611,49 +611,49 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.finishPoll(RunnableScheduledFu
 &#125;
 
 <span class="hljs-comment">// 任务出队（timeouted）</span>
-RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword">long</span> timeout, TimeUnit unit)
+RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-type">long</span> timeout, TimeUnit unit)
     <span class="hljs-keyword">throws</span> InterruptedException &#123;
-    <span class="hljs-keyword">long</span> nanos = unit.toNanos(timeout);
-    <span class="hljs-keyword">final</span> ReentrantLock lock = <span class="hljs-keyword">this</span>.lock;
+    <span class="hljs-type">long</span> <span class="hljs-variable">nanos</span> <span class="hljs-operator">=</span> unit.toNanos(timeout);
+    <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.lock;
     lock.lockInterruptibly();
     <span class="hljs-keyword">try</span> &#123;
         <span class="hljs-keyword">for</span> (;;) &#123;
 
             <span class="hljs-comment">// 队列为空，挂起 timeout 后继续</span>
             RunnableScheduledFuture&lt;?&gt; first = queue[<span class="hljs-number">0</span>];
-            <span class="hljs-keyword">if</span> (first == <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">if</span> (first == <span class="hljs-literal">null</span>) &#123;
                 <span class="hljs-keyword">if</span> (nanos &lt;= <span class="hljs-number">0L</span>)
-                    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
-                <span class="hljs-keyword">else</span>
-                    nanos = available.awaitNanos(nanos);
+                    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+                <span class="hljs-type">else</span>
+                    <span class="hljs-variable">nanos</span> <span class="hljs-operator">=</span> available.awaitNanos(nanos);
             &#125; <span class="hljs-keyword">else</span> &#123;
 
                 <span class="hljs-comment">// first 到达执行时间点，立刻返回</span>
-                <span class="hljs-keyword">long</span> delay = first.getDelay(NANOSECONDS);
+                <span class="hljs-type">long</span> <span class="hljs-variable">delay</span> <span class="hljs-operator">=</span> first.getDelay(NANOSECONDS);
                 <span class="hljs-keyword">if</span> (delay &lt;= <span class="hljs-number">0L</span>)
                     <span class="hljs-keyword">return</span> finishPoll(first);
 								
                 <span class="hljs-comment">// 否则挂起</span>
                 <span class="hljs-keyword">if</span> (nanos &lt;= <span class="hljs-number">0L</span>)
-                    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
-                first = <span class="hljs-keyword">null</span>; <span class="hljs-comment">// don&#x27;t retain ref while waiting</span>
-                <span class="hljs-keyword">if</span> (nanos &lt; delay || leader != <span class="hljs-keyword">null</span>)
+                    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+                first = <span class="hljs-literal">null</span>; <span class="hljs-comment">// don&#x27;t retain ref while waiting</span>
+                <span class="hljs-keyword">if</span> (nanos &lt; delay || leader != <span class="hljs-literal">null</span>)
                     nanos = available.awaitNanos(nanos);
                 <span class="hljs-keyword">else</span> &#123;
-                    Thread thisThread = Thread.currentThread();
+                    <span class="hljs-type">Thread</span> <span class="hljs-variable">thisThread</span> <span class="hljs-operator">=</span> Thread.currentThread();
                     leader = thisThread;
                     <span class="hljs-keyword">try</span> &#123;
-                        <span class="hljs-keyword">long</span> timeLeft = available.awaitNanos(delay);
+                        <span class="hljs-type">long</span> <span class="hljs-variable">timeLeft</span> <span class="hljs-operator">=</span> available.awaitNanos(delay);
                         nanos -= delay - timeLeft;
                     &#125; <span class="hljs-keyword">finally</span> &#123;
                         <span class="hljs-keyword">if</span> (leader == thisThread)
-                            leader = <span class="hljs-keyword">null</span>;
+                            leader = <span class="hljs-literal">null</span>;
                     &#125;
                 &#125;
             &#125;
         &#125;
     &#125; <span class="hljs-keyword">finally</span> &#123;
-        <span class="hljs-keyword">if</span> (leader == <span class="hljs-keyword">null</span> &amp;&amp; queue[<span class="hljs-number">0</span>] != <span class="hljs-keyword">null</span>)
+        <span class="hljs-keyword">if</span> (leader == <span class="hljs-literal">null</span> &amp;&amp; queue[<span class="hljs-number">0</span>] != <span class="hljs-literal">null</span>)
             available.signal();
         lock.unlock();
     &#125;
@@ -664,11 +664,11 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
 <span class="hljs-comment"> * A handler for rejected tasks that throws a</span>
 <span class="hljs-comment"> * &#123;<span class="hljs-doctag">@code</span> RejectedExecutionException&#125;.</span>
 <span class="hljs-comment"> */</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AbortPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">RejectedExecutionHandler</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AbortPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">RejectedExecutionHandler</span> &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Creates an &#123;<span class="hljs-doctag">@code</span> AbortPolicy&#125;.</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">AbortPolicy</span><span class="hljs-params">()</span> </span>&#123; &#125;
+    <span class="hljs-keyword">public</span> <span class="hljs-title function_">AbortPolicy</span><span class="hljs-params">()</span> &#123; &#125;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Always throws RejectedExecutionException.</span>
@@ -677,8 +677,8 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> e the executor attempting to execute this task</span>
 <span class="hljs-comment">     * <span class="hljs-doctag">@throws</span> RejectedExecutionException always</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> </span>&#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RejectedExecutionException(<span class="hljs-string">&quot;Task &quot;</span> + r.toString() +
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> &#123;
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RejectedExecutionException</span>(<span class="hljs-string">&quot;Task &quot;</span> + r.toString() +
                                              <span class="hljs-string">&quot; rejected from &quot;</span> +
                                              e.toString());
     &#125;
@@ -686,13 +686,13 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
 
 <p>其他的还有：</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 扔掉 task 不做任何处理</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DiscardPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">RejectedExecutionHandler</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> </span>&#123;&#125;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DiscardPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">RejectedExecutionHandler</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> &#123;&#125;
 &#125;
 
 <span class="hljs-comment">// 既然 workQueue 满了那我就扔掉一个，然后把这个 task 入队</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DiscardOldestPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">RejectedExecutionHandler</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DiscardOldestPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">RejectedExecutionHandler</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> &#123;
         <span class="hljs-keyword">if</span> (!e.isShutdown()) &#123;
             e.getQueue().poll();
             e.execute(r);
@@ -701,8 +701,8 @@ RunnableScheduledFuture&lt;?&gt; DelayedWorkQueue.poll(<span class="hljs-keyword
 &#125;
 
 <span class="hljs-comment">// 由提交 task 的线程负责执行 task</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CallerRunsPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">RejectedExecutionHandler</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CallerRunsPolicy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">RejectedExecutionHandler</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">rejectedExecution</span><span class="hljs-params">(Runnable r, ThreadPoolExecutor e)</span> &#123;
         <span class="hljs-keyword">if</span> (!e.isShutdown()) &#123;
             r.run();
         &#125;

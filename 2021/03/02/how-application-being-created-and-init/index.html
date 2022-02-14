@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-03-02-how-application-being-created-and-init/fork_by_zygote.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-03-02-how-application-being-created-and-init/create_application.png">
 <meta property="article:published_time" content="2021-03-02T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="Application">
 <meta property="article:tag" content="AMS">
@@ -79,11 +79,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -238,7 +238,7 @@
               <h2 id="时序图"><a href="#时序图" class="headerlink" title="时序图"></a>时序图</h2><p>从 <code>startActivity</code> 开始，比如打开一个 app 的首页，当 app 未启动时就会走创建 <code>Application</code> 这条路</p>
 <p><img src="../../../../image/2021-03-02-how-application-being-created-and-init/from_startActivity_to_zygote.png" srcset="/image/loading.gif" lazyload alt="from_startActivity_to_zygote.png"></p>
 <h2 id="AMS-承担的工作"><a href="#AMS-承担的工作" class="headerlink" title="AMS 承担的工作"></a>AMS 承担的工作</h2><p>其中的转折点在 <code>resumeTopActivityInnerLocked</code>，发现 app process 不存在，走启动 app process 的流程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">boolean</span> ActivityStack.resumeTopActivityInnerLocked(ActivityRecord prev, ActivityOptions options) &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-type">boolean</span> ActivityStack.resumeTopActivityInnerLocked(ActivityRecord prev, ActivityOptions options) &#123;
     <span class="hljs-comment">// ... Launching this app&#x27;s activity, make sure the app is no longer considered stopped. 下面是启动 Activity 的逻辑</span>
     <span class="hljs-keyword">if</span> (next.attachedToProcess()) &#123;
         <span class="hljs-comment">// ...</span>
@@ -246,42 +246,42 @@
         <span class="hljs-comment">// 此时 app process 还没有起来，走下面一段逻辑</span>
         <span class="hljs-comment">// Whoops, need to restart this activity!</span>
         <span class="hljs-keyword">if</span> (!next.hasBeenLaunched) &#123;
-            next.hasBeenLaunched = <span class="hljs-keyword">true</span>;
+            next.hasBeenLaunched = <span class="hljs-literal">true</span>;
         &#125; <span class="hljs-keyword">else</span> &#123;
             <span class="hljs-keyword">if</span> (SHOW_APP_STARTING_PREVIEW) &#123;
-                next.showStartingWindow(<span class="hljs-keyword">null</span> <span class="hljs-comment">/* prev */</span>, <span class="hljs-keyword">false</span> <span class="hljs-comment">/* newTask */</span>, <span class="hljs-keyword">false</span> <span class="hljs-comment">/* taskSwich */</span>);
+                next.showStartingWindow(<span class="hljs-literal">null</span> <span class="hljs-comment">/* prev */</span>, <span class="hljs-literal">false</span> <span class="hljs-comment">/* newTask */</span>, <span class="hljs-literal">false</span> <span class="hljs-comment">/* taskSwich */</span>);
             &#125;
             <span class="hljs-keyword">if</span> (DEBUG_SWITCH) Slog.v(TAG_SWITCH, <span class="hljs-string">&quot;Restarting: &quot;</span> + next);
         &#125;
         <span class="hljs-keyword">if</span> (DEBUG_STATES) Slog.d(TAG_STATES, <span class="hljs-string">&quot;resumeTopActivityLocked: Restarting &quot;</span> + next);
-        mStackSupervisor.startSpecificActivity(next, <span class="hljs-keyword">true</span>, <span class="hljs-keyword">true</span>);
+        mStackSupervisor.startSpecificActivity(next, <span class="hljs-literal">true</span>, <span class="hljs-literal">true</span>);
     &#125;
 &#125;</code></pre></div>
 
 <p>最后走到 <code>attemptZygoteSendArgsAndGetResult</code>，AMS 将 app 的相关参数通过 socket 发送给 zygote 进程，由 zygote 负责 fork 出一个 app process，这一段路程就算完结了</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> Process.<span class="hljs-function">ProcessStartResult <span class="hljs-title">attemptZygoteSendArgsAndGetResult</span><span class="hljs-params">(ZygoteState zygoteState, String msgStr)</span> <span class="hljs-keyword">throws</span> ZygoteStartFailedEx </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> Process.ProcessStartResult <span class="hljs-title function_">attemptZygoteSendArgsAndGetResult</span><span class="hljs-params">(ZygoteState zygoteState, String msgStr)</span> <span class="hljs-keyword">throws</span> ZygoteStartFailedEx &#123;
     <span class="hljs-keyword">try</span> &#123;
-        <span class="hljs-keyword">final</span> BufferedWriter zygoteWriter = zygoteState.mZygoteOutputWriter;
-        <span class="hljs-keyword">final</span> DataInputStream zygoteInputStream = zygoteState.mZygoteInputStream;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">BufferedWriter</span> <span class="hljs-variable">zygoteWriter</span> <span class="hljs-operator">=</span> zygoteState.mZygoteOutputWriter;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">DataInputStream</span> <span class="hljs-variable">zygoteInputStream</span> <span class="hljs-operator">=</span> zygoteState.mZygoteInputStream;
         zygoteWriter.write(msgStr);
         zygoteWriter.flush();
-        Process.ProcessStartResult result = <span class="hljs-keyword">new</span> Process.ProcessStartResult();
+        Process.<span class="hljs-type">ProcessStartResult</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Process</span>.ProcessStartResult();
         result.pid = zygoteInputStream.readInt();
         result.usingWrapper = zygoteInputStream.readBoolean();
         <span class="hljs-keyword">if</span> (result.pid &lt; <span class="hljs-number">0</span>) &#123;
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> ZygoteStartFailedEx(<span class="hljs-string">&quot;fork() failed&quot;</span>);
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZygoteStartFailedEx</span>(<span class="hljs-string">&quot;fork() failed&quot;</span>);
         &#125;
         <span class="hljs-keyword">return</span> result;
     &#125; <span class="hljs-keyword">catch</span> (IOException ex) &#123;
         zygoteState.close();
         Log.e(LOG_TAG, <span class="hljs-string">&quot;IO Exception while communicating with Zygote - &quot;</span> + ex.toString());
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> ZygoteStartFailedEx(ex);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZygoteStartFailedEx</span>(ex);
     &#125;
 &#125;</code></pre></div>
 
 <p>值得注意的是，AMS 是通过 <code>LocalSocket</code> 与 zygote 交互的，它们建立连接的过程如下：</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> Process.ProcessStartResult ZygoteProcess.startViaZygote(...) &#123;
-    ArrayList&lt;String&gt; argsForZygote = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();
+    ArrayList&lt;String&gt; argsForZygote = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
     argsForZygote.add(<span class="hljs-string">&quot;--runtime-args&quot;</span>);
     <span class="hljs-comment">// 拼接字符串参数 ...</span>
     <span class="hljs-keyword">return</span> zygoteSendArgsAndGetResult(openZygoteSocketIfNeeded(abi), zygotePolicyFlags, argsForZygote);
@@ -293,22 +293,22 @@
         <span class="hljs-keyword">if</span> (primaryZygoteState.matches(abi)) &#123;
             <span class="hljs-keyword">return</span> primaryZygoteState;
         &#125;
-        <span class="hljs-keyword">if</span> (mZygoteSecondarySocketAddress != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (mZygoteSecondarySocketAddress != <span class="hljs-literal">null</span>) &#123;
             attemptConnectionToSecondaryZygote();
             <span class="hljs-keyword">if</span> (secondaryZygoteState.matches(abi)) &#123;
                 <span class="hljs-keyword">return</span> secondaryZygoteState;
             &#125;
         &#125;
     &#125; <span class="hljs-keyword">catch</span> (IOException ioe) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> ZygoteStartFailedEx(<span class="hljs-string">&quot;Error connecting to zygote&quot;</span>, ioe);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZygoteStartFailedEx</span>(<span class="hljs-string">&quot;Error connecting to zygote&quot;</span>, ioe);
     &#125;
-    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> ZygoteStartFailedEx(<span class="hljs-string">&quot;Unsupported zygote ABI: &quot;</span> + abi);
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZygoteStartFailedEx</span>(<span class="hljs-string">&quot;Unsupported zygote ABI: &quot;</span> + abi);
 &#125;
 
 <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> ZygoteProcess.attemptConnectionToPrimaryZygote() <span class="hljs-keyword">throws</span> IOException &#123;
-    <span class="hljs-keyword">if</span> (primaryZygoteState == <span class="hljs-keyword">null</span> || primaryZygoteState.isClosed()) &#123;
+    <span class="hljs-keyword">if</span> (primaryZygoteState == <span class="hljs-literal">null</span> || primaryZygoteState.isClosed()) &#123;
         primaryZygoteState = ZygoteState.connect(mZygoteSocketAddress, mUsapPoolSocketAddress);
-        maybeSetApiDenylistExemptions(primaryZygoteState, <span class="hljs-keyword">false</span>);
+        maybeSetApiDenylistExemptions(primaryZygoteState, <span class="hljs-literal">false</span>);
         maybeSetHiddenApiAccessLogSampleRate(primaryZygoteState);
     &#125;
 &#125;
@@ -317,22 +317,22 @@
     DataInputStream zygoteInputStream;
     BufferedWriter zygoteOutputWriter;
 
-    <span class="hljs-keyword">final</span> LocalSocket zygoteSessionSocket = <span class="hljs-keyword">new</span> LocalSocket()
-    <span class="hljs-keyword">if</span> (zygoteSocketAddress == <span class="hljs-keyword">null</span>) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalArgumentException(<span class="hljs-string">&quot;zygoteSocketAddress can&#x27;t be null&quot;</span>);
+    <span class="hljs-keyword">final</span> <span class="hljs-type">LocalSocket</span> <span class="hljs-variable">zygoteSessionSocket</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LocalSocket</span>()
+    <span class="hljs-keyword">if</span> (zygoteSocketAddress == <span class="hljs-literal">null</span>) &#123;
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;zygoteSocketAddress can&#x27;t be null&quot;</span>);
     &#125;
     
     <span class="hljs-keyword">try</span> &#123;
         zygoteSessionSocket.connect(zygoteSocketAddress);
-        zygoteInputStream = <span class="hljs-keyword">new</span> DataInputStream(zygoteSessionSocket.getInputStream());
-        zygoteOutputWriter = <span class="hljs-keyword">new</span> BufferedWriter(<span class="hljs-keyword">new</span> OutputStreamWriter(zygoteSessionSocket.getOutputStream()), Zygote.SOCKET_BUFFER_SIZE);
+        zygoteInputStream = <span class="hljs-keyword">new</span> <span class="hljs-title class_">DataInputStream</span>(zygoteSessionSocket.getInputStream());
+        zygoteOutputWriter = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedWriter</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">OutputStreamWriter</span>(zygoteSessionSocket.getOutputStream()), Zygote.SOCKET_BUFFER_SIZE);
     &#125; <span class="hljs-keyword">catch</span> (IOException ex) &#123;
         <span class="hljs-keyword">try</span> &#123;
             zygoteSessionSocket.close();
         &#125; <span class="hljs-keyword">catch</span> (IOException ignore) &#123;&#125; 
         <span class="hljs-keyword">throw</span> ex;
     &#125;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> ZygoteState(zygoteSocketAddress, usapSocketAddress, zygoteSessionSocket, zygoteInputStream, zygoteOutputWriter, 
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZygoteState</span>(zygoteSocketAddress, usapSocketAddress, zygoteSessionSocket, zygoteInputStream, zygoteOutputWriter, 
 				getAbiList(zygoteOutputWriter, zygoteInputStream));
 &#125;</code></pre></div>
 
@@ -345,16 +345,16 @@
 <span class="hljs-comment"> * and handles other tasks related to preparing the process for forking into applications.</span>
 <span class="hljs-comment"> */</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> ZygoteInit.main(String[] argv) &#123;
-    ZygoteServer zygoteServer = <span class="hljs-keyword">null</span>;
+    <span class="hljs-type">ZygoteServer</span> <span class="hljs-variable">zygoteServer</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
     <span class="hljs-comment">// ...</span>
-    zygoteServer = <span class="hljs-keyword">new</span> ZygoteServer(isPrimaryZygote);
+    zygoteServer = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZygoteServer</span>(isPrimaryZygote);
     <span class="hljs-comment">// ...</span>
     caller = zygoteServer.runSelectLoop(abiList);
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
 <p>zygote server socket 实际上是个挂载在 <code>/dev/sockets/</code> 目录下的 FD，它是由脚本 <code>init.rc</code> 创建的，这个 FD 可以通过环境变量 <code>ANDROID_SOCKET_&lt;socketName&gt;</code> 获得</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ZygoteServer(<span class="hljs-keyword">boolean</span> isPrimaryZygote) &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java">ZygoteServer(<span class="hljs-type">boolean</span> isPrimaryZygote) &#123;
     mUsapPoolEventFD = Zygote.getUsapPoolEventFD();
     <span class="hljs-keyword">if</span> (isPrimaryZygote) &#123;
         mZygoteSocket = Zygote.createManagedSocketFromInitSocket(Zygote.PRIMARY_SOCKET_NAME);  <span class="hljs-comment">// PRIMARY_SOCKET_NAME = &quot;zygote&quot;</span>
@@ -363,7 +363,7 @@
         mZygoteSocket = Zygote.createManagedSocketFromInitSocket(Zygote.SECONDARY_SOCKET_NAME);
         mUsapPoolSocket = Zygote.createManagedSocketFromInitSocket(Zygote.USAP_POOL_SECONDARY_SOCKET_NAME);
     &#125;
-    mUsapPoolSupported = <span class="hljs-keyword">true</span>;
+    mUsapPoolSupported = <span class="hljs-literal">true</span>;
     fetchUsapPoolPolicyProps();
 &#125;
 
@@ -376,20 +376,20 @@
 <span class="hljs-comment"> * variable.</span>
 <span class="hljs-comment"> */</span>
 <span class="hljs-keyword">static</span> LocalServerSocket Zygote.createManagedSocketFromInitSocket(String socketName) &#123;
-    <span class="hljs-keyword">int</span> fileDesc;
-    <span class="hljs-keyword">final</span> String fullSocketName = ANDROID_SOCKET_PREFIX + socketName;  <span class="hljs-comment">// ANDROID_SOCKET_PREFIX = &quot;ANDROID_SOCKET_&quot;</span>
+    <span class="hljs-type">int</span> fileDesc;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">fullSocketName</span> <span class="hljs-operator">=</span> ANDROID_SOCKET_PREFIX + socketName;  <span class="hljs-comment">// ANDROID_SOCKET_PREFIX = &quot;ANDROID_SOCKET_&quot;</span>
     <span class="hljs-keyword">try</span> &#123;
-        String env = System.getenv(fullSocketName);
+        <span class="hljs-type">String</span> <span class="hljs-variable">env</span> <span class="hljs-operator">=</span> System.getenv(fullSocketName);
         fileDesc = Integer.parseInt(env);
     &#125; <span class="hljs-keyword">catch</span> (RuntimeException ex) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;Socket unset or invalid: &quot;</span> + fullSocketName, ex);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Socket unset or invalid: &quot;</span> + fullSocketName, ex);
     &#125;
     <span class="hljs-keyword">try</span> &#123;
-        FileDescriptor fd = <span class="hljs-keyword">new</span> FileDescriptor();
+        <span class="hljs-type">FileDescriptor</span> <span class="hljs-variable">fd</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileDescriptor</span>();
         fd.setInt$(fileDesc);
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> LocalServerSocket(fd);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LocalServerSocket</span>(fd);
     &#125; <span class="hljs-keyword">catch</span> (IOException ex) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(
             <span class="hljs-string">&quot;Error building socket from file descriptor: &quot;</span> + fileDesc, ex);
     &#125;
 &#125;</code></pre></div>
@@ -402,35 +402,35 @@
 <span class="hljs-comment"> */</span>
 Runnable ZygoteServer.runSelectLoop(String abiList) &#123;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">while</span> (<span class="hljs-keyword">true</span>) &#123;
+    <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
         <span class="hljs-comment">// epoll 可以同时监听多个 FD：pollFDs，当 epoll 返回时要逐个处理</span>
         StructPollfd[] pollFDs;
-        pollFDs = <span class="hljs-keyword">new</span> StructPollfd[socketFDs.size()];
-        <span class="hljs-keyword">int</span> pollIndex = <span class="hljs-number">0</span>;
+        pollFDs = <span class="hljs-keyword">new</span> <span class="hljs-title class_">StructPollfd</span>[socketFDs.size()];
+        <span class="hljs-type">int</span> <span class="hljs-variable">pollIndex</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
         <span class="hljs-keyword">for</span> (FileDescriptor socketFD : socketFDs) &#123;
-            pollFDs[pollIndex] = <span class="hljs-keyword">new</span> StructPollfd();
+            pollFDs[pollIndex] = <span class="hljs-keyword">new</span> <span class="hljs-title class_">StructPollfd</span>();
             pollFDs[pollIndex].fd = socketFD;
-            pollFDs[pollIndex].events = (<span class="hljs-keyword">short</span>) POLLIN;
+            pollFDs[pollIndex].events = (<span class="hljs-type">short</span>) POLLIN;
             ++pollIndex;
         &#125;
         <span class="hljs-comment">// ... 阻塞直到 pollFDs 里有消息输入</span>
-        <span class="hljs-keyword">int</span> pollReturnValue;
+        <span class="hljs-type">int</span> pollReturnValue;
         <span class="hljs-keyword">try</span> &#123;
             pollReturnValue = Os.poll(pollFDs, pollTimeoutMs);
         &#125; <span class="hljs-keyword">catch</span> (ErrnoException ex) &#123;
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;poll failed&quot;</span>, ex);
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;poll failed&quot;</span>, ex);
         &#125;
         <span class="hljs-comment">// ... 第一个 PD 总是 Zygote server socket，它接收 fork 请求并创建一个新的 FD 与对方交互</span>
         <span class="hljs-keyword">while</span> (--pollIndex &gt;= <span class="hljs-number">0</span>) &#123;
             <span class="hljs-keyword">if</span> (pollIndex == <span class="hljs-number">0</span>) &#123;
-                ZygoteConnection newPeer = acceptCommandPeer(abiList);
+                <span class="hljs-type">ZygoteConnection</span> <span class="hljs-variable">newPeer</span> <span class="hljs-operator">=</span> acceptCommandPeer(abiList);
                 peers.add(newPeer);
                 socketFDs.add(newPeer.getFileDescriptor());
             &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (pollIndex &lt; usapPoolEventFDIndex) &#123;
                 <span class="hljs-comment">// 从 FD 里解析请求参数并处理</span>
-                ZygoteConnection connection = peers.get(pollIndex);
-                <span class="hljs-keyword">boolean</span> multipleForksOK = !isUsapPoolEnabled() &amp;&amp; ZygoteHooks.indefiniteThreadSuspensionOK();
-                <span class="hljs-keyword">final</span> Runnable command = connection.processCommand(<span class="hljs-keyword">this</span>, multipleForksOK);  <span class="hljs-comment">// commands alaways null in zygote server</span>
+                <span class="hljs-type">ZygoteConnection</span> <span class="hljs-variable">connection</span> <span class="hljs-operator">=</span> peers.get(pollIndex);
+                <span class="hljs-type">boolean</span> <span class="hljs-variable">multipleForksOK</span> <span class="hljs-operator">=</span> !isUsapPoolEnabled() &amp;&amp; ZygoteHooks.indefiniteThreadSuspensionOK();
+                <span class="hljs-keyword">final</span> <span class="hljs-type">Runnable</span> <span class="hljs-variable">command</span> <span class="hljs-operator">=</span> connection.processCommand(<span class="hljs-built_in">this</span>, multipleForksOK);  <span class="hljs-comment">// commands alaways null in zygote server</span>
                 <span class="hljs-comment">// ...</span>
             &#125;
         &#125;
@@ -453,119 +453,119 @@ Runnable ZygoteServer.runSelectLoop(String abiList) &#123;
     &#125; ...
     <span class="hljs-comment">// We&#x27;re in the child process and have exited the select loop. Proceed to execute the</span>
     <span class="hljs-comment">// command.</span>
-    <span class="hljs-keyword">if</span> (caller != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">if</span> (caller != <span class="hljs-literal">null</span>) &#123;
         caller.run();
     &#125;
 &#125;</code></pre></div>
 
 <p>这个 <code>Runnable</code> 实际上是通过反射调用 <code>ActivityThread.main</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// app 进程的 entry point 被设置为 android.app.ActivityThread</span>
-<span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">startProcessLocked</span><span class="hljs-params">(ProcessRecord app, HostingRecord hostingRecord,</span></span>
-<span class="hljs-params"><span class="hljs-function">        <span class="hljs-keyword">int</span> zygotePolicyFlags, <span class="hljs-keyword">boolean</span> disableHiddenApiChecks, <span class="hljs-keyword">boolean</span> disableTestApiChecks,</span></span>
-<span class="hljs-params"><span class="hljs-function">        <span class="hljs-keyword">boolean</span> mountExtStorageFull, String abiOverride)</span> </span>&#123;
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">startProcessLocked</span><span class="hljs-params">(ProcessRecord app, HostingRecord hostingRecord,</span>
+<span class="hljs-params">        <span class="hljs-type">int</span> zygotePolicyFlags, <span class="hljs-type">boolean</span> disableHiddenApiChecks, <span class="hljs-type">boolean</span> disableTestApiChecks,</span>
+<span class="hljs-params">        <span class="hljs-type">boolean</span> mountExtStorageFull, String abiOverride)</span> &#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-comment">// Start the process.  It will either succeed and return a result containing</span>
     <span class="hljs-comment">// the PID of the new process, or else throw a RuntimeException.</span>
-    <span class="hljs-keyword">final</span> String entryPoint = <span class="hljs-string">&quot;android.app.ActivityThread&quot;</span>;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">entryPoint</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;android.app.ActivityThread&quot;</span>;
     <span class="hljs-keyword">return</span> startProcessLocked(hostingRecord, entryPoint, app, uid, gids, runtimeFlags, 
 				zygotePolicyFlags, mountExternal, seInfo, requiredAbi, instructionSet, invokeWith, startTime);
 &#125;
 
 <span class="hljs-comment">// 寻找方法 main(String[] args)</span>
-<span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">static</span> Runnable <span class="hljs-title">findStaticMain</span><span class="hljs-params">(String className, String[] argv, ClassLoader classLoader)</span> </span>&#123;
+<span class="hljs-keyword">protected</span> <span class="hljs-keyword">static</span> Runnable <span class="hljs-title function_">findStaticMain</span><span class="hljs-params">(String className, String[] argv, ClassLoader classLoader)</span> &#123;
     Class&lt;?&gt; cl;
     <span class="hljs-keyword">try</span> &#123;
-        cl = Class.forName(className, <span class="hljs-keyword">true</span>, classLoader);
+        cl = Class.forName(className, <span class="hljs-literal">true</span>, classLoader);
     &#125; <span class="hljs-keyword">catch</span> (ClassNotFoundException ex) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;Missing class when invoking static main &quot;</span> + className, ex);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Missing class when invoking static main &quot;</span> + className, ex);
     &#125;
     Method m;
     <span class="hljs-keyword">try</span> &#123;
-        m = cl.getMethod(<span class="hljs-string">&quot;main&quot;</span>, <span class="hljs-keyword">new</span> Class[] &#123; String[].class &#125;);
+        m = cl.getMethod(<span class="hljs-string">&quot;main&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Class</span>[] &#123; String[].class &#125;);
     &#125; <span class="hljs-keyword">catch</span> (NoSuchMethodException ex) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;Missing static main on &quot;</span> + className, ex);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Missing static main on &quot;</span> + className, ex);
     &#125; <span class="hljs-keyword">catch</span> (SecurityException ex) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;Problem getting static main on &quot;</span> + className, ex);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Problem getting static main on &quot;</span> + className, ex);
     &#125;
-    <span class="hljs-keyword">int</span> modifiers = m.getModifiers();
+    <span class="hljs-type">int</span> <span class="hljs-variable">modifiers</span> <span class="hljs-operator">=</span> m.getModifiers();
     <span class="hljs-keyword">if</span> (! (Modifier.isStatic(modifiers) &amp;&amp; Modifier.isPublic(modifiers))) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;Main method is not public and static on &quot;</span> + className);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Main method is not public and static on &quot;</span> + className);
     &#125;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> MethodAndArgsCaller(m, argv);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">MethodAndArgsCaller</span>(m, argv);
 &#125;
 
 <span class="hljs-comment">// 通过反射调用 main 方法</span>
-<span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MethodAndArgsCaller</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> </span>&#123;
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MethodAndArgsCaller</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Runnable</span> &#123;
     <span class="hljs-comment">/** method to call */</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Method mMethod;
     <span class="hljs-comment">/** argument array */</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> String[] mArgs;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">MethodAndArgsCaller</span><span class="hljs-params">(Method method, String[] args)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-title function_">MethodAndArgsCaller</span><span class="hljs-params">(Method method, String[] args)</span> &#123;
         mMethod = method;
         mArgs = args;
     &#125;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-keyword">try</span> &#123;
-            mMethod.invoke(<span class="hljs-keyword">null</span>, <span class="hljs-keyword">new</span> Object[] &#123; mArgs &#125;);
+            mMethod.invoke(<span class="hljs-literal">null</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Object</span>[] &#123; mArgs &#125;);
         &#125; <span class="hljs-keyword">catch</span> (IllegalAccessException ex) &#123;
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(ex);
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(ex);
         &#125; <span class="hljs-keyword">catch</span> (InvocationTargetException ex) &#123;
-            Throwable cause = ex.getCause();
+            <span class="hljs-type">Throwable</span> <span class="hljs-variable">cause</span> <span class="hljs-operator">=</span> ex.getCause();
             <span class="hljs-keyword">if</span> (cause <span class="hljs-keyword">instanceof</span> RuntimeException) &#123;
                 <span class="hljs-keyword">throw</span> (RuntimeException) cause;
             &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (cause <span class="hljs-keyword">instanceof</span> Error) &#123;
                 <span class="hljs-keyword">throw</span> (Error) cause;
             &#125;
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(ex);
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(ex);
         &#125;
     &#125;
 &#125;</code></pre></div>
 
 <h2 id="Application-实例的创建和初始化"><a href="#Application-实例的创建和初始化" class="headerlink" title="Application 实例的创建和初始化"></a>Application 实例的创建和初始化</h2><p><img src="../../../../image/2021-03-02-how-application-being-created-and-init/create_application.png" srcset="/image/loading.gif" lazyload alt="create_application.png"></p>
 <p>app process 的起始点是 <code>ActivityThread.main</code>，做完所有准备龚州工作后进入 loop 循环，后续的任务通过 <code>Handler</code> 执行</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> &#123;
     <span class="hljs-comment">// ...</span>
     Looper.prepareMainLooper();
     <span class="hljs-comment">// ...</span>
     Looper.loop();
-    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;Main thread loop unexpectedly exited&quot;</span>);
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Main thread loop unexpectedly exited&quot;</span>);
 &#125;</code></pre></div>
 
 <p><code>ActivityThread.handleBindApplication</code> 是 <code>Application</code> 实例创建和初始化的地方</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> ActivityThread.handleBindApplication(AppBindData data) &#123;
     <span class="hljs-comment">// ...</span>
     Application app;
-    <span class="hljs-keyword">final</span> StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskWrites();
-    <span class="hljs-keyword">final</span> StrictMode.ThreadPolicy writesAllowedPolicy = StrictMode.getThreadPolicy();
+    <span class="hljs-keyword">final</span> StrictMode.<span class="hljs-type">ThreadPolicy</span> <span class="hljs-variable">savedPolicy</span> <span class="hljs-operator">=</span> StrictMode.allowThreadDiskWrites();
+    <span class="hljs-keyword">final</span> StrictMode.<span class="hljs-type">ThreadPolicy</span> <span class="hljs-variable">writesAllowedPolicy</span> <span class="hljs-operator">=</span> StrictMode.getThreadPolicy();
     <span class="hljs-keyword">try</span> &#123;
-        app = data.info.makeApplication(data.restrictedBackupMode, <span class="hljs-keyword">null</span>);
+        app = data.info.makeApplication(data.restrictedBackupMode, <span class="hljs-literal">null</span>);
         <span class="hljs-comment">// ...</span>
     &#125; ...
 &#125;
 
-<span class="hljs-keyword">public</span> Application LoadedApk.makeApplication(<span class="hljs-keyword">boolean</span> forceDefaultAppClass, Instrumentation instrumentation) &#123;
+<span class="hljs-keyword">public</span> Application LoadedApk.makeApplication(<span class="hljs-type">boolean</span> forceDefaultAppClass, Instrumentation instrumentation) &#123;
     <span class="hljs-comment">// ...</span>
-    Application app = <span class="hljs-keyword">null</span>;
-    String appClass = mApplicationInfo.className;
-    <span class="hljs-keyword">if</span> (forceDefaultAppClass || (appClass == <span class="hljs-keyword">null</span>)) &#123;
+    <span class="hljs-type">Application</span> <span class="hljs-variable">app</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-type">String</span> <span class="hljs-variable">appClass</span> <span class="hljs-operator">=</span> mApplicationInfo.className;
+    <span class="hljs-keyword">if</span> (forceDefaultAppClass || (appClass == <span class="hljs-literal">null</span>)) &#123;
         appClass = <span class="hljs-string">&quot;android.app.Application&quot;</span>;
     &#125;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">try</span> &#123;
-        <span class="hljs-keyword">final</span> java.lang.ClassLoader cl = getClassLoader();
+        <span class="hljs-keyword">final</span> java.lang.<span class="hljs-type">ClassLoader</span> <span class="hljs-variable">cl</span> <span class="hljs-operator">=</span> getClassLoader();
         <span class="hljs-keyword">if</span> (!mPackageName.equals(<span class="hljs-string">&quot;android&quot;</span>)) &#123;
             Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, <span class="hljs-string">&quot;initializeJavaContextClassLoader&quot;</span>);
             initializeJavaContextClassLoader();
             Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
         &#125;
-        ContextImpl appContext = ContextImpl.createAppContext(mActivityThread, <span class="hljs-keyword">this</span>);
+        <span class="hljs-type">ContextImpl</span> <span class="hljs-variable">appContext</span> <span class="hljs-operator">=</span> ContextImpl.createAppContext(mActivityThread, <span class="hljs-built_in">this</span>);
         <span class="hljs-comment">// ... 创建 Application 实例</span>
         app = mActivityThread.mInstrumentation.newApplication(cl, appClass, appContext);
         appContext.setOuterContext(app);
     &#125; ...
     mActivityThread.mAllApplications.add(app);
     mApplication = app;
-    <span class="hljs-keyword">if</span> (instrumentation != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">if</span> (instrumentation != <span class="hljs-literal">null</span>) &#123;
         <span class="hljs-keyword">try</span> &#123;
             instrumentation.callApplicationOnCreate(app);  <span class="hljs-comment">// 这里会调用生命周期函数 onCreate</span>
         &#125; ...
@@ -573,9 +573,9 @@ Runnable ZygoteServer.runSelectLoop(String abiList) &#123;
     <span class="hljs-keyword">return</span> app;
 &#125;
 
-<span class="hljs-keyword">public</span> Instrumentation.<span class="hljs-function">Application <span class="hljs-title">newApplication</span><span class="hljs-params">(ClassLoader cl, String className, Context context)</span></span>
-<span class="hljs-function">        <span class="hljs-keyword">throws</span> InstantiationException, IllegalAccessException, ClassNotFoundException </span>&#123;
-    Application app = getFactory(context.getPackageName()).instantiateApplication(cl, className);
+<span class="hljs-keyword">public</span> Instrumentation.Application <span class="hljs-title function_">newApplication</span><span class="hljs-params">(ClassLoader cl, String className, Context context)</span>
+        <span class="hljs-keyword">throws</span> InstantiationException, IllegalAccessException, ClassNotFoundException &#123;
+    <span class="hljs-type">Application</span> <span class="hljs-variable">app</span> <span class="hljs-operator">=</span> getFactory(context.getPackageName()).instantiateApplication(cl, className);
     app.attach(context);  <span class="hljs-comment">// 在这里会调用 attachBaseContext</span>
     <span class="hljs-keyword">return</span> app;
 &#125;

@@ -28,7 +28,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-12-13-ui-thread-in-vsync/114050.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-12-13-ui-thread-in-vsync/52054.png">
 <meta property="article:published_time" content="2020-12-13T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="vsync">
 <meta property="article:tag" content="ui thread">
@@ -77,11 +77,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -239,14 +239,14 @@
 ViewRootImpl.doTraversal()
 ViewRootImpl.performTraversals()
 ViewRootImpl.performDraw()
-ViewRootImpl.draw(<span class="hljs-keyword">boolean</span> fullRedrawNeeded)
+ViewRootImpl.draw(<span class="hljs-type">boolean</span> fullRedrawNeeded)
 
 <span class="hljs-comment">// 进入 ThreadedRenderer</span>
 ThreadedRenderer.draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks) &#123;
     <span class="hljs-comment">// ...</span>
     updateRootDisplayList(view, callbacks);
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">int</span> syncResult = syncAndDrawFrame(choreographer.mFrameInfo);
+    <span class="hljs-type">int</span> <span class="hljs-variable">syncResult</span> <span class="hljs-operator">=</span> syncAndDrawFrame(choreographer.mFrameInfo);
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
@@ -256,7 +256,7 @@ ThreadedRenderer.draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks)
     updateViewTreeDisplayList(view);
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (mRootNodeNeedsUpdate || !mRootNode.hasDisplayList()) &#123;
-        RecordingCanvas canvas = mRootNode.beginRecording(mSurfaceWidth, mSurfaceHeight);
+        <span class="hljs-type">RecordingCanvas</span> <span class="hljs-variable">canvas</span> <span class="hljs-operator">=</span> mRootNode.beginRecording(mSurfaceWidth, mSurfaceHeight);
         <span class="hljs-keyword">try</span> &#123;
             <span class="hljs-comment">// ...</span>
             canvas.drawRenderNode(view.updateDisplayListIfDirty());
@@ -274,9 +274,9 @@ ThreadedRenderer.draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks)
 </ol>
 <h2 id="updateViewTreeDisplayList"><a href="#updateViewTreeDisplayList" class="headerlink" title="updateViewTreeDisplayList"></a>updateViewTreeDisplayList</h2><div class="hljs code-wrapper"><pre><code class="hljs java">ThreadedRenderer.updateViewTreeDisplayList(View view)
 RenderNode View.updateDisplayListIfDirty() &#123;
-    <span class="hljs-keyword">final</span> RenderNode renderNode = mRenderNode;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">RenderNode</span> <span class="hljs-variable">renderNode</span> <span class="hljs-operator">=</span> mRenderNode;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">final</span> RecordingCanvas canvas = renderNode.beginRecording(width, height);
+    <span class="hljs-keyword">final</span> <span class="hljs-type">RecordingCanvas</span> <span class="hljs-variable">canvas</span> <span class="hljs-operator">=</span> renderNode.beginRecording(width, height);
     <span class="hljs-keyword">try</span> &#123;
         <span class="hljs-comment">// ...</span>
         draw(canvas);
@@ -290,28 +290,28 @@ RenderNode View.updateDisplayListIfDirty() &#123;
 &#125;</code></pre></div>
 
 <p>最终在这里调用了 <code>View.draw</code>，里面就是常规的画布绘制操作，我们继续看看 <code>RecordingCanvas</code> 这个类</p>
-<h2 id="RecordingCanvas"><a href="#RecordingCanvas" class="headerlink" title="RecordingCanvas"></a>RecordingCanvas</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RecordingCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">DisplayListCanvas</span></span>
-<span class="hljs-class"><span class="hljs-title">public</span> <span class="hljs-title">abstract</span> <span class="hljs-title">class</span> <span class="hljs-title">DisplayListCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">BaseRecordingCanvas</span></span>
-<span class="hljs-class"><span class="hljs-title">public</span> <span class="hljs-title">class</span> <span class="hljs-title">BaseRecordingCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Canvas</span> </span>&#123;
+<h2 id="RecordingCanvas"><a href="#RecordingCanvas" class="headerlink" title="RecordingCanvas"></a>RecordingCanvas</h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">RecordingCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">DisplayListCanvas</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DisplayListCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">BaseRecordingCanvas</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">BaseRecordingCanvas</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Canvas</span> &#123;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">drawArc</span><span class="hljs-params">(<span class="hljs-keyword">float</span> left, <span class="hljs-keyword">float</span> top, <span class="hljs-keyword">float</span> right, <span class="hljs-keyword">float</span> bottom, <span class="hljs-keyword">float</span> startAngle,</span></span>
-<span class="hljs-params"><span class="hljs-function">            <span class="hljs-keyword">float</span> sweepAngle, <span class="hljs-keyword">boolean</span> useCenter, <span class="hljs-meta">@NonNull</span> Paint paint)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">drawArc</span><span class="hljs-params">(<span class="hljs-type">float</span> left, <span class="hljs-type">float</span> top, <span class="hljs-type">float</span> right, <span class="hljs-type">float</span> bottom, <span class="hljs-type">float</span> startAngle,</span>
+<span class="hljs-params">            <span class="hljs-type">float</span> sweepAngle, <span class="hljs-type">boolean</span> useCenter, <span class="hljs-meta">@NonNull</span> Paint paint)</span> &#123;
         nDrawArc(mNativeCanvasWrapper, left, top, right, bottom, startAngle, sweepAngle,
                 useCenter, paint.getNativeInstance());
     &#125;
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">drawBitmap</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> Bitmap bitmap, <span class="hljs-keyword">float</span> left, <span class="hljs-keyword">float</span> top,</span></span>
-<span class="hljs-params"><span class="hljs-function">            <span class="hljs-meta">@Nullable</span> Paint paint)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">drawBitmap</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> Bitmap bitmap, <span class="hljs-type">float</span> left, <span class="hljs-type">float</span> top,</span>
+<span class="hljs-params">            <span class="hljs-meta">@Nullable</span> Paint paint)</span> &#123;
         throwIfCannotDraw(bitmap);
         nDrawBitmap(mNativeCanvasWrapper, bitmap.getNativeInstance(), left, top,
-                paint != <span class="hljs-keyword">null</span> ? paint.getNativeInstance() : <span class="hljs-number">0</span>, mDensity, mScreenDensity,
+                paint != <span class="hljs-literal">null</span> ? paint.getNativeInstance() : <span class="hljs-number">0</span>, mDensity, mScreenDensity,
                 bitmap.mDensity);
     &#125;
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">drawRect</span><span class="hljs-params">(<span class="hljs-keyword">float</span> left, <span class="hljs-keyword">float</span> top, <span class="hljs-keyword">float</span> right, <span class="hljs-keyword">float</span> bottom,</span></span>
-<span class="hljs-params"><span class="hljs-function">            <span class="hljs-meta">@NonNull</span> Paint paint)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">drawRect</span><span class="hljs-params">(<span class="hljs-type">float</span> left, <span class="hljs-type">float</span> top, <span class="hljs-type">float</span> right, <span class="hljs-type">float</span> bottom,</span>
+<span class="hljs-params">            <span class="hljs-meta">@NonNull</span> Paint paint)</span> &#123;
         nDrawRect(mNativeCanvasWrapper, left, top, right, bottom, paint.getNativeInstance());
     &#125;
 &#125;</code></pre></div>
@@ -319,16 +319,16 @@ RenderNode View.updateDisplayListIfDirty() &#123;
 <p><code>RecordingCanvas</code> 继承自 <code>DisplayListCanvas</code>，<code>DisplayListCanvas</code> 继承自 <code>BaseRecordingCanvas</code></p>
 <p>在 <code>BaseRecordingCanvas</code> 里，<code>View.draw(Canvas)</code> 所用到的 <code>drawBitmap</code>、<code>drawText</code>、<code>drawRect</code> 等绘图方法都被重定向到 <code>BaseCanvas.mNativeCanvasWrapper</code>，继续看看它指向谁</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 从构造开始</span>
-RecordingCanvas RenderNode.beginRecording(<span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height) &#123;
+RecordingCanvas RenderNode.beginRecording(<span class="hljs-type">int</span> width, <span class="hljs-type">int</span> height) &#123;
     <span class="hljs-comment">// ...</span>
-    mCurrentRecordingCanvas = RecordingCanvas.obtain(<span class="hljs-keyword">this</span>, width, height);
+    mCurrentRecordingCanvas = RecordingCanvas.obtain(<span class="hljs-built_in">this</span>, width, height);
     <span class="hljs-keyword">return</span> mCurrentRecordingCanvas;
 &#125;
-RecordingCanvas RecordingCanvas.obtain(RenderNode node, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height) &#123;
-    <span class="hljs-keyword">if</span> (node == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalArgumentException(<span class="hljs-string">&quot;node cannot be null&quot;</span>);
-    RecordingCanvas canvas = sPool.acquire();
-    <span class="hljs-keyword">if</span> (canvas == <span class="hljs-keyword">null</span>) &#123;
-        canvas = <span class="hljs-keyword">new</span> RecordingCanvas(node, width, height);
+RecordingCanvas RecordingCanvas.obtain(RenderNode node, <span class="hljs-type">int</span> width, <span class="hljs-type">int</span> height) &#123;
+    <span class="hljs-keyword">if</span> (node == <span class="hljs-literal">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;node cannot be null&quot;</span>);
+    <span class="hljs-type">RecordingCanvas</span> <span class="hljs-variable">canvas</span> <span class="hljs-operator">=</span> sPool.acquire();
+    <span class="hljs-keyword">if</span> (canvas == <span class="hljs-literal">null</span>) &#123;
+        canvas = <span class="hljs-keyword">new</span> <span class="hljs-title class_">RecordingCanvas</span>(node, width, height);
     &#125; <span class="hljs-keyword">else</span> &#123;
         nResetDisplayListCanvas(canvas.mNativeCanvasWrapper, node.mNativeRenderNode, width, height);
     &#125;
@@ -339,27 +339,27 @@ RecordingCanvas RecordingCanvas.obtain(RenderNode node, <span class="hljs-keywor
 &#125;</code></pre></div>
 
 <p><code>RecordingCanvas</code> 会被频繁地创建和销毁，所以用了池化，池子大小是 25，从池子里拿出的对象用 <code>nResetDisplayListCanvas</code> 重置；我们走创建新实例这条路继续看下去</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-title">RecordingCanvas</span><span class="hljs-params">(RenderNode node, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span> </span>&#123;
-    <span class="hljs-keyword">super</span>(nCreateDisplayListCanvas(node.mNativeRenderNode, width, height));
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">protected</span> <span class="hljs-title function_">RecordingCanvas</span><span class="hljs-params">(RenderNode node, <span class="hljs-type">int</span> width, <span class="hljs-type">int</span> height)</span> &#123;
+    <span class="hljs-built_in">super</span>(nCreateDisplayListCanvas(node.mNativeRenderNode, width, height));
 &#125;
 
 <span class="hljs-comment">// /frameworks/base/core/jni/android_view_DisplayListCanvas.cpp</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> jlong <span class="hljs-title">android_view_DisplayListCanvas_createDisplayListCanvas</span><span class="hljs-params">(jlong renderNodePtr, jint width, jint height)</span> </span>&#123;
+<span class="hljs-keyword">static</span> jlong <span class="hljs-title function_">android_view_DisplayListCanvas_createDisplayListCanvas</span><span class="hljs-params">(jlong renderNodePtr, jint width, jint height)</span> &#123;
     RenderNode* renderNode = reinterpret_cast&lt;RenderNode*&gt;(renderNodePtr);
     <span class="hljs-keyword">return</span> reinterpret_cast&lt;jlong&gt;(Canvas::create_recording_canvas(width, height, renderNode));
 &#125;
 
-Canvas* Canvas::create_recording_canvas(<span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height, uirenderer::RenderNode* renderNode) &#123;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> uirenderer::skiapipeline::SkiaRecordingCanvas(renderNode, width, height);
+Canvas* Canvas::create_recording_canvas(<span class="hljs-type">int</span> width, <span class="hljs-type">int</span> height, uirenderer::RenderNode* renderNode) &#123;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">uirenderer</span>::skiapipeline::SkiaRecordingCanvas(renderNode, width, height);
 &#125;</code></pre></div>
 
 <p>可以看到 <code>RecordingCanvas.mNativeCanvasWrapper</code> 是 native <code>SkiaRecordingCanvas</code></p>
 <p><code>SkiaRecordingCanvas</code> 继承自 <code>SkiaCanvas</code>，大部分 2D 绘图方法都是由 <code>SkiaCanvas</code> 实现的，而 <code>SkiaCanvas</code> 又把绘图操作交由 <code>SkiaCanvas.mCanvas</code> 执行，我们看下它指向谁</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">explicit</span> <span class="hljs-title">SkiaRecordingCanvas</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">explicit</span> <span class="hljs-title">SkiaRecordingCanvas</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-type">int</span> width, <span class="hljs-type">int</span> height)</span> </span>&#123;
     <span class="hljs-built_in">initDisplayList</span>(renderNode, width, height);
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaRecordingCanvas::initDisplayList</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaRecordingCanvas::initDisplayList</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-type">int</span> width, <span class="hljs-type">int</span> height)</span> </span>&#123;
     mCurrentBarrier = <span class="hljs-literal">nullptr</span>;
     <span class="hljs-built_in">SkASSERT</span>(mDisplayList.<span class="hljs-built_in">get</span>() == <span class="hljs-literal">nullptr</span>);
 
@@ -374,7 +374,7 @@ Canvas* Canvas::create_recording_canvas(<span class="hljs-keyword">int</span> wi
     SkiaCanvas::<span class="hljs-built_in">reset</span>(&amp;mRecorder);
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaCanvas::reset</span><span class="hljs-params">(SkCanvas* skiaCanvas)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaCanvas::reset</span><span class="hljs-params">(SkCanvas* skiaCanvas)</span> </span>&#123;
     <span class="hljs-keyword">if</span> (mCanvas != skiaCanvas) &#123;
         mCanvas = skiaCanvas;
         mCanvasOwned.<span class="hljs-built_in">reset</span>();
@@ -383,41 +383,41 @@ Canvas* Canvas::create_recording_canvas(<span class="hljs-keyword">int</span> wi
 &#125;</code></pre></div>
 
 <p><code>SkiaRecordingCanvas.mRecorder</code> 被赋值给了 <code>SkiaCanvas.mCanvas</code>，它是 <code>RecordingCanvaas</code>，而它又把 draw 交由 <code>RecordingCanvas.fDL</code> 执行</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DisplayListData::drawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; rect, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span> </span>&#123;
-    <span class="hljs-keyword">this</span>-&gt;push&lt;DrawRect&gt;(<span class="hljs-number">0</span>, rect, paint);
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">DisplayListData::drawRect</span><span class="hljs-params">(<span class="hljs-type">const</span> SkRect&amp; rect, <span class="hljs-type">const</span> SkPaint&amp; paint)</span> </span>&#123;
+    <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">push</span>&lt;DrawRect&gt;(<span class="hljs-number">0</span>, rect, paint);
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">DrawRect</span> <span class="hljs-keyword">final</span> :</span> Op &#123;
-    <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">auto</span> kType = Type::DrawRect;
-    <span class="hljs-built_in">DrawRect</span>(<span class="hljs-keyword">const</span> SkRect&amp; rect, <span class="hljs-keyword">const</span> SkPaint&amp; paint) : <span class="hljs-built_in">rect</span>(rect), <span class="hljs-built_in">paint</span>(paint) &#123;&#125;
+<span class="hljs-keyword">struct</span> <span class="hljs-title class_">DrawRect</span> <span class="hljs-keyword">final</span> : Op &#123;
+    <span class="hljs-type">static</span> <span class="hljs-type">const</span> <span class="hljs-keyword">auto</span> kType = Type::DrawRect;
+    <span class="hljs-built_in">DrawRect</span>(<span class="hljs-type">const</span> SkRect&amp; rect, <span class="hljs-type">const</span> SkPaint&amp; paint) : <span class="hljs-built_in">rect</span>(rect), <span class="hljs-built_in">paint</span>(paint) &#123;&#125;
     SkRect rect;
     SkPaint paint;
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">draw</span><span class="hljs-params">(SkCanvas* c, <span class="hljs-keyword">const</span> SkMatrix&amp;)</span> <span class="hljs-keyword">const</span> </span>&#123; c-&gt;<span class="hljs-built_in">drawRect</span>(rect, paint); &#125;
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">draw</span><span class="hljs-params">(SkCanvas* c, <span class="hljs-type">const</span> SkMatrix&amp;)</span> <span class="hljs-type">const</span> </span>&#123; c-&gt;<span class="hljs-built_in">drawRect</span>(rect, paint); &#125;
 &#125;;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DisplayListData::drawImage</span><span class="hljs-params">(sk_sp&lt;<span class="hljs-keyword">const</span> SkImage&gt; image, SkScalar x, SkScalar y, onst SkPaint* paint, BitmapPalette palette)</span> </span>&#123;
-    <span class="hljs-keyword">this</span>-&gt;push&lt;DrawImage&gt;(<span class="hljs-number">0</span>, std::<span class="hljs-built_in">move</span>(image), x, y, paint, palette);
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">DisplayListData::drawImage</span><span class="hljs-params">(sk_sp&lt;<span class="hljs-type">const</span> SkImage&gt; image, SkScalar x, SkScalar y, onst SkPaint* paint, BitmapPalette palette)</span> </span>&#123;
+    <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">push</span>&lt;DrawImage&gt;(<span class="hljs-number">0</span>, std::<span class="hljs-built_in">move</span>(image), x, y, paint, palette);
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">DrawImage</span> <span class="hljs-keyword">final</span> :</span> Op &#123;
-    <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">auto</span> kType = Type::DrawImage;
-    <span class="hljs-built_in">DrawImage</span>(sk_sp&lt;<span class="hljs-keyword">const</span> SkImage&gt;&amp;&amp; image, SkScalar x, SkScalar y, <span class="hljs-keyword">const</span> SkPaint* paint, BitmapPalette palette)
+<span class="hljs-keyword">struct</span> <span class="hljs-title class_">DrawImage</span> <span class="hljs-keyword">final</span> : Op &#123;
+    <span class="hljs-type">static</span> <span class="hljs-type">const</span> <span class="hljs-keyword">auto</span> kType = Type::DrawImage;
+    <span class="hljs-built_in">DrawImage</span>(sk_sp&lt;<span class="hljs-type">const</span> SkImage&gt;&amp;&amp; image, SkScalar x, SkScalar y, <span class="hljs-type">const</span> SkPaint* paint, BitmapPalette palette)
             : <span class="hljs-built_in">image</span>(std::<span class="hljs-built_in">move</span>(image)), <span class="hljs-built_in">x</span>(x), <span class="hljs-built_in">y</span>(y), <span class="hljs-built_in">palette</span>(palette) &#123;
         <span class="hljs-keyword">if</span> (paint) &#123;
             <span class="hljs-keyword">this</span>-&gt;paint = *paint;
         &#125;
     &#125;
-    sk_sp&lt;<span class="hljs-keyword">const</span> SkImage&gt; image;
+    sk_sp&lt;<span class="hljs-type">const</span> SkImage&gt; image;
     SkScalar x, y;
     SkPaint paint;
     BitmapPalette palette;
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">draw</span><span class="hljs-params">(SkCanvas* c, <span class="hljs-keyword">const</span> SkMatrix&amp;)</span> <span class="hljs-keyword">const</span> </span>&#123; c-&gt;<span class="hljs-built_in">drawImage</span>(image.<span class="hljs-built_in">get</span>(), x, y, &amp;paint); &#125;
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">draw</span><span class="hljs-params">(SkCanvas* c, <span class="hljs-type">const</span> SkMatrix&amp;)</span> <span class="hljs-type">const</span> </span>&#123; c-&gt;<span class="hljs-built_in">drawImage</span>(image.<span class="hljs-built_in">get</span>(), x, y, &amp;paint); &#125;
 &#125;;</code></pre></div>
 
 <p><code>RecordingCanvas.fDL</code> 是个 <code>DisplayListData</code>，它把绘图操作的所有参数记录为一个结构体 Op 并记录起来</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaRecordingCanvas::initDisplayList</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-keyword">int</span> width, <span class="hljs-keyword">int</span> height)</span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaDisplayList::attachRecorder</span><span class="hljs-params">(RecordingCanvas* recorder, <span class="hljs-keyword">const</span> SkIRect&amp; bounds)</span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RecordingCanvas::reset</span><span class="hljs-params">(DisplayListData* dl, <span class="hljs-keyword">const</span> SkIRect&amp; bounds)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaRecordingCanvas::initDisplayList</span><span class="hljs-params">(uirenderer::RenderNode* renderNode, <span class="hljs-type">int</span> width, <span class="hljs-type">int</span> height)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaDisplayList::attachRecorder</span><span class="hljs-params">(RecordingCanvas* recorder, <span class="hljs-type">const</span> SkIRect&amp; bounds)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RecordingCanvas::reset</span><span class="hljs-params">(DisplayListData* dl, <span class="hljs-type">const</span> SkIRect&amp; bounds)</span> </span>&#123;
     <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">resetCanvas</span>(bounds.<span class="hljs-built_in">right</span>(), bounds.<span class="hljs-built_in">bottom</span>());
     fDL = dl;
     mClipMayBeComplex = <span class="hljs-literal">false</span>;
@@ -445,7 +445,7 @@ RecordingCanvas.<span class="hljs-built_in">endRecording</span>() &#123;
     <span class="hljs-comment">// ...</span>
     RecordingCanvas canvas = mCurrentRecordingCanvas;
     mCurrentRecordingCanvas = null;
-    <span class="hljs-keyword">long</span> displayList = canvas.<span class="hljs-built_in">finishRecording</span>();
+    <span class="hljs-type">long</span> displayList = canvas.<span class="hljs-built_in">finishRecording</span>();
     <span class="hljs-built_in">nSetDisplayList</span>(mNativeRenderNode, displayList);
     canvas.<span class="hljs-built_in">recycle</span>();
 &#125;
@@ -455,7 +455,7 @@ RecordingCanvas.<span class="hljs-built_in">endRecording</span>() &#123;
     <span class="hljs-keyword">return</span> mDisplayList.<span class="hljs-built_in">release</span>();
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::setStagingDisplayList</span><span class="hljs-params">(DisplayList* displayList)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::setStagingDisplayList</span><span class="hljs-params">(DisplayList* displayList)</span> </span>&#123;
     mValid = (displayList != <span class="hljs-literal">nullptr</span>);
     mNeedsDisplayListSync = <span class="hljs-literal">true</span>;
     <span class="hljs-keyword">delete</span> mStagingDisplayList;
@@ -473,7 +473,7 @@ RecordingCanvas.<span class="hljs-built_in">recycle</span>() &#123;
     updateViewTreeDisplayList(view);
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (mRootNodeNeedsUpdate || !mRootNode.hasDisplayList()) &#123;
-        RecordingCanvas canvas = mRootNode.beginRecording(mSurfaceWidth, mSurfaceHeight);
+        <span class="hljs-type">RecordingCanvas</span> <span class="hljs-variable">canvas</span> <span class="hljs-operator">=</span> mRootNode.beginRecording(mSurfaceWidth, mSurfaceHeight);
         <span class="hljs-keyword">try</span> &#123;
             <span class="hljs-comment">// ...</span>
             canvas.drawRenderNode(view.updateDisplayListIfDirty());
@@ -486,7 +486,7 @@ RecordingCanvas.<span class="hljs-built_in">recycle</span>() &#123;
 
 <span class="hljs-keyword">void</span> SkiaRecordingCanvas::drawRenderNode(uirenderer::RenderNode* renderNode) &#123;
     <span class="hljs-comment">// Record the child node. Drawable dtor will be invoked when mChildNodes deque is cleared.</span>
-    mDisplayList-&gt;mChildNodes.emplace_back(renderNode, asSkCanvas(), <span class="hljs-keyword">true</span>, mCurrentBarrier);
+    mDisplayList-&gt;mChildNodes.emplace_back(renderNode, asSkCanvas(), <span class="hljs-literal">true</span>, mCurrentBarrier);
     auto&amp; renderNodeDrawable = mDisplayList-&gt;mChildNodes.back();
     <span class="hljs-keyword">if</span> (Properties::getRenderPipelineType() == RenderPipelineType::SkiaVulkan) &#123;
         <span class="hljs-comment">// Put Vulkan WebViews with non-rectangular clips in a HW layer</span>
@@ -507,31 +507,31 @@ RecordingCanvas.<span class="hljs-built_in">recycle</span>() &#123;
     <span class="hljs-comment">// ... 这里会调用 View.draw(Canvas)，并把绘制 op 保存起来</span>
     updateRootDisplayList(view, callbacks);
     <span class="hljs-comment">// ... 这个方法看起来会执行真正的绘制操作，进去看下</span>
-    <span class="hljs-keyword">int</span> syncResult = syncAndDrawFrame(choreographer.mFrameInfo);
+    <span class="hljs-type">int</span> <span class="hljs-variable">syncResult</span> <span class="hljs-operator">=</span> syncAndDrawFrame(choreographer.mFrameInfo);
     <span class="hljs-comment">// ...</span>
 &#125;
 
 <span class="hljs-comment">// 进入 native</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> HardwareRenderer.syncAndDrawFrame(<span class="hljs-meta">@NonNull</span> FrameInfo frameInfo) &#123;
+<span class="hljs-keyword">public</span> <span class="hljs-type">int</span> HardwareRenderer.syncAndDrawFrame(<span class="hljs-meta">@NonNull</span> FrameInfo frameInfo) &#123;
     <span class="hljs-keyword">return</span> nSyncAndDrawFrame(mNativeProxy, frameInfo.frameInfo, frameInfo.frameInfo.length);
 &#125;</code></pre></div>
 
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// frameworks/base/core/jni/android_view_ThreadedRenderer.cpp</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> <span class="hljs-title">android_view_ThreadedRenderer_syncAndDrawFrame</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">android_view_ThreadedRenderer_syncAndDrawFrame</span><span class="hljs-params">(JNIEnv* env, jobject clazz,</span></span>
 <span class="hljs-params"><span class="hljs-function">        jlong proxyPtr, jlongArray frameInfo, jint frameInfoSize)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
-    RenderProxy* proxy = <span class="hljs-keyword">reinterpret_cast</span>&lt;RenderProxy*&gt;(proxyPtr);
+    RenderProxy* proxy = <span class="hljs-built_in">reinterpret_cast</span>&lt;RenderProxy*&gt;(proxyPtr);
     env-&gt;<span class="hljs-built_in">GetLongArrayRegion</span>(frameInfo, <span class="hljs-number">0</span>, frameInfoSize, proxy-&gt;<span class="hljs-built_in">frameInfo</span>());
     <span class="hljs-keyword">return</span> proxy-&gt;<span class="hljs-built_in">syncAndDrawFrame</span>();
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">RenderProxy::syncAndDrawFrame</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">RenderProxy::syncAndDrawFrame</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-keyword">return</span> mDrawFrameTask.<span class="hljs-built_in">drawFrame</span>();
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">DrawFrameTask::drawFrame</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">DrawFrameTask::drawFrame</span><span class="hljs-params">()</span></span>
 <span class="hljs-function"><span class="hljs-comment">// 到此都还是在 ui thread</span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DrawFrameTask::postAndWait</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">DrawFrameTask::postAndWait</span><span class="hljs-params">()</span> </span>&#123;
     AutoMutex _lock(mLock);
     <span class="hljs-comment">// RenderThread 继承自 Thread，DrawFrameTask::run 被提交至 RenderThread 的 WorkQueue 等待执行</span>
     mRenderThread-&gt;<span class="hljs-built_in">queue</span>().<span class="hljs-built_in">post</span>([<span class="hljs-keyword">this</span>]() &#123; <span class="hljs-built_in">run</span>(); &#125;);
@@ -540,11 +540,11 @@ RecordingCanvas.<span class="hljs-built_in">recycle</span>() &#123;
 &#125;
 
 <span class="hljs-comment">// 记住此时已经是在 RenderThread 而不是 ui thread，ui thread 此时被阻塞了</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DrawFrameTask::run</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">DrawFrameTask::run</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-built_in">ATRACE_NAME</span>(<span class="hljs-string">&quot;DrawFrame&quot;</span>);
 
-    <span class="hljs-keyword">bool</span> canUnblockUiThread;
-    <span class="hljs-keyword">bool</span> canDrawThisFrame;
+    <span class="hljs-type">bool</span> canUnblockUiThread;
+    <span class="hljs-type">bool</span> canDrawThisFrame;
     &#123;
         <span class="hljs-function">TreeInfo <span class="hljs-title">info</span><span class="hljs-params">(TreeInfo::MODE_FULL, *mContext)</span></span>;
         canUnblockUiThread = <span class="hljs-built_in">syncFrameState</span>(info);
@@ -558,7 +558,7 @@ RecordingCanvas.<span class="hljs-built_in">recycle</span>() &#123;
 
     <span class="hljs-comment">// Grab a copy of everything we need</span>
     CanvasContext* context = mContext;
-    std::function&lt;<span class="hljs-built_in"><span class="hljs-keyword">void</span></span>(<span class="hljs-keyword">int64_t</span>)&gt; callback = std::<span class="hljs-built_in">move</span>(mFrameCallback);
+    std::function&lt;<span class="hljs-type">void</span>(<span class="hljs-type">int64_t</span>)&gt; callback = std::<span class="hljs-built_in">move</span>(mFrameCallback);
     mFrameCallback = <span class="hljs-literal">nullptr</span>;
 
     <span class="hljs-comment">// From this point on anything in &quot;this&quot; is *UNSAFE TO ACCESS*</span>

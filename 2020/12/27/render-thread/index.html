@@ -26,7 +26,7 @@
 <meta property="og:description" content="接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法 syncFrameState重要的方法有三个：makeCurrent，">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-12-27T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="vsync">
 <meta property="article:tag" content="render thread">
@@ -74,11 +74,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -233,9 +233,9 @@
               <p>接着<a href="../../../../2020/12/13/ui-thread-in-vsync/">上一篇文章</a>，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 <code>DisplayList</code>，而 render thread 会根据 <code>DisplayList</code> 执行真正的渲染工作，主要是 <code>DrawFrameTask.syncFrameState</code> 和 <code>CanvasContext.draw</code> 这两个方法</p>
 <h2 id="syncFrameState"><a href="#syncFrameState" class="headerlink" title="syncFrameState"></a>syncFrameState</h2><p>重要的方法有三个：<code>makeCurrent</code>，<code>unpinImages</code> 和 <code>prepareTree</code></p>
 <p><code>TreeInfo</code> 用来在后续的一系列操作中收集信息，你会看到它在各个方法中作为参数传递</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">DrawFrameTask::syncFrameState</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">DrawFrameTask::syncFrameState</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">bool</span> canDraw = mContext-&gt;<span class="hljs-built_in">makeCurrent</span>();
+    <span class="hljs-type">bool</span> canDraw = mContext-&gt;<span class="hljs-built_in">makeCurrent</span>();
     mContext-&gt;<span class="hljs-built_in">unpinImages</span>();
     <span class="hljs-comment">// ...</span>
     mContext-&gt;<span class="hljs-built_in">setContentDrawBounds</span>(mContentDrawBounds);
@@ -244,7 +244,7 @@
     <span class="hljs-keyword">return</span> info.prepareTextures;
 &#125;</code></pre></div>
 
-<h2 id="makeCurrent"><a href="#makeCurrent" class="headerlink" title="makeCurrent"></a>makeCurrent</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">CanvasContext::makeCurrent</span><span class="hljs-params">()</span></span>
+<h2 id="makeCurrent"><a href="#makeCurrent" class="headerlink" title="makeCurrent"></a>makeCurrent</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">CanvasContext::makeCurrent</span><span class="hljs-params">()</span></span>
 <span class="hljs-function">MakeCurrentResult <span class="hljs-title">SkiaOpenGLPipeline::makeCurrent</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (!mEglManager.<span class="hljs-built_in">makeCurrent</span>(mEglSurface, &amp;error)) &#123;
@@ -253,7 +253,7 @@
     <span class="hljs-comment">// ...</span>
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">EglManager::makeCurrent</span><span class="hljs-params">(EGLSurface surface, EGLint* errOut, <span class="hljs-keyword">bool</span> force)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">EglManager::makeCurrent</span><span class="hljs-params">(EGLSurface surface, EGLint* errOut, <span class="hljs-type">bool</span> force)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">eglMakeCurrent</span>(mEglDisplay, surface, surface, mEglContext)) &#123;
     <span class="hljs-comment">// ...</span>
@@ -277,24 +277,24 @@
 <span class="hljs-comment">    include BMP, GIF, HEIF, ICO, JPEG, PNG, WBMP, WebP. Supported encoding details</span>
 <span class="hljs-comment">    vary with platform.</span>
 <span class="hljs-comment">*/</span>
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SK_API</span> <span class="hljs-title">SkImage</span>	</span>
-<span class="hljs-class"></span>
-<span class="hljs-class">    /**</span>
-<span class="hljs-class">     * <span class="hljs-title">Pin</span> <span class="hljs-title">any</span> <span class="hljs-title">mutable</span> <span class="hljs-title">images</span> <span class="hljs-title">to</span> <span class="hljs-title">the</span> <span class="hljs-title">GPU</span> <span class="hljs-title">cache</span>. <span class="hljs-title">A</span> <span class="hljs-title">pinned</span> <span class="hljs-title">images</span> <span class="hljs-title">is</span> <span class="hljs-title">guaranteed</span> <span class="hljs-title">to</span></span>
-<span class="hljs-class">     * <span class="hljs-title">remain</span> <span class="hljs-title">in</span> <span class="hljs-title">the</span> <span class="hljs-title">cache</span> <span class="hljs-title">until</span> <span class="hljs-title">it</span> <span class="hljs-title">has</span> <span class="hljs-title">been</span> <span class="hljs-title">unpinned</span>. <span class="hljs-title">We</span> <span class="hljs-title">leverage</span> <span class="hljs-title">this</span> <span class="hljs-title">feature</span></span>
-<span class="hljs-class">     * <span class="hljs-title">to</span> <span class="hljs-title">avoid</span> <span class="hljs-title">making</span> <span class="hljs-title">a</span> <span class="hljs-title">CPU</span> <span class="hljs-title">copy</span> <span class="hljs-title">of</span> <span class="hljs-title">the</span> <span class="hljs-title">pixels</span>.</span>
-<span class="hljs-class">     *</span>
-<span class="hljs-class">     * @<span class="hljs-title">return</span> <span class="hljs-title">true</span> <span class="hljs-title">if</span> <span class="hljs-title">all</span> <span class="hljs-title">images</span> <span class="hljs-title">have</span> <span class="hljs-title">been</span> <span class="hljs-title">successfully</span> <span class="hljs-title">pinned</span> <span class="hljs-title">to</span> <span class="hljs-title">the</span> <span class="hljs-title">GPU</span> <span class="hljs-title">cache</span></span>
-<span class="hljs-class">     *         <span class="hljs-title">and</span> <span class="hljs-title">false</span> <span class="hljs-title">otherwise</span> (<span class="hljs-title">e</span>.<span class="hljs-title">g</span>. <span class="hljs-title">cache</span> <span class="hljs-title">limits</span> <span class="hljs-title">have</span> <span class="hljs-title">been</span> <span class="hljs-title">exceeded</span>).</span>
-<span class="hljs-class">     */</span>
-<span class="hljs-class">    <span class="hljs-title">bool</span> <span class="hljs-title">pinImages</span>(<span class="hljs-title">std</span>:</span>:vector&lt;SkImage*&gt;&amp; mutableImages) &#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SK_API</span> SkImage	
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * Pin any mutable images to the GPU cache. A pinned images is guaranteed to</span>
+<span class="hljs-comment">     * remain in the cache until it has been unpinned. We leverage this feature</span>
+<span class="hljs-comment">     * to avoid making a CPU copy of the pixels.</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * @return true if all images have been successfully pinned to the GPU cache</span>
+<span class="hljs-comment">     *         and false otherwise (e.g. cache limits have been exceeded).</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">pinImages</span><span class="hljs-params">(std::vector&lt;SkImage*&gt;&amp; mutableImages)</span> </span>&#123;
         <span class="hljs-keyword">return</span> mRenderPipeline-&gt;<span class="hljs-built_in">pinImages</span>(mutableImages);
     &#125;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Unpin any image that had be previously pinned to the GPU cache</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">unpinImages</span><span class="hljs-params">()</span> </span>&#123; mRenderPipeline-&gt;<span class="hljs-built_in">unpinImages</span>(); &#125;</code></pre></div>
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">unpinImages</span><span class="hljs-params">()</span> </span>&#123; mRenderPipeline-&gt;<span class="hljs-built_in">unpinImages</span>(); &#125;</code></pre></div>
 
 <p><code>SkImage</code> 对一切图像的抽象，包括 jpg、webp 等压缩格式、Bitmap 位图、流、甚至 gpu 上的纹理</p>
 <p><code>pinImages</code> 把在内存的 SkImage 作为纹理上传到 gpu 内存，然后可以通过纹理 id 引用，从而避免在内存里操作（复制）像素</p>
@@ -305,10 +305,10 @@
 info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 <span class="hljs-comment">// 将 node 压入栈顶</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DamageAccumulator::pushTransform</span><span class="hljs-params">(<span class="hljs-keyword">const</span> RenderNode* transform)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">DamageAccumulator::pushTransform</span><span class="hljs-params">(<span class="hljs-type">const</span> RenderNode* transform)</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-comment">// 更新栈顶元素的脏区 = 已有脏区 + node 大小，也就是并集</span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::damageSelf</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::damageSelf</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-keyword">if</span> (<span class="hljs-built_in">isRenderable</span>()) &#123;
         mDamageGenerationId = info.damageGenerationId;
         <span class="hljs-keyword">if</span> (<span class="hljs-built_in">properties</span>().<span class="hljs-built_in">getClipDamageToBounds</span>()) &#123;
@@ -320,17 +320,17 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
         &#125;
     &#125;
 &#125;
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DamageAccumulator::dirty</span><span class="hljs-params">(<span class="hljs-keyword">float</span> left, <span class="hljs-keyword">float</span> top, <span class="hljs-keyword">float</span> right, <span class="hljs-keyword">float</span> bottom)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">DamageAccumulator::dirty</span><span class="hljs-params">(<span class="hljs-type">float</span> left, <span class="hljs-type">float</span> top, <span class="hljs-type">float</span> right, <span class="hljs-type">float</span> bottom)</span> </span>&#123;
     mHead-&gt;pendingDirty.<span class="hljs-built_in">join</span>(&#123;left, top, right, bottom&#125;);
 &#125;
 
 <span class="hljs-comment">// 弹出栈顶元素 head，并将栈顶元素的脏区合并到当前栈顶元素 prev 的脏区</span>
 <span class="hljs-comment">// 可见脏区是累加的</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">DamageAccumulator::popTransform</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">DamageAccumulator::popTransform</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-built_in">LOG_ALWAYS_FATAL_IF</span>(mHead-&gt;prev == mHead, <span class="hljs-string">&quot;Cannot pop the root frame!&quot;</span>);
     DirtyStack* dirtyFrame = mHead;
     mHead = mHead-&gt;prev;
-    <span class="hljs-built_in"><span class="hljs-keyword">switch</span></span> (dirtyFrame-&gt;type) &#123;
+    <span class="hljs-keyword">switch</span> (dirtyFrame-&gt;type) &#123;
         <span class="hljs-keyword">case</span> TransformRenderNode:
             <span class="hljs-built_in">applyRenderNodeTransform</span>(dirtyFrame);
             <span class="hljs-keyword">break</span>;
@@ -345,9 +345,9 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="prepareTree"><a href="#prepareTree" class="headerlink" title="prepareTree"></a>prepareTree</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">CanvasContext::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info, <span class="hljs-keyword">int64_t</span>* uiFrameInfo, <span class="hljs-keyword">int64_t</span> syncQueued, RenderNode* target)</span> </span>&#123;
+<h2 id="prepareTree"><a href="#prepareTree" class="headerlink" title="prepareTree"></a>prepareTree</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CanvasContext::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info, <span class="hljs-type">int64_t</span>* uiFrameInfo, <span class="hljs-type">int64_t</span> syncQueued, RenderNode* target)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> sp&lt;RenderNode&gt;&amp; node : mRenderNodes) &#123;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">const</span> sp&lt;RenderNode&gt;&amp; node : mRenderNodes) &#123;
         <span class="hljs-comment">// Only the primary target node will be drawn full - all other nodes would get drawn in</span>
         <span class="hljs-comment">// real time mode. In case of a window, the primary node is the window content and the other</span>
         <span class="hljs-comment">// node(s) are non client / filler nodes.</span>
@@ -358,8 +358,8 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>target 是 <code>HardwareRenderer.mRootNode</code> 对应的 native <code>RootRenderNode</code>，<code>mRenderNodes</code> 正常情况下应该只有一个元素 target，所以这里应该总是 <code>TreeInfo::MODE_FULL</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info)</span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::prepareTreeImpl</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-keyword">bool</span> functorsNeedLayer)</span> </span>&#123;    
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::prepareTreeImpl</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-type">bool</span> functorsNeedLayer)</span> </span>&#123;    
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.mode == TreeInfo::MODE_FULL) &#123;
         <span class="hljs-built_in">pushStagingDisplayListChanges</span>(observer, info);
@@ -367,8 +367,8 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (mDisplayList) &#123;
         info.out.hasFunctors |= mDisplayList-&gt;<span class="hljs-built_in">hasFunctor</span>();
-        <span class="hljs-keyword">bool</span> isDirty = mDisplayList-&gt;<span class="hljs-built_in">prepareListAndChildren</span>(observer, info, childFunctorsNeedLayer,
-            [](RenderNode* child, TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-keyword">bool</span> functorsNeedLayer) &#123;
+        <span class="hljs-type">bool</span> isDirty = mDisplayList-&gt;<span class="hljs-built_in">prepareListAndChildren</span>(observer, info, childFunctorsNeedLayer,
+            [](RenderNode* child, TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-type">bool</span> functorsNeedLayer) &#123;
                 child-&gt;<span class="hljs-built_in">prepareTreeImpl</span>(observer, info, functorsNeedLayer);
             &#125;);
         <span class="hljs-comment">// ...</span>
@@ -377,7 +377,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-comment">// ...</span>
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::pushStagingDisplayListChanges</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::pushStagingDisplayListChanges</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-keyword">if</span> (mNeedsDisplayListSync) &#123;
         mNeedsDisplayListSync = <span class="hljs-literal">false</span>;
         <span class="hljs-built_in">damageSelf</span>(info);
@@ -386,7 +386,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     &#125;
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::syncDisplayList</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo* info)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::syncDisplayList</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo* info)</span> </span>&#123;
     <span class="hljs-keyword">if</span> (mStagingDisplayList) &#123;
         mStagingDisplayList-&gt;<span class="hljs-built_in">updateChildren</span>([](RenderNode* child) &#123; child-&gt;<span class="hljs-built_in">incParentRefCount</span>(); &#125;);
     &#125;
@@ -403,16 +403,16 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>还记得在<a href="../../../../2020/12/13/ui-thread-in-vsync/">上篇文章</a>里提到， DisplayList 在 endRecording 阶段被放在 <code>RenderNode.mStagingDisplayList</code>，这时候转移到 <code>mDisplayList</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SkiaDisplayList::prepareListAndChildren</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-keyword">bool</span> functorsNeedLayer,</span></span>
-<span class="hljs-params"><span class="hljs-function">        std::function&lt;<span class="hljs-keyword">void</span>(RenderNode*, TreeObserver&amp;, TreeInfo&amp;, <span class="hljs-keyword">bool</span>)&gt; childFn)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">SkiaDisplayList::prepareListAndChildren</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-type">bool</span> functorsNeedLayer,</span></span>
+<span class="hljs-params"><span class="hljs-function">        std::function&lt;<span class="hljs-type">void</span>(RenderNode*, TreeObserver&amp;, TreeInfo&amp;, <span class="hljs-type">bool</span>)&gt; childFn)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.prepareTextures &amp;&amp; !info.canvasContext.<span class="hljs-built_in">pinImages</span>(mMutableImages)) &#123;
         info.prepareTextures = <span class="hljs-literal">false</span>;
         info.canvasContext.<span class="hljs-built_in">unpinImages</span>();
     &#125;
 
-    <span class="hljs-keyword">bool</span> hasBackwardProjectedNodesHere = <span class="hljs-literal">false</span>;
-    <span class="hljs-keyword">bool</span> hasBackwardProjectedNodesSubtree = <span class="hljs-literal">false</span>;
+    <span class="hljs-type">bool</span> hasBackwardProjectedNodesHere = <span class="hljs-literal">false</span>;
+    <span class="hljs-type">bool</span> hasBackwardProjectedNodesSubtree = <span class="hljs-literal">false</span>;
 
     <span class="hljs-keyword">for</span> (<span class="hljs-keyword">auto</span>&amp; child : mChildNodes) &#123;
         RenderNode* childNode = child.<span class="hljs-built_in">getRenderNode</span>();
@@ -426,7 +426,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <p><code>SkiaRecordingCanvas.drawBitmap</code> 等方法会将 mutable image 放入 <code>mMutableImages</code>，然后在 prepare 阶段上传到 gpu；为什么这么做呢，我猜想是在渲染之前需要确保所有内容都计算完毕并确保不变，mutable image 可以被修改，所以放到 gpu 里确保不被改动，immutable image 因为本身就不可修改所以无需这样处理</p>
 <p><code>TreeInfo.prepareTextures</code> 标识 mutable images 有没上传成功；如果上传成功，ui thread 在 <code>DrawFrameTask::syncFrameState</code> 之后就会被唤醒，否则会一直阻塞直到 <code>CanvasContext.draw</code> 完成；这对 ui thread 有着很大的影响</p>
 <p><code>SkiaDisplayList.mChildNodes</code> 应该只有一个 <code>DecorView.mRenderNode</code>，在这里它的 <code>prepareTreeImpl</code> 被调用</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNode::pushLayerUpdate</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::pushLayerUpdate</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.canvasContext.<span class="hljs-built_in">createOrUpdateLayer</span>(<span class="hljs-keyword">this</span>, *info.damageAccumulator, info.errorHandler)) &#123;
         <span class="hljs-built_in">damageSelf</span>(info);
@@ -439,7 +439,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;
 
 <span class="hljs-comment">// 如果 node 没有 layer，或者 node 的大小发送了改变，则新建 layer</span>
-<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SkiaPipeline::createOrUpdateLayer</span><span class="hljs-params">(RenderNode* node, <span class="hljs-keyword">const</span> DamageAccumulator&amp; damageAccumulator,</span></span>
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">SkiaPipeline::createOrUpdateLayer</span><span class="hljs-params">(RenderNode* node, <span class="hljs-type">const</span> DamageAccumulator&amp; damageAccumulator,</span></span>
 <span class="hljs-params"><span class="hljs-function">                                       ErrorHandler* errorHandler)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     SkSurface* layer = node-&gt;<span class="hljs-built_in">getLayerSurface</span>();
@@ -457,7 +457,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 <p>我们知道 <code>View</code> 是 framework ui api，<code>RenderNode</code> 相当于绘制这块 <code>View</code> 所需的配置文件；这里新增了一个新的概念 layer，它是这块 <code>View</code> 对应的 surface，它所呈现的内容将绘制在这个 surface 上，同 opengl 里 surface 的概念</p>
 <p><code>RenderNode</code> 和它的脏区被添加到 <code>TreeInfo.layerUpdateQueue</code>；queue 里应该有两个元素，一个是 <code>HardwareRenderer.mRootNode</code> 对应的 native <code>RootRenderNode</code>，一个是 <code>DecorView.mRenderNode</code></p>
-<h2 id="CanvasContext-draw"><a href="#CanvasContext-draw" class="headerlink" title="CanvasContext.draw"></a>CanvasContext.draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">CanvasContext::draw</span><span class="hljs-params">()</span> </span>&#123;
+<h2 id="CanvasContext-draw"><a href="#CanvasContext-draw" class="headerlink" title="CanvasContext.draw"></a>CanvasContext.draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CanvasContext::draw</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-comment">// 还记得上面说的吗，脏区是累加的，这里是总的脏区</span>
     SkRect dirty;
     mDamageAccumulator.<span class="hljs-built_in">finish</span>(&amp;dirty);
@@ -466,14 +466,14 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-built_in">setPresentTime</span>();
     <span class="hljs-comment">// 再次计算脏区</span>
     SkRect windowDirty = <span class="hljs-built_in">computeDirtyRect</span>(frame, &amp;dirty);
-    <span class="hljs-keyword">bool</span> drew = mRenderPipeline-&gt;<span class="hljs-built_in">draw</span>(frame, windowDirty, dirty, mLightGeometry, &amp;mLayerUpdateQueue,
+    <span class="hljs-type">bool</span> drew = mRenderPipeline-&gt;<span class="hljs-built_in">draw</span>(frame, windowDirty, dirty, mLightGeometry, &amp;mLayerUpdateQueue,
                                       mContentDrawBounds, mOpaque, mLightInfo, mRenderNodes,
                                       &amp;(<span class="hljs-built_in">profiler</span>()));
-    <span class="hljs-keyword">int64_t</span> frameCompleteNr = <span class="hljs-built_in">getFrameNumber</span>();
+    <span class="hljs-type">int64_t</span> frameCompleteNr = <span class="hljs-built_in">getFrameNumber</span>();
     <span class="hljs-built_in">waitOnFences</span>();
-    <span class="hljs-keyword">bool</span> requireSwap = <span class="hljs-literal">false</span>;
-    <span class="hljs-keyword">int</span> error = OK;
-    <span class="hljs-keyword">bool</span> didSwap = mRenderPipeline-&gt;<span class="hljs-built_in">swapBuffers</span>(frame, drew, windowDirty, mCurrentFrameInfo, &amp;requireSwap);
+    <span class="hljs-type">bool</span> requireSwap = <span class="hljs-literal">false</span>;
+    <span class="hljs-type">int</span> error = OK;
+    <span class="hljs-type">bool</span> didSwap = mRenderPipeline-&gt;<span class="hljs-built_in">swapBuffers</span>(frame, drew, windowDirty, mCurrentFrameInfo, &amp;requireSwap);
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
@@ -491,8 +491,8 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">return</span> frame;
 &#125;</code></pre></div>
 
-<h2 id="IRenderPipeline-draw"><a href="#IRenderPipeline-draw" class="headerlink" title="IRenderPipeline::draw"></a>IRenderPipeline::draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">SkiaOpenGLPipeline::draw</span><span class="hljs-params">(...)</span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaPipeline::renderFrame</span><span class="hljs-params">(...)</span> </span>&#123;
+<h2 id="IRenderPipeline-draw"><a href="#IRenderPipeline-draw" class="headerlink" title="IRenderPipeline::draw"></a>IRenderPipeline::draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">SkiaOpenGLPipeline::draw</span><span class="hljs-params">(...)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaPipeline::renderFrame</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     SkCanvas* canvas = <span class="hljs-built_in">tryCapture</span>(surface.<span class="hljs-built_in">get</span>(), nodes[<span class="hljs-number">0</span>].<span class="hljs-built_in">get</span>(), layers);
     <span class="hljs-comment">// draw all layers up front</span>
@@ -510,9 +510,9 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <p><code>SkiaPipeline::renderLayersImpl</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 看上面，layers 是在 RenderNode::prepareTree 阶段加入的，包括 </span>
 <span class="hljs-comment">// HardwareRenderer.mRootNode 对应的 native RootRenderNode 和 DecorView.mRenderNode</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkiaPipeline::renderLayersImpl</span><span class="hljs-params">(<span class="hljs-keyword">const</span> LayerUpdateQueue&amp; layers, <span class="hljs-keyword">bool</span> opaque)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaPipeline::renderLayersImpl</span><span class="hljs-params">(<span class="hljs-type">const</span> LayerUpdateQueue&amp; layers, <span class="hljs-type">bool</span> opaque)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">size_t</span> i = <span class="hljs-number">0</span>; i &lt; layers.<span class="hljs-built_in">entries</span>().<span class="hljs-built_in">size</span>(); i++) &#123;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">size_t</span> i = <span class="hljs-number">0</span>; i &lt; layers.<span class="hljs-built_in">entries</span>().<span class="hljs-built_in">size</span>(); i++) &#123;
         RenderNode* layerNode = layers.<span class="hljs-built_in">entries</span>()[i].renderNode.<span class="hljs-built_in">get</span>();
         <span class="hljs-comment">// ...</span>
         SkCanvas* layerCanvas = layerNode-&gt;<span class="hljs-built_in">getLayerSurface</span>()-&gt;<span class="hljs-built_in">getCanvas</span>();
@@ -535,8 +535,8 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     cachedContext-&gt;<span class="hljs-built_in">flush</span>();
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNodeDrawable::forceDraw</span><span class="hljs-params">(SkCanvas* canvas)</span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">RenderNodeDrawable::drawContent</span><span class="hljs-params">(SkCanvas* canvas)</span> <span class="hljs-keyword">const</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNodeDrawable::forceDraw</span><span class="hljs-params">(SkCanvas* canvas)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNodeDrawable::drawContent</span><span class="hljs-params">(SkCanvas* canvas)</span> <span class="hljs-type">const</span> </span>&#123;
     <span class="hljs-comment">// displayList 是 layerNode 的，canvas 是 layerNode 对应的 layer surface 的</span>
     <span class="hljs-comment">// 下面看看这个由 layer surface 作为 backend 的 canvas 做了什么</span>
     displayList-&gt;<span class="hljs-built_in">draw</span>(canvas);
@@ -551,9 +551,9 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * Call to ensure all drawing to the context has been issued to the underlying 3D API.</span>
 <span class="hljs-comment"> */</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrContext::flush</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrContext::flush</span><span class="hljs-params">()</span></span>
 <span class="hljs-function"></span>
-<span class="hljs-function">GrSemaphoresSubmitted <span class="hljs-title">GrContext::flush</span><span class="hljs-params">(<span class="hljs-keyword">const</span> GrFlushInfo&amp; info, <span class="hljs-keyword">const</span> GrPrepareForExternalIORequests&amp; externalRequests)</span></span>
+<span class="hljs-function">GrSemaphoresSubmitted <span class="hljs-title">GrContext::flush</span><span class="hljs-params">(<span class="hljs-type">const</span> GrFlushInfo&amp; info, <span class="hljs-type">const</span> GrPrepareForExternalIORequests&amp; externalRequests)</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function">GrSemaphoresSubmitted <span class="hljs-title">GrDrawingManager::flush</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
@@ -565,8 +565,8 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-function">GrOpFlushState <span class="hljs-title">flushState</span><span class="hljs-params">(gpu, resourceProvider, &amp;fTokenTracker, fCpuBufferCache)</span></span>;
     <span class="hljs-function">GrOnFlushResourceProvider <span class="hljs-title">onFlushProvider</span><span class="hljs-params">(<span class="hljs-keyword">this</span>)</span></span>;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">int</span> startIndex, stopIndex;
-    <span class="hljs-keyword">bool</span> flushed = <span class="hljs-literal">false</span>;
+    <span class="hljs-type">int</span> startIndex, stopIndex;
+    <span class="hljs-type">bool</span> flushed = <span class="hljs-literal">false</span>;
     &#123;
         <span class="hljs-keyword">while</span> (alloc.<span class="hljs-built_in">assign</span>(&amp;startIndex, &amp;stopIndex, &amp;error)) &#123;
             <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">executeRenderTasks</span>(startIndex, stopIndex, &amp;flushState, &amp;numRenderTasksExecuted)) &#123;
@@ -596,21 +596,21 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">return</span> result;
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">GrDrawingManager::executeRenderTasks</span><span class="hljs-params">(<span class="hljs-keyword">int</span> startIndex, <span class="hljs-keyword">int</span> stopIndex, GrOpFlushState* flushState,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                          <span class="hljs-keyword">int</span>* numRenderTasksExecuted)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">GrDrawingManager::executeRenderTasks</span><span class="hljs-params">(<span class="hljs-type">int</span> startIndex, <span class="hljs-type">int</span> stopIndex, GrOpFlushState* flushState,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                          <span class="hljs-type">int</span>* numRenderTasksExecuted)</span> </span>&#123;
     <span class="hljs-built_in">SkASSERT</span>(startIndex &lt;= stopIndex &amp;&amp; stopIndex &lt;= fDAG.<span class="hljs-built_in">numRenderTasks</span>());
 
-<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> GR_FLUSH_TIME_OP_SPEW</span>
+<span class="hljs-meta">#<span class="hljs-keyword">if</span> GR_FLUSH_TIME_OP_SPEW</span>
     <span class="hljs-built_in">SkDebugf</span>(<span class="hljs-string">&quot;Flushing opsTask: %d to %d out of [%d, %d]\n&quot;</span>, startIndex, stopIndex, <span class="hljs-number">0</span>, fDAG.<span class="hljs-built_in">numRenderTasks</span>());
-    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = startIndex; i &lt; stopIndex; ++i) &#123;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = startIndex; i &lt; stopIndex; ++i) &#123;
         <span class="hljs-keyword">if</span> (fDAG.<span class="hljs-built_in">renderTask</span>(i)) &#123;
             fDAG.<span class="hljs-built_in">renderTask</span>(i)-&gt;<span class="hljs-built_in">dump</span>(<span class="hljs-literal">true</span>);
         &#125;
     &#125;
-<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">endif</span></span>
 
-    <span class="hljs-keyword">bool</span> anyRenderTasksExecuted = <span class="hljs-literal">false</span>;
-    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = startIndex; i &lt; stopIndex; ++i) &#123;
+    <span class="hljs-type">bool</span> anyRenderTasksExecuted = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = startIndex; i &lt; stopIndex; ++i) &#123;
         GrRenderTask* renderTask = fDAG.<span class="hljs-built_in">renderTask</span>(i);
         <span class="hljs-keyword">if</span> (!renderTask || !renderTask-&gt;<span class="hljs-built_in">isInstantiated</span>()) &#123;
              <span class="hljs-keyword">continue</span>;
@@ -627,7 +627,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-comment">// devices to go OOM. In practice we usually only hit this case in our tests, but to be safe we</span>
     <span class="hljs-comment">// put a cap on the number of oplists we will execute before flushing to the GPU to relieve some</span>
     <span class="hljs-comment">// memory pressure.</span>
-    <span class="hljs-keyword">static</span> <span class="hljs-keyword">constexpr</span> <span class="hljs-keyword">int</span> kMaxRenderTasksBeforeFlush = <span class="hljs-number">100</span>;
+    <span class="hljs-type">static</span> <span class="hljs-keyword">constexpr</span> <span class="hljs-type">int</span> kMaxRenderTasksBeforeFlush = <span class="hljs-number">100</span>;
 
     <span class="hljs-comment">// Execute the onFlush renderTasks first, if any.</span>
     <span class="hljs-keyword">for</span> (sk_sp&lt;GrRenderTask&gt;&amp; onFlushRenderTask : fOnFlushRenderTasks) &#123;
@@ -646,7 +646,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     fOnFlushRenderTasks.<span class="hljs-built_in">reset</span>();
 
     <span class="hljs-comment">// Execute the normal op lists.</span>
-    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = startIndex; i &lt; stopIndex; ++i) &#123;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = startIndex; i &lt; stopIndex; ++i) &#123;
         GrRenderTask* renderTask = fDAG.<span class="hljs-built_in">renderTask</span>(i);
         <span class="hljs-keyword">if</span> (!renderTask || !renderTask-&gt;<span class="hljs-built_in">isInstantiated</span>()) &#123;
             <span class="hljs-keyword">continue</span>;
@@ -675,9 +675,9 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>最终 <code>flush</code> 将 <code>GrDrawOp</code> 转换为 opengl 命令并提交给 gpu 执行，下面看看绘制一个矩形 <code>GrFillRectOp</code> 是怎么转换为 opengl 命令的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkCanvas::drawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; r, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkCanvas::drawRect</span><span class="hljs-params">(<span class="hljs-type">const</span> SkRect&amp; r, <span class="hljs-type">const</span> SkPaint&amp; paint)</span></span>
 <span class="hljs-function"></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkCanvas::onDrawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; r, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkCanvas::onDrawRect</span><span class="hljs-params">(<span class="hljs-type">const</span> SkRect&amp; r, <span class="hljs-type">const</span> SkPaint&amp; paint)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (<span class="hljs-built_in">needs_autodrawlooper</span>(<span class="hljs-keyword">this</span>, paint)) &#123;
         <span class="hljs-built_in">LOOPER_BEGIN_CHECK_COMPLETE_OVERWRITE</span>(paint, &amp;r, <span class="hljs-literal">false</span>)
@@ -689,11 +689,11 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-comment">// ...</span>
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">SkGpuDevice::drawRect</span><span class="hljs-params">(<span class="hljs-keyword">const</span> SkRect&amp; rect, <span class="hljs-keyword">const</span> SkPaint&amp; paint)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkGpuDevice::drawRect</span><span class="hljs-params">(<span class="hljs-type">const</span> SkRect&amp; rect, <span class="hljs-type">const</span> SkPaint&amp; paint)</span></span>
 <span class="hljs-function"></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrRenderTargetContext::drawRect</span><span class="hljs-params">(...)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrRenderTargetContext::drawRect</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">const</span> SkStrokeRec&amp; stroke = style-&gt;<span class="hljs-built_in">strokeRec</span>();
+    <span class="hljs-type">const</span> SkStrokeRec&amp; stroke = style-&gt;<span class="hljs-built_in">strokeRec</span>();
     <span class="hljs-keyword">if</span> (stroke.<span class="hljs-built_in">getStyle</span>() == SkStrokeRec::kFill_Style) &#123;
         <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">drawFilledRect</span>(clip, std::<span class="hljs-built_in">move</span>(paint), aa, viewMatrix, rect);
         <span class="hljs-keyword">return</span>;
@@ -701,7 +701,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-comment">// ...</span>
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrRenderTargetContext::drawFilledRect</span><span class="hljs-params">(...)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrRenderTargetContext::drawFilledRect</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     GrAAType aaType = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">chooseAAType</span>(aa, GrAllowMixedSamples::kNo);
     <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">addDrawOp</span>(clip, GrFillRectOp::<span class="hljs-built_in">Make</span>(fContext, std::<span class="hljs-built_in">move</span>(paint), aaType, viewMatrix,
@@ -710,11 +710,11 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 <p>看看 <code>GrFillRectOp</code> 的定义</p>
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">GrFillRectOp::Make</span><span class="hljs-params">(...)</span></span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">Make</span><span class="hljs-params">(...)</span></span>
+<span class="hljs-function"><span class="hljs-type">static</span> std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">Make</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> Op, <span class="hljs-keyword">typename</span>... OpArgs&gt;</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">FactoryHelper</span><span class="hljs-params">(GrRecordingContext* context, GrPaint&amp;&amp; paint, OpArgs... opArgs)</span> </span>&#123;
-    <span class="hljs-keyword">return</span> GrSimpleMeshDrawOpHelper::FactoryHelper&lt;Op, OpArgs...&gt;(context, std::<span class="hljs-built_in">move</span>(paint), std::forward&lt;OpArgs&gt;(opArgs)...);
+<span class="hljs-function"><span class="hljs-type">static</span> std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">FactoryHelper</span><span class="hljs-params">(GrRecordingContext* context, GrPaint&amp;&amp; paint, OpArgs... opArgs)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> GrSimpleMeshDrawOpHelper::<span class="hljs-built_in">FactoryHelper</span>&lt;Op, OpArgs...&gt;(context, std::<span class="hljs-built_in">move</span>(paint), std::forward&lt;OpArgs&gt;(opArgs)...);
 &#125;
 
 <span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> Op, <span class="hljs-keyword">typename</span>... OpArgs&gt;
@@ -725,21 +725,21 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     MakeArgs makeArgs;
     <span class="hljs-keyword">if</span> (paint.<span class="hljs-built_in">isTrivial</span>()) &#123;
         makeArgs.fProcessorSet = <span class="hljs-literal">nullptr</span>;
-        <span class="hljs-keyword">return</span> pool-&gt;allocate&lt;Op&gt;(makeArgs, paint.<span class="hljs-built_in">getColor4f</span>(), std::forward&lt;OpArgs&gt;(opArgs)...);
+        <span class="hljs-keyword">return</span> pool-&gt;<span class="hljs-built_in">allocate</span>&lt;Op&gt;(makeArgs, paint.<span class="hljs-built_in">getColor4f</span>(), std::forward&lt;OpArgs&gt;(opArgs)...);
     &#125;
     <span class="hljs-comment">// ...</span>
 &#125;
 
 <span class="hljs-built_in">FillRectOp</span>(Helper::MakeArgs args, SkPMColor4f paintColor, GrAAType aaType,
-               DrawQuad* quad, <span class="hljs-keyword">const</span> GrUserStencilSettings* stencil, Helper::InputFlags inputFlags)
+               DrawQuad* quad, <span class="hljs-type">const</span> GrUserStencilSettings* stencil, Helper::InputFlags inputFlags)
             : <span class="hljs-built_in">INHERITED</span>(<span class="hljs-built_in">ClassID</span>())
             , <span class="hljs-built_in">fHelper</span>(args, aaType, stencil, inputFlags)
             , <span class="hljs-built_in">fQuads</span>(<span class="hljs-number">1</span>, !fHelper.<span class="hljs-built_in">isTrivial</span>()) &#123;
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrRenderTargetContext::addDrawOp</span><span class="hljs-params">(<span class="hljs-keyword">const</span> GrClip&amp; clip, std::unique_ptr&lt;GrDrawOp&gt; op,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                      <span class="hljs-keyword">const</span> std::function&lt;WillAddOpFn&gt;&amp; willAddFn)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrRenderTargetContext::addDrawOp</span><span class="hljs-params">(<span class="hljs-type">const</span> GrClip&amp; clip, std::unique_ptr&lt;GrDrawOp&gt; op,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                      <span class="hljs-type">const</span> std::function&lt;WillAddOpFn&gt;&amp; willAddFn)</span> </span>&#123;
     <span class="hljs-keyword">auto</span> opList = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">getRTOpList</span>();
     <span class="hljs-comment">// ...</span>
     opList-&gt;<span class="hljs-built_in">addDrawOp</span>(std::<span class="hljs-built_in">move</span>(op), analysis, std::<span class="hljs-built_in">move</span>(appliedClip), dstProxy, *<span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">caps</span>());
@@ -753,7 +753,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">return</span> fOpList.<span class="hljs-built_in">get</span>();
 &#125;
 
-<span class="hljs-function">sk_sp&lt;GrRenderTargetOpList&gt; <span class="hljs-title">GrDrawingManager::newRTOpList</span><span class="hljs-params">(GrRenderTargetProxy* rtp, <span class="hljs-keyword">bool</span> managedOpList)</span> </span>&#123;
+<span class="hljs-function">sk_sp&lt;GrRenderTargetOpList&gt; <span class="hljs-title">GrDrawingManager::newRTOpList</span><span class="hljs-params">(GrRenderTargetProxy* rtp, <span class="hljs-type">bool</span> managedOpList)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">auto</span> resourceProvider = fContext-&gt;<span class="hljs-built_in">contextPriv</span>().<span class="hljs-built_in">resourceProvider</span>();
     <span class="hljs-function">sk_sp&lt;GrRenderTargetOpList&gt; <span class="hljs-title">opList</span><span class="hljs-params">(<span class="hljs-keyword">new</span> GrRenderTargetOpList(resourceProvider, fContext-&gt;contextPriv().refOpMemoryPool(), rtp, fContext-&gt;contextPriv().getAuditTrail()))</span></span>;
@@ -764,7 +764,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">return</span> opList;
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">GrRenderTargetOpList::addDrawOp</span><span class="hljs-params">(...)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrRenderTargetOpList::addDrawOp</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-keyword">auto</span> addDependency = [ &amp;caps, <span class="hljs-keyword">this</span> ] (GrSurfaceProxy* p) &#123;
         <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">addDependency</span>(p, caps);
     &#125;;
@@ -776,8 +776,8 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">recordOp</span>(std::<span class="hljs-built_in">move</span>(op), processorAnalysis, clip.<span class="hljs-built_in">doesClip</span>() ? &amp;clip : <span class="hljs-literal">nullptr</span>, &amp;dstProxy, caps);
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FillRectOp</span> <span class="hljs-keyword">final</span> :</span> <span class="hljs-keyword">public</span> GrMeshDrawOp &#123;
-    <span class="hljs-function">VertexSpec <span class="hljs-title">vertexSpec</span><span class="hljs-params">()</span> <span class="hljs-keyword">const</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">class</span> <span class="hljs-title class_">FillRectOp</span> <span class="hljs-keyword">final</span> : <span class="hljs-keyword">public</span> GrMeshDrawOp &#123;
+    <span class="hljs-function">VertexSpec <span class="hljs-title">vertexSpec</span><span class="hljs-params">()</span> <span class="hljs-type">const</span> </span>&#123;
         <span class="hljs-keyword">auto</span> indexBufferOption = GrQuadPerEdgeAA::<span class="hljs-built_in">CalcIndexBufferOption</span>(fHelper.<span class="hljs-built_in">aaType</span>(), fQuads.<span class="hljs-built_in">count</span>());
         <span class="hljs-keyword">return</span> <span class="hljs-built_in">VertexSpec</span>(fQuads.<span class="hljs-built_in">deviceQuadType</span>(), fColorType, fQuads.<span class="hljs-built_in">localQuadType</span>(),
             fHelper.<span class="hljs-built_in">usesLocalCoords</span>(), GrQuadPerEdgeAA::Domain::kNo,
@@ -785,8 +785,8 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
             fHelper.<span class="hljs-built_in">compatibleWithCoverageAsAlpha</span>(), indexBufferOption);
     &#125;   
 
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">tessellate</span><span class="hljs-params">(<span class="hljs-keyword">const</span> VertexSpec&amp; vertexSpec, <span class="hljs-keyword">char</span>* dst)</span> <span class="hljs-keyword">const</span> </span>&#123;
-        <span class="hljs-keyword">static</span> <span class="hljs-keyword">constexpr</span> SkRect kEmptyDomain = SkRect::<span class="hljs-built_in">MakeEmpty</span>();
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">tessellate</span><span class="hljs-params">(<span class="hljs-type">const</span> VertexSpec&amp; vertexSpec, <span class="hljs-type">char</span>* dst)</span> <span class="hljs-type">const</span> </span>&#123;
+        <span class="hljs-type">static</span> <span class="hljs-keyword">constexpr</span> SkRect kEmptyDomain = SkRect::<span class="hljs-built_in">MakeEmpty</span>();
         <span class="hljs-function">GrQuadPerEdgeAA::Tessellator <span class="hljs-title">tessellator</span><span class="hljs-params">(vertexSpec, dst)</span></span>;
         <span class="hljs-keyword">auto</span> iter = fQuads.<span class="hljs-built_in">iterator</span>();
         <span class="hljs-keyword">while</span> (iter.<span class="hljs-built_in">next</span>()) &#123;
@@ -795,12 +795,12 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
         &#125;
     &#125;   
 
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onPrePrepareDraws</span><span class="hljs-params">(...)</span> <span class="hljs-keyword">override</span> </span>&#123;
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">onPrePrepareDraws</span><span class="hljs-params">(...)</span> <span class="hljs-keyword">override</span> </span>&#123;
         SkArenaAlloc* arena = context-&gt;<span class="hljs-built_in">priv</span>().<span class="hljs-built_in">recordTimeAllocator</span>();
-        <span class="hljs-keyword">const</span> VertexSpec vertexSpec = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">vertexSpec</span>();
-        <span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span> totalNumVertices = fQuads.<span class="hljs-built_in">count</span>() * vertexSpec.<span class="hljs-built_in">verticesPerQuad</span>();
-        <span class="hljs-keyword">const</span> <span class="hljs-keyword">size_t</span> totalVertexSizeInBytes = vertexSpec.<span class="hljs-built_in">vertexSize</span>() * totalNumVertices;
-        fPrePreparedVertices = arena-&gt;makeArrayDefault&lt;<span class="hljs-keyword">char</span>&gt;(totalVertexSizeInBytes);
+        <span class="hljs-type">const</span> VertexSpec vertexSpec = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">vertexSpec</span>();
+        <span class="hljs-type">const</span> <span class="hljs-type">int</span> totalNumVertices = fQuads.<span class="hljs-built_in">count</span>() * vertexSpec.<span class="hljs-built_in">verticesPerQuad</span>();
+        <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> totalVertexSizeInBytes = vertexSpec.<span class="hljs-built_in">vertexSize</span>() * totalNumVertices;
+        fPrePreparedVertices = arena-&gt;<span class="hljs-built_in">makeArrayDefault</span>&lt;<span class="hljs-type">char</span>&gt;(totalVertexSizeInBytes);
         <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">tessellate</span>(vertexSpec, fPrePreparedVertices);
     &#125;
 &#125;</code></pre></div>

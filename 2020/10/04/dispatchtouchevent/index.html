@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-04-dispatchtouchevent/02.jpeg">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-04-dispatchtouchevent/03.jpg">
 <meta property="article:published_time" content="2020-10-04T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="TouchEvent">
 <meta property="article:tag" content="Motion">
@@ -79,11 +79,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -251,27 +251,27 @@
 <p>网上大部分文章到此就结束了，实际上重点应该在 <code>ViewGroup.dispatchTouchEvent</code>，里面是事件分发的核心逻辑，我把它切分为三个阶段：</p>
 <h3 id="拦截"><a href="#拦截" class="headerlink" title="拦截"></a>拦截</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// DOWN 会被拦截，后续的 MOVE 和 UP 如果有 touch target 也会被拦截</span>
 <span class="hljs-comment">// Check for interception.</span>
-<span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> intercepted;
-<span class="hljs-keyword">if</span> (actionMasked == MotionEvent.ACTION_DOWN || mFirstTouchTarget != <span class="hljs-keyword">null</span>) &#123;
+<span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> intercepted;
+<span class="hljs-keyword">if</span> (actionMasked == MotionEvent.ACTION_DOWN || mFirstTouchTarget != <span class="hljs-literal">null</span>) &#123;
     <span class="hljs-comment">// 可以通过 requestDisallowInterceptTouchEvent 跳过此阶段，</span>
     <span class="hljs-comment">// 一般是 child 调用 parent.requestDisallowInterceptTouchEvent 来阻止 parent 拦截 touch event</span>
-    <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> disallowIntercept = (mGroupFlags &amp; FLAG_DISALLOW_INTERCEPT) != <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">disallowIntercept</span> <span class="hljs-operator">=</span> (mGroupFlags &amp; FLAG_DISALLOW_INTERCEPT) != <span class="hljs-number">0</span>;
     <span class="hljs-keyword">if</span> (!disallowIntercept) &#123;
         intercepted = onInterceptTouchEvent(ev);
         ev.setAction(action); <span class="hljs-comment">// restore action in case it was changed</span>
     &#125; <span class="hljs-keyword">else</span> &#123;
-        intercepted = <span class="hljs-keyword">false</span>;
+        intercepted = <span class="hljs-literal">false</span>;
     &#125;
 &#125; <span class="hljs-keyword">else</span> &#123;
     <span class="hljs-comment">// 后续的 MOVE 和 UP 没有 touch target 则直接走向 onTouchEvent 也就不需要拦截了</span>
     <span class="hljs-comment">// There are no touch targets and this action is not an initial down</span>
     <span class="hljs-comment">// so this view group continues to intercept touches.</span>
-    intercepted = <span class="hljs-keyword">true</span>;
+    intercepted = <span class="hljs-literal">true</span>;
 &#125;</code></pre></div>
 
 <h3 id="分发"><a href="#分发" class="headerlink" title="分发"></a>分发</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 收到 CANCEL 或者 onInterceptTouchEvent 返回 true，则不分发 DOWN 给 children</span>
 <span class="hljs-comment">// 导致 children 收不到 DOWN 以及没有 touch target</span>
-<span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> canceled = resetCancelNextUpFlag(<span class="hljs-keyword">this</span>) || actionMasked == MotionEvent.ACTION_CANCEL;
+<span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">canceled</span> <span class="hljs-operator">=</span> resetCancelNextUpFlag(<span class="hljs-built_in">this</span>) || actionMasked == MotionEvent.ACTION_CANCEL;
 <span class="hljs-comment">// ...</span>
 <span class="hljs-keyword">if</span> (!canceled &amp;&amp; !intercepted) &#123;
     <span class="hljs-comment">// ...</span>
@@ -280,20 +280,20 @@
         || actionMasked == MotionEvent.ACTION_HOVER_MOVE) &#123;
         <span class="hljs-comment">// ... 按顺序分发 ACTION_DOWN，child index(in children array) 越大优先级越高，child z value 越大优先级越高</span>
         <span class="hljs-keyword">final</span> ArrayList&lt;View&gt; preorderedList = buildTouchDispatchChildList();
-        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = childrenCount - <span class="hljs-number">1</span>; i &gt;= <span class="hljs-number">0</span>; i--) &#123;
-            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> childIndex = getAndVerifyPreorderedIndex(childrenCount, i, customOrder);
-            <span class="hljs-keyword">final</span> View child = getAndVerifyPreorderedView(preorderedList, children, childIndex);
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> childrenCount - <span class="hljs-number">1</span>; i &gt;= <span class="hljs-number">0</span>; i--) &#123;
+            <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">childIndex</span> <span class="hljs-operator">=</span> getAndVerifyPreorderedIndex(childrenCount, i, customOrder);
+            <span class="hljs-keyword">final</span> <span class="hljs-type">View</span> <span class="hljs-variable">child</span> <span class="hljs-operator">=</span> getAndVerifyPreorderedView(preorderedList, children, childIndex);
             <span class="hljs-comment">// ... touch 是否落在 child 的矩形区域内</span>
             <span class="hljs-keyword">if</span> (!child.canReceivePointerEvents()
-                || !isTransformedTouchPointInView(x, y, child, <span class="hljs-keyword">null</span>)) &#123;
-                ev.setTargetAccessibilityFocus(<span class="hljs-keyword">false</span>);
+                || !isTransformedTouchPointInView(x, y, child, <span class="hljs-literal">null</span>)) &#123;
+                ev.setTargetAccessibilityFocus(<span class="hljs-literal">false</span>);
                 <span class="hljs-keyword">continue</span>;
             &#125;
             <span class="hljs-comment">// ... 将 touch event 坐标转换为 child 区域坐标，分发给 child；当有第一个 child 消费时，记录起来并中断剩下的分发过程</span>
-            <span class="hljs-keyword">if</span> (dispatchTransformedTouchEvent(ev, <span class="hljs-keyword">false</span>, child, idBitsToAssign)) &#123;
+            <span class="hljs-keyword">if</span> (dispatchTransformedTouchEvent(ev, <span class="hljs-literal">false</span>, child, idBitsToAssign)) &#123;
                 <span class="hljs-comment">// ...</span>
                 newTouchTarget = addTouchTarget(child, idBitsToAssign);
-                alreadyDispatchedToNewTouchTarget = <span class="hljs-keyword">true</span>;
+                alreadyDispatchedToNewTouchTarget = <span class="hljs-literal">true</span>;
                 <span class="hljs-keyword">break</span>;
             &#125;
         <span class="hljs-comment">// ...</span>
@@ -301,28 +301,28 @@
 
 <h3 id="处理"><a href="#处理" class="headerlink" title="处理"></a>处理</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 如果没有 touch target，则走自己的 View.dispatchTouchEvent 流程（相当于流向 onTouchEvent）</span>
 <span class="hljs-comment">// Dispatch to touch targets.</span>
-<span class="hljs-keyword">if</span> (mFirstTouchTarget == <span class="hljs-keyword">null</span>) &#123;
+<span class="hljs-keyword">if</span> (mFirstTouchTarget == <span class="hljs-literal">null</span>) &#123;
     <span class="hljs-comment">// No touch targets so treat this as an ordinary view.</span>
-    handled = dispatchTransformedTouchEvent(ev, canceled, <span class="hljs-keyword">null</span>, TouchTarget.ALL_POINTER_IDS);
+    handled = dispatchTransformedTouchEvent(ev, canceled, <span class="hljs-literal">null</span>, TouchTarget.ALL_POINTER_IDS);
 &#125; <span class="hljs-keyword">else</span> &#123;
     <span class="hljs-comment">// 分发给 touch target</span>
     <span class="hljs-comment">// 但如果 onInterceptTouchEvent 返回 true，则发送 CANCEL 给 touch target，后续将不再流向 touch target，而是直接流向 onTouchEvent</span>
     <span class="hljs-comment">// onInterceptTouchEvent 拦截的那个 touch 不会流向 onTouchEvent</span>
-    TouchTarget predecessor = <span class="hljs-keyword">null</span>;
-    TouchTarget target = mFirstTouchTarget;
-    <span class="hljs-keyword">while</span> (target != <span class="hljs-keyword">null</span>) &#123;
-        <span class="hljs-keyword">final</span> TouchTarget next = target.next;
+    <span class="hljs-type">TouchTarget</span> <span class="hljs-variable">predecessor</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-type">TouchTarget</span> <span class="hljs-variable">target</span> <span class="hljs-operator">=</span> mFirstTouchTarget;
+    <span class="hljs-keyword">while</span> (target != <span class="hljs-literal">null</span>) &#123;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">TouchTarget</span> <span class="hljs-variable">next</span> <span class="hljs-operator">=</span> target.next;
         <span class="hljs-keyword">if</span> (alreadyDispatchedToNewTouchTarget &amp;&amp; target == newTouchTarget) &#123;
-            handled = <span class="hljs-keyword">true</span>;
+            handled = <span class="hljs-literal">true</span>;
         &#125; <span class="hljs-keyword">else</span> &#123;
-            <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> cancelChild = resetCancelNextUpFlag(target.child)
+            <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">cancelChild</span> <span class="hljs-operator">=</span> resetCancelNextUpFlag(target.child)
                     || intercepted;
             <span class="hljs-keyword">if</span> (dispatchTransformedTouchEvent(ev, cancelChild,
                     target.child, target.pointerIdBits)) &#123;
-                handled = <span class="hljs-keyword">true</span>;
+                handled = <span class="hljs-literal">true</span>;
             &#125;
             <span class="hljs-keyword">if</span> (cancelChild) &#123;
-                <span class="hljs-keyword">if</span> (predecessor == <span class="hljs-keyword">null</span>) &#123;
+                <span class="hljs-keyword">if</span> (predecessor == <span class="hljs-literal">null</span>) &#123;
                     mFirstTouchTarget = next;
                 &#125; <span class="hljs-keyword">else</span> &#123;
                     predecessor.next = next;
@@ -379,11 +379,11 @@
 <li><code>SwipeRefreshLayout</code> 看下述源码可以看到是由 touch event 和 nested scroll 两种方式触发，touch event 不够灵活屏蔽掉，选用 nested scroll；<code>dispatchNestedPreScroll</code>、<code>dispatchNestedScroll</code>、<code>dispatchNestedPreFling</code> 和 <code>dispatchNestedFling</code> 正常触发，<code>startNestedScroll</code> 则在 scrollY == 0 时触发，这样就只在滚动到顶的时候才触发 refresh。</li>
 </ul>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 显示 loading</span>
-<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">startDragging</span><span class="hljs-params">(<span class="hljs-keyword">float</span> y)</span> </span>&#123;
-    <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> yDiff = y - mInitialDownY;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startDragging</span><span class="hljs-params">(<span class="hljs-type">float</span> y)</span> &#123;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">float</span> <span class="hljs-variable">yDiff</span> <span class="hljs-operator">=</span> y - mInitialDownY;
     <span class="hljs-keyword">if</span> (yDiff &gt; mTouchSlop &amp;&amp; !mIsBeingDragged) &#123;
         mInitialMotionY = mInitialDownY + mTouchSlop;
-        mIsBeingDragged = <span class="hljs-keyword">true</span>;
+        mIsBeingDragged = <span class="hljs-literal">true</span>;
         mProgress.setAlpha(STARTING_PROGRESS_ALPHA);
     &#125;
 &#125;
@@ -393,26 +393,26 @@
     pointerIndex = ev.findPointerIndex(mActivePointerId);
     <span class="hljs-keyword">if</span> (pointerIndex &lt; <span class="hljs-number">0</span>) &#123;
         Log.e(LOG_TAG, <span class="hljs-string">&quot;Got ACTION_MOVE event but have an invalid active pointer id.&quot;</span>);
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
     &#125;
 
-    <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> y = ev.getY(pointerIndex);
+    <span class="hljs-keyword">final</span> <span class="hljs-type">float</span> <span class="hljs-variable">y</span> <span class="hljs-operator">=</span> ev.getY(pointerIndex);
     startDragging(y);
 
     <span class="hljs-keyword">if</span> (mIsBeingDragged) &#123;
-        <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> overscrollTop = (y - mInitialMotionY) * DRAG_RATE;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">float</span> <span class="hljs-variable">overscrollTop</span> <span class="hljs-operator">=</span> (y - mInitialMotionY) * DRAG_RATE;
         <span class="hljs-keyword">if</span> (overscrollTop &gt; <span class="hljs-number">0</span>) &#123;
             moveSpinner(overscrollTop);
         &#125; <span class="hljs-keyword">else</span> &#123;
-            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
         &#125;
     &#125;
     <span class="hljs-keyword">break</span>;
 &#125;
 
 <span class="hljs-comment">// 由 nested scroll 触发 loading</span>
-<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onNestedScroll</span><span class="hljs-params">(<span class="hljs-keyword">final</span> View target, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dxConsumed, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dyConsumed,</span></span>
-<span class="hljs-params"><span class="hljs-function">                           <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dxUnconsumed, <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dyUnconsumed)</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onNestedScroll</span><span class="hljs-params">(<span class="hljs-keyword">final</span> View target, <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> dxConsumed, <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> dyConsumed,</span>
+<span class="hljs-params">                           <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> dxUnconsumed, <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> dyUnconsumed)</span> &#123;
     <span class="hljs-comment">// Dispatch up to the nested parent first</span>
     dispatchNestedScroll(dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed,
             mParentOffsetInWindow);
@@ -422,7 +422,7 @@
     <span class="hljs-comment">// nested scrolling parent has stopped handling events. We do that by using the</span>
     <span class="hljs-comment">// &#x27;offset in window &#x27;functionality to see if we have been moved from the event.</span>
     <span class="hljs-comment">// This is a decent indication of whether we should take over the event stream or not.</span>
-    <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dy = dyUnconsumed + mParentOffsetInWindow[<span class="hljs-number">1</span>];
+    <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">dy</span> <span class="hljs-operator">=</span> dyUnconsumed + mParentOffsetInWindow[<span class="hljs-number">1</span>];
     <span class="hljs-keyword">if</span> (dy &lt; <span class="hljs-number">0</span> &amp;&amp; !canChildScrollUp()) &#123;
         mTotalUnconsumed += Math.abs(dy);
         moveSpinner(mTotalUnconsumed);

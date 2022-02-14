@@ -26,7 +26,7 @@
 <meta property="og:description" content="测试根据 Thread.setDefaultUncaughtExceptionHandler 的方法文档  Uncaught exception handling is controlled first by the thread, then by the thread’s ThreadGroup object and finally by the default uncaught excepti">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-06-18T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.941Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.785Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="uncaught exception">
 <meta property="article:tag" content="exception">
@@ -77,11 +77,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -239,13 +239,13 @@
 </blockquote>
 <p>当发生 <code>Uncaught Exception</code> 时，将会按照 <code>Thread.uncaughtExceptionHandler -&gt; ThreadGroup.uncaughtException -&gt; Thread.defaultUncaughtExceptionHandler</code> 的优先级次序去寻找异常处理器</p>
 <p>而 <code>ThreadGroup.uncaughtException</code> 的默认实现仅仅是像事件冒泡那样把异常往上传递，跑到 root ThreadGroup 后中止冒泡并交由 <code>DefaultUncaughtExceptionHandler</code> 处理 or 打印至标准错误流，所以可以把 <code>ThreadGroup.uncaughtException</code> 当作透明的层忽略之</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> </span>&#123;
-    <span class="hljs-keyword">if</span> (parent != <span class="hljs-keyword">null</span>) &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> &#123;
+    <span class="hljs-keyword">if</span> (parent != <span class="hljs-literal">null</span>) &#123;
         parent.uncaughtException(t, e);
     &#125; <span class="hljs-keyword">else</span> &#123;
-        Thread.UncaughtExceptionHandler ueh =
+        Thread.<span class="hljs-type">UncaughtExceptionHandler</span> <span class="hljs-variable">ueh</span> <span class="hljs-operator">=</span>
             Thread.getDefaultUncaughtExceptionHandler();
-        <span class="hljs-keyword">if</span> (ueh != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (ueh != <span class="hljs-literal">null</span>) &#123;
             ueh.uncaughtException(t, e);
         &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!(e <span class="hljs-keyword">instanceof</span> ThreadDeath)) &#123;
             System.err.print(<span class="hljs-string">&quot;Exception in thread \&quot;&quot;</span>
@@ -506,9 +506,9 @@
 <h2 id="代码跟踪"><a href="#代码跟踪" class="headerlink" title="代码跟踪"></a>代码跟踪</h2><h3 id="抛出-UE-时发生了什么"><a href="#抛出-UE-时发生了什么" class="headerlink" title="抛出 UE 时发生了什么"></a>抛出 UE 时发生了什么</h3><p>有一个 API 可以抛出异常：<code>JNIEnv-&gt;Throw</code>，所以我猜当 java 层发生 uncaught exception 时相当于调用了它</p>
 <p>这个方法的实现很简单，就是把 exception 记录在 Thread::tlsPtr_::exception</p>
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/jni/jni_internal.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> jint <span class="hljs-title">Throw</span><span class="hljs-params">(JNIEnv* env, jthrowable java_exception)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">Throw</span><span class="hljs-params">(JNIEnv* env, jthrowable java_exception)</span> </span>&#123;
   <span class="hljs-function">ScopedObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
-  ObjPtr&lt;mirror::Throwable&gt; exception = soa.Decode&lt;mirror::Throwable&gt;(java_exception);
+  ObjPtr&lt;mirror::Throwable&gt; exception = soa.<span class="hljs-built_in">Decode</span>&lt;mirror::Throwable&gt;(java_exception);
   <span class="hljs-keyword">if</span> (exception == <span class="hljs-literal">nullptr</span>) &#123;
     <span class="hljs-keyword">return</span> JNI_ERR;
   &#125;
@@ -517,7 +517,7 @@
 &#125;
 
 <span class="hljs-comment">// art/runtime/thread.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::SetException</span><span class="hljs-params">(ObjPtr&lt;mirror::Throwable&gt; new_exception)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::SetException</span><span class="hljs-params">(ObjPtr&lt;mirror::Throwable&gt; new_exception)</span> </span>&#123;
   <span class="hljs-built_in">CHECK</span>(new_exception != <span class="hljs-literal">nullptr</span>);
   <span class="hljs-comment">// <span class="hljs-doctag">TODO:</span> DCHECK(!IsExceptionPending());</span>
   tlsPtr_.exception = new_exception.<span class="hljs-built_in">Ptr</span>();
@@ -532,7 +532,7 @@ mirror::Throwable* exception;   <span class="hljs-comment">// The pending except
 Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 <span class="hljs-comment">// java_lang_Thread.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Thread_nativeCreate</span><span class="hljs-params">(JNIEnv* env, jclass, jobject java_thread, jlong stack_size,</span></span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">Thread_nativeCreate</span><span class="hljs-params">(JNIEnv* env, jclass, jobject java_thread, jlong stack_size,</span></span>
 <span class="hljs-params"><span class="hljs-function">                                jboolean daemon)</span> </span>&#123;
   <span class="hljs-comment">// There are sections in the zygote that forbid thread creation.</span>
   Runtime* runtime = Runtime::<span class="hljs-built_in">Current</span>();
@@ -548,16 +548,16 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 <span class="hljs-comment">// art/runtime/thread.cc</span>
 <span class="hljs-comment">// 最终调用 pthread_create 创建线程，新线程的入口是 Thread::CreateCallback</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::CreateNativeThread</span><span class="hljs-params">(JNIEnv* env, jobject java_peer, <span class="hljs-keyword">size_t</span> stack_size, <span class="hljs-keyword">bool</span> is_daemon)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::CreateNativeThread</span><span class="hljs-params">(JNIEnv* env, jobject java_peer, <span class="hljs-type">size_t</span> stack_size, <span class="hljs-type">bool</span> is_daemon)</span> </span>&#123;
   <span class="hljs-built_in">CHECK</span>(java_peer != <span class="hljs-literal">nullptr</span>);
-  Thread* self = <span class="hljs-keyword">static_cast</span>&lt;JNIEnvExt*&gt;(env)-&gt;<span class="hljs-built_in">GetSelf</span>();
+  Thread* self = <span class="hljs-built_in">static_cast</span>&lt;JNIEnvExt*&gt;(env)-&gt;<span class="hljs-built_in">GetSelf</span>();
 
   <span class="hljs-keyword">if</span> (<span class="hljs-built_in">VLOG_IS_ON</span>(threads)) &#123;
     <span class="hljs-function">ScopedObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
 
     ArtField* f = jni::<span class="hljs-built_in">DecodeArtField</span>(WellKnownClasses::java_lang_Thread_name);
     ObjPtr&lt;mirror::String&gt; java_name =
-        f-&gt;<span class="hljs-built_in">GetObject</span>(soa.Decode&lt;mirror::Object&gt;(java_peer))-&gt;<span class="hljs-built_in">AsString</span>();
+        f-&gt;<span class="hljs-built_in">GetObject</span>(soa.<span class="hljs-built_in">Decode</span>&lt;mirror::Object&gt;(java_peer))-&gt;<span class="hljs-built_in">AsString</span>();
     std::string thread_name;
     <span class="hljs-keyword">if</span> (java_name != <span class="hljs-literal">nullptr</span>) &#123;
       thread_name = java_name-&gt;<span class="hljs-built_in">ToModifiedUtf8</span>();
@@ -572,7 +572,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
   Runtime* runtime = Runtime::<span class="hljs-built_in">Current</span>();
 
   <span class="hljs-comment">// Atomically start the birth of the thread ensuring the runtime isn&#x27;t shutting down.</span>
-  <span class="hljs-keyword">bool</span> thread_start_during_shutdown = <span class="hljs-literal">false</span>;
+  <span class="hljs-type">bool</span> thread_start_during_shutdown = <span class="hljs-literal">false</span>;
   &#123;
     <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(self, *Locks::runtime_shutdown_lock_)</span></span>;
     <span class="hljs-keyword">if</span> (runtime-&gt;<span class="hljs-built_in">IsShuttingDownLocked</span>()) &#123;
@@ -595,7 +595,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
   <span class="hljs-comment">// Thread.start is synchronized, so we know that nativePeer is 0, and know that we&#x27;re not racing</span>
   <span class="hljs-comment">// to assign it.</span>
   env-&gt;<span class="hljs-built_in">SetLongField</span>(java_peer, WellKnownClasses::java_lang_Thread_nativePeer,
-                    <span class="hljs-keyword">reinterpret_cast</span>&lt;jlong&gt;(child_thread));
+                    <span class="hljs-built_in">reinterpret_cast</span>&lt;jlong&gt;(child_thread));
 
   <span class="hljs-comment">// Try to allocate a JNIEnvExt for the thread. We do this here as we might be out of memory and</span>
   <span class="hljs-comment">// do not have a good way to report this on the child&#x27;s side.</span>
@@ -603,10 +603,10 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
   <span class="hljs-function">std::unique_ptr&lt;JNIEnvExt&gt; <span class="hljs-title">child_jni_env_ext</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">      JNIEnvExt::Create(child_thread, Runtime::Current()-&gt;GetJavaVM(), &amp;error_msg))</span></span>;
 
-  <span class="hljs-keyword">int</span> pthread_create_result = <span class="hljs-number">0</span>;
+  <span class="hljs-type">int</span> pthread_create_result = <span class="hljs-number">0</span>;
   <span class="hljs-keyword">if</span> (child_jni_env_ext.<span class="hljs-built_in">get</span>() != <span class="hljs-literal">nullptr</span>) &#123;
-    <span class="hljs-keyword">pthread_t</span> new_pthread;
-    <span class="hljs-keyword">pthread_attr_t</span> attr;
+    <span class="hljs-type">pthread_t</span> new_pthread;
+    <span class="hljs-type">pthread_attr_t</span> attr;
     child_thread-&gt;tlsPtr_.tmp_jni_env = child_jni_env_ext.<span class="hljs-built_in">get</span>();
     <span class="hljs-built_in">CHECK_PTHREAD_CALL</span>(pthread_attr_init, (&amp;attr), <span class="hljs-string">&quot;new thread&quot;</span>);
     <span class="hljs-built_in">CHECK_PTHREAD_CALL</span>(pthread_attr_setdetachstate, (&amp;attr, PTHREAD_CREATE_DETACHED),
@@ -651,8 +651,8 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 &#125;
 
 <span class="hljs-comment">// art/runtime/thread.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span>* <span class="hljs-title">Thread::CreateCallback</span><span class="hljs-params">(<span class="hljs-keyword">void</span>* arg)</span> </span>&#123;
-  Thread* self = <span class="hljs-keyword">reinterpret_cast</span>&lt;Thread*&gt;(arg);
+<span class="hljs-function"><span class="hljs-type">void</span>* <span class="hljs-title">Thread::CreateCallback</span><span class="hljs-params">(<span class="hljs-type">void</span>* arg)</span> </span>&#123;
+  Thread* self = <span class="hljs-built_in">reinterpret_cast</span>&lt;Thread*&gt;(arg);
   Runtime* runtime = Runtime::<span class="hljs-built_in">Current</span>();
   <span class="hljs-keyword">if</span> (runtime == <span class="hljs-literal">nullptr</span>) &#123;
     <span class="hljs-built_in">LOG</span>(ERROR) &lt;&lt; <span class="hljs-string">&quot;Thread attaching to non-existent runtime: &quot;</span> &lt;&lt; *self;
@@ -679,7 +679,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
     <span class="hljs-comment">// Copy peer into self, deleting global reference when done.</span>
     <span class="hljs-built_in">CHECK</span>(self-&gt;tlsPtr_.jpeer != <span class="hljs-literal">nullptr</span>);
-    self-&gt;tlsPtr_.opeer = soa.Decode&lt;mirror::Object&gt;(self-&gt;tlsPtr_.jpeer).<span class="hljs-built_in">Ptr</span>();
+    self-&gt;tlsPtr_.opeer = soa.<span class="hljs-built_in">Decode</span>&lt;mirror::Object&gt;(self-&gt;tlsPtr_.jpeer).<span class="hljs-built_in">Ptr</span>();
     <span class="hljs-comment">// Make sure nothing can observe both opeer and jpeer set at the same time.</span>
     self-&gt;<span class="hljs-built_in">DeleteJPeer</span>(self-&gt;<span class="hljs-built_in">GetJniEnv</span>());
     self-&gt;<span class="hljs-built_in">SetThreadName</span>(self-&gt;<span class="hljs-built_in">GetThreadName</span>()-&gt;<span class="hljs-built_in">ToModifiedUtf8</span>().<span class="hljs-built_in">c_str</span>());
@@ -694,7 +694,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
     ArtField* unparkedField = jni::<span class="hljs-built_in">DecodeArtField</span>(
         WellKnownClasses::java_lang_Thread_unparkedBeforeStart);
-    <span class="hljs-keyword">bool</span> should_unpark = <span class="hljs-literal">false</span>;
+    <span class="hljs-type">bool</span> should_unpark = <span class="hljs-literal">false</span>;
     &#123;
       <span class="hljs-comment">// Hold the lock here, so that if another thread calls unpark before the thread starts</span>
       <span class="hljs-comment">// we don&#x27;t observe the unparkedBeforeStart field before the unparker writes to it,</span>
@@ -722,7 +722,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 &#125;
 
 <span class="hljs-comment">// art/runtime/thread_list.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">ThreadList::Unregister</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ThreadList::Unregister</span><span class="hljs-params">(Thread* self)</span> </span>&#123;
   <span class="hljs-built_in">DCHECK_EQ</span>(self, Thread::<span class="hljs-built_in">Current</span>());
   <span class="hljs-built_in">CHECK_NE</span>(self-&gt;<span class="hljs-built_in">GetState</span>(), kRunnable);
   Locks::mutator_lock_-&gt;<span class="hljs-built_in">AssertNotHeld</span>(self);
@@ -744,7 +744,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
   <span class="hljs-comment">// If tracing, remember thread id and name before thread exits.</span>
   Trace::<span class="hljs-built_in">StoreExitingThreadInfo</span>(self);
 
-  <span class="hljs-keyword">uint32_t</span> thin_lock_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();
+  <span class="hljs-type">uint32_t</span> thin_lock_id = self-&gt;<span class="hljs-built_in">GetThreadId</span>();
   <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
     <span class="hljs-comment">// Remove and delete the Thread* while holding the thread_list_lock_ and</span>
     <span class="hljs-comment">// thread_suspend_count_lock_ so that the unregistering thread cannot be suspended.</span>
@@ -780,12 +780,12 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
   <span class="hljs-comment">// Clear the TLS data, so that the underlying native thread is recognizably detached.</span>
   <span class="hljs-comment">// (It may wish to reattach later.)</span>
-<span class="hljs-meta">#<span class="hljs-meta-keyword">ifdef</span> __BIONIC__</span>
+<span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> __BIONIC__</span>
   __get_tls()[TLS_SLOT_ART_THREAD_SELF] = <span class="hljs-literal">nullptr</span>;
-<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">else</span></span>
   <span class="hljs-built_in">CHECK_PTHREAD_CALL</span>(pthread_setspecific, (Thread::pthread_key_self_, <span class="hljs-literal">nullptr</span>), <span class="hljs-string">&quot;detach self&quot;</span>);
   Thread::self_tls_ = <span class="hljs-literal">nullptr</span>;
-<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">endif</span></span>
 
   <span class="hljs-comment">// Signal that a thread just detached.</span>
   <span class="hljs-function">MutexLock <span class="hljs-title">mu</span><span class="hljs-params">(<span class="hljs-literal">nullptr</span>, *Locks::thread_list_lock_)</span></span>;
@@ -794,7 +794,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 &#125;
 
 <span class="hljs-comment">// art/runtime/thread.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::Destroy</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::Destroy</span><span class="hljs-params">()</span> </span>&#123;
   Thread* self = <span class="hljs-keyword">this</span>;
   <span class="hljs-built_in">DCHECK_EQ</span>(self, Thread::<span class="hljs-built_in">Current</span>());
 
@@ -832,10 +832,10 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
     <span class="hljs-comment">// this.nativePeer = 0;</span>
     <span class="hljs-keyword">if</span> (Runtime::<span class="hljs-built_in">Current</span>()-&gt;<span class="hljs-built_in">IsActiveTransaction</span>()) &#123;
       jni::<span class="hljs-built_in">DecodeArtField</span>(WellKnownClasses::java_lang_Thread_nativePeer)
-          -&gt;SetLong&lt;<span class="hljs-literal">true</span>&gt;(tlsPtr_.opeer, <span class="hljs-number">0</span>);
+          -&gt;<span class="hljs-built_in">SetLong</span>&lt;<span class="hljs-literal">true</span>&gt;(tlsPtr_.opeer, <span class="hljs-number">0</span>);
     &#125; <span class="hljs-keyword">else</span> &#123;
       jni::<span class="hljs-built_in">DecodeArtField</span>(WellKnownClasses::java_lang_Thread_nativePeer)
-          -&gt;SetLong&lt;<span class="hljs-literal">false</span>&gt;(tlsPtr_.opeer, <span class="hljs-number">0</span>);
+          -&gt;<span class="hljs-built_in">SetLong</span>&lt;<span class="hljs-literal">false</span>&gt;(tlsPtr_.opeer, <span class="hljs-number">0</span>);
     &#125;
 
     <span class="hljs-comment">// Thread.join() is implemented as an Object.wait() on the Thread.lock object. Signal anyone</span>
@@ -864,7 +864,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 &#125;
 
 <span class="hljs-comment">// art/runtime/thread.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::HandleUncaughtExceptions</span><span class="hljs-params">(ScopedObjectAccessAlreadyRunnable&amp; soa)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::HandleUncaughtExceptions</span><span class="hljs-params">(ScopedObjectAccessAlreadyRunnable&amp; soa)</span> </span>&#123;
   <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">IsExceptionPending</span>()) &#123;
     <span class="hljs-keyword">return</span>;
   &#125;
@@ -887,36 +887,36 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 <p>线程进入 VM 的入口点是 <code>Thread.run()</code>，执行完毕（或者发生 uncaught exception 被中断字节码的执行）退出 VM 回到 native 代码后，就执行销毁线程的流程：<code>ThreadList::Unregister</code> -&gt; <code>Thread::Destroy</code>，其中 <code>HandleUncaughtExceptions</code> 会检查是否有 uncaught exception/pending exception，有的话再次进入 VM 执行 <code>Thread.dispatchUncaughtException</code></p>
 <h4 id="UEH-的入口点"><a href="#UEH-的入口点" class="headerlink" title="UEH 的入口点"></a>UEH 的入口点</h4><p>如果有 <code>Thread.uncaughtExceptionHandler</code> 则直接给它处理，否则事件冒泡给到 ThreadGroup，ThreadGroup 会把异常一直冒泡到 root ThreadGroup，然后交由 <code>DefaultUncaughtExceptionHandler</code> 处理</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Thread</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchUncaughtException</span><span class="hljs-params">(Throwable e)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Thread</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchUncaughtException</span><span class="hljs-params">(Throwable e)</span> &#123;
         <span class="hljs-comment">// BEGIN Android-added: uncaughtExceptionPreHandler for use by platform.</span>
-        Thread.UncaughtExceptionHandler initialUeh =
+        Thread.<span class="hljs-type">UncaughtExceptionHandler</span> <span class="hljs-variable">initialUeh</span> <span class="hljs-operator">=</span>
                 Thread.getUncaughtExceptionPreHandler();
-        <span class="hljs-keyword">if</span> (initialUeh != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (initialUeh != <span class="hljs-literal">null</span>) &#123;
             <span class="hljs-keyword">try</span> &#123;
-                initialUeh.uncaughtException(<span class="hljs-keyword">this</span>, e);
+                initialUeh.uncaughtException(<span class="hljs-built_in">this</span>, e);
             &#125; <span class="hljs-keyword">catch</span> (RuntimeException | Error ignored) &#123;
                 <span class="hljs-comment">// Throwables thrown by the initial handler are ignored</span>
             &#125;
         
         <span class="hljs-comment">// END Android-added: uncaughtExceptionPreHandler for use by platform.</span>
-        getUncaughtExceptionHandler().uncaughtException(<span class="hljs-keyword">this</span>, e);
+        getUncaughtExceptionHandler().uncaughtException(<span class="hljs-built_in">this</span>, e);
     &#125;
     
-    <span class="hljs-function"><span class="hljs-keyword">public</span> UncaughtExceptionHandler <span class="hljs-title">getUncaughtExceptionHandler</span><span class="hljs-params">()</span> </span>&#123;
-        <span class="hljs-keyword">return</span> uncaughtExceptionHandler != <span class="hljs-keyword">null</span> ?
+    <span class="hljs-keyword">public</span> UncaughtExceptionHandler <span class="hljs-title function_">getUncaughtExceptionHandler</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-keyword">return</span> uncaughtExceptionHandler != <span class="hljs-literal">null</span> ?
             uncaughtExceptionHandler : group;
     &#125;        
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThreadGroup</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> </span>&#123;
-        <span class="hljs-keyword">if</span> (parent != <span class="hljs-keyword">null</span>) &#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ThreadGroup</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> &#123;
+        <span class="hljs-keyword">if</span> (parent != <span class="hljs-literal">null</span>) &#123;
             parent.uncaughtException(t, e);
         &#125; <span class="hljs-keyword">else</span> &#123;
-            Thread.UncaughtExceptionHandler ueh =
+            Thread.<span class="hljs-type">UncaughtExceptionHandler</span> <span class="hljs-variable">ueh</span> <span class="hljs-operator">=</span>
                 Thread.getDefaultUncaughtExceptionHandler();
-            <span class="hljs-keyword">if</span> (ueh != <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">if</span> (ueh != <span class="hljs-literal">null</span>) &#123;
                 ueh.uncaughtException(t, e);
             &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!(e <span class="hljs-keyword">instanceof</span> ThreadDeath)) &#123;
                 System.err.print(<span class="hljs-string">&quot;Exception in thread \&quot;&quot;</span>
@@ -929,17 +929,17 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 
 <h2 id="谁打印了-FATAL-EXCEPTION"><a href="#谁打印了-FATAL-EXCEPTION" class="headerlink" title="谁打印了 FATAL EXCEPTION"></a>谁打印了 FATAL EXCEPTION</h2><p>在上面的代码块里 dispatchUncaughtException 还调用了 <code>Thread.uncaughtExceptionPreHandler</code>，这个 handler 是在 app 进程初始化时配置的，而且没有暴露给用户，就是它打印了 <code>AndroidRuntime: FATAL EXCEPTION</code> 的日志</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RuntimeInit</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">commonInit</span><span class="hljs-params">()</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">RuntimeInit</span> &#123;
+    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">commonInit</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-keyword">if</span> (DEBUG) Slog.d(TAG, <span class="hljs-string">&quot;Entered RuntimeInit!&quot;</span>);
 
         <span class="hljs-comment">/*</span>
 <span class="hljs-comment">         * set handlers; these apply to all threads in the VM. Apps can replace</span>
 <span class="hljs-comment">         * the default handler, but not the pre handler.</span>
 <span class="hljs-comment">         */</span>
-        LoggingHandler loggingHandler = <span class="hljs-keyword">new</span> LoggingHandler();
+        <span class="hljs-type">LoggingHandler</span> <span class="hljs-variable">loggingHandler</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LoggingHandler</span>();
         RuntimeHooks.setUncaughtExceptionPreHandler(loggingHandler);
-        Thread.setDefaultUncaughtExceptionHandler(<span class="hljs-keyword">new</span> KillApplicationHandler(loggingHandler));
+        Thread.setDefaultUncaughtExceptionHandler(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KillApplicationHandler</span>(loggingHandler));
 
         <span class="hljs-comment">/*</span>
 <span class="hljs-comment">         * Install a time zone supplier that uses the Android persistent time zone system property.</span>
@@ -954,12 +954,12 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 <span class="hljs-comment">         * certainly already been initialized.</span>
 <span class="hljs-comment">         */</span>
         LogManager.getLogManager().reset();
-        <span class="hljs-keyword">new</span> AndroidConfig();
+        <span class="hljs-keyword">new</span> <span class="hljs-title class_">AndroidConfig</span>();
 
         <span class="hljs-comment">/*</span>
 <span class="hljs-comment">         * Sets the default HTTP User-Agent used by HttpURLConnection.</span>
 <span class="hljs-comment">         */</span>
-        String userAgent = getDefaultUserAgent();
+        <span class="hljs-type">String</span> <span class="hljs-variable">userAgent</span> <span class="hljs-operator">=</span> getDefaultUserAgent();
         System.setProperty(<span class="hljs-string">&quot;http.agent&quot;</span>, userAgent);
 
         <span class="hljs-comment">/*</span>
@@ -967,15 +967,15 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 <span class="hljs-comment">         */</span>
         NetworkManagementSocketTagger.install();
 
-        initialized = <span class="hljs-keyword">true</span>;
+        initialized = <span class="hljs-literal">true</span>;
     &#125;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoggingHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Thread</span>.<span class="hljs-title">UncaughtExceptionHandler</span> </span>&#123;
-        <span class="hljs-keyword">public</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">boolean</span> mTriggered = <span class="hljs-keyword">false</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LoggingHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Thread</span>.UncaughtExceptionHandler &#123;
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">volatile</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">mTriggered</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
 
         <span class="hljs-meta">@Override</span>
-        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> </span>&#123;
-            mTriggered = <span class="hljs-keyword">true</span>;
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> &#123;
+            mTriggered = <span class="hljs-literal">true</span>;
 
             <span class="hljs-comment">// Don&#x27;t re-enter if KillApplicationHandler has already run</span>
             <span class="hljs-keyword">if</span> (mCrashing) <span class="hljs-keyword">return</span>;
@@ -983,7 +983,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
             <span class="hljs-comment">// mApplicationObject is null for non-zygote java programs (e.g. &quot;am&quot;)</span>
             <span class="hljs-comment">// There are also apps running with the system UID. We don&#x27;t want the</span>
             <span class="hljs-comment">// first clause in either of these two cases, only for system_server.</span>
-            <span class="hljs-keyword">if</span> (mApplicationObject == <span class="hljs-keyword">null</span> &amp;&amp; (Process.SYSTEM_UID == Process.myUid())) &#123;
+            <span class="hljs-keyword">if</span> (mApplicationObject == <span class="hljs-literal">null</span> &amp;&amp; (Process.SYSTEM_UID == Process.myUid())) &#123;
                 Clog_e(TAG, <span class="hljs-string">&quot;*** FATAL EXCEPTION IN SYSTEM PROCESS: &quot;</span> + t.getName(), e);
             &#125; <span class="hljs-keyword">else</span> &#123;
                 logUncaught(t.getName(), ActivityThread.currentProcessName(), Process.myPid(), e);
@@ -991,13 +991,13 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
         &#125;
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">logUncaught</span><span class="hljs-params">(String threadName, String processName, <span class="hljs-keyword">int</span> pid, Throwable e)</span> </span>&#123;
-        StringBuilder message = <span class="hljs-keyword">new</span> StringBuilder();
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">logUncaught</span><span class="hljs-params">(String threadName, String processName, <span class="hljs-type">int</span> pid, Throwable e)</span> &#123;
+        <span class="hljs-type">StringBuilder</span> <span class="hljs-variable">message</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>();
         <span class="hljs-comment">// The &quot;FATAL EXCEPTION&quot; string is still used on Android even though</span>
         <span class="hljs-comment">// apps can set a custom UncaughtExceptionHandler that renders uncaught</span>
         <span class="hljs-comment">// exceptions non-fatal.</span>
         message.append(<span class="hljs-string">&quot;FATAL EXCEPTION: &quot;</span>).append(threadName).append(<span class="hljs-string">&quot;\n&quot;</span>);
-        <span class="hljs-keyword">if</span> (processName != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (processName != <span class="hljs-literal">null</span>) &#123;
             message.append(<span class="hljs-string">&quot;Process: &quot;</span>).append(processName).append(<span class="hljs-string">&quot;, &quot;</span>);
         &#125;
         message.append(<span class="hljs-string">&quot;PID: &quot;</span>).append(pid);
@@ -1012,7 +1012,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 <li>弹出 <code>异常退出</code> 对话框，可以让用户选择重启 app</li>
 <li>退出 app 进程</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">KillApplicationHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Thread</span>.<span class="hljs-title">UncaughtExceptionHandler</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">KillApplicationHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Thread</span>.UncaughtExceptionHandler &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> LoggingHandler mLoggingHandler;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Create a new KillApplicationHandler that follows the given LoggingHandler.</span>
@@ -1025,25 +1025,25 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 <span class="hljs-comment">     *     this instance&#x27;s &#123;<span class="hljs-doctag">@link</span> #uncaughtException(Thread, Throwable) uncaughtException&#125;</span>
 <span class="hljs-comment">     *     is being called.</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">KillApplicationHandler</span><span class="hljs-params">(LoggingHandler loggingHandler)</span> </span>&#123;
-        <span class="hljs-keyword">this</span>.mLoggingHandler = Objects.requireNonNull(loggingHandler);
+    <span class="hljs-keyword">public</span> <span class="hljs-title function_">KillApplicationHandler</span><span class="hljs-params">(LoggingHandler loggingHandler)</span> &#123;
+        <span class="hljs-built_in">this</span>.mLoggingHandler = Objects.requireNonNull(loggingHandler);
     &#125;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> &#123;
         <span class="hljs-keyword">try</span> &#123;
             ensureLogging(t, e);
             <span class="hljs-comment">// Don&#x27;t re-enter -- avoid infinite loops if crash-reporting crashes.</span>
             <span class="hljs-keyword">if</span> (mCrashing) <span class="hljs-keyword">return</span>;
-            mCrashing = <span class="hljs-keyword">true</span>;
+            mCrashing = <span class="hljs-literal">true</span>;
             <span class="hljs-comment">// Try to end profiling. If a profiler is running at this point, and we kill the</span>
             <span class="hljs-comment">// process (below), the in-memory buffer will be lost. So try to stop, which will</span>
             <span class="hljs-comment">// flush the buffer. (This makes method trace profiling useful to debug crashes.)</span>
-            <span class="hljs-keyword">if</span> (ActivityThread.currentActivityThread() != <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">if</span> (ActivityThread.currentActivityThread() != <span class="hljs-literal">null</span>) &#123;
                 ActivityThread.currentActivityThread().stopProfiling();
             &#125;
             <span class="hljs-comment">// Bring up crash dialog, wait for it to be dismissed</span>
             ActivityManager.getService().handleApplicationCrash(
-                    mApplicationObject, <span class="hljs-keyword">new</span> ApplicationErrorReport.ParcelableCrashInfo(e));
+                    mApplicationObject, <span class="hljs-keyword">new</span> <span class="hljs-title class_">ApplicationErrorReport</span>.ParcelableCrashInfo(e));
         &#125; <span class="hljs-keyword">catch</span> (Throwable t2) &#123;
             <span class="hljs-keyword">if</span> (t2 <span class="hljs-keyword">instanceof</span> DeadObjectException) &#123;
                 <span class="hljs-comment">// System process is dead; ignore</span>
@@ -1077,7 +1077,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 <span class="hljs-comment">     * then the pre-handler (expected to be &#123;<span class="hljs-doctag">@link</span> #mLoggingHandler&#125;) will already</span>
 <span class="hljs-comment">     * have run. Otherwise, we manually invoke it here.</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">ensureLogging</span><span class="hljs-params">(Thread t, Throwable e)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">ensureLogging</span><span class="hljs-params">(Thread t, Throwable e)</span> &#123;
         <span class="hljs-keyword">if</span> (!mLoggingHandler.mTriggered) &#123;
             <span class="hljs-keyword">try</span> &#123;
                 mLoggingHandler.uncaughtException(t, e);
@@ -1092,11 +1092,11 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 <h2 id="主线程遇到-UE-时发生了什么"><a href="#主线程遇到-UE-时发生了什么" class="headerlink" title="主线程遇到 UE 时发生了什么"></a>主线程遇到 UE 时发生了什么</h2><p>上面在研究子线程时已经发现：Uncaught Exception 会中断字节码的执行流程从而回到 native 代码，主线程在回到 native 代码后选择依次执行 <code>DetachCurrentThread</code> 和 <code>DestroyJavaVM</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// zygote 进程的 native 层入口点，app 进程是由 zygote fork 出来的，所以这也算是 app 进程的入口点</span>
 <span class="hljs-comment">// frameworks/base/cmds/app_process/app_main.cpp</span>
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span>* <span class="hljs-keyword">const</span> argv[])</span></span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span>* <span class="hljs-type">const</span> argv[])</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-comment">// 启动 VM，首次进入 java 层，入口点是 ZygoteInit.main(args)</span></span>
 <span class="hljs-function"><span class="hljs-comment">// frameworks/base/core/jni/AndroidRuntime.cpp </span></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">AndroidRuntime::start</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* className, <span class="hljs-keyword">const</span> Vector&lt;String8&gt;&amp; options, <span class="hljs-keyword">bool</span> zygote)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">AndroidRuntime::start</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* className, <span class="hljs-type">const</span> Vector&lt;String8&gt;&amp; options, <span class="hljs-type">bool</span> zygote)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-comment">// 启动 VM 后此线程就成为 VM 的主线程，直到 VM 退出后此线程才会结束生命</span>
     <span class="hljs-comment">// Start VM.  This thread becomes the main thread of the VM, and will not return until the VM exits.</span>
@@ -1119,18 +1119,18 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 <p>DetachCurrentThread 会调用 <code>HandleUncaughtExceptions</code>，这个方法也在上面介绍过了，它会检查是否有 uncaught exception/pending exception，有的话则再次进入 VM 执行 <code>Thread.dispatchUncaughtException()</code>，所以主线程的 uncaught exception 也是能够被捕获的</p>
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/jni/java_vm_ext.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> jint <span class="hljs-title">DetachCurrentThread</span><span class="hljs-params">(JavaVM* vm)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">DetachCurrentThread</span><span class="hljs-params">(JavaVM* vm)</span> </span>&#123;
   <span class="hljs-keyword">if</span> (vm == <span class="hljs-literal">nullptr</span> || Thread::<span class="hljs-built_in">Current</span>() == <span class="hljs-literal">nullptr</span>) &#123;
     <span class="hljs-keyword">return</span> JNI_ERR;
   &#125;
-  JavaVMExt* raw_vm = <span class="hljs-keyword">reinterpret_cast</span>&lt;JavaVMExt*&gt;(vm);
+  JavaVMExt* raw_vm = <span class="hljs-built_in">reinterpret_cast</span>&lt;JavaVMExt*&gt;(vm);
   Runtime* runtime = raw_vm-&gt;<span class="hljs-built_in">GetRuntime</span>();
   runtime-&gt;<span class="hljs-built_in">DetachCurrentThread</span>();
   <span class="hljs-keyword">return</span> JNI_OK;
 &#125;
 
 <span class="hljs-comment">// art/runtime/runtime.cc</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Runtime::DetachCurrentThread</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Runtime::DetachCurrentThread</span><span class="hljs-params">()</span> </span>&#123;
   <span class="hljs-function">ScopedTrace <span class="hljs-title">trace</span><span class="hljs-params">(__FUNCTION__)</span></span>;
   Thread* self = Thread::<span class="hljs-built_in">Current</span>();
   <span class="hljs-keyword">if</span> (self == <span class="hljs-literal">nullptr</span>) &#123;

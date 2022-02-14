@@ -26,7 +26,7 @@
 <meta property="og:description" content="async &#x2F; awaitasync 和 await 是一对较为现代的 API 用以实现 **结构化并发编程 (Structured Concurrency)**，如下面代码所示，虽然 runBlocking 底层是单个线程，但是 delay 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO job1、job2 和 job3 三个任务并发执行，不需要编写任何线程同步代码如 Condi">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-07-20T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.945Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.785Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="kotlin">
 <meta property="article:tag" content="coroutine">
@@ -75,11 +75,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -423,47 +423,47 @@
 <li>如果 <code>await</code> 返回计算结果则继续执行代码，进入下一个 case</li>
 <li>如果 <code>await</code> 返回 <code>COROUTINE_SUSPENDED</code> 则中断代码执行直接返回（case 不变）</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span>
-<span class="hljs-class"><span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span></span>
-<span class="hljs-class"><span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span>&lt;<span class="hljs-title">CoroutineScope</span>, <span class="hljs-title">Continuation</span>&lt;? <span class="hljs-title">super</span> <span class="hljs-title">Unit</span>&gt;, <span class="hljs-title">Object</span>&gt; </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Example_basic_01Kt</span>.main<span class="hljs-number">.1</span>
+<span class="hljs-keyword">extends</span> <span class="hljs-title class_">SuspendLambda</span>
+<span class="hljs-keyword">implements</span> <span class="hljs-title class_">Function2</span>&lt;CoroutineScope, Continuation&lt;? <span class="hljs-built_in">super</span> Unit&gt;, Object&gt; &#123;
     Object L$<span class="hljs-number">1</span>;
     Object L$<span class="hljs-number">2</span>;
-    <span class="hljs-keyword">long</span> J$<span class="hljs-number">0</span>;
-    <span class="hljs-keyword">int</span> label;
+    <span class="hljs-type">long</span> J$<span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> label;
     <span class="hljs-keyword">private</span> <span class="hljs-comment">/* synthetic */</span> Object L$<span class="hljs-number">0</span>;
 
-    Example_basic_01Kt.main<span class="hljs-number">.1</span>(Continuation&lt;? <span class="hljs-keyword">super</span> Example_basic_01Kt.main<span class="hljs-number">.1</span>&gt; $completion) &#123;
+    Example_basic_01Kt.main<span class="hljs-number">.1</span>(Continuation&lt;? <span class="hljs-built_in">super</span> Example_basic_01Kt.main<span class="hljs-number">.1</span>&gt; $completion) &#123;
     &#125;
 
     <span class="hljs-comment">/*</span>
 <span class="hljs-comment">     * Unable to fully structure code</span>
 <span class="hljs-comment">     */</span>
     <span class="hljs-meta">@Nullable</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invokeSuspend</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Object var1_1)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title function_">invokeSuspend</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Object var1_1)</span> &#123;
         var13_2 = IntrinsicsKt.getCOROUTINE_SUSPENDED();
-        <span class="hljs-keyword">switch</span> (<span class="hljs-keyword">this</span>.label) &#123;
+        <span class="hljs-keyword">switch</span> (<span class="hljs-built_in">this</span>.label) &#123;
             <span class="hljs-keyword">case</span> <span class="hljs-number">0</span>: &#123;
                 ResultKt.throwOnFailure((Object)var1_1);
-                $<span class="hljs-keyword">this</span>$runBlocking = (CoroutineScope)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;
-                values = <span class="hljs-keyword">new</span> LongRange(<span class="hljs-number">500L</span>, <span class="hljs-number">1000L</span>);
-                job1 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-keyword">this</span>$runBlocking, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-keyword">int</span>)<span class="hljs-number">3</span>, <span class="hljs-keyword">null</span>);
-                job2 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-keyword">this</span>$runBlocking, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-keyword">int</span>)<span class="hljs-number">3</span>, <span class="hljs-keyword">null</span>);
-                job3 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-keyword">this</span>$runBlocking, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-keyword">int</span>)<span class="hljs-number">3</span>, <span class="hljs-keyword">null</span>);
+                $<span class="hljs-built_in">this</span>$runBlocking = (CoroutineScope)<span class="hljs-built_in">this</span>.L$<span class="hljs-number">0</span>;
+                values = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LongRange</span>(<span class="hljs-number">500L</span>, <span class="hljs-number">1000L</span>);
+                job1 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-built_in">this</span>$runBlocking, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-type">int</span>)<span class="hljs-number">3</span>, <span class="hljs-literal">null</span>);
+                job2 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-built_in">this</span>$runBlocking, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-type">int</span>)<span class="hljs-number">3</span>, <span class="hljs-literal">null</span>);
+                job3 = BuildersKt.async$<span class="hljs-keyword">default</span>((CoroutineScope)$<span class="hljs-built_in">this</span>$runBlocking, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (<span class="hljs-type">int</span>)<span class="hljs-number">3</span>, <span class="hljs-literal">null</span>);
                 var9_8 = <span class="hljs-string">&quot;result: &quot;</span>;
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span> = job1;
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span> = job2;
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">2</span> = var9_8;
-                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">1</span>;
-                v0 = job3.await((Continuation)<span class="hljs-keyword">this</span>);
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">0</span> = job1;
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">1</span> = job2;
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">2</span> = var9_8;
+                <span class="hljs-built_in">this</span>.label = <span class="hljs-number">1</span>;
+                v0 = job3.await((Continuation)<span class="hljs-built_in">this</span>);
                 <span class="hljs-keyword">if</span> (v0 == var13_2) &#123;
                     <span class="hljs-keyword">return</span> var13_2;
                 &#125;
                 ** GOTO lbl25
             &#125;
             <span class="hljs-keyword">case</span> <span class="hljs-number">1</span>: &#123;
-                var9_8 = (String)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">2</span>;
-                job2 = (Deferred)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span>;
-                job1 = (Deferred)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;
+                var9_8 = (String)<span class="hljs-built_in">this</span>.L$<span class="hljs-number">2</span>;
+                job2 = (Deferred)<span class="hljs-built_in">this</span>.L$<span class="hljs-number">1</span>;
+                job1 = (Deferred)<span class="hljs-built_in">this</span>.L$<span class="hljs-number">0</span>;
                 ResultKt.throwOnFailure((Object)$result);
                 v0 = $result;
 lbl25:
@@ -471,65 +471,65 @@ lbl25:
 
                 var10_9 = v0;
                 var10_10 = ((Number)var10_9).longValue();
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span> = job1;
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span> = var9_8;
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">2</span> = <span class="hljs-keyword">null</span>;
-                <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span> = var10_10;
-                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">2</span>;
-                v1 = job2.await((Continuation)<span class="hljs-keyword">this</span>);
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">0</span> = job1;
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">1</span> = var9_8;
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">2</span> = <span class="hljs-literal">null</span>;
+                <span class="hljs-built_in">this</span>.J$<span class="hljs-number">0</span> = var10_10;
+                <span class="hljs-built_in">this</span>.label = <span class="hljs-number">2</span>;
+                v1 = job2.await((Continuation)<span class="hljs-built_in">this</span>);
                 <span class="hljs-keyword">if</span> (v1 == var13_2) &#123;
                     <span class="hljs-keyword">return</span> var13_2;
                 &#125;
                 ** GOTO lbl42
             &#125;
             <span class="hljs-keyword">case</span> <span class="hljs-number">2</span>: &#123;
-                var10_10 = <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span>;
-                var9_8 = (String)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span>;
-                job1 = (Deferred)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;
+                var10_10 = <span class="hljs-built_in">this</span>.J$<span class="hljs-number">0</span>;
+                var9_8 = (String)<span class="hljs-built_in">this</span>.L$<span class="hljs-number">1</span>;
+                job1 = (Deferred)<span class="hljs-built_in">this</span>.L$<span class="hljs-number">0</span>;
                 ResultKt.throwOnFailure((Object)$result);
                 v1 = $result;
 lbl42:
                 <span class="hljs-comment">// 2 sources</span>
 
                 var12_11 = v1;
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span> = var9_8;
-                <span class="hljs-keyword">this</span>.L$<span class="hljs-number">1</span> = <span class="hljs-keyword">null</span>;
-                <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span> = var10_10 += ((Number)var12_11).longValue();
-                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">3</span>;
-                v2 = job1.await((Continuation)<span class="hljs-keyword">this</span>);
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">0</span> = var9_8;
+                <span class="hljs-built_in">this</span>.L$<span class="hljs-number">1</span> = <span class="hljs-literal">null</span>;
+                <span class="hljs-built_in">this</span>.J$<span class="hljs-number">0</span> = var10_10 += ((Number)var12_11).longValue();
+                <span class="hljs-built_in">this</span>.label = <span class="hljs-number">3</span>;
+                v2 = job1.await((Continuation)<span class="hljs-built_in">this</span>);
                 <span class="hljs-keyword">if</span> (v2 == var13_2) &#123;
                     <span class="hljs-keyword">return</span> var13_2;
                 &#125;
                 ** GOTO lbl56
             &#125;
             <span class="hljs-keyword">case</span> <span class="hljs-number">3</span>: &#123;
-                var10_10 = <span class="hljs-keyword">this</span>.J$<span class="hljs-number">0</span>;
-                var9_8 = (String)<span class="hljs-keyword">this</span>.L$<span class="hljs-number">0</span>;
+                var10_10 = <span class="hljs-built_in">this</span>.J$<span class="hljs-number">0</span>;
+                var9_8 = (String)<span class="hljs-built_in">this</span>.L$<span class="hljs-number">0</span>;
                 ResultKt.throwOnFailure((Object)$result);
                 v2 = $result;
 lbl56:
                 <span class="hljs-comment">// 2 sources</span>
 
                 var12_11 = v2;
-                var7_12 = Intrinsics.stringPlus((String)var9_8, (Object)Boxing.boxLong((<span class="hljs-keyword">long</span>)(var10_10 + ((Number)var12_11).longValue())));
-                var8_13 = <span class="hljs-keyword">false</span>;
+                var7_12 = Intrinsics.stringPlus((String)var9_8, (Object)Boxing.boxLong((<span class="hljs-type">long</span>)(var10_10 + ((Number)var12_11).longValue())));
+                var8_13 = <span class="hljs-literal">false</span>;
                 System.out.println((Object)var7_12);
                 <span class="hljs-keyword">return</span> Unit.INSTANCE;
             &#125;
         &#125;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalStateException(<span class="hljs-string">&quot;call to &#x27;resume&#x27; before &#x27;invoke&#x27; with coroutine&quot;</span>);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalStateException</span>(<span class="hljs-string">&quot;call to &#x27;resume&#x27; before &#x27;invoke&#x27; with coroutine&quot;</span>);
     &#125;
 
     <span class="hljs-meta">@NotNull</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Continuation&lt;Unit&gt; <span class="hljs-title">create</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> Object value, <span class="hljs-meta">@NotNull</span> Continuation&lt;?&gt; $completion)</span> </span>&#123;
-        Function2&lt;CoroutineScope, Continuation&lt;? <span class="hljs-keyword">super</span> Unit&gt;, Object&gt; function2 = <span class="hljs-keyword">new</span> <span class="hljs-comment">/* invalid duplicate definition of identical inner class */</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Continuation&lt;Unit&gt; <span class="hljs-title function_">create</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> Object value, <span class="hljs-meta">@NotNull</span> Continuation&lt;?&gt; $completion)</span> &#123;
+        Function2&lt;CoroutineScope, Continuation&lt;? <span class="hljs-built_in">super</span> Unit&gt;, Object&gt; function2 = <span class="hljs-keyword">new</span> <span class="hljs-comment">/* invalid duplicate definition of identical inner class */</span>;
         function2.L$<span class="hljs-number">0</span> = value;
         <span class="hljs-keyword">return</span> (Continuation)function2;
     &#125;
 
     <span class="hljs-meta">@Nullable</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invoke</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> CoroutineScope p1, <span class="hljs-meta">@Nullable</span> Continuation&lt;? <span class="hljs-keyword">super</span> Unit&gt; p2)</span> </span>&#123;
-        <span class="hljs-keyword">return</span> (<span class="hljs-keyword">this</span>.create(p1, p2)).invokeSuspend(Unit.INSTANCE);
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title function_">invoke</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> CoroutineScope p1, <span class="hljs-meta">@Nullable</span> Continuation&lt;? <span class="hljs-built_in">super</span> Unit&gt; p2)</span> &#123;
+        <span class="hljs-keyword">return</span> (<span class="hljs-built_in">this</span>.create(p1, p2)).invokeSuspend(Unit.INSTANCE);
     &#125;
 &#125;</code></pre></div>
 
@@ -575,7 +575,7 @@ lbl56:
             continuation.resumeWithException(state.cause)
         &#125; <span class="hljs-keyword">else</span> &#123;
             <span class="hljs-comment">// Resuming with value in a cancellable way (AwaitContinuation is configured for this mode).</span>
-            <span class="hljs-meta">@Suppress(<span class="hljs-meta-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
+            <span class="hljs-meta">@Suppress(<span class="hljs-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
             continuation.resume(state.unboxState() <span class="hljs-keyword">as</span> T)
         &#125;
     &#125;
@@ -611,25 +611,25 @@ lbl56:
 <li><code>withContext</code> 得到调度，执行完毕后恢复 <code>runBlocking</code> 的执行</li>
 </ol>
 <p>show me the code 看看是不是如上面说的那样，用 Bytecode Viewer 反编译得到如下代码，正如上面说的 main 代码块从线程切换为边界，切分为两个代码块，<code>case 0</code> 将被 <code>withContext</code> 的返回值中断，重新调度时进入 <code>case 1</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Example_basic_01Kt</span>.<span class="hljs-title">main</span>.1</span>
-<span class="hljs-class"><span class="hljs-keyword">extends</span> <span class="hljs-title">SuspendLambda</span></span>
-<span class="hljs-class"><span class="hljs-keyword">implements</span> <span class="hljs-title">Function2</span>&lt;<span class="hljs-title">CoroutineScope</span>, <span class="hljs-title">Continuation</span>&lt;? <span class="hljs-title">super</span> <span class="hljs-title">Unit</span>&gt;, <span class="hljs-title">Object</span>&gt; </span>&#123;
-    <span class="hljs-keyword">int</span> label;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Example_basic_01Kt</span>.main<span class="hljs-number">.1</span>
+<span class="hljs-keyword">extends</span> <span class="hljs-title class_">SuspendLambda</span>
+<span class="hljs-keyword">implements</span> <span class="hljs-title class_">Function2</span>&lt;CoroutineScope, Continuation&lt;? <span class="hljs-built_in">super</span> Unit&gt;, Object&gt; &#123;
+    <span class="hljs-type">int</span> label;
 
-    Example_basic_01Kt.main<span class="hljs-number">.1</span>(Continuation&lt;? <span class="hljs-keyword">super</span> Example_basic_01Kt.main<span class="hljs-number">.1</span>&gt; $completion) &#123;
+    Example_basic_01Kt.main<span class="hljs-number">.1</span>(Continuation&lt;? <span class="hljs-built_in">super</span> Example_basic_01Kt.main<span class="hljs-number">.1</span>&gt; $completion) &#123;
     &#125;
 
     <span class="hljs-comment">/*</span>
 <span class="hljs-comment">     * Unable to fully structure code</span>
 <span class="hljs-comment">     */</span>
     <span class="hljs-meta">@Nullable</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invokeSuspend</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Object var1_1)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title function_">invokeSuspend</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Object var1_1)</span> &#123;
         var4_2 = IntrinsicsKt.getCOROUTINE_SUSPENDED();
-        <span class="hljs-keyword">switch</span> (<span class="hljs-keyword">this</span>.label) &#123;
+        <span class="hljs-keyword">switch</span> (<span class="hljs-built_in">this</span>.label) &#123;
             <span class="hljs-keyword">case</span> <span class="hljs-number">0</span>: &#123;
                 ResultKt.throwOnFailure((Object)var1_1);
-                <span class="hljs-keyword">this</span>.label = <span class="hljs-number">1</span>;
-                v0 = BuildersKt.withContext((CoroutineContext)((CoroutineContext)Dispatchers.getIO()), (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (Continuation)((Continuation)<span class="hljs-keyword">this</span>));
+                <span class="hljs-built_in">this</span>.label = <span class="hljs-number">1</span>;
+                v0 = BuildersKt.withContext((CoroutineContext)((CoroutineContext)Dispatchers.getIO()), (Function2)((Function2)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* Unavailable Anonymous Inner Class!! */</span>), (Continuation)((Continuation)<span class="hljs-built_in">this</span>));
                 <span class="hljs-keyword">if</span> (v0 == var4_2) &#123;
                     <span class="hljs-keyword">return</span> var4_2;
                 &#125;
@@ -642,22 +642,22 @@ lbl13:
                 <span class="hljs-comment">// 2 sources</span>
 
                 var2_3 = Intrinsics.stringPlus((String)<span class="hljs-string">&quot;finish main func, &quot;</span>, (Object)Thread.currentThread().getName());
-                var3_4 = <span class="hljs-keyword">false</span>;
+                var3_4 = <span class="hljs-literal">false</span>;
                 System.out.println((Object)var2_3);
                 <span class="hljs-keyword">return</span> Unit.INSTANCE;
             &#125;
         &#125;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> IllegalStateException(<span class="hljs-string">&quot;call to &#x27;resume&#x27; before &#x27;invoke&#x27; with coroutine&quot;</span>);
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalStateException</span>(<span class="hljs-string">&quot;call to &#x27;resume&#x27; before &#x27;invoke&#x27; with coroutine&quot;</span>);
     &#125;
 
     <span class="hljs-meta">@NotNull</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Continuation&lt;Unit&gt; <span class="hljs-title">create</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> Object value, <span class="hljs-meta">@NotNull</span> Continuation&lt;?&gt; $completion)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Continuation&lt;Unit&gt; <span class="hljs-title function_">create</span><span class="hljs-params">(<span class="hljs-meta">@Nullable</span> Object value, <span class="hljs-meta">@NotNull</span> Continuation&lt;?&gt; $completion)</span> &#123;
         <span class="hljs-keyword">return</span> (Continuation)<span class="hljs-keyword">new</span> <span class="hljs-comment">/* invalid duplicate definition of identical inner class */</span>;
     &#125;
 
     <span class="hljs-meta">@Nullable</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title">invoke</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> CoroutineScope p1, <span class="hljs-meta">@Nullable</span> Continuation&lt;? <span class="hljs-keyword">super</span> Unit&gt; p2)</span> </span>&#123;
-        <span class="hljs-keyword">return</span> (<span class="hljs-keyword">this</span>.create(p1, p2)).invokeSuspend(Unit.INSTANCE);
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object <span class="hljs-title function_">invoke</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> CoroutineScope p1, <span class="hljs-meta">@Nullable</span> Continuation&lt;? <span class="hljs-built_in">super</span> Unit&gt; p2)</span> &#123;
+        <span class="hljs-keyword">return</span> (<span class="hljs-built_in">this</span>.create(p1, p2)).invokeSuspend(Unit.INSTANCE);
     &#125;
 &#125;</code></pre></div>
 
@@ -706,7 +706,7 @@ lbl13:
         <span class="hljs-comment">// otherwise, onCompletionInternal was already invoked &amp; invoked tryResume, and the result is in the state</span>
         <span class="hljs-keyword">val</span> state = <span class="hljs-keyword">this</span>.state.unboxState()
         <span class="hljs-keyword">if</span> (state <span class="hljs-keyword">is</span> CompletedExceptionally) <span class="hljs-keyword">throw</span> state.cause
-        <span class="hljs-meta">@Suppress(<span class="hljs-meta-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
+        <span class="hljs-meta">@Suppress(<span class="hljs-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
         <span class="hljs-keyword">return</span> state <span class="hljs-keyword">as</span> T
     &#125;
 &#125;

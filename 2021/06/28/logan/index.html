@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-06-28-logan/files.png">
 <meta property="article:published_time" content="2021-06-28T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.941Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.785Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="log">
 <meta property="article:tag" content="logcat">
@@ -76,11 +76,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -308,38 +308,38 @@
 </tr>
 </tbody></table>
 <h3 id="日志队列与-生产者-消费者-模型"><a href="#日志队列与-生产者-消费者-模型" class="headerlink" title="日志队列与 生产者-消费者 模型"></a>日志队列与 生产者-消费者 模型</h3><p>调用 <code>Logan.w</code> 的线程是日志的生产者，日志写入请求被放入日志队列（<code>Queue</code>）里等待处理，<code>LoganThread</code> 线程作为消费者不断地执行日志队列里的任务</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Logan</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Logan</span> &#123;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> log  表示日志内容</span>
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> type 表示日志类型</span>
 <span class="hljs-comment">     * <span class="hljs-doctag">@brief</span> Logan写入日志</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">w</span><span class="hljs-params">(String log, <span class="hljs-keyword">int</span> type)</span> </span>&#123;
-        <span class="hljs-keyword">if</span> (sLoganControlCenter == <span class="hljs-keyword">null</span>) &#123;
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">&quot;Please initialize Logan first&quot;</span>);
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">w</span><span class="hljs-params">(String log, <span class="hljs-type">int</span> type)</span> &#123;
+        <span class="hljs-keyword">if</span> (sLoganControlCenter == <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Please initialize Logan first&quot;</span>);
         &#125;
         sLoganControlCenter.write(log, type);
     &#125;
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganControlCenter</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganControlCenter</span> &#123;
 
-    <span class="hljs-keyword">private</span> ConcurrentLinkedQueue&lt;LoganModel&gt; mCacheLogQueue = <span class="hljs-keyword">new</span> ConcurrentLinkedQueue&lt;&gt;();
+    <span class="hljs-keyword">private</span> ConcurrentLinkedQueue&lt;LoganModel&gt; mCacheLogQueue = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ConcurrentLinkedQueue</span>&lt;&gt;();
     <span class="hljs-keyword">private</span> LoganThread mLoganThread;
 
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">write</span><span class="hljs-params">(String log, <span class="hljs-keyword">int</span> flag)</span> </span>&#123;
+    <span class="hljs-keyword">void</span> <span class="hljs-title function_">write</span><span class="hljs-params">(String log, <span class="hljs-type">int</span> flag)</span> &#123;
         <span class="hljs-keyword">if</span> (TextUtils.isEmpty(log)) &#123;
             <span class="hljs-keyword">return</span>;
         &#125;
-        LoganModel model = <span class="hljs-keyword">new</span> LoganModel();
+        <span class="hljs-type">LoganModel</span> <span class="hljs-variable">model</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LoganModel</span>();
         model.action = LoganModel.Action.WRITE;
-        WriteAction action = <span class="hljs-keyword">new</span> WriteAction();
-        String threadName = Thread.currentThread().getName();
-        <span class="hljs-keyword">long</span> threadLog = Thread.currentThread().getId();
-        <span class="hljs-keyword">boolean</span> isMain = <span class="hljs-keyword">false</span>;
+        <span class="hljs-type">WriteAction</span> <span class="hljs-variable">action</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">WriteAction</span>();
+        <span class="hljs-type">String</span> <span class="hljs-variable">threadName</span> <span class="hljs-operator">=</span> Thread.currentThread().getName();
+        <span class="hljs-type">long</span> <span class="hljs-variable">threadLog</span> <span class="hljs-operator">=</span> Thread.currentThread().getId();
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">isMain</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
         <span class="hljs-keyword">if</span> (Looper.getMainLooper() == Looper.myLooper()) &#123;
-            isMain = <span class="hljs-keyword">true</span>;
+            isMain = <span class="hljs-literal">true</span>;
         &#125;
         action.log = log;
         action.localTime = System.currentTimeMillis();
@@ -350,15 +350,15 @@
         model.writeAction = action;
         <span class="hljs-keyword">if</span> (mCacheLogQueue.size() &lt; mMaxQueue) &#123;
             mCacheLogQueue.add(model);
-            <span class="hljs-keyword">if</span> (mLoganThread != <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">if</span> (mLoganThread != <span class="hljs-literal">null</span>) &#123;
                 mLoganThread.notifyRun();
             &#125;
         &#125;
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">init</span><span class="hljs-params">()</span> </span>&#123;
-        <span class="hljs-keyword">if</span> (mLoganThread == <span class="hljs-keyword">null</span>) &#123;
-            mLoganThread = <span class="hljs-keyword">new</span> LoganThread(mCacheLogQueue, mCachePath, mPath, mSaveTime,
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">init</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-keyword">if</span> (mLoganThread == <span class="hljs-literal">null</span>) &#123;
+            mLoganThread = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LoganThread</span>(mCacheLogQueue, mCachePath, mPath, mSaveTime,
                     mMaxLogFile, mMinSDCard, mEncryptKey16, mEncryptIv16);
             mLoganThread.setName(<span class="hljs-string">&quot;logan-thread&quot;</span>);
             mLoganThread.start();
@@ -366,26 +366,26 @@
     &#125;    
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Thread</span> &#123;
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.run();
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-built_in">super</span>.run();
         <span class="hljs-keyword">while</span> (mIsRun) &#123;
             <span class="hljs-keyword">synchronized</span> (sync) &#123;
-                mIsWorking = <span class="hljs-keyword">true</span>;
+                mIsWorking = <span class="hljs-literal">true</span>;
                 <span class="hljs-keyword">try</span> &#123;
-                    LoganModel model = mCacheLogQueue.poll();
-                    <span class="hljs-keyword">if</span> (model == <span class="hljs-keyword">null</span>) &#123;
-                        mIsWorking = <span class="hljs-keyword">false</span>;
+                    <span class="hljs-type">LoganModel</span> <span class="hljs-variable">model</span> <span class="hljs-operator">=</span> mCacheLogQueue.poll();
+                    <span class="hljs-keyword">if</span> (model == <span class="hljs-literal">null</span>) &#123;
+                        mIsWorking = <span class="hljs-literal">false</span>;
                         sync.wait();
-                        mIsWorking = <span class="hljs-keyword">true</span>;
+                        mIsWorking = <span class="hljs-literal">true</span>;
                     &#125; <span class="hljs-keyword">else</span> &#123;
                         action(model);
                     &#125;
                 &#125; <span class="hljs-keyword">catch</span> (InterruptedException e) &#123;
                     e.printStackTrace();
-                    mIsWorking = <span class="hljs-keyword">false</span>;
+                    mIsWorking = <span class="hljs-literal">false</span>;
                 &#125;
             &#125;
         &#125;
@@ -401,11 +401,11 @@ CLoganProtocol.<span class="hljs-function">clogan_write</span>
 <span class="hljs-function">clogan_write</span>
 <span class="hljs-function">clogan_write_section</span>
 <span class="hljs-function"></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">clogan_write2</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *data, <span class="hljs-keyword">int</span> length)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">clogan_write2</span><span class="hljs-params">(<span class="hljs-type">char</span> *data, <span class="hljs-type">int</span> length)</span> </span>&#123;
     <span class="hljs-keyword">if</span> (<span class="hljs-literal">NULL</span> != logan_model &amp;&amp; logan_model-&gt;is_ok) &#123;
         <span class="hljs-built_in">clogan_zlib_compress</span>(logan_model, data, length);    <span class="hljs-comment">// 压缩和加密后的数据放在内存 buffer 里</span>
         <span class="hljs-built_in">update_length_clogan</span>(logan_model);
-        <span class="hljs-keyword">int</span> is_gzip_end = <span class="hljs-number">0</span>;
+        <span class="hljs-type">int</span> is_gzip_end = <span class="hljs-number">0</span>;
 
         &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (buffer_type == LOGAN_MMAP_MMAP &amp;&amp;
                    logan_model-&gt;total_len &gt;=
@@ -423,35 +423,35 @@ CLoganProtocol.<span class="hljs-function">clogan_write</span>
 <h4 id="mmap"><a href="#mmap" class="headerlink" title="mmap"></a>mmap</h4><p>当 APP 因为崩溃而被 kill 或者被其他进程 kill 时，保存在内存中的日志缓存就会失去回写文件的机会，从而导致日志的丢失</p>
 <p>使用 <code>mmap</code> 可以在虚拟内存中开辟一片内存空间作为 buffer，它对应了一个 file backed，系统会选择合适的机会将 buffer 回写至文件，而且在进程被 kill 时系统可以确保 buffer 被正确地回写，确保进程异常时不会丢失日志</p>
 <p>mmap file 位于 <code>&#123;cacheDir&#125;/logan_cache/logan.mmap2</code>，buffer 和 mmap file 的大小默认为 150K</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-meta-keyword">ifndef</span> LOGAN_MMAP_LENGTH</span>
-<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> LOGAN_MMAP_LENGTH 150 * 1024 <span class="hljs-comment">//150k</span></span>
-<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-keyword">ifndef</span> LOGAN_MMAP_LENGTH</span>
+<span class="hljs-meta">#<span class="hljs-keyword">define</span> LOGAN_MMAP_LENGTH 150 * 1024 <span class="hljs-comment">//150k</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">endif</span></span>
 
 <span class="hljs-comment">// 创建MMAP缓存buffer或者内存buffer</span>
 <span class="hljs-comment">// _filepath: mmap file 地址</span>
 <span class="hljs-comment">// buffer: mmap buffer</span>
 <span class="hljs-comment">// cache: 如果 mmap 失败则使用内存缓存</span>
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">open_mmap_file_clogan</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *_filepath, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> **buffer, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> **cache)</span> </span>&#123;
-    <span class="hljs-keyword">int</span> back = LOGAN_MMAP_FAIL;
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">open_mmap_file_clogan</span><span class="hljs-params">(<span class="hljs-type">char</span> *_filepath, <span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> **buffer, <span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> **cache)</span> </span>&#123;
+    <span class="hljs-type">int</span> back = LOGAN_MMAP_FAIL;
     <span class="hljs-keyword">if</span> (<span class="hljs-literal">NULL</span> == _filepath || <span class="hljs-number">0</span> == <span class="hljs-built_in">strnlen</span>(_filepath, <span class="hljs-number">128</span>)) &#123;
         back = LOGAN_MMAP_MEMORY;
     &#125; <span class="hljs-keyword">else</span> &#123;
-        <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *p_map = <span class="hljs-literal">NULL</span>;
-        <span class="hljs-keyword">int</span> size = LOGAN_MMAP_LENGTH;
-        <span class="hljs-keyword">int</span> fd = <span class="hljs-built_in">open</span>(_filepath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP); <span class="hljs-comment">//后两个添加权限</span>
-        <span class="hljs-keyword">int</span> isNeedCheck = <span class="hljs-number">0</span>; <span class="hljs-comment">//是否需要检查mmap缓存文件重新检查</span>
+        <span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> *p_map = <span class="hljs-literal">NULL</span>;
+        <span class="hljs-type">int</span> size = LOGAN_MMAP_LENGTH;
+        <span class="hljs-type">int</span> fd = <span class="hljs-built_in">open</span>(_filepath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP); <span class="hljs-comment">//后两个添加权限</span>
+        <span class="hljs-type">int</span> isNeedCheck = <span class="hljs-number">0</span>; <span class="hljs-comment">//是否需要检查mmap缓存文件重新检查</span>
         <span class="hljs-keyword">if</span> (fd != <span class="hljs-number">-1</span>) &#123; <span class="hljs-comment">//保护</span>
-            <span class="hljs-keyword">int</span> isFileOk = <span class="hljs-number">0</span>;
+            <span class="hljs-type">int</span> isFileOk = <span class="hljs-number">0</span>;
             FILE *file = <span class="hljs-built_in">fopen</span>(_filepath, <span class="hljs-string">&quot;rb+&quot;</span>); <span class="hljs-comment">//先判断文件是否有值，再mmap内存映射</span>
             <span class="hljs-keyword">if</span> (<span class="hljs-literal">NULL</span> != file) &#123;
                 <span class="hljs-built_in">fseek</span>(file, <span class="hljs-number">0</span>, SEEK_END);
-                <span class="hljs-keyword">long</span> longBytes = <span class="hljs-built_in">ftell</span>(file);
+                <span class="hljs-type">long</span> longBytes = <span class="hljs-built_in">ftell</span>(file);
                 <span class="hljs-keyword">if</span> (longBytes &lt; LOGAN_MMAP_LENGTH) &#123;
                     <span class="hljs-built_in">fseek</span>(file, <span class="hljs-number">0</span>, SEEK_SET);
-                    <span class="hljs-keyword">char</span> zero_data[size];
+                    <span class="hljs-type">char</span> zero_data[size];
                     <span class="hljs-built_in">memset</span>(zero_data, <span class="hljs-number">0</span>, size);
-                    <span class="hljs-keyword">size_t</span> _size = <span class="hljs-number">0</span>;
-                    _size = <span class="hljs-built_in">fwrite</span>(zero_data, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">char</span>), size, file);
+                    <span class="hljs-type">size_t</span> _size = <span class="hljs-number">0</span>;
+                    _size = <span class="hljs-built_in">fwrite</span>(zero_data, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>), size, file);
                     <span class="hljs-built_in">fflush</span>(file);
                     <span class="hljs-keyword">if</span> (_size == size) &#123;
                         <span class="hljs-built_in">printf_clogan</span>(<span class="hljs-string">&quot;copy data 2 mmap file success\n&quot;</span>);
@@ -472,7 +472,7 @@ CLoganProtocol.<span class="hljs-function">clogan_write</span>
                 FILE *file = <span class="hljs-built_in">fopen</span>(_filepath, <span class="hljs-string">&quot;rb&quot;</span>);
                 <span class="hljs-keyword">if</span> (file != <span class="hljs-literal">NULL</span>) &#123;
                     <span class="hljs-built_in">fseek</span>(file, <span class="hljs-number">0</span>, SEEK_END);
-                    <span class="hljs-keyword">long</span> longBytes = <span class="hljs-built_in">ftell</span>(file);
+                    <span class="hljs-type">long</span> longBytes = <span class="hljs-built_in">ftell</span>(file);
                     <span class="hljs-keyword">if</span> (longBytes &gt;= LOGAN_MMAP_LENGTH) &#123;
                         isFileOk = <span class="hljs-number">1</span>;
                     &#125; <span class="hljs-keyword">else</span> &#123;
@@ -485,7 +485,7 @@ CLoganProtocol.<span class="hljs-function">clogan_write</span>
             &#125;
 
             <span class="hljs-keyword">if</span> (isFileOk) &#123;
-                p_map = (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *) <span class="hljs-built_in">mmap</span>(<span class="hljs-number">0</span>, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, <span class="hljs-number">0</span>);
+                p_map = (<span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> *) <span class="hljs-built_in">mmap</span>(<span class="hljs-number">0</span>, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, <span class="hljs-number">0</span>);
             &#125;
             <span class="hljs-keyword">if</span> (p_map != MAP_FAILED &amp;&amp; <span class="hljs-literal">NULL</span> != p_map &amp;&amp; isFileOk) &#123;
                 back = LOGAN_MMAP_MMAP;
@@ -510,8 +510,8 @@ CLoganProtocol.<span class="hljs-function">clogan_write</span>
         &#125;
     &#125;
 
-    <span class="hljs-keyword">int</span> size = LOGAN_MEMORY_LENGTH;
-    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *tempData = <span class="hljs-built_in">malloc</span>(size);
+    <span class="hljs-type">int</span> size = LOGAN_MEMORY_LENGTH;
+    <span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> *tempData = <span class="hljs-built_in">malloc</span>(size);
     <span class="hljs-keyword">if</span> (<span class="hljs-literal">NULL</span> != tempData) &#123;
         <span class="hljs-built_in">memset</span>(tempData, <span class="hljs-number">0</span>, size);
         *cache = tempData;
@@ -537,22 +537,22 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <span class="hljs-function">Java_com_dianping_logan_CLoganProtocol_clogan_1flush</span>
 <span class="hljs-function">clogan_flush</span>
 <span class="hljs-function"></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">write_flush_clogan</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">write_flush_clogan</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-keyword">if</span> (logan_model-&gt;zlib_type == LOGAN_ZLIB_ING) &#123;
         <span class="hljs-built_in">clogan_zlib_end_compress</span>(logan_model);
         <span class="hljs-built_in">update_length_clogan</span>(logan_model);
     &#125;
     <span class="hljs-keyword">if</span> (logan_model-&gt;total_len &gt; LOGAN_WRITEPROTOCOL_HEAER_LENGTH) &#123;
-        <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *point = logan_model-&gt;total_point;
+        <span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> *point = logan_model-&gt;total_point;
         point += LOGAN_MMAP_TOTALLEN;
-        <span class="hljs-built_in">write_dest_clogan</span>(point, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">char</span>), logan_model-&gt;total_len, logan_model);
+        <span class="hljs-built_in">write_dest_clogan</span>(point, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>), logan_model-&gt;total_len, logan_model);
         <span class="hljs-built_in">printf_clogan</span>(<span class="hljs-string">&quot;write_flush_clogan &gt; logan total len : %d \n&quot;</span>, logan_model-&gt;total_len);
         <span class="hljs-built_in">clear_clogan</span>(logan_model);
     &#125;
 &#125;
 
 <span class="hljs-comment">//文件写入磁盘、更新文件大小</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">write_dest_clogan</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *point, <span class="hljs-keyword">size_t</span> size, <span class="hljs-keyword">size_t</span> length, cLogan_model *loganModel)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">write_dest_clogan</span><span class="hljs-params">(<span class="hljs-type">void</span> *point, <span class="hljs-type">size_t</span> size, <span class="hljs-type">size_t</span> length, cLogan_model *loganModel)</span> </span>&#123;
     <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">is_file_exist_clogan</span>(loganModel-&gt;file_path)) &#123; <span class="hljs-comment">//如果文件被删除,再创建一个文件</span>
         <span class="hljs-keyword">if</span> (logan_model-&gt;file_stream_type == LOGAN_FILE_OPEN) &#123;
             <span class="hljs-built_in">fclose</span>(logan_model-&gt;file);
@@ -569,7 +569,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
     <span class="hljs-keyword">if</span> (CLOGAN_EMPTY_FILE == loganModel-&gt;file_len) &#123; <span class="hljs-comment">//如果是空文件插入一行CLogan的头文件</span>
         <span class="hljs-built_in">insert_header_file_clogan</span>(loganModel);
     &#125;
-    <span class="hljs-built_in">fwrite</span>(point, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">char</span>), logan_model-&gt;total_len, logan_model-&gt;file);<span class="hljs-comment">//写入到文件中</span>
+    <span class="hljs-built_in">fwrite</span>(point, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>), logan_model-&gt;total_len, logan_model-&gt;file);<span class="hljs-comment">//写入到文件中</span>
     <span class="hljs-built_in">fflush</span>(logan_model-&gt;file);
     loganModel-&gt;file_len += loganModel-&gt;total_len; <span class="hljs-comment">//修改文件大小</span>
 &#125;</code></pre></div>
@@ -577,52 +577,52 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <h3 id="日志文件"><a href="#日志文件" class="headerlink" title="日志文件"></a>日志文件</h3><p>日志文件保存在目录 <code>LoganConfig.Builder.setPath(path)</code>，日志按日期存储，文件名是日期当天零时零分零秒的 <code>时间戳</code></p>
 <p><img src="../../../../image/2021-06-28-logan/files.png" srcset="/image/loading.gif" lazyload alt="files.png"></p>
 <p>日志经过 gzip 压缩和 AES 加密，其格式是 JSON，每个日志文件的第一条总是 <code>clogan header</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs json">&#123;
-    <span class="hljs-attr">&quot;c&quot;</span>:<span class="hljs-string">&quot;clogan header&quot;</span>,    <span class="hljs-comment">// 日志内容</span>
-    <span class="hljs-attr">&quot;f&quot;</span>:<span class="hljs-number">1</span>,                  <span class="hljs-comment">// flag，Logan.w(log, type) 中的 type 传入</span>
-    <span class="hljs-attr">&quot;l&quot;</span>:<span class="hljs-string">&quot;init&quot;</span>,             <span class="hljs-comment">// local time，本地时间</span>
-    <span class="hljs-attr">&quot;n&quot;</span>:<span class="hljs-string">&quot;clogan&quot;</span>,           <span class="hljs-comment">// thread name，线程名称</span>
-    <span class="hljs-attr">&quot;i&quot;</span>:<span class="hljs-number">1</span>,                  <span class="hljs-comment">// thread id，线程 ID</span>
-    <span class="hljs-attr">&quot;m&quot;</span>:<span class="hljs-literal">true</span>                <span class="hljs-comment">// main thread，是否主线程</span>
-&#125;
-&#123;
-    <span class="hljs-attr">&quot;c&quot;</span>:<span class="hljs-string">&quot;I/Fridge-okhttp.OkHttpClient：[ (AndroidLog.kt:84)#androidLog$okhttp ] [ (AndroidLog.kt:39)#publish ] domain: video&quot;</span>,
-    <span class="hljs-attr">&quot;f&quot;</span>:<span class="hljs-number">4</span>,
-    <span class="hljs-attr">&quot;l&quot;</span>:<span class="hljs-string">&quot;2021-09-07 00:00:00.000&quot;</span>,
-    <span class="hljs-attr">&quot;n&quot;</span>:<span class="hljs-string">&quot;RxCachedThreadScheduler-15&quot;</span>,
-    <span class="hljs-attr">&quot;i&quot;</span>:<span class="hljs-number">174</span>,
-    <span class="hljs-attr">&quot;m&quot;</span>:<span class="hljs-literal">false</span>
-&#125;
-&#123;
-    <span class="hljs-attr">&quot;c&quot;</span>:<span class="hljs-string">&quot;I/Fridge-okhttp.OkHttpClient：[ (AndroidLog.kt:84)#androidLog$okhttp ] [ (AndroidLog.kt:39)#publish ] Authorization_v1: U5xQjeKDh4Dkgx4Z&quot;</span>,
-    <span class="hljs-attr">&quot;f&quot;</span>:<span class="hljs-number">4</span>,
-    <span class="hljs-attr">&quot;l&quot;</span>:<span class="hljs-string">&quot;2021-09-07 00:00:00.001&quot;</span>,
-    <span class="hljs-attr">&quot;n&quot;</span>:<span class="hljs-string">&quot;RxCachedThreadScheduler-15&quot;</span>,
-    <span class="hljs-attr">&quot;i&quot;</span>:<span class="hljs-number">174</span>,
-    <span class="hljs-attr">&quot;m&quot;</span>:<span class="hljs-literal">false</span>
-&#125;</code></pre></div>
+<div class="hljs code-wrapper"><pre><code class="hljs json"><span class="hljs-punctuation">&#123;</span>
+    <span class="hljs-attr">&quot;c&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;clogan header&quot;</span><span class="hljs-punctuation">,</span>    <span class="hljs-comment">// 日志内容</span>
+    <span class="hljs-attr">&quot;f&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">1</span><span class="hljs-punctuation">,</span>                  <span class="hljs-comment">// flag，Logan.w(log, type) 中的 type 传入</span>
+    <span class="hljs-attr">&quot;l&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;init&quot;</span><span class="hljs-punctuation">,</span>             <span class="hljs-comment">// local time，本地时间</span>
+    <span class="hljs-attr">&quot;n&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;clogan&quot;</span><span class="hljs-punctuation">,</span>           <span class="hljs-comment">// thread name，线程名称</span>
+    <span class="hljs-attr">&quot;i&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">1</span><span class="hljs-punctuation">,</span>                  <span class="hljs-comment">// thread id，线程 ID</span>
+    <span class="hljs-attr">&quot;m&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-keyword">true</span>                <span class="hljs-comment">// main thread，是否主线程</span>
+<span class="hljs-punctuation">&#125;</span>
+<span class="hljs-punctuation">&#123;</span>
+    <span class="hljs-attr">&quot;c&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;I/Fridge-okhttp.OkHttpClient：[ (AndroidLog.kt:84)#androidLog$okhttp ] [ (AndroidLog.kt:39)#publish ] domain: video&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;f&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;l&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;2021-09-07 00:00:00.000&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;n&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;RxCachedThreadScheduler-15&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;i&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">174</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;m&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-keyword">false</span>
+<span class="hljs-punctuation">&#125;</span>
+<span class="hljs-punctuation">&#123;</span>
+    <span class="hljs-attr">&quot;c&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;I/Fridge-okhttp.OkHttpClient：[ (AndroidLog.kt:84)#androidLog$okhttp ] [ (AndroidLog.kt:39)#publish ] Authorization_v1: U5xQjeKDh4Dkgx4Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;f&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;l&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;2021-09-07 00:00:00.001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;n&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-string">&quot;RxCachedThreadScheduler-15&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;i&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-number">174</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;m&quot;</span><span class="hljs-punctuation">:</span><span class="hljs-keyword">false</span>
+<span class="hljs-punctuation">&#125;</span></code></pre></div>
 
 <p>每次写日志时，都会判断下当前日期是否与日志文件的日期一致；如果不一致说明跨天了，创建当天的日志文件，并删除 <code>LoganConfig.Builder.setDay(long)</code> 前的日志文件</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Thread</span> &#123;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doWriteLog2File</span><span class="hljs-params">(WriteAction action)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">doWriteLog2File</span><span class="hljs-params">(WriteAction action)</span> &#123;
         <span class="hljs-keyword">if</span> (Logan.sDebug) &#123;
             Log.d(TAG, <span class="hljs-string">&quot;Logan write start&quot;</span>);
         &#125;
-        <span class="hljs-keyword">if</span> (mFileDirectory == <span class="hljs-keyword">null</span>) &#123;
-            mFileDirectory = <span class="hljs-keyword">new</span> File(mPath);
+        <span class="hljs-keyword">if</span> (mFileDirectory == <span class="hljs-literal">null</span>) &#123;
+            mFileDirectory = <span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(mPath);
         &#125;
 
         <span class="hljs-keyword">if</span> (!isDay()) &#123;
-            <span class="hljs-keyword">long</span> tempCurrentDay = Util.getCurrentTime();
+            <span class="hljs-type">long</span> <span class="hljs-variable">tempCurrentDay</span> <span class="hljs-operator">=</span> Util.getCurrentTime();
             <span class="hljs-comment">//save时间</span>
-            <span class="hljs-keyword">long</span> deleteTime = tempCurrentDay - mSaveTime;
+            <span class="hljs-type">long</span> <span class="hljs-variable">deleteTime</span> <span class="hljs-operator">=</span> tempCurrentDay - mSaveTime;
             deleteExpiredFile(deleteTime);
             mCurrentDay = tempCurrentDay;
             mLoganProtocol.logan_open(String.valueOf(mCurrentDay));
         &#125;
 
-        <span class="hljs-keyword">long</span> currentTime = System.currentTimeMillis(); <span class="hljs-comment">//每隔1分钟判断一次</span>
+        <span class="hljs-type">long</span> <span class="hljs-variable">currentTime</span> <span class="hljs-operator">=</span> System.currentTimeMillis(); <span class="hljs-comment">//每隔1分钟判断一次</span>
         <span class="hljs-keyword">if</span> (currentTime - mLastTime &gt; MINUTE) &#123;
             mIsSDCard = isCanWriteSDCard();
         &#125;
@@ -640,8 +640,8 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <ol>
 <li>日志内容为空</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganControlCenter</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">write</span><span class="hljs-params">(String log, <span class="hljs-keyword">int</span> flag)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganControlCenter</span> &#123;
+    <span class="hljs-keyword">void</span> <span class="hljs-title function_">write</span><span class="hljs-params">(String log, <span class="hljs-type">int</span> flag)</span> &#123;
         <span class="hljs-keyword">if</span> (TextUtils.isEmpty(log)) &#123;
             <span class="hljs-keyword">return</span>;
         &#125;
@@ -652,13 +652,13 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <ol start="2">
 <li>任务队列满了</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganControlCenter</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganControlCenter</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span> mMaxQueue;     <span class="hljs-comment">// 最大队列数</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-type">long</span> mMaxQueue;     <span class="hljs-comment">// 最大队列数</span>
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-title">LoganControlCenter</span><span class="hljs-params">(LoganConfig config)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-title function_">LoganControlCenter</span><span class="hljs-params">(LoganConfig config)</span> &#123;
         <span class="hljs-keyword">if</span> (!config.isValid()) &#123;
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException(<span class="hljs-string">&quot;config&#x27;s param is invalid&quot;</span>);
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>(<span class="hljs-string">&quot;config&#x27;s param is invalid&quot;</span>);
         &#125;
         mPath = config.mPathPath;
         mCachePath = config.mCachePath;
@@ -666,39 +666,39 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
         mMinSDCard = config.mMinSDCard;
         mMaxLogFile = config.mMaxFile;
         mMaxQueue = config.mMaxQueue;
-        mEncryptKey16 = <span class="hljs-keyword">new</span> String(config.mEncryptKey16);
-        mEncryptIv16 = <span class="hljs-keyword">new</span> String(config.mEncryptIv16);
+        mEncryptKey16 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>(config.mEncryptKey16);
+        mEncryptIv16 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>(config.mEncryptIv16);
         init();
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">write</span><span class="hljs-params">(String log, <span class="hljs-keyword">int</span> flag)</span> </span>&#123;
+    <span class="hljs-keyword">void</span> <span class="hljs-title function_">write</span><span class="hljs-params">(String log, <span class="hljs-type">int</span> flag)</span> &#123;
         <span class="hljs-comment">// ...</span>
         <span class="hljs-keyword">if</span> (mCacheLogQueue.size() &lt; mMaxQueue) &#123;
             mCacheLogQueue.add(model);
-            <span class="hljs-keyword">if</span> (mLoganThread != <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">if</span> (mLoganThread != <span class="hljs-literal">null</span>) &#123;
                 mLoganThread.notifyRun();
             &#125;
         &#125;
     &#125;
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganConfig</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganConfig</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> DEFAULT_QUEUE = <span class="hljs-number">500</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">DEFAULT_QUEUE</span> <span class="hljs-operator">=</span> <span class="hljs-number">500</span>;
 
-    <span class="hljs-keyword">long</span> mMaxQueue = DEFAULT_QUEUE;     <span class="hljs-comment">// 没有公开 getter/setter</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">mMaxQueue</span> <span class="hljs-operator">=</span> DEFAULT_QUEUE;     <span class="hljs-comment">// 没有公开 getter/setter</span>
 &#125;</code></pre></div>
 
 <ol start="3">
 <li>存储设备容量不足（默认至少 50M）</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Thread</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Thread</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span> mMinSDCard;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">long</span> mMinSDCard;
 
     LoganThread(
             ConcurrentLinkedQueue&lt;LoganModel&gt; cacheLogQueue, String cachePath,
-            String path, <span class="hljs-keyword">long</span> saveTime, <span class="hljs-keyword">long</span> maxLogFile, <span class="hljs-keyword">long</span> minSDCard, String encryptKey16,
+            String path, <span class="hljs-type">long</span> saveTime, <span class="hljs-type">long</span> maxLogFile, <span class="hljs-type">long</span> minSDCard, String encryptKey16,
             String encryptIv16) &#123;
         mCacheLogQueue = cacheLogQueue;
         mCachePath = cachePath;
@@ -710,10 +710,10 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
         mEncryptIv16 = encryptIv16;
     &#125;    
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doWriteLog2File</span><span class="hljs-params">(WriteAction action)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">doWriteLog2File</span><span class="hljs-params">(WriteAction action)</span> &#123;
         <span class="hljs-comment">// ...</span>
 
-        <span class="hljs-keyword">long</span> currentTime = System.currentTimeMillis(); <span class="hljs-comment">//每隔1分钟判断一次</span>
+        <span class="hljs-type">long</span> <span class="hljs-variable">currentTime</span> <span class="hljs-operator">=</span> System.currentTimeMillis(); <span class="hljs-comment">//每隔1分钟判断一次</span>
         <span class="hljs-keyword">if</span> (currentTime - mLastTime &gt; MINUTE) &#123;
             mIsSDCard = isCanWriteSDCard();
         &#125;
@@ -726,15 +726,15 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
                 action.threadId, action.isMainThread);
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isCanWriteSDCard</span><span class="hljs-params">()</span> </span>&#123;
-        <span class="hljs-keyword">boolean</span> item = <span class="hljs-keyword">false</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isCanWriteSDCard</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">item</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
         <span class="hljs-keyword">try</span> &#123;
-            StatFs stat = <span class="hljs-keyword">new</span> StatFs(mPath);
-            <span class="hljs-keyword">long</span> blockSize = stat.getBlockSize();
-            <span class="hljs-keyword">long</span> availableBlocks = stat.getAvailableBlocks();
-            <span class="hljs-keyword">long</span> total = availableBlocks * blockSize;
+            <span class="hljs-type">StatFs</span> <span class="hljs-variable">stat</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StatFs</span>(mPath);
+            <span class="hljs-type">long</span> <span class="hljs-variable">blockSize</span> <span class="hljs-operator">=</span> stat.getBlockSize();
+            <span class="hljs-type">long</span> <span class="hljs-variable">availableBlocks</span> <span class="hljs-operator">=</span> stat.getAvailableBlocks();
+            <span class="hljs-type">long</span> <span class="hljs-variable">total</span> <span class="hljs-operator">=</span> availableBlocks * blockSize;
             <span class="hljs-keyword">if</span> (total &gt; mMinSDCard) &#123; <span class="hljs-comment">//判断SDK卡</span>
-                item = <span class="hljs-keyword">true</span>;
+                item = <span class="hljs-literal">true</span>;
             &#125;
         &#125; <span class="hljs-keyword">catch</span> (IllegalArgumentException e) &#123;
             e.printStackTrace();
@@ -743,33 +743,33 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
     &#125;    
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganConfig</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganConfig</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> M = <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>;                  <span class="hljs-comment">// M</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> DEFAULT_MIN_SDCARD_SIZE = <span class="hljs-number">50</span> * M; <span class="hljs-comment">// 最小的 SD 卡小于这个大小不写入</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">M</span> <span class="hljs-operator">=</span> <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>;                  <span class="hljs-comment">// M</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">DEFAULT_MIN_SDCARD_SIZE</span> <span class="hljs-operator">=</span> <span class="hljs-number">50</span> * M; <span class="hljs-comment">// 最小的 SD 卡小于这个大小不写入</span>
 
-    <span class="hljs-keyword">long</span> mMinSDCard = DEFAULT_MIN_SDCARD_SIZE;                  <span class="hljs-comment">// 最小 sd 卡大小，通过 LoganConfig.Builder#setMinSDCard 配置</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">mMinSDCard</span> <span class="hljs-operator">=</span> DEFAULT_MIN_SDCARD_SIZE;                  <span class="hljs-comment">// 最小 sd 卡大小，通过 LoganConfig.Builder#setMinSDCard 配置</span>
 &#125;</code></pre></div>
 
 <ol start="4">
 <li>日志文件大小超过限制</li>
 </ol>
 <p>默认 10M，<code>LoganConfig</code> 未公开 setter</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoganConfig</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LoganConfig</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> M = <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>; <span class="hljs-comment">//M</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> DEFAULT_FILE_SIZE = <span class="hljs-number">10</span> * M;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">M</span> <span class="hljs-operator">=</span> <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>; <span class="hljs-comment">//M</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">DEFAULT_FILE_SIZE</span> <span class="hljs-operator">=</span> <span class="hljs-number">10</span> * M;
 
-    <span class="hljs-keyword">long</span> mMaxFile = DEFAULT_FILE_SIZE; <span class="hljs-comment">// 删除文件最大值（实际并不会删除，只是不再写入）</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">mMaxFile</span> <span class="hljs-operator">=</span> DEFAULT_FILE_SIZE; <span class="hljs-comment">// 删除文件最大值（实际并不会删除，只是不再写入）</span>
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> LOGAN_LOGFILE_MAXLENGTH 10 * 1024 * 1024</span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-keyword">define</span> LOGAN_LOGFILE_MAXLENGTH 10 * 1024 * 1024</span>
 
-<span class="hljs-keyword">static</span> <span class="hljs-keyword">long</span> max_file_len = LOGAN_LOGFILE_MAXLENGTH;
+<span class="hljs-type">static</span> <span class="hljs-type">long</span> max_file_len = LOGAN_LOGFILE_MAXLENGTH;
 
-<span class="hljs-function"><span class="hljs-keyword">int</span></span>
-<span class="hljs-function"><span class="hljs-title">clogan_write</span><span class="hljs-params">(<span class="hljs-keyword">int</span> flag, <span class="hljs-keyword">char</span> *log, <span class="hljs-keyword">long</span> <span class="hljs-keyword">long</span> local_time, <span class="hljs-keyword">char</span> *thread_name, <span class="hljs-keyword">long</span> <span class="hljs-keyword">long</span> thread_id,</span></span>
-<span class="hljs-params"><span class="hljs-function">             <span class="hljs-keyword">int</span> is_main)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">int</span></span>
+<span class="hljs-function"><span class="hljs-title">clogan_write</span><span class="hljs-params">(<span class="hljs-type">int</span> flag, <span class="hljs-type">char</span> *log, <span class="hljs-type">long</span> <span class="hljs-type">long</span> local_time, <span class="hljs-type">char</span> *thread_name, <span class="hljs-type">long</span> <span class="hljs-type">long</span> thread_id,</span></span>
+<span class="hljs-params"><span class="hljs-function">             <span class="hljs-type">int</span> is_main)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
 
     <span class="hljs-keyword">if</span> (<span class="hljs-built_in">is_file_exist_clogan</span>(logan_model-&gt;file_path)) &#123;
@@ -784,25 +784,25 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 &#125;</code></pre></div>
 
 <h3 id="公司内部日志库-VLog"><a href="#公司内部日志库-VLog" class="headerlink" title="公司内部日志库 VLog"></a>公司内部日志库 VLog</h3><p>VLog 使用 Logan 来持久化 <code>Android.util.Log</code> 的日志输出，以便下发指令远程抓取用户日志，通过 gradle plugin Transform 和 ASM 将 <code>Log.XXX</code> 替换为 <code>VLog.XXX</code>，从而达到透明重定向日志输出的目的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LogHandleTransform</span>(<span class="hljs-title">project</span>: <span class="hljs-title">Project</span>, <span class="hljs-title">ext</span>: <span class="hljs-title">LogExtension</span>?) : <span class="hljs-title">Transform</span>() </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LogHandleTransform</span>(project: Project, ext: LogExtension?) : Transform() &#123;
 
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> classProcessor: ClassProcessor = ClassProcessor()
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> logExtension: LogExtension? = <span class="hljs-function">ext</span>
-<span class="hljs-function"></span>
-<span class="hljs-function">    override fun <span class="hljs-title">getName</span><span class="hljs-params">()</span>: String </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> logExtension: LogExtension? = ext
+
+    override fun <span class="hljs-title function_">getName</span><span class="hljs-params">()</span>: String &#123;
         <span class="hljs-keyword">return</span> NAME
     &#125;
 
-    <span class="hljs-function">override fun <span class="hljs-title">getInputTypes</span><span class="hljs-params">()</span>: MutableSet&lt;QualifiedContent.ContentType&gt; </span>&#123;
+    override fun <span class="hljs-title function_">getInputTypes</span><span class="hljs-params">()</span>: MutableSet&lt;QualifiedContent.ContentType&gt; &#123;
         <span class="hljs-keyword">return</span> TransformManager.CONTENT_CLASS
     &#125;
 
-    <span class="hljs-function">override fun <span class="hljs-title">getScopes</span><span class="hljs-params">()</span>: MutableSet&lt;in QualifiedContent.Scope&gt; </span>&#123;
+    override fun <span class="hljs-title function_">getScopes</span><span class="hljs-params">()</span>: MutableSet&lt;in QualifiedContent.Scope&gt; &#123;
         <span class="hljs-keyword">return</span> TransformManager.SCOPE_FULL_PROJECT
     &#125;
 
-    <span class="hljs-function">override fun <span class="hljs-title">isIncremental</span><span class="hljs-params">()</span>: Boolean </span>&#123;
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>
+    override fun <span class="hljs-title function_">isIncremental</span><span class="hljs-params">()</span>: Boolean &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
     &#125;
 
     <span class="hljs-comment">/**</span>
@@ -810,11 +810,11 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
 <span class="hljs-comment">     * ADDED、CHANGED: 正常处理，输出给下一个任务</span>
 <span class="hljs-comment">     * REMOVED: 移除outputProvider获取路径对应的文件</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function">override fun <span class="hljs-title">transform</span><span class="hljs-params">(transformInvocation: TransformInvocation)</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.transform(transformInvocation)
-        val inputs = transformInvocation.inputs
-        val outputProvider = transformInvocation.outputProvider
-        val isIncremental = transformInvocation.isIncremental
+    override fun <span class="hljs-title function_">transform</span><span class="hljs-params">(transformInvocation: TransformInvocation)</span> &#123;
+        <span class="hljs-built_in">super</span>.transform(transformInvocation)
+        <span class="hljs-type">val</span> <span class="hljs-variable">inputs</span> <span class="hljs-operator">=</span> transformInvocation.inputs
+        <span class="hljs-type">val</span> <span class="hljs-variable">outputProvider</span> <span class="hljs-operator">=</span> transformInvocation.outputProvider
+        <span class="hljs-type">val</span> <span class="hljs-variable">isIncremental</span> <span class="hljs-operator">=</span> transformInvocation.isIncremental
         <span class="hljs-comment">//如果非增量，则清空旧的输出内容</span>
         <span class="hljs-keyword">if</span> (!isIncremental) &#123;
             outputProvider.deleteAll()
@@ -823,13 +823,13 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
         inputs.stream().forEach &#123; transformInput: TransformInput -&gt;
             <span class="hljs-comment">//jar</span>
             transformInput.jarInputs.stream().forEach &#123; jarInput: JarInput -&gt;
-                val status = jarInput.status
+                <span class="hljs-type">val</span> <span class="hljs-variable">status</span> <span class="hljs-operator">=</span> jarInput.status
                 val src: File = jarInput.file
-                <span class="hljs-keyword">var</span> destName = src.<span class="hljs-function">name</span>
-<span class="hljs-function">                <span class="hljs-title">if</span> <span class="hljs-params">(destName.endsWith(<span class="hljs-string">&quot;.jar&quot;</span>)</span>) </span>&#123;
+                <span class="hljs-type">var</span> <span class="hljs-variable">destName</span> <span class="hljs-operator">=</span> src.name
+                <span class="hljs-title function_">if</span> <span class="hljs-params">(destName.endsWith(<span class="hljs-string">&quot;.jar&quot;</span>)</span>) &#123;
                     destName = destName.substring(<span class="hljs-number">0</span>, destName.length - <span class="hljs-number">4</span>);
                 &#125;
-                val hexName = DigestUtils.md5Hex(src.absolutePath)
+                <span class="hljs-type">val</span> <span class="hljs-variable">hexName</span> <span class="hljs-operator">=</span> DigestUtils.md5Hex(src.absolutePath)
                 val dest: File =
                     transformInvocation.outputProvider.getContentLocation(
                         <span class="hljs-comment">//destName + &quot;_&quot; + hexName,</span>
@@ -839,7 +839,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
                         Format.JAR
                     )
                 Logger.w(<span class="hljs-string">&quot;jar origin path: $&#123;src.absolutePath&#125;, jar output path: $&#123;dest.absolutePath&#125;, jar status $&#123;status.name&#125;&quot;</span>)
-                <span class="hljs-keyword">if</span> (status == <span class="hljs-keyword">null</span> || !isIncremental) &#123;
+                <span class="hljs-keyword">if</span> (status == <span class="hljs-literal">null</span> || !isIncremental) &#123;
                     processJar(src, dest)
                 &#125; <span class="hljs-keyword">else</span> &#123;
                     when (status) &#123;
@@ -868,15 +868,15 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
                     )
                 Logger.w(<span class="hljs-string">&quot;dir origin path: $&#123;src.absolutePath&#125;, dir output path: $&#123;dest.absolutePath&#125;&quot;</span>)
                 <span class="hljs-keyword">if</span> (isIncremental) &#123;
-                    val srcDirPath = src.absolutePath
-                    val destDirPath = dest.absolutePath
-                    val fileStatusMap = directoryInput.changedFiles
+                    <span class="hljs-type">val</span> <span class="hljs-variable">srcDirPath</span> <span class="hljs-operator">=</span> src.absolutePath
+                    <span class="hljs-type">val</span> <span class="hljs-variable">destDirPath</span> <span class="hljs-operator">=</span> dest.absolutePath
+                    <span class="hljs-type">val</span> <span class="hljs-variable">fileStatusMap</span> <span class="hljs-operator">=</span> directoryInput.changedFiles
                     <span class="hljs-comment">//Logger.w(&quot;dir change file: $fileStatusMap&quot;)</span>
                     <span class="hljs-keyword">for</span> ((inputFile: File, status: Status) in fileStatusMap) &#123;
                         val destFilePath: String =
                             inputFile.absolutePath.replace(srcDirPath, destDirPath)
                         <span class="hljs-comment">//Logger.w(&quot;incremental dir handle origin file: $&#123;inputFile.absolutePath&#125;, dir output path: $destFilePath&quot;)</span>
-                        val destFile = File(destFilePath)
+                        <span class="hljs-type">val</span> <span class="hljs-variable">destFile</span> <span class="hljs-operator">=</span> File(destFilePath)
                         when (status) &#123;
                             Status.NOTCHANGED -&gt; &#123;
                                 <span class="hljs-comment">//nothing</span>
@@ -913,7 +913,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
         &#125;
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> fun <span class="hljs-title">handleDirectoryInput</span><span class="hljs-params">(file: File, targetDirFile: File, relativePath: String)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> fun <span class="hljs-title function_">handleDirectoryInput</span><span class="hljs-params">(file: File, targetDirFile: File, relativePath: String)</span> &#123;
         <span class="hljs-keyword">if</span> (file.isDirectory) &#123;
             <span class="hljs-keyword">for</span> (f in file.listFiles()) &#123;
                 handleDirectoryInput(f, targetDirFile, relativePath)
@@ -921,19 +921,19 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
         &#125; <span class="hljs-keyword">else</span> &#123;
             val targetPath: String =
                 file.absolutePath.replace(relativePath, targetDirFile.absolutePath)
-            val targetFile = File(targetPath)
+            <span class="hljs-type">val</span> <span class="hljs-variable">targetFile</span> <span class="hljs-operator">=</span> File(targetPath)
             <span class="hljs-comment">//Logger.w(&quot;handleDirectoryInput targetDir: $&#123;targetDirFile.absolutePath&#125;, origin file: $&#123;file.absolutePath&#125;, output file: $targetPath&quot;)</span>
             <span class="hljs-keyword">if</span> (file.name.endsWith(<span class="hljs-string">&quot;.class&quot;</span>)) &#123;
                 processClassFile(file, targetFile)
             &#125; <span class="hljs-keyword">else</span> &#123;
-                val destFile = File(targetPath)
+                <span class="hljs-type">val</span> <span class="hljs-variable">destFile</span> <span class="hljs-operator">=</span> File(targetPath)
                 FileUtils.copyFile(file, destFile)
             &#125;
         &#125;
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> fun <span class="hljs-title">processClassFile</span><span class="hljs-params">(src: File, targetFile: File)</span> </span>&#123;
-        <span class="hljs-keyword">var</span> bytes: ByteArray? = <span class="hljs-keyword">null</span>
+    <span class="hljs-keyword">private</span> fun <span class="hljs-title function_">processClassFile</span><span class="hljs-params">(src: File, targetFile: File)</span> &#123;
+        <span class="hljs-keyword">var</span> bytes: ByteArray? = <span class="hljs-literal">null</span>
         <span class="hljs-keyword">try</span> &#123;
             bytes = classProcessor.process(FileUtils.readFileToByteArray(src))
         &#125; <span class="hljs-keyword">catch</span> (e: IOException) &#123;
@@ -949,9 +949,9 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
         &#125;
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> fun <span class="hljs-title">processJar</span><span class="hljs-params">(zipFile: File, destFile: File)</span> </span>&#123;
-        val zos = ZipOutputStream(FileOutputStream(destFile))
-        val zis = JarFile(zipFile)
+    <span class="hljs-keyword">private</span> fun <span class="hljs-title function_">processJar</span><span class="hljs-params">(zipFile: File, destFile: File)</span> &#123;
+        <span class="hljs-type">val</span> <span class="hljs-variable">zos</span> <span class="hljs-operator">=</span> ZipOutputStream(FileOutputStream(destFile))
+        <span class="hljs-type">val</span> <span class="hljs-variable">zis</span> <span class="hljs-operator">=</span> JarFile(zipFile)
         val enumeration: Enumeration&lt;JarEntry&gt; = zis.entries()
         <span class="hljs-keyword">while</span> (enumeration.hasMoreElements()) &#123;
             val jarEntry: JarEntry = enumeration.nextElement() as JarEntry
@@ -959,7 +959,7 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
             <span class="hljs-comment">//Logger.w(&quot;jar content name: $entryName&quot;)</span>
             <span class="hljs-keyword">if</span> (jarEntry.isDirectory) <span class="hljs-keyword">continue</span>
             <span class="hljs-comment">//为新的jar创建zipEntry</span>
-            val zipEntry = ZipEntry(entryName)
+            <span class="hljs-type">val</span> <span class="hljs-variable">zipEntry</span> <span class="hljs-operator">=</span> ZipEntry(entryName)
             zos.putNextEntry(zipEntry)
             val inputStream: InputStream = zis.getInputStream(jarEntry)
             <span class="hljs-comment">//inputStream to byte，我看bytex也是用的这个</span>
@@ -978,18 +978,18 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
         zos.close()
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> fun <span class="hljs-title">needHandle</span><span class="hljs-params">(entryName: String)</span>: Boolean </span>&#123;
+    <span class="hljs-keyword">private</span> fun <span class="hljs-title function_">needHandle</span><span class="hljs-params">(entryName: String)</span>: Boolean &#123;
         <span class="hljs-keyword">if</span> (!entryName.endsWith(<span class="hljs-string">&quot;.class&quot;</span>)) &#123;
-            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
         &#125;
         <span class="hljs-keyword">if</span> (entryName.contains(LOG_LIB_PKG) || entryName.contains(LOGAN_LIB_PKG)) &#123;
-            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
         &#125;
-        <span class="hljs-keyword">var</span> handle = <span class="hljs-keyword">true</span>
+        <span class="hljs-type">var</span> <span class="hljs-variable">handle</span> <span class="hljs-operator">=</span> <span class="hljs-literal">true</span>
         logExtension?.let &#123;
             <span class="hljs-keyword">for</span> (name in logExtension!!.whiteList) &#123;
                 <span class="hljs-keyword">if</span> (entryName.contains(LogExtension.transform(name))) &#123;
-                    <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>
+                    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
                 &#125;
             &#125;
         &#125;
@@ -997,12 +997,12 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
     &#125;
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ClassProcessor</span> </span>&#123;
-    <span class="hljs-function">fun <span class="hljs-title">process</span><span class="hljs-params">(src: ByteArray)</span>: ByteArray </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ClassProcessor</span> &#123;
+    fun <span class="hljs-title function_">process</span><span class="hljs-params">(src: ByteArray)</span>: ByteArray &#123;
         <span class="hljs-keyword">try</span> &#123;
-            val classReader = ClassReader(src)
-            val cw = ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
-            val monitorClassVisitor = LogClassVisitor(ASM_API, cw)
+            <span class="hljs-type">val</span> <span class="hljs-variable">classReader</span> <span class="hljs-operator">=</span> ClassReader(src)
+            <span class="hljs-type">val</span> <span class="hljs-variable">cw</span> <span class="hljs-operator">=</span> ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
+            <span class="hljs-type">val</span> <span class="hljs-variable">monitorClassVisitor</span> <span class="hljs-operator">=</span> LogClassVisitor(ASM_API, cw)
             classReader.accept(monitorClassVisitor, ClassReader.EXPAND_FRAMES)
             <span class="hljs-keyword">return</span> cw.toByteArray()
         &#125; <span class="hljs-keyword">catch</span> (e: MethodCallOptException) &#123;
@@ -1011,55 +1011,55 @@ CLoganProtocol.<span class="hljs-built_in">clogan_flush</span>()
     &#125;
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LogClassVisitor</span>(<span class="hljs-title">api</span>: <span class="hljs-title">Int</span>, <span class="hljs-title">cv</span>: <span class="hljs-title">ClassVisitor</span>) : <span class="hljs-title">ClassVisitor</span>(<span class="hljs-title">api</span>, <span class="hljs-title">cv</span>) </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">LogClassVisitor</span>(api: Int, cv: ClassVisitor) : ClassVisitor(api, cv) &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> className: String? = <span class="hljs-function"><span class="hljs-keyword">null</span></span>
-<span class="hljs-function"></span>
-<span class="hljs-function">    override fun <span class="hljs-title">visit</span><span class="hljs-params">(</span></span>
-<span class="hljs-params"><span class="hljs-function">        version: Int,</span></span>
-<span class="hljs-params"><span class="hljs-function">        access: Int,</span></span>
-<span class="hljs-params"><span class="hljs-function">        name: String?,</span></span>
-<span class="hljs-params"><span class="hljs-function">        signature: String?,</span></span>
-<span class="hljs-params"><span class="hljs-function">        superName: String?,</span></span>
-<span class="hljs-params"><span class="hljs-function">        interfaces: Array&lt;out String&gt;?</span></span>
-<span class="hljs-params"><span class="hljs-function">    )</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.visit(version, access, name, signature, superName, interfaces)
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> className: String? = <span class="hljs-literal">null</span>
+
+    override fun <span class="hljs-title function_">visit</span><span class="hljs-params">(</span>
+<span class="hljs-params">        version: Int,</span>
+<span class="hljs-params">        access: Int,</span>
+<span class="hljs-params">        name: String?,</span>
+<span class="hljs-params">        signature: String?,</span>
+<span class="hljs-params">        superName: String?,</span>
+<span class="hljs-params">        interfaces: Array&lt;out String&gt;?</span>
+<span class="hljs-params">    )</span> &#123;
+        <span class="hljs-built_in">super</span>.visit(version, access, name, signature, superName, interfaces)
         className = name
     &#125;
 
-    <span class="hljs-function">override fun <span class="hljs-title">visitMethod</span><span class="hljs-params">(</span></span>
-<span class="hljs-params"><span class="hljs-function">        access: Int,</span></span>
-<span class="hljs-params"><span class="hljs-function">        name: String?,</span></span>
-<span class="hljs-params"><span class="hljs-function">        desc: String?,</span></span>
-<span class="hljs-params"><span class="hljs-function">        signature: String?,</span></span>
-<span class="hljs-params"><span class="hljs-function">        exceptions: Array&lt;out String&gt;?</span></span>
-<span class="hljs-params"><span class="hljs-function">    )</span>: MethodVisitor </span>&#123;
+    override fun <span class="hljs-title function_">visitMethod</span><span class="hljs-params">(</span>
+<span class="hljs-params">        access: Int,</span>
+<span class="hljs-params">        name: String?,</span>
+<span class="hljs-params">        desc: String?,</span>
+<span class="hljs-params">        signature: String?,</span>
+<span class="hljs-params">        exceptions: Array&lt;out String&gt;?</span>
+<span class="hljs-params">    )</span>: MethodVisitor &#123;
         val methodVisitor: MethodVisitor =
-            <span class="hljs-keyword">super</span>.visitMethod(access, name, desc, signature, exceptions)
+            <span class="hljs-built_in">super</span>.visitMethod(access, name, desc, signature, exceptions)
         <span class="hljs-keyword">return</span> MethodVisit(methodVisitor, className, ASM_API, access, name, desc)
     &#125;
 
-    <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MethodVisit</span>(</span>
-<span class="hljs-class">        <span class="hljs-title">methodVisitor</span>: <span class="hljs-title">MethodVisitor</span>,</span>
-<span class="hljs-class">        <span class="hljs-title">className</span>: <span class="hljs-title">String</span>?,</span>
-<span class="hljs-class">        <span class="hljs-title">api</span>: <span class="hljs-title">Int</span>,</span>
-<span class="hljs-class">        <span class="hljs-title">access</span>: <span class="hljs-title">Int</span>,</span>
-<span class="hljs-class">        <span class="hljs-title">name</span>: <span class="hljs-title">String</span>?,</span>
-<span class="hljs-class">        <span class="hljs-title">desc</span>: <span class="hljs-title">String</span>?</span>
-<span class="hljs-class">    ) : <span class="hljs-title">AdviceAdapter</span>(<span class="hljs-title">api</span>, <span class="hljs-title">methodVisitor</span>, <span class="hljs-title">access</span>, <span class="hljs-title">name</span>, <span class="hljs-title">desc</span>) </span>&#123;
+    <span class="hljs-keyword">class</span> <span class="hljs-title class_">MethodVisit</span>(
+        methodVisitor: MethodVisitor,
+        className: String?,
+        api: Int,
+        access: Int,
+        name: String?,
+        desc: String?
+    ) : AdviceAdapter(api, methodVisitor, access, name, desc) &#123;
 
-        <span class="hljs-function">override fun <span class="hljs-title">visitMethodInsn</span><span class="hljs-params">(</span></span>
-<span class="hljs-params"><span class="hljs-function">            opcode: Int,</span></span>
-<span class="hljs-params"><span class="hljs-function">            owner: String,</span></span>
-<span class="hljs-params"><span class="hljs-function">            name: String,</span></span>
-<span class="hljs-params"><span class="hljs-function">            descriptor: String,</span></span>
-<span class="hljs-params"><span class="hljs-function">            isInterface: Boolean</span></span>
-<span class="hljs-params"><span class="hljs-function">        )</span> </span>&#123;
+        override fun <span class="hljs-title function_">visitMethodInsn</span><span class="hljs-params">(</span>
+<span class="hljs-params">            opcode: Int,</span>
+<span class="hljs-params">            owner: String,</span>
+<span class="hljs-params">            name: String,</span>
+<span class="hljs-params">            descriptor: String,</span>
+<span class="hljs-params">            isInterface: Boolean</span>
+<span class="hljs-params">        )</span> &#123;
             val ext: LogExt? = LogExt.needRep(owner, name, descriptor)
-            <span class="hljs-keyword">if</span> (ext != <span class="hljs-keyword">null</span>) &#123;
-                <span class="hljs-keyword">super</span>.visitMethodInsn(opcode, LOG_LIB_CLASS, name, descriptor, isInterface)
+            <span class="hljs-keyword">if</span> (ext != <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-built_in">super</span>.visitMethodInsn(opcode, LOG_LIB_CLASS, name, descriptor, isInterface)
             &#125; <span class="hljs-keyword">else</span> &#123;
-                <span class="hljs-keyword">super</span>.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                <span class="hljs-built_in">super</span>.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             &#125;
         &#125;
     &#125;

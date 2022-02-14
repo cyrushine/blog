@@ -30,7 +30,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-12-leakcanary/hprof_header.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-12-leakcanary/hprof_record.png">
 <meta property="article:published_time" content="2021-04-12T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="LeakCanary">
 <meta property="article:tag" content="内存优化，OOM">
@@ -79,11 +79,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -260,16 +260,16 @@
 </tr>
 </tbody></table>
 <p>所有的引用类型都可以在构造时与一个 <code>ReferenceQueue</code> 关联，当引用的对象被 GC 后，这个 <code>Reference</code> 将被入队到关联的引用队列里</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Reference</span>&lt;<span class="hljs-title">T</span>&gt; </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Reference</span>&lt;T&gt; &#123;
     <span class="hljs-comment">/* -- Constructors -- */</span>
 
     Reference(T referent) &#123;
-        <span class="hljs-keyword">this</span>(referent, <span class="hljs-keyword">null</span>);
+        <span class="hljs-built_in">this</span>(referent, <span class="hljs-literal">null</span>);
     &#125;
 
-    Reference(T referent, ReferenceQueue&lt;? <span class="hljs-keyword">super</span> T&gt; queue) &#123;
-        <span class="hljs-keyword">this</span>.referent = referent;
-        <span class="hljs-keyword">this</span>.queue = queue;
+    Reference(T referent, ReferenceQueue&lt;? <span class="hljs-built_in">super</span> T&gt; queue) &#123;
+        <span class="hljs-built_in">this</span>.referent = referent;
+        <span class="hljs-built_in">this</span>.queue = queue;
     &#125;
 &#125;</code></pre></div>
 
@@ -468,7 +468,7 @@
     viewModelMap = <span class="hljs-keyword">try</span> &#123;
       <span class="hljs-keyword">val</span> mMapField = ViewModelStore::<span class="hljs-keyword">class</span>.java.getDeclaredField(<span class="hljs-string">&quot;mMap&quot;</span>)
       mMapField.isAccessible = <span class="hljs-literal">true</span>
-      <span class="hljs-meta">@Suppress(<span class="hljs-meta-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
+      <span class="hljs-meta">@Suppress(<span class="hljs-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
       mMapField[storeOwner.viewModelStore] <span class="hljs-keyword">as</span> Map&lt;String, ViewModel&gt;
     &#125; <span class="hljs-keyword">catch</span> (ignored: Exception) &#123;
       <span class="hljs-literal">null</span>
@@ -489,7 +489,7 @@
 <span class="hljs-params"><span class="hljs-function">      reachabilityWatcher: <span class="hljs-type">ReachabilityWatcher</span></span></span>
 <span class="hljs-params"><span class="hljs-function">    )</span></span> &#123;
       <span class="hljs-keyword">val</span> provider = ViewModelProvider(storeOwner, <span class="hljs-keyword">object</span> : Factory &#123;
-        <span class="hljs-meta">@Suppress(<span class="hljs-meta-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
+        <span class="hljs-meta">@Suppress(<span class="hljs-string">&quot;UNCHECKED_CAST&quot;</span>)</span>
         <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T : ViewModel?&gt;</span> <span class="hljs-title">create</span><span class="hljs-params">(modelClass: <span class="hljs-type">Class</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span>: T =
           ViewModelClearedWatcher(storeOwner, reachabilityWatcher) <span class="hljs-keyword">as</span> T
       &#125;)
@@ -1163,7 +1163,7 @@ HeapAnalyzer.analyze
     <span class="hljs-comment">// ...</span>
     <span class="hljs-comment">// If the app is being launched for full backup or restore, bring it up in</span>
     <span class="hljs-comment">// a restricted environment with the base application class.</span>
-    app = data.info.makeApplication(data.restrictedBackupMode, <span class="hljs-keyword">null</span>);
+    app = data.info.makeApplication(data.restrictedBackupMode, <span class="hljs-literal">null</span>);
     <span class="hljs-comment">// Propagate autofill compat state</span>
     app.setAutofillOptions(data.autofillOptions);
     <span class="hljs-comment">// Propagate Content Capture options</span>
@@ -1182,7 +1182,7 @@ HeapAnalyzer.analyze
         mInstrumentation.onCreate(data.instrumentationArgs);
     &#125;
     <span class="hljs-keyword">catch</span> (Exception e) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(
             <span class="hljs-string">&quot;Exception thrown in onCreate() of &quot;</span>
             + data.instrumentationName + <span class="hljs-string">&quot;: &quot;</span> + e.toString(), e);
     &#125;
@@ -1190,7 +1190,7 @@ HeapAnalyzer.analyze
         mInstrumentation.callApplicationOnCreate(app);
     &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
         <span class="hljs-keyword">if</span> (!mInstrumentation.onException(app, e)) &#123;
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(
               <span class="hljs-string">&quot;Unable to create application &quot;</span> + app.getClass().getName()
               + <span class="hljs-string">&quot;: &quot;</span> + e.toString(), e);
         &#125;
@@ -1198,14 +1198,14 @@ HeapAnalyzer.analyze
     <span class="hljs-comment">// ...</span>
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">installContentProviders</span><span class="hljs-params">(</span></span>
-<span class="hljs-params"><span class="hljs-function">        Context context, List&lt;ProviderInfo&gt; providers)</span> </span>&#123;
-    <span class="hljs-keyword">final</span> ArrayList&lt;ContentProviderHolder&gt; results = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">installContentProviders</span><span class="hljs-params">(</span>
+<span class="hljs-params">        Context context, List&lt;ProviderInfo&gt; providers)</span> &#123;
+    <span class="hljs-keyword">final</span> ArrayList&lt;ContentProviderHolder&gt; results = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
     <span class="hljs-keyword">for</span> (ProviderInfo cpi : providers) &#123;
-        ContentProviderHolder cph = installProvider(context, <span class="hljs-keyword">null</span>, cpi,
-                <span class="hljs-keyword">false</span> <span class="hljs-comment">/*noisy*/</span>, <span class="hljs-keyword">true</span> <span class="hljs-comment">/*noReleaseNeeded*/</span>, <span class="hljs-keyword">true</span> <span class="hljs-comment">/*stable*/</span>);
-        <span class="hljs-keyword">if</span> (cph != <span class="hljs-keyword">null</span>) &#123;
-            cph.noReleaseNeeded = <span class="hljs-keyword">true</span>;
+        <span class="hljs-type">ContentProviderHolder</span> <span class="hljs-variable">cph</span> <span class="hljs-operator">=</span> installProvider(context, <span class="hljs-literal">null</span>, cpi,
+                <span class="hljs-literal">false</span> <span class="hljs-comment">/*noisy*/</span>, <span class="hljs-literal">true</span> <span class="hljs-comment">/*noReleaseNeeded*/</span>, <span class="hljs-literal">true</span> <span class="hljs-comment">/*stable*/</span>);
+        <span class="hljs-keyword">if</span> (cph != <span class="hljs-literal">null</span>) &#123;
+            cph.noReleaseNeeded = <span class="hljs-literal">true</span>;
             results.add(cph);
         &#125;
     &#125;
@@ -1214,22 +1214,22 @@ HeapAnalyzer.analyze
 <span class="hljs-comment">// 实例化 ContentProvider 并调用生命周期函数 onCreate</span>
 <span class="hljs-keyword">private</span> ContentProviderHolder ActivityThread.installProvider(Context context,
         ContentProviderHolder holder, ProviderInfo info,
-        <span class="hljs-keyword">boolean</span> noisy, <span class="hljs-keyword">boolean</span> noReleaseNeeded, <span class="hljs-keyword">boolean</span> stable) &#123;
+        <span class="hljs-type">boolean</span> noisy, <span class="hljs-type">boolean</span> noReleaseNeeded, <span class="hljs-type">boolean</span> stable) &#123;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">final</span> java.lang.ClassLoader cl = c.getClassLoader();
-    LoadedApk packageInfo = peekPackageInfo(ai.packageName, <span class="hljs-keyword">true</span>);
-    <span class="hljs-keyword">if</span> (packageInfo == <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">final</span> java.lang.<span class="hljs-type">ClassLoader</span> <span class="hljs-variable">cl</span> <span class="hljs-operator">=</span> c.getClassLoader();
+    <span class="hljs-type">LoadedApk</span> <span class="hljs-variable">packageInfo</span> <span class="hljs-operator">=</span> peekPackageInfo(ai.packageName, <span class="hljs-literal">true</span>);
+    <span class="hljs-keyword">if</span> (packageInfo == <span class="hljs-literal">null</span>) &#123;
         <span class="hljs-comment">// System startup case.</span>
         packageInfo = getSystemContext().mPackageInfo;
     &#125;
     localProvider = packageInfo.getAppFactory()
             .instantiateProvider(cl, info.name);
     provider = localProvider.getIContentProvider();
-    <span class="hljs-keyword">if</span> (provider == <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">if</span> (provider == <span class="hljs-literal">null</span>) &#123;
         Slog.e(TAG, <span class="hljs-string">&quot;Failed to instantiate class &quot;</span> +
               info.name + <span class="hljs-string">&quot; from sourceDir &quot;</span> +
               info.applicationInfo.sourceDir);
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
     &#125;
     <span class="hljs-keyword">if</span> (DEBUG_PROVIDER) Slog.v(
         TAG, <span class="hljs-string">&quot;Instantiating local provider &quot;</span> + info.name);
@@ -1239,12 +1239,12 @@ HeapAnalyzer.analyze
 &#125;
 
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> ContentProvider.attachInfo(Context context, ProviderInfo info) &#123;
-    attachInfo(context, info, <span class="hljs-keyword">false</span>);
+    attachInfo(context, info, <span class="hljs-literal">false</span>);
 &#125;
 
-<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> ContentProvider.attachInfo(Context context, ProviderInfo info, <span class="hljs-keyword">boolean</span> testing) &#123;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> ContentProvider.attachInfo(Context context, ProviderInfo info, <span class="hljs-type">boolean</span> testing) &#123;
     <span class="hljs-comment">// ...</span>
-    ContentProvider.<span class="hljs-keyword">this</span>.onCreate();
+    ContentProvider.<span class="hljs-built_in">this</span>.onCreate();
 &#125;</code></pre></div>
 
 <h3 id="有什么缺点"><a href="#有什么缺点" class="headerlink" title="有什么缺点"></a>有什么缺点</h3><ol>

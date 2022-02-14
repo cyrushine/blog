@@ -28,7 +28,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory_log.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory.png">
 <meta property="article:published_time" content="2021-04-16T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.941Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.785Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="OOM">
 <meta name="twitter:card" content="summary_large_image">
@@ -76,11 +76,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -328,7 +328,7 @@
 <p><img src="../../../../image/2021-04-16-looking-into-oom/oom_memory_log.png" srcset="/image/loading.gif" lazyload alt="oom_memory_log.png"></p>
 <p><img src="../../../../image/2021-04-16-looking-into-oom/oom_memory.png" srcset="/image/loading.gif" lazyload alt="oom_memory.png"></p>
 <h3 id="定位抛出-OOM-的位置"><a href="#定位抛出-OOM-的位置" class="headerlink" title="定位抛出 OOM 的位置"></a>定位抛出 OOM 的位置</h3><p>最终抛出 <code>OutOfMemoryError</code> 的代码 是 <code>Thread::ThrowOutOfMemoryError</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::ThrowOutOfMemoryError</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* msg)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::ThrowOutOfMemoryError</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* msg)</span> </span>&#123;
   <span class="hljs-built_in">LOG</span>(WARNING) &lt;&lt; <span class="hljs-string">&quot;Throwing OutOfMemoryError &quot;</span>
                &lt;&lt; <span class="hljs-string">&#x27;&quot;&#x27;</span> &lt;&lt; msg &lt;&lt; <span class="hljs-string">&#x27;&quot;&#x27;</span>
                &lt;&lt; <span class="hljs-string">&quot; (VmSize &quot;</span> &lt;&lt; <span class="hljs-built_in">GetProcessStatus</span>(<span class="hljs-string">&quot;VmSize&quot;</span>)
@@ -343,21 +343,21 @@
   &#125;
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::ThrowNewException</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* exception_class_descriptor,</span></span>
-<span class="hljs-params"><span class="hljs-function">                               <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* msg)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::ThrowNewException</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* exception_class_descriptor,</span></span>
+<span class="hljs-params"><span class="hljs-function">                               <span class="hljs-type">const</span> <span class="hljs-type">char</span>* msg)</span> </span>&#123;
   <span class="hljs-comment">// Callers should either clear or call ThrowNewWrappedException.</span>
   <span class="hljs-built_in">AssertNoPendingExceptionForNewException</span>(msg);
   <span class="hljs-built_in">ThrowNewWrappedException</span>(exception_class_descriptor, msg);
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::ThrowNewWrappedException</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* exception_class_descriptor,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                      <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* msg)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::ThrowNewWrappedException</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* exception_class_descriptor,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                      <span class="hljs-type">const</span> <span class="hljs-type">char</span>* msg)</span> </span>&#123;
   <span class="hljs-comment">// ... 构造 Ljava/lang/OutOfMemoryError;</span>
 &#125;</code></pre></div>
 
 <p>而因为堆内存分配失败抛出 OOM 的代码在 <code>Heap::ThrowOutOfMemoryError</code>，其中异常信息为：</p>
 <p><code>&quot;Failed to allocate a (x) byte allocation with (x) free bytes and (x) until OOM, target footprint (x), growth limit (x)&quot;</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Heap::ThrowOutOfMemoryError</span><span class="hljs-params">(Thread* self, <span class="hljs-keyword">size_t</span> byte_count, AllocatorType allocator_type)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Heap::ThrowOutOfMemoryError</span><span class="hljs-params">(Thread* self, <span class="hljs-type">size_t</span> byte_count, AllocatorType allocator_type)</span> </span>&#123;
   <span class="hljs-comment">// If we&#x27;re in a stack overflow, do not create a new exception. It would require running the</span>
   <span class="hljs-comment">// constructor, which will of course still be in a stack overflow.</span>
   <span class="hljs-keyword">if</span> (self-&gt;<span class="hljs-built_in">IsHandlingStackOverflow</span>()) &#123;
@@ -367,7 +367,7 @@
   &#125;
 
   std::ostringstream oss;
-  <span class="hljs-keyword">size_t</span> total_bytes_free = <span class="hljs-built_in">GetFreeMemory</span>();
+  <span class="hljs-type">size_t</span> total_bytes_free = <span class="hljs-built_in">GetFreeMemory</span>();
   oss &lt;&lt; <span class="hljs-string">&quot;Failed to allocate a &quot;</span> &lt;&lt; byte_count &lt;&lt; <span class="hljs-string">&quot; byte allocation with &quot;</span> &lt;&lt; total_bytes_free
       &lt;&lt; <span class="hljs-string">&quot; free bytes and &quot;</span> &lt;&lt; <span class="hljs-built_in">PrettySize</span>(<span class="hljs-built_in">GetFreeMemoryUntilOOME</span>()) &lt;&lt; <span class="hljs-string">&quot; until OOM,&quot;</span>
       &lt;&lt; <span class="hljs-string">&quot; target footprint &quot;</span> &lt;&lt; target_footprint_.<span class="hljs-built_in">load</span>(std::memory_order_relaxed)
@@ -401,19 +401,19 @@
 &#125;</code></pre></div>
 
 <h2 id="创建线程时-Could-not-allocate-JNI-Env-导致的-OOM"><a href="#创建线程时-Could-not-allocate-JNI-Env-导致的-OOM" class="headerlink" title="创建线程时 Could not allocate JNI Env 导致的 OOM"></a>创建线程时 <code>Could not allocate JNI Env</code> 导致的 OOM</h2><h3 id="测试代码"><a href="#测试代码" class="headerlink" title="测试代码"></a>测试代码</h3><p>线程数量可以通过 <code>/proc/&#123;pid&#125;/status</code> 里 <code>Threads</code> 那行拿到</p>
-<div class="hljs code-wrapper"><pre><code class="hljs javascript">Name:	m.myapplication
-<span class="hljs-attr">State</span>:	R (running)
-<span class="hljs-attr">Tgid</span>:	<span class="hljs-number">26939</span>
-<span class="hljs-attr">Ngid</span>:	<span class="hljs-number">0</span>
-<span class="hljs-attr">Pid</span>:	<span class="hljs-number">26939</span>
-<span class="hljs-attr">PPid</span>:	<span class="hljs-number">1846</span>
-<span class="hljs-attr">TracerPid</span>:	<span class="hljs-number">0</span>
-<span class="hljs-attr">Uid</span>:	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>
-<span class="hljs-attr">Gid</span>:	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>
-<span class="hljs-attr">FDSize</span>:	<span class="hljs-number">64</span>
-<span class="hljs-attr">Groups</span>:	<span class="hljs-number">3003</span> <span class="hljs-number">9997</span> <span class="hljs-number">20100</span> <span class="hljs-number">50100</span> 
+<div class="hljs code-wrapper"><pre><code class="hljs javascript"><span class="hljs-title class_">Name</span>:	m.<span class="hljs-property">myapplication</span>
+<span class="hljs-title class_">State</span>:	R (running)
+<span class="hljs-title class_">Tgid</span>:	<span class="hljs-number">26939</span>
+<span class="hljs-title class_">Ngid</span>:	<span class="hljs-number">0</span>
+<span class="hljs-title class_">Pid</span>:	<span class="hljs-number">26939</span>
+<span class="hljs-title class_">PPid</span>:	<span class="hljs-number">1846</span>
+<span class="hljs-title class_">TracerPid</span>:	<span class="hljs-number">0</span>
+<span class="hljs-title class_">Uid</span>:	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>
+<span class="hljs-title class_">Gid</span>:	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>	<span class="hljs-number">10100</span>
+<span class="hljs-title class_">FDSize</span>:	<span class="hljs-number">64</span>
+<span class="hljs-title class_">Groups</span>:	<span class="hljs-number">3003</span> <span class="hljs-number">9997</span> <span class="hljs-number">20100</span> <span class="hljs-number">50100</span> 
 ...
-<span class="hljs-attr">Threads</span>:	<span class="hljs-number">17</span>                  <span class="hljs-comment">// 线程数量</span>
+<span class="hljs-title class_">Threads</span>:	<span class="hljs-number">17</span>                  <span class="hljs-comment">// 线程数量</span>
 ...</code></pre></div>
 
 <p>不断地创建新线程，新线程啥也不干就阻塞住，从而使 APP 进程的线程数量持续上涨，模拟 APP 随意创建线程/线程池而没有做统一的管理，导致创建大量线程的情况，最后抛出 <code>Could not allocate JNI Env: Failed anonymous mmap(0x0, 8192, 0x3, 0x2, 53, 0): Permission denied. See process maps in the log.</code></p>
@@ -455,36 +455,36 @@
     regexGroupInFile(pattern = <span class="hljs-string">&quot;.*Threads:\\s+(\\d+).*&quot;</span>, path = <span class="hljs-string">&quot;/proc/<span class="hljs-subst">$&#123;myPid()&#125;</span>/status&quot;</span>)?.toInt()
 &#125;.getOrDefault(<span class="hljs-number">0</span>)</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs javascript"><span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.067</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1633</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.170</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1680</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.272</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1731</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.374</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1784</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.475</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1829</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.578</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1880</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.680</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1929</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.783</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1972</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.886</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">2017</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.988</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">2067</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.090</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">2113</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.193</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">2164</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.294</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">2208</span>
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.368</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29771</span>/com.myapplication W/m.myapplicatio: Throwing OutOfMemoryError <span class="hljs-string">&quot;Could not allocate JNI Env: Failed anonymous mmap(0x0, 8192, 0x3, 0x2, 53, 0): Permission denied. See process maps in the log.&quot;</span>
+<div class="hljs code-wrapper"><pre><code class="hljs javascript"><span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.067</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1633</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.170</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1680</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.272</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1731</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.374</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1784</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.475</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1829</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.578</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1880</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.680</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1929</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.783</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1972</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.886</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">2017</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.988</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">2067</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.090</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">2113</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.193</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">2164</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.294</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">2208</span>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.368</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29771</span>/com.<span class="hljs-property">myapplication</span> W/m.<span class="hljs-property">myapplicatio</span>: <span class="hljs-title class_">Throwing</span> <span class="hljs-title class_">OutOfMemoryError</span> <span class="hljs-string">&quot;Could not allocate JNI Env: Failed anonymous mmap(0x0, 8192, 0x3, 0x2, 53, 0): Permission denied. See process maps in the log.&quot;</span>
     
     --------- beginning <span class="hljs-keyword">of</span> crash
-<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.368</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29771</span>/com.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-<span class="hljs-number">2</span>
-    <span class="hljs-attr">Process</span>: com.myapplication, <span class="hljs-attr">PID</span>: <span class="hljs-number">29743</span>
-    java.lang.OutOfMemoryError: Could not allocate JNI Env: Failed anonymous mmap(<span class="hljs-number">0x0</span>, <span class="hljs-number">8192</span>, <span class="hljs-number">0x3</span>, <span class="hljs-number">0x2</span>, <span class="hljs-number">53</span>, <span class="hljs-number">0</span>): Permission denied. See process maps <span class="hljs-keyword">in</span> the log.
-        at java.lang.Thread.nativeCreate(Native Method)
-        at java.lang.Thread.start(Thread.java:<span class="hljs-number">733</span>)
-        at com.myapplication.MemoryKillerService$onHandleIntent$1.invoke(MemoryKillerService.kt:<span class="hljs-number">35</span>)
-        at com.myapplication.MemoryKillerService$onHandleIntent$1.invoke(MemoryKillerService.kt:<span class="hljs-number">22</span>)
-        at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:<span class="hljs-number">30</span>)</code></pre></div>
+<span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">11.368</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29771</span>/com.<span class="hljs-property">myapplication</span> E/<span class="hljs-title class_">AndroidRuntime</span>: <span class="hljs-variable constant_">FATAL</span> <span class="hljs-attr">EXCEPTION</span>: <span class="hljs-title class_">Thread</span>-<span class="hljs-number">2</span>
+    <span class="hljs-title class_">Process</span>: com.<span class="hljs-property">myapplication</span>, <span class="hljs-attr">PID</span>: <span class="hljs-number">29743</span>
+    java.<span class="hljs-property">lang</span>.<span class="hljs-property">OutOfMemoryError</span>: <span class="hljs-title class_">Could</span> not allocate <span class="hljs-variable constant_">JNI</span> <span class="hljs-title class_">Env</span>: <span class="hljs-title class_">Failed</span> anonymous <span class="hljs-title function_">mmap</span>(<span class="hljs-number">0x0</span>, <span class="hljs-number">8192</span>, <span class="hljs-number">0x3</span>, <span class="hljs-number">0x2</span>, <span class="hljs-number">53</span>, <span class="hljs-number">0</span>): <span class="hljs-title class_">Permission</span> denied. <span class="hljs-title class_">See</span> process maps <span class="hljs-keyword">in</span> the log.
+        at java.<span class="hljs-property">lang</span>.<span class="hljs-property">Thread</span>.<span class="hljs-title function_">nativeCreate</span>(<span class="hljs-title class_">Native</span> <span class="hljs-title class_">Method</span>)
+        at java.<span class="hljs-property">lang</span>.<span class="hljs-property">Thread</span>.<span class="hljs-title function_">start</span>(<span class="hljs-title class_">Thread</span>.<span class="hljs-property">java</span>:<span class="hljs-number">733</span>)
+        at com.<span class="hljs-property">myapplication</span>.<span class="hljs-property">MemoryKillerService$onHandleIntent$1</span>.<span class="hljs-title function_">invoke</span>(<span class="hljs-title class_">MemoryKillerService</span>.<span class="hljs-property">kt</span>:<span class="hljs-number">35</span>)
+        at com.<span class="hljs-property">myapplication</span>.<span class="hljs-property">MemoryKillerService$onHandleIntent$1</span>.<span class="hljs-title function_">invoke</span>(<span class="hljs-title class_">MemoryKillerService</span>.<span class="hljs-property">kt</span>:<span class="hljs-number">22</span>)
+        at kotlin.<span class="hljs-property">concurrent</span>.<span class="hljs-property">ThreadsKt$thread$thread$1</span>.<span class="hljs-title function_">run</span>(<span class="hljs-title class_">Thread</span>.<span class="hljs-property">kt</span>:<span class="hljs-number">30</span>)</code></pre></div>
 
 <h3 id="代码追踪"><a href="#代码追踪" class="headerlink" title="代码追踪"></a>代码追踪</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp">Thread.<span class="hljs-built_in">start</span>()
 Thread.<span class="hljs-function">nativeCreate</span>
 <span class="hljs-function">Thread_nativeCreate</span>
 <span class="hljs-function"></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::CreateNativeThread</span><span class="hljs-params">(JNIEnv* env, jobject java_peer, <span class="hljs-keyword">size_t</span> stack_size, <span class="hljs-keyword">bool</span> is_daemon)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::CreateNativeThread</span><span class="hljs-params">(JNIEnv* env, jobject java_peer, <span class="hljs-type">size_t</span> stack_size, <span class="hljs-type">bool</span> is_daemon)</span> </span>&#123;
   <span class="hljs-comment">// ...</span>
   <span class="hljs-comment">// Try to allocate a JNIEnvExt for the thread. We do this here as we might be out of memory and</span>
   <span class="hljs-comment">// do not have a good way to report this on the child&#x27;s side.</span>
@@ -529,7 +529,7 @@ JNIEnvExt::<span class="hljs-built_in">JNIEnvExt</span>(Thread* self_in, JavaVME
 &#125;
 
 <span class="hljs-comment">// table_mem_map_ 是由 MemMap::MapAnonymous 创建的</span>
-IndirectReferenceTable::<span class="hljs-built_in">IndirectReferenceTable</span>(<span class="hljs-keyword">size_t</span> max_count,
+IndirectReferenceTable::<span class="hljs-built_in">IndirectReferenceTable</span>(<span class="hljs-type">size_t</span> max_count,
                                                IndirectRefKind desired_kind,
                                                ResizableCapacity resizable,
                                                std::string* error_msg)
@@ -542,9 +542,9 @@ IndirectReferenceTable::<span class="hljs-built_in">IndirectReferenceTable</span
   <span class="hljs-built_in">CHECK_NE</span>(desired_kind, kJniTransitionOrInvalid);
 
   <span class="hljs-comment">// Overflow and maximum check.</span>
-  <span class="hljs-built_in">CHECK_LE</span>(max_count, kMaxTableSizeInBytes / <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(IrtEntry));
+  <span class="hljs-built_in">CHECK_LE</span>(max_count, kMaxTableSizeInBytes / <span class="hljs-built_in">sizeof</span>(IrtEntry));
 
-  <span class="hljs-keyword">const</span> <span class="hljs-keyword">size_t</span> table_bytes = <span class="hljs-built_in">RoundUp</span>(max_count * <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(IrtEntry), kPageSize);
+  <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> table_bytes = <span class="hljs-built_in">RoundUp</span>(max_count * <span class="hljs-built_in">sizeof</span>(IrtEntry), kPageSize);
   table_mem_map_ = MemMap::<span class="hljs-built_in">MapAnonymous</span>(<span class="hljs-string">&quot;indirect ref table&quot;</span>,
                                         table_bytes,
                                         PROT_READ | PROT_WRITE,
@@ -555,30 +555,30 @@ IndirectReferenceTable::<span class="hljs-built_in">IndirectReferenceTable</span
   &#125;
 
   <span class="hljs-keyword">if</span> (table_mem_map_.<span class="hljs-built_in">IsValid</span>()) &#123;
-    table_ = <span class="hljs-keyword">reinterpret_cast</span>&lt;IrtEntry*&gt;(table_mem_map_.<span class="hljs-built_in">Begin</span>());
+    table_ = <span class="hljs-built_in">reinterpret_cast</span>&lt;IrtEntry*&gt;(table_mem_map_.<span class="hljs-built_in">Begin</span>());
   &#125; <span class="hljs-keyword">else</span> &#123;
     table_ = <span class="hljs-literal">nullptr</span>;
   &#125;
   segment_state_ = kIRTFirstSegment;
   last_known_previous_state_ = kIRTFirstSegment;
   <span class="hljs-comment">// Take into account the actual length.</span>
-  max_entries_ = table_bytes / <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(IrtEntry);
+  max_entries_ = table_bytes / <span class="hljs-built_in">sizeof</span>(IrtEntry);
 &#125;
 
 <span class="hljs-comment">// 找到错误信息 Failed anonymous mmap 的出处了</span>
-<span class="hljs-function">MemMap <span class="hljs-title">MemMap::MapAnonymous</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* name,</span></span>
-<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-keyword">uint8_t</span>* addr,</span></span>
-<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-keyword">size_t</span> byte_count,</span></span>
-<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-keyword">int</span> prot,</span></span>
-<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-keyword">bool</span> low_4gb,</span></span>
-<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-keyword">bool</span> reuse,</span></span>
+<span class="hljs-function">MemMap <span class="hljs-title">MemMap::MapAnonymous</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* name,</span></span>
+<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-type">uint8_t</span>* addr,</span></span>
+<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-type">size_t</span> byte_count,</span></span>
+<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-type">int</span> prot,</span></span>
+<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-type">bool</span> low_4gb,</span></span>
+<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-type">bool</span> reuse,</span></span>
 <span class="hljs-params"><span class="hljs-function">                            <span class="hljs-comment">/*inout*/</span>MemMap* reservation,</span></span>
 <span class="hljs-params"><span class="hljs-function">                            <span class="hljs-comment">/*out*/</span>std::string* error_msg,</span></span>
-<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-keyword">bool</span> use_debug_name)</span> </span>&#123;
+<span class="hljs-params"><span class="hljs-function">                            <span class="hljs-type">bool</span> use_debug_name)</span> </span>&#123;
   <span class="hljs-comment">// ...</span>
   <span class="hljs-comment">// fd 没有指向任何有效文件，addr 也是 nullptr</span>
   <span class="hljs-comment">// 也就是说这里只是开辟了容量是 byte_count 的一段内存空间</span>
-  <span class="hljs-keyword">void</span>* actual = <span class="hljs-built_in">MapInternal</span>(addr,
+  <span class="hljs-type">void</span>* actual = <span class="hljs-built_in">MapInternal</span>(addr,
                              page_aligned_byte_count,
                              prot,
                              flags,
@@ -650,13 +650,13 @@ mmap</code></pre></div>
 Thread.<span class="hljs-function">nativeCreate</span>
 <span class="hljs-function">Thread_nativeCreate</span>
 <span class="hljs-function"></span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">Thread::CreateNativeThread</span><span class="hljs-params">(JNIEnv* env, jobject java_peer, <span class="hljs-keyword">size_t</span> stack_size, <span class="hljs-keyword">bool</span> is_daemon)</span> </span>&#123;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::CreateNativeThread</span><span class="hljs-params">(JNIEnv* env, jobject java_peer, <span class="hljs-type">size_t</span> stack_size, <span class="hljs-type">bool</span> is_daemon)</span> </span>&#123;
   <span class="hljs-comment">// ...</span>
   <span class="hljs-comment">// 不同于上面的情况，此时已为 JNIEnvExt 分配内存，但在执行 pthread_create 时出错了</span>
-  <span class="hljs-keyword">int</span> pthread_create_result = <span class="hljs-number">0</span>;
+  <span class="hljs-type">int</span> pthread_create_result = <span class="hljs-number">0</span>;
   <span class="hljs-keyword">if</span> (child_jni_env_ext.<span class="hljs-built_in">get</span>() != <span class="hljs-literal">nullptr</span>) &#123;
-    <span class="hljs-keyword">pthread_t</span> new_pthread;
-    <span class="hljs-keyword">pthread_attr_t</span> attr;
+    <span class="hljs-type">pthread_t</span> new_pthread;
+    <span class="hljs-type">pthread_attr_t</span> attr;
     child_thread-&gt;tlsPtr_.tmp_jni_env = child_jni_env_ext.<span class="hljs-built_in">get</span>();
     <span class="hljs-built_in">CHECK_PTHREAD_CALL</span>(pthread_attr_init, (&amp;attr), <span class="hljs-string">&quot;new thread&quot;</span>);
     <span class="hljs-built_in">CHECK_PTHREAD_CALL</span>(pthread_attr_setdetachstate, (&amp;attr, PTHREAD_CREATE_DETACHED),

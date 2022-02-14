@@ -26,7 +26,7 @@
 <meta property="og:description" content="写时复制（Copy On Write）CopyOnWriteArrayList使用 写时复制 实现的线程安全版 ArrayList，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组 public boolean add(E e) &amp;#123;     synchronized (lock) &amp;#123;         Obje">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-03-31T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="JUC">
 <meta property="article:tag" content="线程安全">
@@ -74,11 +74,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -231,45 +231,45 @@
             
             <div class="markdown-body">
               <h2 id="写时复制（Copy-On-Write）"><a href="#写时复制（Copy-On-Write）" class="headerlink" title="写时复制（Copy On Write）"></a>写时复制（Copy On Write）</h2><h3 id="CopyOnWriteArrayList"><a href="#CopyOnWriteArrayList" class="headerlink" title="CopyOnWriteArrayList"></a><code>CopyOnWriteArrayList</code></h3><p>使用 <strong>写时复制</strong> 实现的线程安全版 <code>ArrayList</code>，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">add</span><span class="hljs-params">(E e)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">add</span><span class="hljs-params">(E e)</span> &#123;
     <span class="hljs-keyword">synchronized</span> (lock) &#123;
         Object[] elements = getArray();
-        <span class="hljs-keyword">int</span> len = elements.length;
+        <span class="hljs-type">int</span> <span class="hljs-variable">len</span> <span class="hljs-operator">=</span> elements.length;
         Object[] newElements = Arrays.copyOf(elements, len + <span class="hljs-number">1</span>);
         newElements[len] = e;
         setArray(newElements);
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
     &#125;
 &#125;</code></pre></div>
 
 <p>也就是说所有的修改操作都不会修改原数组，这样所有的读操作（get、iterate）都可以不加锁，从而实现高效的读（虽然有可能会读到旧数据）；因为它的写操作是很昂贵的（复制一份出来），但同时它的读操作和迭代很高效（不上锁），所以它适用于读操作远大于写操作的情况；<code>CopyOnWriteArraySet</code> 内部是通过 <code>CopyOnWriteArrayList</code> 实现的</p>
 <h2 id="分段加锁"><a href="#分段加锁" class="headerlink" title="分段加锁"></a>分段加锁</h2><h3 id="ConcurrentHashMap"><a href="#ConcurrentHashMap" class="headerlink" title="ConcurrentHashMap"></a><code>ConcurrentHashMap</code></h3><p>跟 <code>HashMap</code> 一样采用数组 + 链表的实现，链表又叫做桶 or 箱子（bin）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ConcurrentHashMap</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractMap</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt;</span>
-<span class="hljs-class">    <span class="hljs-keyword">implements</span> <span class="hljs-title">ConcurrentMap</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt;, <span class="hljs-title">Serializable</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ConcurrentHashMap</span>&lt;K,V&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractMap</span>&lt;K,V&gt;
+    <span class="hljs-keyword">implements</span> <span class="hljs-title class_">ConcurrentMap</span>&lt;K,V&gt;, Serializable &#123;
     <span class="hljs-keyword">transient</span> <span class="hljs-keyword">volatile</span> Node&lt;K,V&gt;[] table;
 &#125;</code></pre></div>
 
 <p>写时采用 <strong>分段加锁</strong>，不对整个写操作 or <code>table</code> 加锁，而只对所在的桶加锁，其他线程依然可以进行读操作 or 对其他桶进行写操作</p>
 <p>整个 <code>ConcurrentHashMap</code> 都没有使用 <code>Lock</code> 进行阻塞，而是尽可能采用自旋 + CAS（乐观锁，是实现无锁操作的重要函数），最后才用 <code>synchronized</code>（参考文章，它的锁膨胀过程中掺杂自旋和阻塞）对桶上锁</p>
 <p><code>tabAt</code>、<code>setTabAt</code> 和 <code>casTabAt</code> 使对 <code>table</code> 的操作具有可见性和原子性，避免了对 <code>table</code> 上锁</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">final</span> V <span class="hljs-title">putVal</span><span class="hljs-params">(K key, V value, <span class="hljs-keyword">boolean</span> onlyIfAbsent)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> V <span class="hljs-title function_">putVal</span><span class="hljs-params">(K key, V value, <span class="hljs-type">boolean</span> onlyIfAbsent)</span> &#123;
     <span class="hljs-comment">// 没有对整个写操作加锁，也没有对 table 加锁</span>
-    <span class="hljs-keyword">if</span> (key == <span class="hljs-keyword">null</span> || value == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException();
-    <span class="hljs-keyword">int</span> hash = spread(key.hashCode());
-    <span class="hljs-keyword">int</span> binCount = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">if</span> (key == <span class="hljs-literal">null</span> || value == <span class="hljs-literal">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
+    <span class="hljs-type">int</span> <span class="hljs-variable">hash</span> <span class="hljs-operator">=</span> spread(key.hashCode());
+    <span class="hljs-type">int</span> <span class="hljs-variable">binCount</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
 
     <span class="hljs-comment">// CAS 失败会自旋，是乐观锁</span>
     <span class="hljs-keyword">for</span> (Node&lt;K,V&gt;[] tab = table;;) &#123;
-        Node&lt;K,V&gt; f; <span class="hljs-keyword">int</span> n, i, fh;
+        Node&lt;K,V&gt; f; <span class="hljs-type">int</span> n, i, fh;
 
         <span class="hljs-comment">// 如果 table == null，则进行初始化；初始化后每个桶是 null</span>
-        <span class="hljs-keyword">if</span> (tab == <span class="hljs-keyword">null</span> || (n = tab.length) == <span class="hljs-number">0</span>)
+        <span class="hljs-keyword">if</span> (tab == <span class="hljs-literal">null</span> || (n = tab.length) == <span class="hljs-number">0</span>)
             tab = initTable();
         
         <span class="hljs-comment">// 所在的桶为 null，不加锁直接用 CAS 操作添加新桶头，失败的话自旋</span>
-        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((f = tabAt(tab, i = (n - <span class="hljs-number">1</span>) &amp; hash)) == <span class="hljs-keyword">null</span>) &#123;
-            <span class="hljs-keyword">if</span> (casTabAt(tab, i, <span class="hljs-keyword">null</span>,
-                         <span class="hljs-keyword">new</span> Node&lt;K,V&gt;(hash, key, value, <span class="hljs-keyword">null</span>)))
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((f = tabAt(tab, i = (n - <span class="hljs-number">1</span>) &amp; hash)) == <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">if</span> (casTabAt(tab, i, <span class="hljs-literal">null</span>,
+                         <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>&lt;K,V&gt;(hash, key, value, <span class="hljs-literal">null</span>)))
                 <span class="hljs-keyword">break</span>;                   <span class="hljs-comment">// no lock when adding to empty bin</span>
         &#125;
         <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((fh = f.hash) == MOVED)
@@ -277,7 +277,7 @@
         <span class="hljs-keyword">else</span> &#123;
 
             <span class="hljs-comment">// 找到所在的不为 null 的桶，对单个桶上锁</span>
-            V oldVal = <span class="hljs-keyword">null</span>;
+            <span class="hljs-type">V</span> <span class="hljs-variable">oldVal</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
             <span class="hljs-keyword">synchronized</span> (f) &#123;
                 <span class="hljs-keyword">if</span> (tabAt(tab, i) == f) &#123;
 
@@ -289,16 +289,16 @@
                             K ek;
                             <span class="hljs-keyword">if</span> (e.hash == hash &amp;&amp;
                                 ((ek = e.key) == key ||
-                                 (ek != <span class="hljs-keyword">null</span> &amp;&amp; key.equals(ek)))) &#123;
+                                 (ek != <span class="hljs-literal">null</span> &amp;&amp; key.equals(ek)))) &#123;
                                 oldVal = e.val;
                                 <span class="hljs-keyword">if</span> (!onlyIfAbsent)
                                     e.val = value;
                                 <span class="hljs-keyword">break</span>;
                             &#125;
                             Node&lt;K,V&gt; pred = e;
-                            <span class="hljs-keyword">if</span> ((e = e.next) == <span class="hljs-keyword">null</span>) &#123;
-                                pred.next = <span class="hljs-keyword">new</span> Node&lt;K,V&gt;(hash, key,
-                                                          value, <span class="hljs-keyword">null</span>);
+                            <span class="hljs-keyword">if</span> ((e = e.next) == <span class="hljs-literal">null</span>) &#123;
+                                pred.next = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>&lt;K,V&gt;(hash, key,
+                                                          value, <span class="hljs-literal">null</span>);
                                 <span class="hljs-keyword">break</span>;
                             &#125;
                         &#125;
@@ -314,16 +314,16 @@
 
 <span class="hljs-comment">// 初始化 table，自旋 + CAS</span>
 <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] initTable() &#123;
-    Node&lt;K,V&gt;[] tab; <span class="hljs-keyword">int</span> sc;
-    <span class="hljs-keyword">while</span> ((tab = table) == <span class="hljs-keyword">null</span> || tab.length == <span class="hljs-number">0</span>) &#123;
+    Node&lt;K,V&gt;[] tab; <span class="hljs-type">int</span> sc;
+    <span class="hljs-keyword">while</span> ((tab = table) == <span class="hljs-literal">null</span> || tab.length == <span class="hljs-number">0</span>) &#123;
         <span class="hljs-keyword">if</span> ((sc = sizeCtl) &lt; <span class="hljs-number">0</span>)
             Thread.yield(); <span class="hljs-comment">// lost initialization race; just spin</span>
-        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (U.compareAndSwapInt(<span class="hljs-keyword">this</span>, SIZECTL, sc, -<span class="hljs-number">1</span>)) &#123;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (U.compareAndSwapInt(<span class="hljs-built_in">this</span>, SIZECTL, sc, -<span class="hljs-number">1</span>)) &#123;
             <span class="hljs-keyword">try</span> &#123;
-                <span class="hljs-keyword">if</span> ((tab = table) == <span class="hljs-keyword">null</span> || tab.length == <span class="hljs-number">0</span>) &#123;
-                    <span class="hljs-keyword">int</span> n = (sc &gt; <span class="hljs-number">0</span>) ? sc : DEFAULT_CAPACITY;
+                <span class="hljs-keyword">if</span> ((tab = table) == <span class="hljs-literal">null</span> || tab.length == <span class="hljs-number">0</span>) &#123;
+                    <span class="hljs-type">int</span> <span class="hljs-variable">n</span> <span class="hljs-operator">=</span> (sc &gt; <span class="hljs-number">0</span>) ? sc : DEFAULT_CAPACITY;
                     <span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span>
-                    Node&lt;K,V&gt;[] nt = (Node&lt;K,V&gt;[])<span class="hljs-keyword">new</span> Node&lt;?,?&gt;[n];
+                    Node&lt;K,V&gt;[] nt = (Node&lt;K,V&gt;[])<span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>&lt;?,?&gt;[n];
                     table = tab = nt;
                     sc = n - (n &gt;&gt;&gt; <span class="hljs-number">2</span>);
                 &#125;
@@ -337,68 +337,68 @@
 &#125;
 
 <span class="hljs-comment">// 使数组的读/写操作像 volatile 成员变量一样具有线程可见性</span>
-<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-function">Node&lt;K,V&gt; <span class="hljs-title">tabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> i)</span> </span>&#123;
-    <span class="hljs-keyword">return</span> (Node&lt;K,V&gt;)U.getObjectVolatile(tab, ((<span class="hljs-keyword">long</span>)i &lt;&lt; ASHIFT) + ABASE);
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; Node&lt;K,V&gt; <span class="hljs-title function_">tabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-type">int</span> i)</span> &#123;
+    <span class="hljs-keyword">return</span> (Node&lt;K,V&gt;)U.getObjectVolatile(tab, ((<span class="hljs-type">long</span>)i &lt;&lt; ASHIFT) + ABASE);
 &#125;
-<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">setTabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> i, Node&lt;K,V&gt; v)</span> </span>&#123;
-    U.putObjectVolatile(tab, ((<span class="hljs-keyword">long</span>)i &lt;&lt; ASHIFT) + ABASE, v);
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-keyword">void</span> <span class="hljs-title function_">setTabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-type">int</span> i, Node&lt;K,V&gt; v)</span> &#123;
+    U.putObjectVolatile(tab, ((<span class="hljs-type">long</span>)i &lt;&lt; ASHIFT) + ABASE, v);
 &#125;
 
 <span class="hljs-comment">// 在数组上实现 CAS 操作</span>
-<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">casTabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> i,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                    Node&lt;K,V&gt; c, Node&lt;K,V&gt; v)</span> </span>&#123;
-    <span class="hljs-keyword">return</span> U.compareAndSwapObject(tab, ((<span class="hljs-keyword">long</span>)i &lt;&lt; ASHIFT) + ABASE, c, v);
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> &lt;K,V&gt; <span class="hljs-type">boolean</span> <span class="hljs-title function_">casTabAt</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-type">int</span> i,</span>
+<span class="hljs-params">                                    Node&lt;K,V&gt; c, Node&lt;K,V&gt; v)</span> &#123;
+    <span class="hljs-keyword">return</span> U.compareAndSwapObject(tab, ((<span class="hljs-type">long</span>)i &lt;&lt; ASHIFT) + ABASE, c, v);
 &#125;</code></pre></div>
 
 <p>虽然都是线程安全的 map，但 <code>ConcurrentHashMap</code> 的分段加锁对比 <code>HashTable</code> 的整个方法加锁优势就体现出来了，高并发下优势会愈加明显</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// HashTable 对整个写操作加锁</span>
-<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> V <span class="hljs-title">put</span><span class="hljs-params">(K key, V value)</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> V <span class="hljs-title function_">put</span><span class="hljs-params">(K key, V value)</span> &#123;
     <span class="hljs-comment">// Make sure the value is not null</span>
-    <span class="hljs-keyword">if</span> (value == <span class="hljs-keyword">null</span>) &#123;
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> NullPointerException();
+    <span class="hljs-keyword">if</span> (value == <span class="hljs-literal">null</span>) &#123;
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
     &#125;
 
     <span class="hljs-comment">// Makes sure the key is not already in the hashtable.</span>
     HashtableEntry&lt;?,?&gt; tab[] = table;
-    <span class="hljs-keyword">int</span> hash = key.hashCode();
-    <span class="hljs-keyword">int</span> index = (hash &amp; <span class="hljs-number">0x7FFFFFFF</span>) % tab.length;
+    <span class="hljs-type">int</span> <span class="hljs-variable">hash</span> <span class="hljs-operator">=</span> key.hashCode();
+    <span class="hljs-type">int</span> <span class="hljs-variable">index</span> <span class="hljs-operator">=</span> (hash &amp; <span class="hljs-number">0x7FFFFFFF</span>) % tab.length;
     <span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span>
     HashtableEntry&lt;K,V&gt; entry = (HashtableEntry&lt;K,V&gt;)tab[index];
-    <span class="hljs-keyword">for</span>(; entry != <span class="hljs-keyword">null</span> ; entry = entry.next) &#123;
+    <span class="hljs-keyword">for</span>(; entry != <span class="hljs-literal">null</span> ; entry = entry.next) &#123;
         <span class="hljs-keyword">if</span> ((entry.hash == hash) &amp;&amp; entry.key.equals(key)) &#123;
-            V old = entry.value;
+            <span class="hljs-type">V</span> <span class="hljs-variable">old</span> <span class="hljs-operator">=</span> entry.value;
             entry.value = value;
             <span class="hljs-keyword">return</span> old;
         &#125;
     &#125;
 
     addEntry(hash, key, value, index);
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
 &#125;</code></pre></div>
 
 <p>读操作完全不加锁，但是 <code>Node.val</code> 和 <code>Node.next</code> 是 <code>volatile</code> 修饰的，所以 <code>Node</code> 的线程可见性是有保证的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> V <span class="hljs-title">get</span><span class="hljs-params">(Object key)</span> </span>&#123;
-    Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; e, p; <span class="hljs-keyword">int</span> n, eh; K ek;
-    <span class="hljs-keyword">int</span> h = spread(key.hashCode());
-    <span class="hljs-keyword">if</span> ((tab = table) != <span class="hljs-keyword">null</span> &amp;&amp; (n = tab.length) &gt; <span class="hljs-number">0</span> &amp;&amp;
-        (e = tabAt(tab, (n - <span class="hljs-number">1</span>) &amp; h)) != <span class="hljs-keyword">null</span>) &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> V <span class="hljs-title function_">get</span><span class="hljs-params">(Object key)</span> &#123;
+    Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; e, p; <span class="hljs-type">int</span> n, eh; K ek;
+    <span class="hljs-type">int</span> <span class="hljs-variable">h</span> <span class="hljs-operator">=</span> spread(key.hashCode());
+    <span class="hljs-keyword">if</span> ((tab = table) != <span class="hljs-literal">null</span> &amp;&amp; (n = tab.length) &gt; <span class="hljs-number">0</span> &amp;&amp;
+        (e = tabAt(tab, (n - <span class="hljs-number">1</span>) &amp; h)) != <span class="hljs-literal">null</span>) &#123;
         <span class="hljs-keyword">if</span> ((eh = e.hash) == h) &#123;
-            <span class="hljs-keyword">if</span> ((ek = e.key) == key || (ek != <span class="hljs-keyword">null</span> &amp;&amp; key.equals(ek)))
+            <span class="hljs-keyword">if</span> ((ek = e.key) == key || (ek != <span class="hljs-literal">null</span> &amp;&amp; key.equals(ek)))
                 <span class="hljs-keyword">return</span> e.val;
         &#125;
         <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (eh &lt; <span class="hljs-number">0</span>)
-            <span class="hljs-keyword">return</span> (p = e.find(h, key)) != <span class="hljs-keyword">null</span> ? p.val : <span class="hljs-keyword">null</span>;
-        <span class="hljs-keyword">while</span> ((e = e.next) != <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">return</span> (p = e.find(h, key)) != <span class="hljs-literal">null</span> ? p.val : <span class="hljs-literal">null</span>;
+        <span class="hljs-keyword">while</span> ((e = e.next) != <span class="hljs-literal">null</span>) &#123;
             <span class="hljs-keyword">if</span> (e.hash == h &amp;&amp;
-                ((ek = e.key) == key || (ek != <span class="hljs-keyword">null</span> &amp;&amp; key.equals(ek))))
+                ((ek = e.key) == key || (ek != <span class="hljs-literal">null</span> &amp;&amp; key.equals(ek))))
                 <span class="hljs-keyword">return</span> e.val;
         &#125;
     &#125;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
 &#125;
 
-<span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Node</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; <span class="hljs-keyword">implements</span> <span class="hljs-title">Map</span>.<span class="hljs-title">Entry</span>&lt;<span class="hljs-title">K</span>,<span class="hljs-title">V</span>&gt; </span>&#123;
-    <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> hash;
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Node</span>&lt;K,V&gt; <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Map</span>.Entry&lt;K,V&gt; &#123;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> hash;
     <span class="hljs-keyword">final</span> K key;
     <span class="hljs-keyword">volatile</span> V val;
     <span class="hljs-keyword">volatile</span> Node&lt;K,V&gt; next;
@@ -435,26 +435,26 @@
 </tbody></table>
 <h3 id="ArrayBlockingQueue"><a href="#ArrayBlockingQueue" class="headerlink" title="ArrayBlockingQueue"></a><code>ArrayBlockingQueue</code></h3><p>基于数组、容量有限的阻塞队列，通过构造函数指定队列的容量</p>
 <p>用两个指针 <code>takeIndex</code>(队头，指向下一次出队的位置) 和 <code>putIndex</code>（队尾，指向下一次入队的位置） 模拟队列，它们初始为 0（最左边），随着元素的入队 <code>putIndex</code> 往右移动，随着元素的出队 <code>takeIndex</code> 也往右移动，当它们越过数组最后边时会重置到最左边，<code>count</code> 确保 <code>takeIndex</code> 不会违规越过 <code>putIndex</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ArrayBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span>
-<span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ArrayBlockingQueue</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractQueue</span>&lt;E&gt;
+        <span class="hljs-keyword">implements</span> <span class="hljs-title class_">BlockingQueue</span>&lt;E&gt;, java.io.Serializable &#123;
 
     <span class="hljs-comment">/** The queued items */</span>
     <span class="hljs-keyword">final</span> Object[] items;
 
     <span class="hljs-comment">/** items index for next take, poll, peek or remove */</span>
-    <span class="hljs-keyword">int</span> takeIndex;
+    <span class="hljs-type">int</span> takeIndex;
 
     <span class="hljs-comment">/** items index for next put, offer, or add */</span>
-    <span class="hljs-keyword">int</span> putIndex;
+    <span class="hljs-type">int</span> putIndex;
 
     <span class="hljs-comment">/** Number of elements in the queue */</span>
-    <span class="hljs-keyword">int</span> count;
+    <span class="hljs-type">int</span> count;
 
 &#125;</code></pre></div>
 
 <p>出队/入队时用了 <code>Lock</code> 和 <code>Condition</code> 实现阻塞和唤醒，出队时如果为空则阻塞在 <code>notEmpty</code> 上，入队时如果满了则阻塞在 <code>notFull</code>，入队后唤醒阻塞在 <code>notEmpty</code> 上的线程，出队后唤醒阻塞在 <code>notFull</code> 上的线程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ArrayBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span>
-<span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ArrayBlockingQueue</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractQueue</span>&lt;E&gt;
+        <span class="hljs-keyword">implements</span> <span class="hljs-title class_">BlockingQueue</span>&lt;E&gt;, java.io.Serializable &#123;
 
     <span class="hljs-comment">/** Main lock guarding all access */</span>
     <span class="hljs-keyword">final</span> ReentrantLock lock;
@@ -469,10 +469,10 @@
 <span class="hljs-comment">     * Inserts element at current put position, advances, and signals.</span>
 <span class="hljs-comment">     * Call only when holding lock.</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">enqueue</span><span class="hljs-params">(E x)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">enqueue</span><span class="hljs-params">(E x)</span> &#123;
         <span class="hljs-comment">// assert lock.getHoldCount() == 1;</span>
         <span class="hljs-comment">// assert items[putIndex] == null;</span>
-        <span class="hljs-keyword">final</span> Object[] items = <span class="hljs-keyword">this</span>.items;
+        <span class="hljs-keyword">final</span> Object[] items = <span class="hljs-built_in">this</span>.items;
         items[putIndex] = x;
         <span class="hljs-keyword">if</span> (++putIndex == items.length) putIndex = <span class="hljs-number">0</span>;
         count++;
@@ -483,16 +483,16 @@
 <span class="hljs-comment">     * Extracts element at current take position, advances, and signals.</span>
 <span class="hljs-comment">     * Call only when holding lock.</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">private</span> E <span class="hljs-title">dequeue</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">private</span> E <span class="hljs-title function_">dequeue</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-comment">// assert lock.getHoldCount() == 1;</span>
         <span class="hljs-comment">// assert items[takeIndex] != null;</span>
-        <span class="hljs-keyword">final</span> Object[] items = <span class="hljs-keyword">this</span>.items;
+        <span class="hljs-keyword">final</span> Object[] items = <span class="hljs-built_in">this</span>.items;
         <span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span>
-        E x = (E) items[takeIndex];
-        items[takeIndex] = <span class="hljs-keyword">null</span>;
+        <span class="hljs-type">E</span> <span class="hljs-variable">x</span> <span class="hljs-operator">=</span> (E) items[takeIndex];
+        items[takeIndex] = <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">if</span> (++takeIndex == items.length) takeIndex = <span class="hljs-number">0</span>;
         count--;
-        <span class="hljs-keyword">if</span> (itrs != <span class="hljs-keyword">null</span>)
+        <span class="hljs-keyword">if</span> (itrs != <span class="hljs-literal">null</span>)
             itrs.elementDequeued();
         notFull.signal();
         <span class="hljs-keyword">return</span> x;
@@ -501,13 +501,13 @@
 &#125;</code></pre></div>
 
 <h3 id="LinkedBlockingQueue"><a href="#LinkedBlockingQueue" class="headerlink" title="LinkedBlockingQueue"></a><code>LinkedBlockingQueue</code></h3><p>基于链表、无限容量（当然也可以通过构造函数设置最大容量）的阻塞队列，链表是单向的，<code>head</code> 指向队头也就是出队的位置，<code>last</code> 指向队尾也就是出队的位置</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LinkedBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span>
-<span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LinkedBlockingQueue</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractQueue</span>&lt;E&gt;
+        <span class="hljs-keyword">implements</span> <span class="hljs-title class_">BlockingQueue</span>&lt;E&gt;, java.io.Serializable &#123;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Linked list node class.</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Node</span>&lt;<span class="hljs-title">E</span>&gt; </span>&#123;
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Node</span>&lt;E&gt; &#123;
         E item;
 
         <span class="hljs-comment">/**</span>
@@ -522,10 +522,10 @@
     &#125;
 
     <span class="hljs-comment">/** The capacity bound, or Integer.MAX_VALUE if none */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> capacity;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> capacity;
 
     <span class="hljs-comment">/** Current number of elements */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> AtomicInteger count = <span class="hljs-keyword">new</span> AtomicInteger();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">AtomicInteger</span> <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicInteger</span>();
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Head of linked list.</span>
@@ -539,21 +539,21 @@
 <span class="hljs-comment">     */</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Node&lt;E&gt; last;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">enqueue</span><span class="hljs-params">(Node&lt;E&gt; node)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">enqueue</span><span class="hljs-params">(Node&lt;E&gt; node)</span> &#123;
         <span class="hljs-comment">// assert putLock.isHeldByCurrentThread();</span>
         <span class="hljs-comment">// assert last.next == null;</span>
         last = last.next = node;
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> E <span class="hljs-title">dequeue</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">private</span> E <span class="hljs-title function_">dequeue</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-comment">// assert takeLock.isHeldByCurrentThread();</span>
         <span class="hljs-comment">// assert head.item == null;</span>
         Node&lt;E&gt; h = head;
         Node&lt;E&gt; first = h.next;
         h.next = h; <span class="hljs-comment">// help GC</span>
         head = first;
-        E x = first.item;
-        first.item = <span class="hljs-keyword">null</span>;
+        <span class="hljs-type">E</span> <span class="hljs-variable">x</span> <span class="hljs-operator">=</span> first.item;
+        first.item = <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">return</span> x;
     &#125;
 
@@ -561,33 +561,33 @@
 
 <p>跟 <code>ArrayBlockingQueue</code> 一样用了两个条件变量：<code>notEmpty</code> 和 <code>notFull</code> 来阻塞/唤醒生产者和消费者；为啥会有 <code>notFull</code> 的情况呢，不是无限容量吗？因为它可以设置一个最大容量</p>
 <p>不同的是 <code>LinkedBlockingQueue</code> 用了两个锁，<code>takeLock</code> 给出队加锁，<code>putLock</code> 给入队加锁，出队和入队之所以可以并行是有 <code>count</code> 在确保数量正确</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LinkedBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span>
-<span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LinkedBlockingQueue</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractQueue</span>&lt;E&gt;
+        <span class="hljs-keyword">implements</span> <span class="hljs-title class_">BlockingQueue</span>&lt;E&gt;, java.io.Serializable &#123;
 
     <span class="hljs-comment">/** The capacity bound, or Integer.MAX_VALUE if none */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> capacity;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> capacity;
 
     <span class="hljs-comment">/** Current number of elements */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> AtomicInteger count = <span class="hljs-keyword">new</span> AtomicInteger();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">AtomicInteger</span> <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicInteger</span>();
 
     <span class="hljs-comment">/** Lock held by take, poll, etc */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ReentrantLock takeLock = <span class="hljs-keyword">new</span> ReentrantLock();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">takeLock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ReentrantLock</span>();
 
     <span class="hljs-comment">/** Wait queue for waiting takes */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Condition notEmpty = takeLock.newCondition();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Condition</span> <span class="hljs-variable">notEmpty</span> <span class="hljs-operator">=</span> takeLock.newCondition();
 
     <span class="hljs-comment">/** Lock held by put, offer, etc */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ReentrantLock putLock = <span class="hljs-keyword">new</span> ReentrantLock();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">putLock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ReentrantLock</span>();
 
     <span class="hljs-comment">/** Wait queue for waiting puts */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Condition notFull = putLock.newCondition();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Condition</span> <span class="hljs-variable">notFull</span> <span class="hljs-operator">=</span> putLock.newCondition();
 
 &#125;</code></pre></div>
 
 <h3 id="PriorityBlockingQueue"><a href="#PriorityBlockingQueue" class="headerlink" title="PriorityBlockingQueue"></a><code>PriorityBlockingQueue</code></h3><p>上面两个阻塞队列是 <code>FIFO</code> 排序的，而这个可以用 <code>Comparator</code> 和 <code>Comparable</code> 自定义优先级</p>
 <p>底层用 <strong>小顶堆</strong> 实现的优先队列，小顶堆是用数组实现的二叉树（左右节点要大于父节点）；入队元素添加到叶子那层的最左边，然后自下往上跟父节点比较，如果小则交换，这个操作叫 <code>siftUp</code>；出队元素固定是树的根节点，出队后把最后一个节点作为根节点，从上往下跟左右节点比较，如果大则交换，这个操作叫 <code>siftDown</code>（参考 <a href="../../../../2021/02/19/threadpool/">这篇文章</a> 里堆的介绍）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PriorityBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span>
-<span class="hljs-class">    <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PriorityBlockingQueue</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractQueue</span>&lt;E&gt;
+    <span class="hljs-keyword">implements</span> <span class="hljs-title class_">BlockingQueue</span>&lt;E&gt;, java.io.Serializable &#123;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Priority queue represented as a balanced binary heap: the two</span>
@@ -599,11 +599,11 @@
 <span class="hljs-comment">     */</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> Object[] queue;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">siftUpUsingComparator</span><span class="hljs-params">(<span class="hljs-keyword">int</span> k, T x, Object[] array,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                       Comparator&lt;? <span class="hljs-keyword">super</span> T&gt; cmp)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-keyword">void</span> <span class="hljs-title function_">siftUpUsingComparator</span><span class="hljs-params">(<span class="hljs-type">int</span> k, T x, Object[] array,</span>
+<span class="hljs-params">                                       Comparator&lt;? <span class="hljs-built_in">super</span> T&gt; cmp)</span> &#123;
         <span class="hljs-keyword">while</span> (k &gt; <span class="hljs-number">0</span>) &#123;
-            <span class="hljs-keyword">int</span> parent = (k - <span class="hljs-number">1</span>) &gt;&gt;&gt; <span class="hljs-number">1</span>;
-            Object e = array[parent];
+            <span class="hljs-type">int</span> <span class="hljs-variable">parent</span> <span class="hljs-operator">=</span> (k - <span class="hljs-number">1</span>) &gt;&gt;&gt; <span class="hljs-number">1</span>;
+            <span class="hljs-type">Object</span> <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> array[parent];
             <span class="hljs-keyword">if</span> (cmp.compare(x, (T) e) &gt;= <span class="hljs-number">0</span>)
                 <span class="hljs-keyword">break</span>;
             array[k] = e;
@@ -612,15 +612,15 @@
         array[k] = x;
     &#125;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">siftDownUsingComparator</span><span class="hljs-params">(<span class="hljs-keyword">int</span> k, T x, Object[] array,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                                    <span class="hljs-keyword">int</span> n,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                                    Comparator&lt;? <span class="hljs-keyword">super</span> T&gt; cmp)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-keyword">void</span> <span class="hljs-title function_">siftDownUsingComparator</span><span class="hljs-params">(<span class="hljs-type">int</span> k, T x, Object[] array,</span>
+<span class="hljs-params">                                                    <span class="hljs-type">int</span> n,</span>
+<span class="hljs-params">                                                    Comparator&lt;? <span class="hljs-built_in">super</span> T&gt; cmp)</span> &#123;
         <span class="hljs-keyword">if</span> (n &gt; <span class="hljs-number">0</span>) &#123;
-            <span class="hljs-keyword">int</span> half = n &gt;&gt;&gt; <span class="hljs-number">1</span>;
+            <span class="hljs-type">int</span> <span class="hljs-variable">half</span> <span class="hljs-operator">=</span> n &gt;&gt;&gt; <span class="hljs-number">1</span>;
             <span class="hljs-keyword">while</span> (k &lt; half) &#123;
-                <span class="hljs-keyword">int</span> child = (k &lt;&lt; <span class="hljs-number">1</span>) + <span class="hljs-number">1</span>;
-                Object c = array[child];
-                <span class="hljs-keyword">int</span> right = child + <span class="hljs-number">1</span>;
+                <span class="hljs-type">int</span> <span class="hljs-variable">child</span> <span class="hljs-operator">=</span> (k &lt;&lt; <span class="hljs-number">1</span>) + <span class="hljs-number">1</span>;
+                <span class="hljs-type">Object</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> array[child];
+                <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> child + <span class="hljs-number">1</span>;
                 <span class="hljs-keyword">if</span> (right &lt; n &amp;&amp; cmp.compare((T) c, (T) array[right]) &gt; <span class="hljs-number">0</span>)
                     c = array[child = right];
                 <span class="hljs-keyword">if</span> (cmp.compare(x, (T) c) &lt;= <span class="hljs-number">0</span>)
@@ -638,42 +638,42 @@
 <li>分配一块新内存，用 int 和 CAS 操作实现自旋（也许是认为分配新内存很快，所以用乐观锁？）</li>
 <li>复制数组用 <code>Lock</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">tryGrow</span><span class="hljs-params">(Object[] array, <span class="hljs-keyword">int</span> oldCap)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">tryGrow</span><span class="hljs-params">(Object[] array, <span class="hljs-type">int</span> oldCap)</span> &#123;
     <span class="hljs-comment">// 分配内存，自旋</span>
     lock.unlock(); <span class="hljs-comment">// must release and then re-acquire main lock</span>
-    Object[] newArray = <span class="hljs-keyword">null</span>;
+    Object[] newArray = <span class="hljs-literal">null</span>;
     <span class="hljs-keyword">if</span> (allocationSpinLock == <span class="hljs-number">0</span> &amp;&amp;
-        U.compareAndSwapInt(<span class="hljs-keyword">this</span>, ALLOCATIONSPINLOCK, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>)) &#123;
+        U.compareAndSwapInt(<span class="hljs-built_in">this</span>, ALLOCATIONSPINLOCK, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>)) &#123;
         <span class="hljs-keyword">try</span> &#123;
-            <span class="hljs-keyword">int</span> newCap = oldCap + ((oldCap &lt; <span class="hljs-number">64</span>) ?
+            <span class="hljs-type">int</span> <span class="hljs-variable">newCap</span> <span class="hljs-operator">=</span> oldCap + ((oldCap &lt; <span class="hljs-number">64</span>) ?
                                    (oldCap + <span class="hljs-number">2</span>) : <span class="hljs-comment">// grow faster if small</span>
                                    (oldCap &gt;&gt; <span class="hljs-number">1</span>));
             <span class="hljs-keyword">if</span> (newCap - MAX_ARRAY_SIZE &gt; <span class="hljs-number">0</span>) &#123;    <span class="hljs-comment">// possible overflow</span>
-                <span class="hljs-keyword">int</span> minCap = oldCap + <span class="hljs-number">1</span>;
+                <span class="hljs-type">int</span> <span class="hljs-variable">minCap</span> <span class="hljs-operator">=</span> oldCap + <span class="hljs-number">1</span>;
                 <span class="hljs-keyword">if</span> (minCap &lt; <span class="hljs-number">0</span> || minCap &gt; MAX_ARRAY_SIZE)
-                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> OutOfMemoryError();
+                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">OutOfMemoryError</span>();
                 newCap = MAX_ARRAY_SIZE;
             &#125;
             <span class="hljs-keyword">if</span> (newCap &gt; oldCap &amp;&amp; queue == array)
-                newArray = <span class="hljs-keyword">new</span> Object[newCap];
+                newArray = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Object</span>[newCap];
         &#125; <span class="hljs-keyword">finally</span> &#123;
             allocationSpinLock = <span class="hljs-number">0</span>;
         &#125;
     &#125;
-    <span class="hljs-keyword">if</span> (newArray == <span class="hljs-keyword">null</span>) <span class="hljs-comment">// back off if another thread is allocating</span>
+    <span class="hljs-keyword">if</span> (newArray == <span class="hljs-literal">null</span>) <span class="hljs-comment">// back off if another thread is allocating</span>
         Thread.yield();
 
     <span class="hljs-comment">// 复制数组才上悲观锁</span>
     lock.lock();
-    <span class="hljs-keyword">if</span> (newArray != <span class="hljs-keyword">null</span> &amp;&amp; queue == array) &#123;
+    <span class="hljs-keyword">if</span> (newArray != <span class="hljs-literal">null</span> &amp;&amp; queue == array) &#123;
         queue = newArray;
         System.arraycopy(array, <span class="hljs-number">0</span>, newArray, <span class="hljs-number">0</span>, oldCap);
     &#125;
 &#125;</code></pre></div>
 
 <p>跟 <code>ArrayBlockingQueue</code> 一样，入队/出队用同一把锁，因为无容量限制所以只需一个条件变量 <code>notEmpty</code>（<code>notFull</code> 的情况不会出现）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PriorityBlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractQueue</span>&lt;<span class="hljs-title">E</span>&gt;</span>
-<span class="hljs-class">    <span class="hljs-keyword">implements</span> <span class="hljs-title">BlockingQueue</span>&lt;<span class="hljs-title">E</span>&gt;, <span class="hljs-title">java</span>.<span class="hljs-title">io</span>.<span class="hljs-title">Serializable</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PriorityBlockingQueue</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractQueue</span>&lt;E&gt;
+    <span class="hljs-keyword">implements</span> <span class="hljs-title class_">BlockingQueue</span>&lt;E&gt;, java.io.Serializable &#123;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Lock used for all public operations.</span>
@@ -693,10 +693,10 @@
 <li><code>ArrayBlockingQueue</code> 在内存利用率上会比 <code>LinkedBlockingQueue</code> 要好（<code>Node</code> 需要额外的空间），而且底层数组在构造函数时就已预先分配内存，使用时无需动态申请内存，内存波动较小；而动态申请内存的 <code>LinkedBlockingQueue</code> 可能会增加 JVM GC 的负担</li>
 </ul>
 <h2 id="ConcurrentLinkedQueue"><a href="#ConcurrentLinkedQueue" class="headerlink" title="ConcurrentLinkedQueue"></a><code>ConcurrentLinkedQueue</code></h2><p>用链表实现的线程安全的队列，没有使用 <code>Lock</code> 和 <code>synchronized</code>，而是采用 <code>CAS</code> 操作和自旋的乐观锁，所以 <code>ConcurrentLinkedQueue</code> 是乐观的容器</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ConcurrentLinkedQueue</span>&lt;<span class="hljs-title">E</span>&gt; </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ConcurrentLinkedQueue</span>&lt;E&gt; &#123;
 
     <span class="hljs-comment">// 因为没使用锁，为了确保可见性，节点的成员变量都是 volatile</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Node</span>&lt;<span class="hljs-title">E</span>&gt; </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Node</span>&lt;E&gt; &#123;
         <span class="hljs-keyword">volatile</span> E item;
         <span class="hljs-keyword">volatile</span> Node&lt;E&gt; next;
     &#125;
@@ -707,44 +707,44 @@
 
 <span class="hljs-comment">// 出队操作，不移除 Node 只是将 Node.item 置空，下一次操作才会将 Node.item == null 的空节点移除</span>
 <span class="hljs-comment">// 使用 for + cas</span>
-<span class="hljs-function"><span class="hljs-keyword">public</span> E <span class="hljs-title">poll</span><span class="hljs-params">()</span> </span>&#123;
+<span class="hljs-keyword">public</span> E <span class="hljs-title function_">poll</span><span class="hljs-params">()</span> &#123;
     restartFromHead:
     <span class="hljs-keyword">for</span> (;;) &#123;
         <span class="hljs-keyword">for</span> (Node&lt;E&gt; h = head, p = h, q;;) &#123;
-            E item = p.item;
-            <span class="hljs-keyword">if</span> (item != <span class="hljs-keyword">null</span> &amp;&amp; casItem(p, item, <span class="hljs-keyword">null</span>)) &#123;
+            <span class="hljs-type">E</span> <span class="hljs-variable">item</span> <span class="hljs-operator">=</span> p.item;
+            <span class="hljs-keyword">if</span> (item != <span class="hljs-literal">null</span> &amp;&amp; casItem(p, item, <span class="hljs-literal">null</span>)) &#123;
                 <span class="hljs-comment">// Successful CAS is the linearization point</span>
                 <span class="hljs-comment">// for item to be removed from this queue.</span>
                 <span class="hljs-keyword">if</span> (p != h) <span class="hljs-comment">// hop two nodes at a time</span>
-                    updateHead(h, ((q = p.next) != <span class="hljs-keyword">null</span>) ? q : p);
+                    updateHead(h, ((q = p.next) != <span class="hljs-literal">null</span>) ? q : p);
                 <span class="hljs-keyword">return</span> item;
             &#125;
-            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((q = p.next) == <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((q = p.next) == <span class="hljs-literal">null</span>) &#123;
                 updateHead(h, p);
-                <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
             &#125;
             <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (p == q)
                 <span class="hljs-keyword">continue</span> restartFromHead;
-            <span class="hljs-keyword">else</span>
-                p = q;
+            <span class="hljs-type">else</span>
+                <span class="hljs-variable">p</span> <span class="hljs-operator">=</span> q;
         &#125;
     &#125;
 &#125;
 
 <span class="hljs-comment">// 入队，依然用的是 for + cas</span>
-<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">offer</span><span class="hljs-params">(E e)</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">offer</span><span class="hljs-params">(E e)</span> &#123;
     <span class="hljs-keyword">final</span> Node&lt;E&gt; newNode = newNode(Objects.requireNonNull(e));
     <span class="hljs-keyword">for</span> (Node&lt;E&gt; t = tail, p = t;;) &#123;
         Node&lt;E&gt; q = p.next;
-        <span class="hljs-keyword">if</span> (q == <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (q == <span class="hljs-literal">null</span>) &#123;
             <span class="hljs-comment">// p is last node</span>
-            <span class="hljs-keyword">if</span> (casNext(p, <span class="hljs-keyword">null</span>, newNode)) &#123;
+            <span class="hljs-keyword">if</span> (casNext(p, <span class="hljs-literal">null</span>, newNode)) &#123;
                 <span class="hljs-comment">// Successful CAS is the linearization point</span>
                 <span class="hljs-comment">// for e to become an element of this queue,</span>
                 <span class="hljs-comment">// and for newNode to become &quot;live&quot;.</span>
                 <span class="hljs-keyword">if</span> (p != t) <span class="hljs-comment">// hop two nodes at a time</span>
                     casTail(t, newNode);  <span class="hljs-comment">// Failure is OK.</span>
-                <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
             &#125;
             <span class="hljs-comment">// Lost CAS race to another thread; re-read next</span>
         &#125;

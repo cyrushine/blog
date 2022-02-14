@@ -1,0 +1,596 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="埋雷 和 除雷 是 Android 设计 ANR 时的一个重要思路，ANR 的实质是超时，那么只需要在执行前埋下延迟爆炸的雷，如果在规定时间内执行完毕则把雷移除，否则到点雷爆炸抛出 ANR 下面以 startService 为例：  startService 时记录下当前时间，并埋下延时任务 sendMessageDelayed bindService 表示启动完毕，移除上面埋下的雷 SERVIC">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ANR 设计思路：埋雷和除雷">
+<meta property="og:url" content="https://www.dalvik.work/2022/02/14/anr-bigpicture/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="埋雷 和 除雷 是 Android 设计 ANR 时的一个重要思路，ANR 的实质是超时，那么只需要在执行前埋下延迟爆炸的雷，如果在规定时间内执行完毕则把雷移除，否则到点雷爆炸抛出 ANR 下面以 startService 为例：  startService 时记录下当前时间，并埋下延时任务 sendMessageDelayed bindService 表示启动完毕，移除上面埋下的雷 SERVIC">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-02-14T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.789Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="ANR">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  <title>ANR 设计思路：埋雷和除雷 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.1"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="ANR 设计思路：埋雷和除雷">
+              
+                ANR 设计思路：埋雷和除雷
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2022-02-14 04:00" pubdate>
+        2022年2月14日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      5.9k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      50 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">ANR 设计思路：埋雷和除雷</h1>
+            
+            <div class="markdown-body">
+              <p><code>埋雷</code> 和 <code>除雷</code> 是 Android 设计 ANR 时的一个重要思路，ANR 的实质是超时，那么只需要在执行前埋下延迟爆炸的雷，如果在规定时间内执行完毕则把雷移除，否则到点雷爆炸抛出 ANR</p>
+<p>下面以 <code>startService</code> 为例：</p>
+<ol>
+<li><code>startService</code> 时记录下当前时间，并埋下延时任务 <code>sendMessageDelayed</code></li>
+<li><code>bindService</code> 表示启动完毕，移除上面埋下的雷 <code>SERVICE_TIMEOUT_MSG</code></li>
+<li>否则到点雷爆炸 <code>serviceTimeout</code>，根据 Service 的启动时间和超时时间（<code>SERVICE_TIMEOUT</code> / <code>SERVICE_BACKGROUND_TIMEOUT</code>）找到执行超时的 Service</li>
+</ol>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 埋雷，放入 ANR Message: SERVICE_TIMEOUT_MSG</span>
+
+<span class="hljs-comment">// How long we wait for a service to finish executing.</span>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">SERVICE_TIMEOUT</span> <span class="hljs-operator">=</span> <span class="hljs-number">20</span> * <span class="hljs-number">1000</span> * Build.HW_TIMEOUT_MULTIPLIER; <span class="hljs-comment">// 前台 Service 超时时间</span>
+<span class="hljs-comment">// How long we wait for a service to finish executing.</span>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">SERVICE_BACKGROUND_TIMEOUT</span> <span class="hljs-operator">=</span> SERVICE_TIMEOUT * <span class="hljs-number">10</span>;         <span class="hljs-comment">// 后台 Service 超时时间</span>
+
+<span class="hljs-comment">// AMS.startService</span>
+<span class="hljs-comment">// ActiveServices.startServiceLocked</span>
+<span class="hljs-comment">// ActiveServices.startServiceInnerLocked(ServiceRecord r, Intent service, ...)</span>
+<span class="hljs-comment">// ActiveServices.startServiceInnerLocked(ServiceMap smap, Intent service, ServiceRecord r, boolean callerFg, boolean addToStarting)</span>
+<span class="hljs-comment">// ActiveServices.bringUpServiceLocked</span>
+<span class="hljs-comment">// ActiveServices.realStartServiceLocked</span>
+<span class="hljs-comment">// ActiveServices.bumpServiceExecutingLocked</span>
+<span class="hljs-keyword">void</span> <span class="hljs-title function_">scheduleServiceTimeoutLocked</span><span class="hljs-params">(ProcessRecord proc)</span> &#123;
+    <span class="hljs-keyword">if</span> (proc.mServices.numberOfExecutingServices() == <span class="hljs-number">0</span> || proc.getThread() == <span class="hljs-literal">null</span>) &#123;
+        <span class="hljs-keyword">return</span>;
+    &#125;
+    <span class="hljs-type">Message</span> <span class="hljs-variable">msg</span> <span class="hljs-operator">=</span> mAm.mHandler.obtainMessage(
+            ActivityManagerService.SERVICE_TIMEOUT_MSG);
+    msg.obj = proc;
+    mAm.mHandler.sendMessageDelayed(msg, proc.mServices.shouldExecServicesFg()
+            ? SERVICE_TIMEOUT : SERVICE_BACKGROUND_TIMEOUT);
+&#125;
+
+<span class="hljs-comment">// 看看这颗雷爆炸了会发生什么</span>
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ActivityManagerService</span> &#123;
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MainHandler</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Handler</span> &#123;
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">handleMessage</span><span class="hljs-params">(Message msg)</span> &#123;
+            <span class="hljs-keyword">switch</span> (msg.what) &#123;
+            <span class="hljs-keyword">case</span> GC_BACKGROUND_PROCESSES_MSG: &#123;
+                <span class="hljs-keyword">synchronized</span> (ActivityManagerService.<span class="hljs-built_in">this</span>) &#123;
+                    mAppProfiler.performAppGcsIfAppropriateLocked();
+                &#125;
+            &#125; <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">case</span> SERVICE_TIMEOUT_MSG: &#123;
+                mServices.serviceTimeout((ProcessRecord) msg.obj);
+            &#125; <span class="hljs-keyword">break</span>;
+            <span class="hljs-comment">// case ...</span>
+            &#125;
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ActiveServices</span> &#123;
+    <span class="hljs-keyword">void</span> <span class="hljs-title function_">serviceTimeout</span><span class="hljs-params">(ProcessRecord proc)</span> &#123;
+        <span class="hljs-type">String</span> <span class="hljs-variable">anrMessage</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+        <span class="hljs-keyword">synchronized</span>(mAm) &#123;
+            <span class="hljs-keyword">if</span> (proc.isDebugging()) &#123;
+                <span class="hljs-comment">// The app&#x27;s being debugged, ignore timeout.</span>
+                <span class="hljs-keyword">return</span>;
+            &#125;
+            <span class="hljs-keyword">final</span> <span class="hljs-type">ProcessServiceRecord</span> <span class="hljs-variable">psr</span> <span class="hljs-operator">=</span> proc.mServices;
+            <span class="hljs-keyword">if</span> (psr.numberOfExecutingServices() == <span class="hljs-number">0</span> || proc.getThread() == <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-keyword">return</span>;
+            &#125;
+
+            <span class="hljs-comment">// sr.executingStart 是 startService 的时间</span>
+            <span class="hljs-comment">// maxTime 是理论上推算出的、如果 Service 没有 timeout 的 startService 时间</span>
+            <span class="hljs-comment">// 如果 sr.executingStart &lt; maxTime 说明 Service 执行超时了</span>
+            <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">now</span> <span class="hljs-operator">=</span> SystemClock.uptimeMillis();
+            <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">maxTime</span> <span class="hljs-operator">=</span>  now -
+                    (psr.shouldExecServicesFg() ? SERVICE_TIMEOUT : SERVICE_BACKGROUND_TIMEOUT);
+            <span class="hljs-type">ServiceRecord</span> <span class="hljs-variable">timeout</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+            <span class="hljs-type">long</span> <span class="hljs-variable">nextTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+            <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> psr.numberOfExecutingServices() - <span class="hljs-number">1</span>; i &gt;= <span class="hljs-number">0</span>; i--) &#123;
+                <span class="hljs-type">ServiceRecord</span> <span class="hljs-variable">sr</span> <span class="hljs-operator">=</span> psr.getExecutingServiceAt(i);
+                <span class="hljs-keyword">if</span> (sr.executingStart &lt; maxTime) &#123;
+                    timeout = sr;
+                    <span class="hljs-keyword">break</span>;
+                &#125;
+                <span class="hljs-keyword">if</span> (sr.executingStart &gt; nextTime) &#123;
+                    nextTime = sr.executingStart;
+                &#125;
+            &#125;
+
+            <span class="hljs-keyword">if</span> (timeout != <span class="hljs-literal">null</span> &amp;&amp; mAm.mProcessList.isInLruListLOSP(proc)) &#123;
+                Slog.w(TAG, <span class="hljs-string">&quot;Timeout executing service: &quot;</span> + timeout);
+                <span class="hljs-type">StringWriter</span> <span class="hljs-variable">sw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringWriter</span>();
+                <span class="hljs-type">PrintWriter</span> <span class="hljs-variable">pw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FastPrintWriter</span>(sw, <span class="hljs-literal">false</span>, <span class="hljs-number">1024</span>);
+                pw.println(timeout);
+                timeout.dump(pw, <span class="hljs-string">&quot;    &quot;</span>);
+                pw.close();
+                mLastAnrDump = sw.toString();
+                mAm.mHandler.removeCallbacks(mLastAnrDumpClearer);
+                mAm.mHandler.postDelayed(mLastAnrDumpClearer, LAST_ANR_LIFETIME_DURATION_MSECS);
+                anrMessage = <span class="hljs-string">&quot;executing service &quot;</span> + timeout.shortInstanceName;
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-type">Message</span> <span class="hljs-variable">msg</span> <span class="hljs-operator">=</span> mAm.mHandler.obtainMessage(
+                        ActivityManagerService.SERVICE_TIMEOUT_MSG);
+                msg.obj = proc;
+                mAm.mHandler.sendMessageAtTime(msg, psr.shouldExecServicesFg()
+                        ? (nextTime+SERVICE_TIMEOUT) : (nextTime + SERVICE_BACKGROUND_TIMEOUT));
+            &#125;
+        &#125;
+
+        <span class="hljs-comment">// 真正的 ANR 处理逻辑，具体可以看这篇 【深入 ANR：产生的根源、处理流程和日志文件】</span>
+        <span class="hljs-keyword">if</span> (anrMessage != <span class="hljs-literal">null</span>) &#123;
+            mAm.mAnrHelper.appNotResponding(proc, anrMessage);
+        &#125;
+    &#125;    
+&#125;
+
+<span class="hljs-comment">// 除雷，Service 在规定时间内启动完毕，则需要移除 SERVICE_TIMEOUT_MSG 消息</span>
+
+<span class="hljs-comment">// AMS.bindService</span>
+<span class="hljs-comment">// AMS.bindIsolatedService</span>
+<span class="hljs-comment">// ActiveServices.bindServiceLocked</span>
+<span class="hljs-comment">// ActiveServices.requestServiceBindingLocked</span>
+<span class="hljs-comment">// ActivityThread.scheduleBindService</span>
+<span class="hljs-comment">// ActivityThread.handleBindService</span>
+<span class="hljs-comment">// AMS.publishService</span>
+<span class="hljs-comment">// ActiveServices.publishServiceLocked</span>
+<span class="hljs-comment">// ActiveServices.serviceDoneExecutingLocked</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ActiveServices</span> &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">serviceDoneExecutingLocked</span><span class="hljs-params">(ServiceRecord r, <span class="hljs-type">boolean</span> inDestroying,</span>
+<span class="hljs-params">            <span class="hljs-type">boolean</span> finishing, <span class="hljs-type">boolean</span> enqueueOomAdj)</span> &#123;
+        <span class="hljs-keyword">if</span> (DEBUG_SERVICE) Slog.v(TAG_SERVICE, <span class="hljs-string">&quot;&lt;&lt;&lt; DONE EXECUTING &quot;</span> + r
+                + <span class="hljs-string">&quot;: nesting=&quot;</span> + r.executeNesting
+                + <span class="hljs-string">&quot;, inDestroying=&quot;</span> + inDestroying + <span class="hljs-string">&quot;, app=&quot;</span> + r.app);
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (DEBUG_SERVICE_EXECUTING) Slog.v(TAG_SERVICE_EXECUTING,
+                <span class="hljs-string">&quot;&lt;&lt;&lt; DONE EXECUTING &quot;</span> + r.shortInstanceName);
+        r.executeNesting--;
+        <span class="hljs-keyword">if</span> (r.executeNesting &lt;= <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">if</span> (r.app != <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-keyword">final</span> <span class="hljs-type">ProcessServiceRecord</span> <span class="hljs-variable">psr</span> <span class="hljs-operator">=</span> r.app.mServices;
+                <span class="hljs-keyword">if</span> (DEBUG_SERVICE) Slog.v(TAG_SERVICE,
+                        <span class="hljs-string">&quot;Nesting at 0 of &quot;</span> + r.shortInstanceName);
+                psr.setExecServicesFg(<span class="hljs-literal">false</span>);
+                psr.stopExecutingService(r);
+                <span class="hljs-keyword">if</span> (psr.numberOfExecutingServices() == <span class="hljs-number">0</span>) &#123;
+                    <span class="hljs-keyword">if</span> (DEBUG_SERVICE || DEBUG_SERVICE_EXECUTING) Slog.v(TAG_SERVICE_EXECUTING,
+                            <span class="hljs-string">&quot;No more executingServices of &quot;</span> + r.shortInstanceName);
+
+                    <span class="hljs-comment">// Service 成功启动，移除上面埋下的雷 SERVICE_TIMEOUT_MSG</span>
+                    mAm.mHandler.removeMessages(ActivityManagerService.SERVICE_TIMEOUT_MSG, r.app);
+                &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (r.executeFg) &#123;
+                    <span class="hljs-comment">// Need to re-evaluate whether the app still needs to be in the foreground.</span>
+                    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> psr.numberOfExecutingServices() - <span class="hljs-number">1</span>; i &gt;= <span class="hljs-number">0</span>; i--) &#123;
+                        <span class="hljs-keyword">if</span> (psr.getExecutingServiceAt(i).executeFg) &#123;
+                            psr.setExecServicesFg(<span class="hljs-literal">true</span>);
+                            <span class="hljs-keyword">break</span>;
+                        &#125;
+                    &#125;
+                &#125;
+                <span class="hljs-keyword">if</span> (inDestroying) &#123;
+                    <span class="hljs-keyword">if</span> (DEBUG_SERVICE) Slog.v(TAG_SERVICE,
+                            <span class="hljs-string">&quot;doneExecuting remove destroying &quot;</span> + r);
+                    mDestroyingServices.remove(r);
+                    r.bindings.clear();
+                &#125;
+                <span class="hljs-keyword">if</span> (enqueueOomAdj) &#123;
+                    mAm.enqueueOomAdjTargetLocked(r.app);
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    mAm.updateOomAdjLocked(r.app, OomAdjuster.OOM_ADJ_REASON_UNBIND_SERVICE);
+                &#125;
+            &#125;
+            r.executeFg = <span class="hljs-literal">false</span>;
+            <span class="hljs-keyword">if</span> (r.tracker != <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-keyword">synchronized</span> (mAm.mProcessStats.mLock) &#123;
+                    <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">memFactor</span> <span class="hljs-operator">=</span> mAm.mProcessStats.getMemFactorLocked();
+                    <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">now</span> <span class="hljs-operator">=</span> SystemClock.uptimeMillis();
+                    r.tracker.setExecuting(<span class="hljs-literal">false</span>, memFactor, now);
+                    r.tracker.setForeground(<span class="hljs-literal">false</span>, memFactor, now);
+                    <span class="hljs-keyword">if</span> (finishing) &#123;
+                        r.tracker.clearCurrentOwner(r, <span class="hljs-literal">false</span>);
+                        r.tracker = <span class="hljs-literal">null</span>;
+                    &#125;
+                &#125;
+            &#125;
+            <span class="hljs-keyword">if</span> (finishing) &#123;
+                <span class="hljs-keyword">if</span> (r.app != <span class="hljs-literal">null</span> &amp;&amp; !r.app.isPersistent()) &#123;
+                    stopServiceAndUpdateAllowlistManagerLocked(r);
+                &#125;
+                r.setProcess(<span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, <span class="hljs-number">0</span>, <span class="hljs-literal">null</span>);
+            &#125;
+        &#125;
+    &#125;    
+&#125;</code></pre></div>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/ANR/">ANR</a>
+                    
+                  </div>
+                
+              </div>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/12/22/fresco/">
+                        <span class="hidden-mobile">初识 Fresco</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

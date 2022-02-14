@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-31-how-glide-work/glide_memory_cache.jpg">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-31-how-glide-work/glide_disk_cache.jpg">
 <meta property="article:published_time" content="2020-10-31T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="glide">
 <meta property="article:tag" content="fresco">
@@ -82,11 +82,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -279,13 +279,13 @@
 
 <span class="hljs-comment">// 看下 AUTOMATIC 的情况</span>
 <span class="hljs-comment">// data cache，只缓存网络资源，不缓存 asset file，local disk file 等本地资源</span>
-<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isDataCacheable</span><span class="hljs-params">(DataSource dataSource)</span> </span>&#123;
-    <span class="hljs-keyword">return</span> dataSource == DataSource.REMOTE;
+<span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isDataCacheable</span><span class="hljs-params">(DataSource dataSource)</span> &#123;
+    <span class="hljs-type">return</span> <span class="hljs-variable">dataSource</span> <span class="hljs-operator">=</span>= DataSource.REMOTE;
 &#125;
 
 <span class="hljs-comment">// resource cache 只缓存 asset file，local disk file 等本地资源</span>
-<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isResourceCacheable</span><span class="hljs-params">(</span></span>
-<span class="hljs-params"><span class="hljs-function">        <span class="hljs-keyword">boolean</span> isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy)</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isResourceCacheable</span><span class="hljs-params">(</span>
+<span class="hljs-params">        <span class="hljs-type">boolean</span> isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy)</span> &#123;
     <span class="hljs-keyword">return</span> ((isFromAlternateCacheKey &amp;&amp; dataSource == DataSource.DATA_DISK_CACHE)
             || dataSource == DataSource.LOCAL)
             &amp;&amp; encodeStrategy == EncodeStrategy.TRANSFORMED;
@@ -307,7 +307,7 @@
 </ul>
 <h2 id="加载路径"><a href="#加载路径" class="headerlink" title="加载路径"></a>加载路径</h2><p>加载路径把 model - dataClass - resourceClass - transcodeClass 串联起来</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// url string 是 model，类型是 String；transcodeClass 是 Drawable.class，最终的目标类型；此时的 resourceClass 是 Object.class</span>
-GlideApp.with(<span class="hljs-keyword">this</span>).as(Drawable.class).load(url).into(photoView);</code></pre></div>
+GlideApp.with(<span class="hljs-built_in">this</span>).as(Drawable.class).load(url).into(photoView);</code></pre></div>
 
 <ol>
 <li>通过 <code>ModelLoaderRegistry</code> 知道 model 能使用哪些 <code>ModelLoader</code>，能加载到 jvm 里成为哪些 dataClass；string url 的话，适用于 <code>StringLoader</code>，能加载为 <code>InputStream</code> 和 <code>ParcelFileDescriptor</code>；如果有多个 loader 可以用，则使用 <code>MultiModelLoader</code>，它专门用来包裹多个 loader，因为对于一个 model 可能会有多个 loader 可以处理它；对于 <code>MultiXXX</code>，内部都有个属性 <code>currentIndex</code> 指定使用哪个实例（一般情况下就是第 0 个了，除非有代码设置过 <code>currentIndex</code>）；loader 在注册表中的位置可以通过 append、prepend 调整</li>

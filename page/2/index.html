@@ -53,11 +53,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -171,6 +171,56 @@
               <div class="col-12 col-md-10 m-auto">
                 
 
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/06/22/xcrash/" target="_self">
+          崩溃日志收集库 xCrash 浅析
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/06/22/xcrash/" target="_self">
+          
+          xCrash 是爱奇艺团队开源的一款崩溃日志收集库，可以收集 java crash、native crash 和 ANR 日志 日志格式为专用格式，内容还算丰富：机器信息、崩溃线程和其他线程的方法栈、logcat、打开的 fd 等等 … 默认配置为：  java crash、native crash 和 ANR 都会被捕获 日志目录在 &#x2F;data&#x2F;data&#x2F;[pkg]&#x2F;files&#x2F;tombston
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-06-22 04:00" pubdate>
+              2021-06-22
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/uncaught-exception/">uncaught exception</a>
+            
+              <a href="/tags/exception/">exception</a>
+            
+              <a href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
+            
+              <a href="/tags/%E5%B4%A9%E6%BA%83%E6%97%A5%E5%BF%97/">崩溃日志</a>
+            
+              <a href="/tags/crash/">crash</a>
+            
+              <a href="/tags/xcrash/">xcrash</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
 
   <div class="row mx-auto index-card">
     
@@ -557,48 +607,6 @@
               <a href="/tags/APM/">APM</a>
             
               <a href="/tags/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">性能优化</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/04/23/matrix-resourcescanary/" target="_self">
-          Matrix - ResourcesCanary 浅析
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/04/23/matrix-resourcescanary/" target="_self">
-          
-          Activity 的泄漏检测跟 LeakCanary 一样，使用 ActivityLifecycleCallbacks 监听 Activity.onDestroy() 事件，从而收集到已销毁的 Activity 对象 public class ResourcePlugin extends Plugin &amp;#123;     @Override     public void start() &amp;#1
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-04-23 04:00" pubdate>
-              2021-04-23
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
-            
-              <a href="/tags/APM/">APM</a>
             
           </div>
         

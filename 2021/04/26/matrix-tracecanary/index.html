@@ -30,7 +30,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-26-matrix-tracecanary/run_store.jpg">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-26-matrix-tracecanary/stack.jpg">
 <meta property="article:published_time" content="2021-04-26T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.941Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.785Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="APM">
 <meta property="article:tag" content="性能优化">
@@ -79,11 +79,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -248,15 +248,15 @@
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">for</span> (;;) &#123;
         <span class="hljs-comment">// ...</span>
-        <span class="hljs-keyword">final</span> Printer logging = me.mLogging;
-        <span class="hljs-keyword">if</span> (logging != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">Printer</span> <span class="hljs-variable">logging</span> <span class="hljs-operator">=</span> me.mLogging;
+        <span class="hljs-keyword">if</span> (logging != <span class="hljs-literal">null</span>) &#123;
             logging.println(<span class="hljs-string">&quot;&gt;&gt;&gt;&gt;&gt; Dispatching to &quot;</span> + msg.target + <span class="hljs-string">&quot; &quot;</span> +
                     msg.callback + <span class="hljs-string">&quot;: &quot;</span> + msg.what);
         &#125;
         <span class="hljs-comment">// ...</span>
         msg.target.dispatchMessage(msg);
         <span class="hljs-comment">// ...</span>
-        <span class="hljs-keyword">if</span> (logging != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (logging != <span class="hljs-literal">null</span>) &#123;
             logging.println(<span class="hljs-string">&quot;&lt;&lt;&lt;&lt;&lt; Finished to &quot;</span> + msg.target + <span class="hljs-string">&quot; &quot;</span> + msg.callback);
         &#125;
         <span class="hljs-comment">// ...</span>
@@ -264,43 +264,43 @@
 &#125;</code></pre></div>
 
 <p><code>LooperMonitor</code> 通过替换 <code>Looper.mLogging</code>，从而捕获到 <code>&gt;&gt;&gt;&gt;&gt; Dispatching to</code> 和 <code>&lt;&lt;&lt;&lt;&lt; Finished to</code> 的日志输出进而算出 <code>Message</code> 耗时，并提供 <code>dispatchStart</code> 和 <code>dispatchEnd</code> 两个钩子</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LooperMonitor</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LooperMonitor</span> &#123;
     <span class="hljs-comment">// 通过反射替换 Looper.mLogging</span>
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> <span class="hljs-title">resetPrinter</span><span class="hljs-params">()</span> </span>&#123;
-        Printer originPrinter = <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">resetPrinter</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-type">Printer</span> <span class="hljs-variable">originPrinter</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">try</span> &#123;
             <span class="hljs-keyword">if</span> (!isReflectLoggingError) &#123;
                 originPrinter = ReflectUtils.get(looper.getClass(), <span class="hljs-string">&quot;mLogging&quot;</span>, looper);
-                <span class="hljs-keyword">if</span> (originPrinter == printer &amp;&amp; <span class="hljs-keyword">null</span> != printer) &#123;
+                <span class="hljs-keyword">if</span> (originPrinter == printer &amp;&amp; <span class="hljs-literal">null</span> != printer) &#123;
                     <span class="hljs-keyword">return</span>;
                 &#125;
             &#125;
         &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
-            isReflectLoggingError = <span class="hljs-keyword">true</span>;
+            isReflectLoggingError = <span class="hljs-literal">true</span>;
             Log.e(TAG, <span class="hljs-string">&quot;[resetPrinter] %s&quot;</span>, e);
         &#125;
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">null</span> != printer) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-literal">null</span> != printer) &#123;
             MatrixLog.w(TAG, <span class="hljs-string">&quot;maybe thread:%s printer[%s] was replace other[%s]!&quot;</span>,
                     looper.getThread().getName(), printer, originPrinter);
         &#125;
-        looper.setMessageLogging(printer = <span class="hljs-keyword">new</span> LooperPrinter(originPrinter));
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">null</span> != originPrinter) &#123;
+        looper.setMessageLogging(printer = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LooperPrinter</span>(originPrinter));
+        <span class="hljs-keyword">if</span> (<span class="hljs-literal">null</span> != originPrinter) &#123;
             MatrixLog.i(TAG, <span class="hljs-string">&quot;reset printer, originPrinter[%s] in %s&quot;</span>, originPrinter, looper.getThread().getName());
         &#125;
     &#125;
 
     <span class="hljs-comment">// 捕获根据特定格式的日志输出</span>
-    <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LooperPrinter</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Printer</span> </span>&#123;
-        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">println</span><span class="hljs-params">(String x)</span> </span>&#123;
-            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">null</span> != origin) &#123;
+    <span class="hljs-keyword">class</span> <span class="hljs-title class_">LooperPrinter</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Printer</span> &#123;
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">println</span><span class="hljs-params">(String x)</span> &#123;
+            <span class="hljs-keyword">if</span> (<span class="hljs-literal">null</span> != origin) &#123;
                 origin.println(x);
-                <span class="hljs-keyword">if</span> (origin == <span class="hljs-keyword">this</span>) &#123;
-                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(TAG + <span class="hljs-string">&quot; origin == this&quot;</span>);
+                <span class="hljs-keyword">if</span> (origin == <span class="hljs-built_in">this</span>) &#123;
+                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(TAG + <span class="hljs-string">&quot; origin == this&quot;</span>);
                 &#125;
             &#125;
             <span class="hljs-keyword">if</span> (!isHasChecked) &#123;
                 isValid = x.charAt(<span class="hljs-number">0</span>) == <span class="hljs-string">&#x27;&gt;&#x27;</span> || x.charAt(<span class="hljs-number">0</span>) == <span class="hljs-string">&#x27;&lt;&#x27;</span>;
-                isHasChecked = <span class="hljs-keyword">true</span>;
+                isHasChecked = <span class="hljs-literal">true</span>;
                 <span class="hljs-keyword">if</span> (!isValid) &#123;
                     MatrixLog.e(TAG, <span class="hljs-string">&quot;[println] Printer is inValid! x:%s&quot;</span>, x);
                 &#125;
@@ -312,7 +312,7 @@
     &#125;
 
     <span class="hljs-comment">// 分发 Dispatching to 和 Finished to 事件</span>
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatch</span><span class="hljs-params">(<span class="hljs-keyword">boolean</span> isBegin, String log)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatch</span><span class="hljs-params">(<span class="hljs-type">boolean</span> isBegin, String log)</span> &#123;
         <span class="hljs-keyword">for</span> (LooperDispatchListener listener : listeners) &#123;
             <span class="hljs-keyword">if</span> (listener.isValid()) &#123;
                 <span class="hljs-keyword">if</span> (isBegin) &#123;
@@ -332,47 +332,47 @@
 &#125;</code></pre></div>
 
 <p>为了防止其他代码也替换 <code>Looper.mLogging</code>，<code>LooperMonitor</code> 还在主线程空闲的时候进行检查</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> LooperMonitor.queueIdle() &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> LooperMonitor.queueIdle() &#123;
     <span class="hljs-keyword">if</span> (SystemClock.uptimeMillis() - lastCheckPrinterTime &gt;= CHECK_TIME) &#123;
         resetPrinter();
         lastCheckPrinterTime = SystemClock.uptimeMillis();
     &#125;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
 &#125;</code></pre></div>
 
 <h3 id="计算-doFrame-耗时"><a href="#计算-doFrame-耗时" class="headerlink" title="计算 doFrame 耗时"></a>计算 <code>doFrame</code> 耗时</h3><p>上面的方法可以统计主线程里每个 <code>Message</code> 的耗时，但并不是每个 <code>Message</code> 都在做 ui 绘制（<code>doFrame</code>），比如违规放入耗时的 IO 操作；为了更精确地捕获耗时的 <code>doFrame</code>，以及进行 FPS 统计，还需做更多的工作</p>
 <p>参考 <a href="../../../../2020/12/02/vsync/">Android 图形栈（一）vsync</a> 我们知道，当 <code>APP_VSYNC</code> 到达时会走 <code>FrameDisplayEventReceiver.onVsync</code> -&gt; <code>Choreographer.doFrame</code> -&gt; <code>Choreographer.doCallbacks</code>，最后按 INPUT - ANIMATION - TRAVERSAL 的顺序执行 <code>Choreographer.mCallbackQueues</code> 里的 <code>Runnable</code></p>
 <p>动态地往这三个队列的头部插入钩子，从而计算出每个阶段开始时间和结束时间，加上捕获 <code>Message</code> 的方法（<code>Choreographer.doFrame</code> 是由 <code>FrameDisplayEventReceiver.onVsync</code> 放入主线程任务队列的 <code>Message</code>），最终形成完整的闭环：</p>
 <p><code>dispatchBegin</code> -&gt; <code>doFrameBegin</code> -&gt; <code>doQueueBegin(INPUT)</code> -&gt; <code>doQueueEnd(INPUT)</code> -&gt; <code>doQueueBegin(ANIMATION)</code> -&gt; <code>doQueueEnd(ANIMATION)</code> -&gt; <code>doQueueBegin(TRAVERSAL)</code> -&gt; <code>doQueueEnd(TRAVERSAL)</code> -&gt; <code>doFrameEnd</code> -&gt; <code>dispatchEnd</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">UIThreadMonitor</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UIThreadMonitor</span> &#123;
     <span class="hljs-comment">// 最开始先在 INPUT 头部插入钩子</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> UIThreadMonitor.onStart() &#123;
         <span class="hljs-comment">// ...</span>
-        queueStatus = <span class="hljs-keyword">new</span> <span class="hljs-keyword">int</span>[CALLBACK_LAST + <span class="hljs-number">1</span>];
-        queueCost = <span class="hljs-keyword">new</span> <span class="hljs-keyword">long</span>[CALLBACK_LAST + <span class="hljs-number">1</span>];
-        addFrameCallback(CALLBACK_INPUT, <span class="hljs-keyword">this</span>, <span class="hljs-keyword">true</span>);
+        queueStatus = <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[CALLBACK_LAST + <span class="hljs-number">1</span>];
+        queueCost = <span class="hljs-keyword">new</span> <span class="hljs-title class_">long</span>[CALLBACK_LAST + <span class="hljs-number">1</span>];
+        addFrameCallback(CALLBACK_INPUT, <span class="hljs-built_in">this</span>, <span class="hljs-literal">true</span>);
     &#125;
 
     <span class="hljs-comment">// 依次往 ANIMATION/TRAVERSAL 插入钩子</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
-        <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> start = System.nanoTime();
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> System.nanoTime();
         <span class="hljs-keyword">try</span> &#123;
             doFrameBegin(token);
             doQueueBegin(CALLBACK_INPUT);
-            addFrameCallback(CALLBACK_ANIMATION, <span class="hljs-keyword">new</span> Runnable() &#123;
+            addFrameCallback(CALLBACK_ANIMATION, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
                 <span class="hljs-meta">@Override</span>
-                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+                <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
                     doQueueEnd(CALLBACK_INPUT);
                     doQueueBegin(CALLBACK_ANIMATION);
                 &#125;
-            &#125;, <span class="hljs-keyword">true</span>);
-            addFrameCallback(CALLBACK_TRAVERSAL, <span class="hljs-keyword">new</span> Runnable() &#123;
+            &#125;, <span class="hljs-literal">true</span>);
+            addFrameCallback(CALLBACK_TRAVERSAL, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
                 <span class="hljs-meta">@Override</span>
-                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+                <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
                     doQueueEnd(CALLBACK_ANIMATION);
                     doQueueBegin(CALLBACK_TRAVERSAL);
                 &#125;
-            &#125;, <span class="hljs-keyword">true</span>);
+            &#125;, <span class="hljs-literal">true</span>);
         &#125; <span class="hljs-keyword">finally</span> &#123;
             <span class="hljs-keyword">if</span> (config.isDevEnv()) &#123;
                 MatrixLog.d(TAG, <span class="hljs-string">&quot;[UIThreadMonitor#run] inner cost:%sns&quot;</span>, System.nanoTime() - start);
@@ -381,10 +381,10 @@
     &#125;
 
     <span class="hljs-comment">// 主线程消息队列的任务结束钩子，也作为 TRAVERSAL 的结束标志</span>
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchEnd</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchEnd</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-comment">// ...</span>
-        <span class="hljs-keyword">long</span> startNs = token;
-        <span class="hljs-keyword">long</span> intendedFrameTimeNs = startNs;
+        <span class="hljs-type">long</span> <span class="hljs-variable">startNs</span> <span class="hljs-operator">=</span> token;
+        <span class="hljs-type">long</span> <span class="hljs-variable">intendedFrameTimeNs</span> <span class="hljs-operator">=</span> startNs;
         <span class="hljs-keyword">if</span> (isVsyncFrame) &#123;
             doFrameEnd(token);
             intendedFrameTimeNs = getIntendedFrameTimeNs(startNs);  <span class="hljs-comment">// FrameDisplayEventReceiver.mTimestampNanos</span>
@@ -392,17 +392,17 @@
         <span class="hljs-comment">// ...</span>
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doFrameEnd</span><span class="hljs-params">(<span class="hljs-keyword">long</span> token)</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">doFrameEnd</span><span class="hljs-params">(<span class="hljs-type">long</span> token)</span> &#123;
         doQueueEnd(CALLBACK_TRAVERSAL);
         <span class="hljs-comment">// ...</span>
-        addFrameCallback(CALLBACK_INPUT, <span class="hljs-keyword">this</span>, <span class="hljs-keyword">true</span>);   <span class="hljs-comment">// 继续放入下一轮 doFrame 的钩子</span>
+        addFrameCallback(CALLBACK_INPUT, <span class="hljs-built_in">this</span>, <span class="hljs-literal">true</span>);   <span class="hljs-comment">// 继续放入下一轮 doFrame 的钩子</span>
     &#125;     
 &#125;</code></pre></div>
 
 <h3 id="LooperObserver"><a href="#LooperObserver" class="headerlink" title="LooperObserver"></a><code>LooperObserver</code></h3><p>结合上面捕获到的信息，提供一个「观察者」</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LooperObserver</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LooperObserver</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">boolean</span> isDispatchBegin = <span class="hljs-keyword">false</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">isDispatchBegin</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
 
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Message 开始执行</span>
@@ -411,8 +411,8 @@
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> token         等于 beginNs</span>
 <span class="hljs-comment">     */</span>
     <span class="hljs-meta">@CallSuper</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchBegin</span><span class="hljs-params">(<span class="hljs-keyword">long</span> beginNs, <span class="hljs-keyword">long</span> cpuBeginNs, <span class="hljs-keyword">long</span> token)</span> </span>&#123;
-        isDispatchBegin = <span class="hljs-keyword">true</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchBegin</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginNs, <span class="hljs-type">long</span> token)</span> &#123;
+        isDispatchBegin = <span class="hljs-literal">true</span>;
     &#125;
 
     <span class="hljs-comment">/**</span>
@@ -426,7 +426,7 @@
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> animationCostNs       doFrame ANIMATION 阶段耗时</span>
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> traversalCostNs       doFrame TRAVERSAL 阶段耗时</span>
 <span class="hljs-comment">     */</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doFrame</span><span class="hljs-params">(String focusedActivity, <span class="hljs-keyword">long</span> startNs, <span class="hljs-keyword">long</span> endNs, <span class="hljs-keyword">boolean</span> isVsyncFrame, <span class="hljs-keyword">long</span> intendedFrameTimeNs, <span class="hljs-keyword">long</span> inputCostNs, <span class="hljs-keyword">long</span> animationCostNs, <span class="hljs-keyword">long</span> traversalCostNs)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">doFrame</span><span class="hljs-params">(String focusedActivity, <span class="hljs-type">long</span> startNs, <span class="hljs-type">long</span> endNs, <span class="hljs-type">boolean</span> isVsyncFrame, <span class="hljs-type">long</span> intendedFrameTimeNs, <span class="hljs-type">long</span> inputCostNs, <span class="hljs-type">long</span> animationCostNs, <span class="hljs-type">long</span> traversalCostNs)</span> &#123;
 
     &#125;
 
@@ -440,11 +440,11 @@
 <span class="hljs-comment">     * <span class="hljs-doctag">@param</span> isVsyncFrame  此任务是否 ui 绘制任务（doFrame）</span>
 <span class="hljs-comment">     */</span>
     <span class="hljs-meta">@CallSuper</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchEnd</span><span class="hljs-params">(<span class="hljs-keyword">long</span> beginNs, <span class="hljs-keyword">long</span> cpuBeginMs, <span class="hljs-keyword">long</span> endNs, <span class="hljs-keyword">long</span> cpuEndMs, <span class="hljs-keyword">long</span> token, <span class="hljs-keyword">boolean</span> isVsyncFrame)</span> </span>&#123;
-        isDispatchBegin = <span class="hljs-keyword">false</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchEnd</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> endNs, <span class="hljs-type">long</span> cpuEndMs, <span class="hljs-type">long</span> token, <span class="hljs-type">boolean</span> isVsyncFrame)</span> &#123;
+        isDispatchBegin = <span class="hljs-literal">false</span>;
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isDispatchBegin</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isDispatchBegin</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-keyword">return</span> isDispatchBegin;
     &#125;
 &#125;</code></pre></div>
@@ -477,35 +477,35 @@
 <p>最底下的图表是过去 10s 内平均帧率（200ms 时间段）的横向柱状图，每 5s 就会有 25 条记录，50 FPS 差不多是 <code>Normal</code> 的帧率下限，30 FPS 差不多是 <code>Middle</code> 的帧率下限</p>
 <p><img src="../../../../image/2021-04-26-matrix-tracecanary/fps_board.jpg" srcset="/image/loading.gif" lazyload alt="fps_board"></p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 每帧的时间间隔，默认取 16ms（60 FPS）</span>
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">UIThreadMonitor</span> </span>&#123;
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span> frameIntervalNanos = <span class="hljs-number">16666666</span>;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UIThreadMonitor</span> &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">long</span> <span class="hljs-variable">frameIntervalNanos</span> <span class="hljs-operator">=</span> <span class="hljs-number">16666666</span>;
 
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">init</span><span class="hljs-params">(TraceConfig config)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">init</span><span class="hljs-params">(TraceConfig config)</span> &#123;
         frameIntervalNanos = ReflectUtils.reflectObject(choreographer, <span class="hljs-string">&quot;mFrameIntervalNanos&quot;</span>, Constants.DEFAULT_FRAME_DURATION);
         <span class="hljs-comment">// ...</span>
     &#125;
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FrameTracer</span> </span>&#123;
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> frameIntervalNs;     <span class="hljs-comment">// UIThreadMonitor.getMonitor().getFrameIntervalNanos()</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FrameTracer</span> &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> frameIntervalNs;     <span class="hljs-comment">// UIThreadMonitor.getMonitor().getFrameIntervalNanos()</span>
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">notifyListener</span><span class="hljs-params">(<span class="hljs-keyword">final</span> String focusedActivity, <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> startNs, <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> endNs, <span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isVsyncFrame,</span></span>
-<span class="hljs-params"><span class="hljs-function">                                <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> intendedFrameTimeNs, <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> inputCostNs, <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> animationCostNs, <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> traversalCostNs)</span> </span>&#123;
-        <span class="hljs-keyword">long</span> traceBegin = System.currentTimeMillis();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">notifyListener</span><span class="hljs-params">(<span class="hljs-keyword">final</span> String focusedActivity, <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> startNs, <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> endNs, <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> isVsyncFrame,</span>
+<span class="hljs-params">                                <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> intendedFrameTimeNs, <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> inputCostNs, <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> animationCostNs, <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> traversalCostNs)</span> &#123;
+        <span class="hljs-type">long</span> <span class="hljs-variable">traceBegin</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
         <span class="hljs-keyword">try</span> &#123;
-            <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> jiter = endNs - intendedFrameTimeNs;         <span class="hljs-comment">// 从收到 vsync 到完成 doFrame 的时间，也就是实际渲染一帧的耗时</span>
-            <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> dropFrame = (<span class="hljs-keyword">int</span>) (jiter / frameIntervalNs);  <span class="hljs-comment">// 计算出渲染这一帧对比理论 FPS 有没掉帧，掉了多少帧</span>
+            <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">jiter</span> <span class="hljs-operator">=</span> endNs - intendedFrameTimeNs;         <span class="hljs-comment">// 从收到 vsync 到完成 doFrame 的时间，也就是实际渲染一帧的耗时</span>
+            <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">dropFrame</span> <span class="hljs-operator">=</span> (<span class="hljs-type">int</span>) (jiter / frameIntervalNs);  <span class="hljs-comment">// 计算出渲染这一帧对比理论 FPS 有没掉帧，掉了多少帧</span>
             <span class="hljs-comment">// ...</span>
         &#125;
     &#125;    
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FrameDecorator</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doFrameAsync</span><span class="hljs-params">(String focusedActivity, <span class="hljs-keyword">long</span> startNs, <span class="hljs-keyword">long</span> endNs, <span class="hljs-keyword">int</span> dropFrame, <span class="hljs-keyword">boolean</span> isVsyncFrame, <span class="hljs-keyword">long</span> intendedFrameTimeNs, <span class="hljs-keyword">long</span> inputCostNs, <span class="hljs-keyword">long</span> animationCostNs, <span class="hljs-keyword">long</span> traversalCostNs)</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.doFrameAsync(focusedActivity, startNs, endNs, dropFrame, isVsyncFrame, intendedFrameTimeNs, inputCostNs, animationCostNs, traversalCostNs);
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FrameDecorator</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">doFrameAsync</span><span class="hljs-params">(String focusedActivity, <span class="hljs-type">long</span> startNs, <span class="hljs-type">long</span> endNs, <span class="hljs-type">int</span> dropFrame, <span class="hljs-type">boolean</span> isVsyncFrame, <span class="hljs-type">long</span> intendedFrameTimeNs, <span class="hljs-type">long</span> inputCostNs, <span class="hljs-type">long</span> animationCostNs, <span class="hljs-type">long</span> traversalCostNs)</span> &#123;
+        <span class="hljs-built_in">super</span>.doFrameAsync(focusedActivity, startNs, endNs, dropFrame, isVsyncFrame, intendedFrameTimeNs, inputCostNs, animationCostNs, traversalCostNs);
 
         <span class="hljs-keyword">if</span> (!Objects.equals(focusedActivity, lastVisibleScene)) &#123;        <span class="hljs-comment">// 切换页面时，重置页面的统计数据</span>
-            dropLevel = <span class="hljs-keyword">new</span> <span class="hljs-keyword">int</span>[FrameTracer.DropStatus.values().length];
+            dropLevel = <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[FrameTracer.DropStatus.values().length];
             lastVisibleScene = focusedActivity;
             lastCost[<span class="hljs-number">0</span>] = <span class="hljs-number">0</span>;
             lastFrames[<span class="hljs-number">0</span>] = <span class="hljs-number">0</span>;
@@ -516,7 +516,7 @@
         <span class="hljs-comment">// 2，其次考虑用户无操作/页面静止的情况，主线程的任务队列为空，没有刷新页面，如果用设备时间 endNs 会导致计算出极低的错误 FPS</span>
         sumFrameCost += (dropFrame + <span class="hljs-number">1</span>) * frameIntervalMs;
         sumFrames += <span class="hljs-number">1</span>;
-        <span class="hljs-keyword">float</span> duration = sumFrameCost - lastCost[<span class="hljs-number">0</span>];            <span class="hljs-comment">// 距离上一次刷新 FPS 的时间间隔</span>
+        <span class="hljs-type">float</span> <span class="hljs-variable">duration</span> <span class="hljs-operator">=</span> sumFrameCost - lastCost[<span class="hljs-number">0</span>];            <span class="hljs-comment">// 距离上一次刷新 FPS 的时间间隔</span>
 
         <span class="hljs-keyword">if</span> (dropFrame &gt;= Constants.DEFAULT_DROPPED_FROZEN) &#123;    <span class="hljs-comment">// 根据掉帧数，给发生的掉帧事故分级别统计</span>
             dropLevel[FrameTracer.DropStatus.DROPPED_FROZEN.index]++;
@@ -531,9 +531,9 @@
         &#125; <span class="hljs-comment">// ...</span>
 
 
-        <span class="hljs-keyword">long</span> collectFrame = sumFrames - lastFrames[<span class="hljs-number">0</span>];                              <span class="hljs-comment">// 200ms 内刷新了几帧</span>
+        <span class="hljs-type">long</span> <span class="hljs-variable">collectFrame</span> <span class="hljs-operator">=</span> sumFrames - lastFrames[<span class="hljs-number">0</span>];                              <span class="hljs-comment">// 200ms 内刷新了几帧</span>
         <span class="hljs-keyword">if</span> (duration &gt;= <span class="hljs-number">200</span>) &#123;                                                      <span class="hljs-comment">// 每隔 200ms 刷新一次 FPS</span>
-            <span class="hljs-keyword">final</span> <span class="hljs-keyword">float</span> fps = Math.min(maxFps, <span class="hljs-number">1000.f</span> * collectFrame / duration);   <span class="hljs-comment">// 统计过去 200ms 的 FPS</span>
+            <span class="hljs-keyword">final</span> <span class="hljs-type">float</span> <span class="hljs-variable">fps</span> <span class="hljs-operator">=</span> Math.min(maxFps, <span class="hljs-number">1000.f</span> * collectFrame / duration);   <span class="hljs-comment">// 统计过去 200ms 的 FPS</span>
             updateView(view, fps, belongColor, dropLevel[FrameTracer.DropStatus.DROPPED_NORMAL.index], dropLevel[FrameTracer.DropStatus.DROPPED_MIDDLE.index] ...);
             lastCost[<span class="hljs-number">0</span>] = sumFrameCost;
             lastFrames[<span class="hljs-number">0</span>] = sumFrames;
@@ -543,9 +543,9 @@
 &#125;</code></pre></div>
 
 <h3 id="统计耗时-Message"><a href="#统计耗时-Message" class="headerlink" title="统计耗时 Message"></a>统计耗时 <code>Message</code></h3><p><code>TraceCanary</code> 把耗时超过 700ms 的 <code>Message</code> 作为 <code>Evil Method</code> 上报</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EvilMethodTracer</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchEnd</span><span class="hljs-params">(<span class="hljs-keyword">long</span> beginNs, <span class="hljs-keyword">long</span> cpuBeginMs, <span class="hljs-keyword">long</span> endNs, <span class="hljs-keyword">long</span> cpuEndMs, <span class="hljs-keyword">long</span> token, <span class="hljs-keyword">boolean</span> isVsyncFrame)</span> </span>&#123;
-        <span class="hljs-keyword">long</span> dispatchCost = (endNs - beginNs) / Constants.TIME_MILLIS_TO_NANO;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EvilMethodTracer</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchEnd</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> endNs, <span class="hljs-type">long</span> cpuEndMs, <span class="hljs-type">long</span> token, <span class="hljs-type">boolean</span> isVsyncFrame)</span> &#123;
+        <span class="hljs-type">long</span> <span class="hljs-variable">dispatchCost</span> <span class="hljs-operator">=</span> (endNs - beginNs) / Constants.TIME_MILLIS_TO_NANO;
         <span class="hljs-keyword">try</span> &#123;
             <span class="hljs-keyword">if</span> (dispatchCost &gt;= evilThresholdMs) &#123;
                 <span class="hljs-comment">// ...</span>
@@ -803,34 +803,34 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 搜集匹配的函数</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> MethodCollector.collect(Set&lt;File&gt; srcFolderList, Set&lt;File&gt; dependencyJarList) <span class="hljs-keyword">throws</span> ExecutionException, InterruptedException &#123;
-    List&lt;Future&gt; futures = <span class="hljs-keyword">new</span> LinkedList&lt;&gt;();
+    List&lt;Future&gt; futures = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedList</span>&lt;&gt;();
     <span class="hljs-keyword">for</span> (File srcFile : srcFolderList) &#123;                    <span class="hljs-comment">// 在 class 里收集匹配的函数</span>
-        ArrayList&lt;File&gt; classFileList = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();
+        ArrayList&lt;File&gt; classFileList = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
         <span class="hljs-keyword">if</span> (srcFile.isDirectory()) &#123;
             listClassFiles(classFileList, srcFile);
         &#125; <span class="hljs-keyword">else</span> &#123;
             classFileList.add(srcFile);
         &#125;
         <span class="hljs-keyword">for</span> (File classFile : classFileList) &#123;
-            futures.add(executor.submit(<span class="hljs-keyword">new</span> CollectSrcTask(classFile)));
+            futures.add(executor.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">CollectSrcTask</span>(classFile)));
         &#125;
     &#125;
     <span class="hljs-keyword">for</span> (File jarFile : dependencyJarList) &#123;                <span class="hljs-comment">// 在 jar 包里收集匹配的函数</span>
-        futures.add(executor.submit(<span class="hljs-keyword">new</span> CollectJarTask(jarFile)));
+        futures.add(executor.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">CollectJarTask</span>(jarFile)));
     &#125;
     <span class="hljs-keyword">for</span> (Future future : futures) &#123;
         future.get();
     &#125;
     futures.clear();
-    futures.add(executor.submit(<span class="hljs-keyword">new</span> Runnable() &#123;
+    futures.add(executor.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
         <span class="hljs-meta">@Override</span>
-        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
             saveIgnoreCollectedMethod(mappingCollector);    <span class="hljs-comment">// 写入 ignored methods 到文件里</span>
         &#125;
     &#125;));
-    futures.add(executor.submit(<span class="hljs-keyword">new</span> Runnable() &#123;
+    futures.add(executor.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
         <span class="hljs-meta">@Override</span>
-        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
             saveCollectedMethod(mappingCollector);          <span class="hljs-comment">// 将 method id -&gt; method 映射写入文件里</span>
         &#125;
     &#125;));
@@ -842,14 +842,14 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <span class="hljs-comment">// 用 ASM Core API 解析并找到匹配的函数</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> CollectMethodNode.visitEnd() &#123;
-    <span class="hljs-keyword">super</span>.visitEnd();
-    TraceMethod traceMethod = TraceMethod.create(<span class="hljs-number">0</span>, access, className, name, desc);
+    <span class="hljs-built_in">super</span>.visitEnd();
+    <span class="hljs-type">TraceMethod</span> <span class="hljs-variable">traceMethod</span> <span class="hljs-operator">=</span> TraceMethod.create(<span class="hljs-number">0</span>, access, className, name, desc);
     <span class="hljs-keyword">if</span> (<span class="hljs-string">&quot;&lt;init&gt;&quot;</span>.equals(name)) &#123;
-        isConstructor = <span class="hljs-keyword">true</span>;
+        isConstructor = <span class="hljs-literal">true</span>;
     &#125;
 
     <span class="hljs-comment">// 过滤掉空函数、getter/setter 等，加入 ignored method file 里</span>
-    <span class="hljs-keyword">boolean</span> isNeedTrace = isNeedTrace(configuration, traceMethod.className, mappingCollector);
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">isNeedTrace</span> <span class="hljs-operator">=</span> isNeedTrace(configuration, traceMethod.className, mappingCollector);
     <span class="hljs-keyword">if</span> ((isEmptyMethod() || isGetSetMethod() || isSingleMethod())
             &amp;&amp; isNeedTrace) &#123;
         ignoreCount.incrementAndGet();
@@ -869,20 +869,20 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 &#125;
 
 <span class="hljs-comment">// Jar 包则用 ZipFile API 遍历，依然用 ASM 解析</span>
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CollectJarTask</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
-        ZipFile zipFile = <span class="hljs-keyword">null</span>;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">CollectJarTask</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Runnable</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-type">ZipFile</span> <span class="hljs-variable">zipFile</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">try</span> &#123;
-            zipFile = <span class="hljs-keyword">new</span> ZipFile(fromJar);
-            Enumeration&lt;? extends ZipEntry&gt; enumeration = zipFile.entries();
+            zipFile = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZipFile</span>(fromJar);
+            Enumeration&lt;? <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ZipEntry</span>&gt; enumeration = zipFile.entries();
             <span class="hljs-keyword">while</span> (enumeration.hasMoreElements()) &#123;
-                ZipEntry zipEntry = enumeration.nextElement();
-                String zipEntryName = zipEntry.getName();
+                <span class="hljs-type">ZipEntry</span> <span class="hljs-variable">zipEntry</span> <span class="hljs-operator">=</span> enumeration.nextElement();
+                <span class="hljs-type">String</span> <span class="hljs-variable">zipEntryName</span> <span class="hljs-operator">=</span> zipEntry.getName();
                 <span class="hljs-keyword">if</span> (isNeedTraceFile(zipEntryName)) &#123;
-                    InputStream inputStream = zipFile.getInputStream(zipEntry);
-                    ClassReader classReader = <span class="hljs-keyword">new</span> ClassReader(inputStream);
-                    ClassWriter classWriter = <span class="hljs-keyword">new</span> ClassWriter(ClassWriter.COMPUTE_MAXS);
-                    ClassVisitor visitor = <span class="hljs-keyword">new</span> TraceClassAdapter(Opcodes.ASM5, classWriter);
+                    <span class="hljs-type">InputStream</span> <span class="hljs-variable">inputStream</span> <span class="hljs-operator">=</span> zipFile.getInputStream(zipEntry);
+                    <span class="hljs-type">ClassReader</span> <span class="hljs-variable">classReader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassReader</span>(inputStream);
+                    <span class="hljs-type">ClassWriter</span> <span class="hljs-variable">classWriter</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassWriter</span>(ClassWriter.COMPUTE_MAXS);
+                    <span class="hljs-type">ClassVisitor</span> <span class="hljs-variable">visitor</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TraceClassAdapter</span>(Opcodes.ASM5, classWriter);
                     classReader.accept(visitor, <span class="hljs-number">0</span>);
                 &#125;
             &#125;
@@ -900,7 +900,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 &#125;</code></pre></div>
 
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> MethodTracer.trace(Map&lt;File, File&gt; srcFolderList, Map&lt;File, File&gt; dependencyJarList) <span class="hljs-keyword">throws</span> ExecutionException, InterruptedException &#123;
-    List&lt;Future&gt; futures = <span class="hljs-keyword">new</span> LinkedList&lt;&gt;();
+    List&lt;Future&gt; futures = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedList</span>&lt;&gt;();
     traceMethodFromSrc(srcFolderList, futures);     <span class="hljs-comment">// 处理 class</span>
     traceMethodFromJar(dependencyJarList, futures); <span class="hljs-comment">// 处理 jar</span>
     <span class="hljs-keyword">for</span> (Future future : futures) &#123;
@@ -910,45 +910,45 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 &#125;
 
 <span class="hljs-comment">// 一个线程处理一个 class/dir </span>
-<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">traceMethodFromSrc</span><span class="hljs-params">(Map&lt;File, File&gt; srcMap, List&lt;Future&gt; futures)</span> </span>&#123;
-    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">null</span> != srcMap) &#123;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">traceMethodFromSrc</span><span class="hljs-params">(Map&lt;File, File&gt; srcMap, List&lt;Future&gt; futures)</span> &#123;
+    <span class="hljs-keyword">if</span> (<span class="hljs-literal">null</span> != srcMap) &#123;
         <span class="hljs-keyword">for</span> (Map.Entry&lt;File, File&gt; entry : srcMap.entrySet()) &#123;
-            futures.add(executor.submit(<span class="hljs-keyword">new</span> Runnable() &#123;
-                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123; innerTraceMethodFromSrc(entry.getKey(), entry.getValue()); &#125;
+            futures.add(executor.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
+                <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123; innerTraceMethodFromSrc(entry.getKey(), entry.getValue()); &#125;
             &#125;));
         &#125;
     &#125;
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">innerTraceMethodFromSrc</span><span class="hljs-params">(File input, File output)</span> </span>&#123;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">innerTraceMethodFromSrc</span><span class="hljs-params">(File input, File output)</span> &#123;
     <span class="hljs-comment">// ... 依然是 ASM 里 classReader，classWriter 和 classVisitor 的经典用法</span>
-    is = <span class="hljs-keyword">new</span> FileInputStream(classFile);
-    ClassReader classReader = <span class="hljs-keyword">new</span> ClassReader(is);
-    ClassWriter classWriter = <span class="hljs-keyword">new</span> ClassWriter(ClassWriter.COMPUTE_MAXS);
-    ClassVisitor classVisitor = <span class="hljs-keyword">new</span> TraceClassAdapter(Opcodes.ASM5, classWriter);   <span class="hljs-comment">// 重要的类</span>
+    is = <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(classFile);
+    <span class="hljs-type">ClassReader</span> <span class="hljs-variable">classReader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassReader</span>(is);
+    <span class="hljs-type">ClassWriter</span> <span class="hljs-variable">classWriter</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassWriter</span>(ClassWriter.COMPUTE_MAXS);
+    <span class="hljs-type">ClassVisitor</span> <span class="hljs-variable">classVisitor</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TraceClassAdapter</span>(Opcodes.ASM5, classWriter);   <span class="hljs-comment">// 重要的类</span>
     classReader.accept(classVisitor, ClassReader.EXPAND_FRAMES);
     <span class="hljs-comment">// ...</span>
 &#125;
 
-<span class="hljs-keyword">public</span> MethodVisitor TraceClassAdapter.visitMethod(<span class="hljs-keyword">int</span> access, String name, String desc,
+<span class="hljs-keyword">public</span> MethodVisitor TraceClassAdapter.visitMethod(<span class="hljs-type">int</span> access, String name, String desc,
                                  String signature, String[] exceptions) &#123;
     <span class="hljs-keyword">if</span> (isABSClass) &#123;
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">super</span>.visitMethod(access, name, desc, signature, exceptions);
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">super</span>.visitMethod(access, name, desc, signature, exceptions);
     &#125; <span class="hljs-keyword">else</span> &#123;
         <span class="hljs-keyword">if</span> (!hasWindowFocusMethod) &#123;    <span class="hljs-comment">// 匹配 Activity.onWindowFocusChanged，做页面打开速度统计</span>
             hasWindowFocusMethod = MethodCollector.isWindowFocusChangeMethod(name, desc);
         &#125;
-        MethodVisitor methodVisitor = cv.visitMethod(access, name, desc, signature, exceptions);
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> TraceMethodAdapter(api, methodVisitor, access, name, desc, <span class="hljs-keyword">this</span>.className,
+        <span class="hljs-type">MethodVisitor</span> <span class="hljs-variable">methodVisitor</span> <span class="hljs-operator">=</span> cv.visitMethod(access, name, desc, signature, exceptions);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TraceMethodAdapter</span>(api, methodVisitor, access, name, desc, <span class="hljs-built_in">this</span>.className,
                 hasWindowFocusMethod, isActivityOrSubClass, isNeedTrace);
     &#125;
 &#125;
 
 <span class="hljs-comment">// 匹配 Activity.onWindowFocusChanged(boolean hasFocus)</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">static</span> String MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD = <span class="hljs-string">&quot;onWindowFocusChanged&quot;</span>;
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">static</span> String MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD_ARGS = <span class="hljs-string">&quot;(Z)V&quot;</span>;
-<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isWindowFocusChangeMethod</span><span class="hljs-params">(String name, String desc)</span> </span>&#123;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span> != name &amp;&amp; <span class="hljs-keyword">null</span> != desc &amp;&amp; name.equals(TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD) 
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">static</span> <span class="hljs-type">String</span> <span class="hljs-variable">MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;onWindowFocusChanged&quot;</span>;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">static</span> <span class="hljs-type">String</span> <span class="hljs-variable">MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD_ARGS</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;(Z)V&quot;</span>;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isWindowFocusChangeMethod</span><span class="hljs-params">(String name, String desc)</span> &#123;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span> != name &amp;&amp; <span class="hljs-literal">null</span> != desc &amp;&amp; name.equals(TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD) 
         &amp;&amp; desc.equals(TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD_ARGS);
 &#125;
 
@@ -956,32 +956,32 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
     <span class="hljs-keyword">if</span> (!hasWindowFocusMethod &amp;&amp; isActivityOrSubClass &amp;&amp; isNeedTrace) &#123;
         insertWindowFocusChangeMethod(cv, className);
     &#125;
-    <span class="hljs-keyword">super</span>.visitEnd();
+    <span class="hljs-built_in">super</span>.visitEnd();
 &#125;
 
 <span class="hljs-comment">// 如果 Activity 没有覆盖 onWindowFocusChanged 则覆盖之（需要在里面插桩统计页面打开速度）</span>
-<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">insertWindowFocusChangeMethod</span><span class="hljs-params">(ClassVisitor cv, String classname)</span> </span>&#123;
-    MethodVisitor methodVisitor = cv.visitMethod(Opcodes.ACC_PUBLIC, TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD,
-            TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD_ARGS, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">null</span>);
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">insertWindowFocusChangeMethod</span><span class="hljs-params">(ClassVisitor cv, String classname)</span> &#123;
+    <span class="hljs-type">MethodVisitor</span> <span class="hljs-variable">methodVisitor</span> <span class="hljs-operator">=</span> cv.visitMethod(Opcodes.ACC_PUBLIC, TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD,
+            TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD_ARGS, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>);
     methodVisitor.visitCode();
     methodVisitor.visitVarInsn(Opcodes.ALOAD, <span class="hljs-number">0</span>);
     methodVisitor.visitVarInsn(Opcodes.ILOAD, <span class="hljs-number">1</span>);
     methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, TraceBuildConstants.MATRIX_TRACE_ACTIVITY_CLASS, 
-        TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD, TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD_ARGS, <span class="hljs-keyword">false</span>);
+        TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD, TraceBuildConstants.MATRIX_TRACE_ON_WINDOW_FOCUS_METHOD_ARGS, <span class="hljs-literal">false</span>);
     traceWindowFocusChangeMethod(methodVisitor, classname);
     methodVisitor.visitInsn(Opcodes.RETURN);
     methodVisitor.visitMaxs(<span class="hljs-number">2</span>, <span class="hljs-number">2</span>);
     methodVisitor.visitEnd();
 &#125;
 
-<span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TraceMethodAdapter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AdviceAdapter</span> </span>&#123;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">TraceMethodAdapter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AdviceAdapter</span> &#123;
     <span class="hljs-comment">// 进入函数后先执行 MethodBeat.i</span>
-    <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onMethodEnter</span><span class="hljs-params">()</span> </span>&#123;
-        TraceMethod traceMethod = collectedMethodMap.get(methodName);
-        <span class="hljs-keyword">if</span> (traceMethod != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onMethodEnter</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-type">TraceMethod</span> <span class="hljs-variable">traceMethod</span> <span class="hljs-operator">=</span> collectedMethodMap.get(methodName);
+        <span class="hljs-keyword">if</span> (traceMethod != <span class="hljs-literal">null</span>) &#123;
             traceMethodCount.incrementAndGet();
             mv.visitLdcInsn(traceMethod.id);
-            mv.visitMethodInsn(INVOKESTATIC, TraceBuildConstants.MATRIX_TRACE_CLASS, <span class="hljs-string">&quot;i&quot;</span>, <span class="hljs-string">&quot;(I)V&quot;</span>, <span class="hljs-keyword">false</span>);
+            mv.visitMethodInsn(INVOKESTATIC, TraceBuildConstants.MATRIX_TRACE_CLASS, <span class="hljs-string">&quot;i&quot;</span>, <span class="hljs-string">&quot;(I)V&quot;</span>, <span class="hljs-literal">false</span>);
 
             <span class="hljs-comment">// 在 onWindowFocusChanged 插入 AppMethodBeat.at</span>
             <span class="hljs-keyword">if</span> (checkNeedTraceWindowFocusChangeMethod(traceMethod)) &#123;
@@ -991,12 +991,12 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
     &#125;
     
     <span class="hljs-comment">// 退出函数前，执行 MethodBeat.o</span>
-    <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onMethodExit</span><span class="hljs-params">(<span class="hljs-keyword">int</span> opcode)</span> </span>&#123;
-        TraceMethod traceMethod = collectedMethodMap.get(methodName);
-        <span class="hljs-keyword">if</span> (traceMethod != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onMethodExit</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode)</span> &#123;
+        <span class="hljs-type">TraceMethod</span> <span class="hljs-variable">traceMethod</span> <span class="hljs-operator">=</span> collectedMethodMap.get(methodName);
+        <span class="hljs-keyword">if</span> (traceMethod != <span class="hljs-literal">null</span>) &#123;
             traceMethodCount.incrementAndGet();
             mv.visitLdcInsn(traceMethod.id);
-            mv.visitMethodInsn(INVOKESTATIC, TraceBuildConstants.MATRIX_TRACE_CLASS, <span class="hljs-string">&quot;o&quot;</span>, <span class="hljs-string">&quot;(I)V&quot;</span>, <span class="hljs-keyword">false</span>);
+            mv.visitMethodInsn(INVOKESTATIC, TraceBuildConstants.MATRIX_TRACE_CLASS, <span class="hljs-string">&quot;o&quot;</span>, <span class="hljs-string">&quot;(I)V&quot;</span>, <span class="hljs-literal">false</span>);
         &#125;
     &#125;
 &#125;
@@ -1010,48 +1010,48 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <p><img src="../../../../image/2021-04-26-matrix-tracecanary/stack.jpg" srcset="/image/loading.gif" lazyload alt="summary func cast"></p>
 </blockquote>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 记录函数的开始时间</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.i(<span class="hljs-keyword">int</span> methodId) &#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.i(<span class="hljs-type">int</span> methodId) &#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (threadId == sMainThreadId) &#123;                <span class="hljs-comment">// 只关心主线程的慢函数，其他线程不记录</span>
         <span class="hljs-keyword">if</span> (assertIn) &#123;                             <span class="hljs-comment">// 防止重入</span>
             android.util.Log.e(TAG, <span class="hljs-string">&quot;ERROR!!! AppMethodBeat.i Recursive calls!!!&quot;</span>);
             <span class="hljs-keyword">return</span>;
         &#125;
-        assertIn = <span class="hljs-keyword">true</span>;
+        assertIn = <span class="hljs-literal">true</span>;
         <span class="hljs-keyword">if</span> (sIndex &lt; Constants.BUFFER_SIZE) &#123;       <span class="hljs-comment">// buffer 满了则重头开始，会覆盖掉旧数据</span>
-            mergeData(methodId, sIndex, <span class="hljs-keyword">true</span>);
+            mergeData(methodId, sIndex, <span class="hljs-literal">true</span>);
         &#125; <span class="hljs-keyword">else</span> &#123;
             sIndex = <span class="hljs-number">0</span>;
-            mergeData(methodId, sIndex, <span class="hljs-keyword">true</span>);
+            mergeData(methodId, sIndex, <span class="hljs-literal">true</span>);
         &#125;
         ++sIndex;
-        assertIn = <span class="hljs-keyword">false</span>;
+        assertIn = <span class="hljs-literal">false</span>;
     &#125;
 &#125;
 <span class="hljs-comment">// 插入 buffer</span>
-<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.mergeData(<span class="hljs-keyword">int</span> methodId, <span class="hljs-keyword">int</span> index, <span class="hljs-keyword">boolean</span> isIn) &#123;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.mergeData(<span class="hljs-type">int</span> methodId, <span class="hljs-type">int</span> index, <span class="hljs-type">boolean</span> isIn) &#123;
     <span class="hljs-keyword">if</span> (methodId == AppMethodBeat.METHOD_ID_DISPATCH) &#123;
         sCurrentDiffTime = SystemClock.uptimeMillis() - sDiffTime;
     &#125;
-    <span class="hljs-keyword">long</span> trueId = <span class="hljs-number">0L</span>;                               <span class="hljs-comment">// 构造函数执行时间戳，第一位表示 i/o 操作</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">trueId</span> <span class="hljs-operator">=</span> <span class="hljs-number">0L</span>;                               <span class="hljs-comment">// 构造函数执行时间戳，第一位表示 i/o 操作</span>
     <span class="hljs-keyword">if</span> (isIn) &#123;
         trueId |= <span class="hljs-number">1L</span> &lt;&lt; <span class="hljs-number">63</span>;
     &#125;
-    trueId |= (<span class="hljs-keyword">long</span>) methodId &lt;&lt; <span class="hljs-number">43</span>;                <span class="hljs-comment">// 后续 20 位存储 method id</span>
+    trueId |= (<span class="hljs-type">long</span>) methodId &lt;&lt; <span class="hljs-number">43</span>;                <span class="hljs-comment">// 后续 20 位存储 method id</span>
     trueId |= sCurrentDiffTime &amp; <span class="hljs-number">0x7FFFFFFFFFFL</span>;    <span class="hljs-comment">// 低 43 位存储相对时间戳</span>
     sBuffer[index] = trueId;
     checkPileup(index);
     sLastIndex = index;
 &#125;
 <span class="hljs-comment">// 记录函数的结束时间，跟上面是一样的</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.o(<span class="hljs-keyword">int</span> methodId) &#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.o(<span class="hljs-type">int</span> methodId) &#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (Thread.currentThread().getId() == sMainThreadId) &#123;
         <span class="hljs-keyword">if</span> (sIndex &lt; Constants.BUFFER_SIZE) &#123;
-            mergeData(methodId, sIndex, <span class="hljs-keyword">false</span>);
+            mergeData(methodId, sIndex, <span class="hljs-literal">false</span>);
         &#125; <span class="hljs-keyword">else</span> &#123;
             sIndex = <span class="hljs-number">0</span>;
-            mergeData(methodId, sIndex, <span class="hljs-keyword">false</span>);
+            mergeData(methodId, sIndex, <span class="hljs-literal">false</span>);
         &#125;
         ++sIndex;
     &#125;
@@ -1062,11 +1062,11 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <blockquote>
 <p>另外，考虑到每个方法执行前后都获取系统时间（System.nanoTime）会对性能影响比较大，而实际上，单个函数执行耗时小于 5ms 的情况，对卡顿来说不是主要原因，可以忽略不计，如果是多次调用的情况，则在它的父级方法中可以反映出来，所以为了减少对性能的影响，通过另一条更新时间的线程每 5ms 去更新一个时间变量，而每个方法执行前后只读取该变量来减少性能损耗。</p>
 </blockquote>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> Runnable sUpdateDiffTimeRunnable = <span class="hljs-keyword">new</span> Runnable() &#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Runnable</span> <span class="hljs-variable">sUpdateDiffTimeRunnable</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-keyword">try</span> &#123;
-            <span class="hljs-keyword">while</span> (<span class="hljs-keyword">true</span>) &#123;
+            <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
                 <span class="hljs-keyword">while</span> (!isPauseUpdateTime &amp;&amp; status &gt; STATUS_STOPPED) &#123;
                     sCurrentDiffTime = SystemClock.uptimeMillis() - sDiffTime;
                     SystemClock.sleep(Constants.TIME_UPDATE_CYCLE_MS);
@@ -1084,20 +1084,20 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <h2 id="上报耗时-Message"><a href="#上报耗时-Message" class="headerlink" title="上报耗时 Message"></a>上报耗时 <code>Message</code></h2><p>上面说过可以用一个 <code>long</code> 表示函数开始/结束的相对时间戳，然后存储在一个 100M 大小的数组里，插入索引会从 0 不断增长，到达 100M 后重置为 0</p>
 <p>遇到耗时 <code>Message</code> 时，需要裁剪出有效的函数执行时间记录，所以在处理 <code>Message</code> 开始前先把索引记下来 <code>start</code>，处理完后从 <code>start</code> 到当前索引 <code>end</code> 之间就是这个 <code>Message</code> 的调用栈耗时记录</p>
 <p>要注意的是索引到尾部后会重置为 0，所以要区分 <code>start</code> 和 <code>end</code> 大小关系；当 <code>start &lt; end</code> 取 <code>[start, end]</code>，当 <code>start &gt; end</code> 取 <code>[start,] + [0, end]</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EvilMethodTracer</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EvilMethodTracer</span> &#123;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchBegin</span><span class="hljs-params">(<span class="hljs-keyword">long</span> beginNs, <span class="hljs-keyword">long</span> cpuBeginMs, <span class="hljs-keyword">long</span> token)</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.dispatchBegin(beginNs, cpuBeginMs, token);
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchBegin</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> token)</span> &#123;
+        <span class="hljs-built_in">super</span>.dispatchBegin(beginNs, cpuBeginMs, token);
         indexRecord = AppMethodBeat.getInstance().maskIndex(<span class="hljs-string">&quot;EvilMethodTracer#dispatchBegin&quot;</span>);  <span class="hljs-comment">// 把当前索引记下来</span>
     &#125;
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchEnd</span><span class="hljs-params">(<span class="hljs-keyword">long</span> beginNs, <span class="hljs-keyword">long</span> cpuBeginMs, <span class="hljs-keyword">long</span> endNs, <span class="hljs-keyword">long</span> cpuEndMs, <span class="hljs-keyword">long</span> token, <span class="hljs-keyword">boolean</span> isVsyncFrame)</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.dispatchEnd(beginNs, cpuBeginMs, endNs, cpuEndMs, token, isVsyncFrame);
-        <span class="hljs-keyword">long</span> dispatchCost = (endNs - beginNs) / Constants.TIME_MILLIS_TO_NANO;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchEnd</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> endNs, <span class="hljs-type">long</span> cpuEndMs, <span class="hljs-type">long</span> token, <span class="hljs-type">boolean</span> isVsyncFrame)</span> &#123;
+        <span class="hljs-built_in">super</span>.dispatchEnd(beginNs, cpuBeginMs, endNs, cpuEndMs, token, isVsyncFrame);
+        <span class="hljs-type">long</span> <span class="hljs-variable">dispatchCost</span> <span class="hljs-operator">=</span> (endNs - beginNs) / Constants.TIME_MILLIS_TO_NANO;
         <span class="hljs-keyword">try</span> &#123;
             <span class="hljs-keyword">if</span> (dispatchCost &gt;= evilThresholdMs) &#123;
-                <span class="hljs-keyword">long</span>[] data = AppMethodBeat.getInstance().copyData(indexRecord);    <span class="hljs-comment">// 裁剪出从开始索引到当前索引间的数据</span>
+                <span class="hljs-type">long</span>[] data = AppMethodBeat.getInstance().copyData(indexRecord);    <span class="hljs-comment">// 裁剪出从开始索引到当前索引间的数据</span>
                 <span class="hljs-comment">// ...</span>
             &#125;
         &#125; ...
@@ -1105,24 +1105,24 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 &#125;
 
 <span class="hljs-comment">// 裁剪函数执行耗时，注意区分 start &lt; end 和 start &gt; end 两种情况</span>
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AppMethodBeat</span> </span>&#123;
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">long</span>[] copyData(IndexRecord startRecord) &#123;
-        <span class="hljs-keyword">return</span> copyData(startRecord, <span class="hljs-keyword">new</span> IndexRecord(sIndex - <span class="hljs-number">1</span>));
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AppMethodBeat</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-type">long</span>[] copyData(IndexRecord startRecord) &#123;
+        <span class="hljs-keyword">return</span> copyData(startRecord, <span class="hljs-keyword">new</span> <span class="hljs-title class_">IndexRecord</span>(sIndex - <span class="hljs-number">1</span>));
     &#125;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span>[] copyData(IndexRecord startRecord, IndexRecord endRecord) &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">long</span>[] copyData(IndexRecord startRecord, IndexRecord endRecord) &#123;
         <span class="hljs-comment">// ...</span>
-        <span class="hljs-keyword">long</span>[] data = <span class="hljs-keyword">new</span> <span class="hljs-keyword">long</span>[<span class="hljs-number">0</span>];
-        <span class="hljs-keyword">int</span> length;
-        <span class="hljs-keyword">int</span> start = Math.max(<span class="hljs-number">0</span>, startRecord.index);
-        <span class="hljs-keyword">int</span> end = Math.max(<span class="hljs-number">0</span>, endRecord.index);
+        <span class="hljs-type">long</span>[] data = <span class="hljs-keyword">new</span> <span class="hljs-title class_">long</span>[<span class="hljs-number">0</span>];
+        <span class="hljs-type">int</span> length;
+        <span class="hljs-type">int</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> Math.max(<span class="hljs-number">0</span>, startRecord.index);
+        <span class="hljs-type">int</span> <span class="hljs-variable">end</span> <span class="hljs-operator">=</span> Math.max(<span class="hljs-number">0</span>, endRecord.index);
         <span class="hljs-keyword">if</span> (end &gt; start) &#123;
             length = end - start + <span class="hljs-number">1</span>;
-            data = <span class="hljs-keyword">new</span> <span class="hljs-keyword">long</span>[length];
+            data = <span class="hljs-keyword">new</span> <span class="hljs-title class_">long</span>[length];
             System.arraycopy(sBuffer, start, data, <span class="hljs-number">0</span>, length);
         &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (end &lt; start) &#123;
             length = <span class="hljs-number">1</span> + end + (sBuffer.length - start);
-            data = <span class="hljs-keyword">new</span> <span class="hljs-keyword">long</span>[length];
+            data = <span class="hljs-keyword">new</span> <span class="hljs-title class_">long</span>[length];
             System.arraycopy(sBuffer, start, data, <span class="hljs-number">0</span>, sBuffer.length - start);
             System.arraycopy(sBuffer, <span class="hljs-number">0</span>, data, sBuffer.length - start, end + <span class="hljs-number">1</span>);
         &#125;
@@ -1133,10 +1133,10 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <h2 id="上报-ANR"><a href="#上报-ANR" class="headerlink" title="上报 ANR"></a>上报 ANR</h2><p>在 <a href="../../../../2020/10/20/anr/">阅读源码系列：ANR 是怎么产生的</a> 说过，ANR 是因为没有及时消费 <code>MotionEvent</code>，超过 5s 后由 AMS 弹出的对话框</p>
 <p>弹出 ANR 对话框的 <code>Runnable</code> 是在分发 <code>MotionEvent</code> 时放下的一个延时炸弹（<code>Handler.postDelayed</code>），如果 <code>MotionEvent</code> 在 5s 内被消费则炸弹被移除（<code>Handler.removeCallbacks</code>）</p>
 <p>我们在 <code>Message</code> 执行前有钩子函数 <code>dispatchBegin</code>，那也可以学习 ANR 放入报告函数（注意是放在子线程的消息队列里，不然在主线程里还没执行就被 ANR 对话框杀掉了），延时 5s，然后在 <code>dispatchEnd</code> 里移除，如果主线程的 <code>Message</code> 超过 5s 未执行完，那极有可能触发 ANR，于是收集调用堆栈及耗时信息上报给服务器</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AnrTracer</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AnrTracer</span> &#123;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchBegin</span><span class="hljs-params">(<span class="hljs-keyword">long</span> beginNs, <span class="hljs-keyword">long</span> cpuBeginMs, <span class="hljs-keyword">long</span> token)</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.dispatchBegin(beginNs, cpuBeginMs, token);
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchBegin</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> token)</span> &#123;
+        <span class="hljs-built_in">super</span>.dispatchBegin(beginNs, cpuBeginMs, token);
 
         anrTask.beginRecord = AppMethodBeat.getInstance().maskIndex(<span class="hljs-string">&quot;AnrTracer#dispatchBegin&quot;</span>);     <span class="hljs-comment">// 记下调用堆栈的索引</span>
         anrTask.token = token;
@@ -1144,64 +1144,64 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
         <span class="hljs-keyword">if</span> (traceConfig.isDevEnv()) &#123;
             MatrixLog.v(TAG, <span class="hljs-string">&quot;* [dispatchBegin] token:%s index:%s&quot;</span>, token, anrTask.beginRecord.index);
         &#125;
-        <span class="hljs-keyword">long</span> cost = (System.nanoTime() - token) / Constants.TIME_MILLIS_TO_NANO;
+        <span class="hljs-type">long</span> <span class="hljs-variable">cost</span> <span class="hljs-operator">=</span> (System.nanoTime() - token) / Constants.TIME_MILLIS_TO_NANO;
         anrHandler.postDelayed(anrTask, Constants.DEFAULT_ANR - cost);                              <span class="hljs-comment">// 在子线程埋下延时 5s 的“炸弹”</span>
         lagHandler.postDelayed(lagTask, Constants.DEFAULT_NORMAL_LAG - cost);
     &#125;
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatchEnd</span><span class="hljs-params">(<span class="hljs-keyword">long</span> beginNs, <span class="hljs-keyword">long</span> cpuBeginMs, <span class="hljs-keyword">long</span> endNs, <span class="hljs-keyword">long</span> cpuEndMs, <span class="hljs-keyword">long</span> token, <span class="hljs-keyword">boolean</span> isBelongFrame)</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.dispatchEnd(beginNs, cpuBeginMs, endNs, cpuEndMs, token, isBelongFrame);
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchEnd</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> endNs, <span class="hljs-type">long</span> cpuEndMs, <span class="hljs-type">long</span> token, <span class="hljs-type">boolean</span> isBelongFrame)</span> &#123;
+        <span class="hljs-built_in">super</span>.dispatchEnd(beginNs, cpuBeginMs, endNs, cpuEndMs, token, isBelongFrame);
         <span class="hljs-comment">// ... 及时移除“炸弹”</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">null</span> != anrTask) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-literal">null</span> != anrTask) &#123;
             anrTask.getBeginRecord().release();
             anrHandler.removeCallbacks(anrTask);
         &#125;
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">null</span> != lagTask) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-literal">null</span> != lagTask) &#123;
             lagHandler.removeCallbacks(lagTask);
         &#125;
     &#125;    
 &#125;
 
 <span class="hljs-comment">// 收集调用栈帧及其耗时、INPUUT/ANIMATION/TRAVERSAL 耗时、线程及进程信息等</span>
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AnrHandleTask</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">AnrHandleTask</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Runnable</span> &#123;
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;
-        <span class="hljs-keyword">long</span> curTime = SystemClock.uptimeMillis();
-        <span class="hljs-keyword">boolean</span> isForeground = isForeground();
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-type">long</span> <span class="hljs-variable">curTime</span> <span class="hljs-operator">=</span> SystemClock.uptimeMillis();
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">isForeground</span> <span class="hljs-operator">=</span> isForeground();
         <span class="hljs-comment">// process</span>
-        <span class="hljs-keyword">int</span>[] processStat = Utils.getProcessPriority(Process.myPid());
-        <span class="hljs-keyword">long</span>[] data = AppMethodBeat.getInstance().copyData(beginRecord);
+        <span class="hljs-type">int</span>[] processStat = Utils.getProcessPriority(Process.myPid());
+        <span class="hljs-type">long</span>[] data = AppMethodBeat.getInstance().copyData(beginRecord);
         beginRecord.release();
-        String scene = AppMethodBeat.getVisibleScene();
+        <span class="hljs-type">String</span> <span class="hljs-variable">scene</span> <span class="hljs-operator">=</span> AppMethodBeat.getVisibleScene();
         <span class="hljs-comment">// memory</span>
-        <span class="hljs-keyword">long</span>[] memoryInfo = dumpMemory();
+        <span class="hljs-type">long</span>[] memoryInfo = dumpMemory();
         <span class="hljs-comment">// Thread state</span>
-        Thread.State status = Looper.getMainLooper().getThread().getState();
+        Thread.<span class="hljs-type">State</span> <span class="hljs-variable">status</span> <span class="hljs-operator">=</span> Looper.getMainLooper().getThread().getState();
         StackTraceElement[] stackTrace = Looper.getMainLooper().getThread().getStackTrace();
-        String dumpStack = Utils.getStack(stackTrace, <span class="hljs-string">&quot;|*\t\t&quot;</span>, <span class="hljs-number">12</span>);
+        <span class="hljs-type">String</span> <span class="hljs-variable">dumpStack</span> <span class="hljs-operator">=</span> Utils.getStack(stackTrace, <span class="hljs-string">&quot;|*\t\t&quot;</span>, <span class="hljs-number">12</span>);
         <span class="hljs-comment">// frame</span>
-        UIThreadMonitor monitor = UIThreadMonitor.getMonitor();
-        <span class="hljs-keyword">long</span> inputCost = monitor.getQueueCost(UIThreadMonitor.CALLBACK_INPUT, token);
-        <span class="hljs-keyword">long</span> animationCost = monitor.getQueueCost(UIThreadMonitor.CALLBACK_ANIMATION, token);
-        <span class="hljs-keyword">long</span> traversalCost = monitor.getQueueCost(UIThreadMonitor.CALLBACK_TRAVERSAL, token);
+        <span class="hljs-type">UIThreadMonitor</span> <span class="hljs-variable">monitor</span> <span class="hljs-operator">=</span> UIThreadMonitor.getMonitor();
+        <span class="hljs-type">long</span> <span class="hljs-variable">inputCost</span> <span class="hljs-operator">=</span> monitor.getQueueCost(UIThreadMonitor.CALLBACK_INPUT, token);
+        <span class="hljs-type">long</span> <span class="hljs-variable">animationCost</span> <span class="hljs-operator">=</span> monitor.getQueueCost(UIThreadMonitor.CALLBACK_ANIMATION, token);
+        <span class="hljs-type">long</span> <span class="hljs-variable">traversalCost</span> <span class="hljs-operator">=</span> monitor.getQueueCost(UIThreadMonitor.CALLBACK_TRAVERSAL, token);
         <span class="hljs-comment">// trace</span>
-        LinkedList&lt;MethodItem&gt; stack = <span class="hljs-keyword">new</span> LinkedList();
+        LinkedList&lt;MethodItem&gt; stack = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedList</span>();
         <span class="hljs-keyword">if</span> (data.length &gt; <span class="hljs-number">0</span>) &#123;
-            TraceDataUtils.structuredDataToStack(data, stack, <span class="hljs-keyword">true</span>, curTime);
-            TraceDataUtils.trimStack(stack, Constants.TARGET_EVIL_METHOD_STACK, <span class="hljs-keyword">new</span> TraceDataUtils.IStructuredDataFilter() &#123;
+            TraceDataUtils.structuredDataToStack(data, stack, <span class="hljs-literal">true</span>, curTime);
+            TraceDataUtils.trimStack(stack, Constants.TARGET_EVIL_METHOD_STACK, <span class="hljs-keyword">new</span> <span class="hljs-title class_">TraceDataUtils</span>.IStructuredDataFilter() &#123;
                 <span class="hljs-meta">@Override</span>
-                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isFilter</span><span class="hljs-params">(<span class="hljs-keyword">long</span> during, <span class="hljs-keyword">int</span> filterCount)</span> </span>&#123;
+                <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isFilter</span><span class="hljs-params">(<span class="hljs-type">long</span> during, <span class="hljs-type">int</span> filterCount)</span> &#123;
                     <span class="hljs-keyword">return</span> during &lt; filterCount * Constants.TIME_UPDATE_CYCLE_MS;
                 &#125;
                 <span class="hljs-meta">@Override</span>
-                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> <span class="hljs-title">getFilterMaxCount</span><span class="hljs-params">()</span> </span>&#123;
+                <span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getFilterMaxCount</span><span class="hljs-params">()</span> &#123;
                     <span class="hljs-keyword">return</span> Constants.FILTER_STACK_MAX_COUNT;
                 &#125;
                 <span class="hljs-meta">@Override</span>
-                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">fallback</span><span class="hljs-params">(List&lt;MethodItem&gt; stack, <span class="hljs-keyword">int</span> size)</span> </span>&#123;
+                <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">fallback</span><span class="hljs-params">(List&lt;MethodItem&gt; stack, <span class="hljs-type">int</span> size)</span> &#123;
                     MatrixLog.w(TAG, <span class="hljs-string">&quot;[fallback] size:%s targetSize:%s stack:%s&quot;</span>, size, Constants.TARGET_EVIL_METHOD_STACK, stack);
-                    Iterator iterator = stack.listIterator(Math.min(size, Constants.TARGET_EVIL_METHOD_STACK));
+                    <span class="hljs-type">Iterator</span> <span class="hljs-variable">iterator</span> <span class="hljs-operator">=</span> stack.listIterator(Math.min(size, Constants.TARGET_EVIL_METHOD_STACK));
                     <span class="hljs-keyword">while</span> (iterator.hasNext()) &#123;
                         iterator.next();
                         iterator.remove();
@@ -1209,9 +1209,9 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
                 &#125;
             &#125;);
         &#125;
-        StringBuilder reportBuilder = <span class="hljs-keyword">new</span> StringBuilder();
-        StringBuilder logcatBuilder = <span class="hljs-keyword">new</span> StringBuilder();
-        <span class="hljs-keyword">long</span> stackCost = Math.max(Constants.DEFAULT_ANR, TraceDataUtils.stackToString(stack, reportBuilder, logcatBuilder));
+        <span class="hljs-type">StringBuilder</span> <span class="hljs-variable">reportBuilder</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>();
+        <span class="hljs-type">StringBuilder</span> <span class="hljs-variable">logcatBuilder</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>();
+        <span class="hljs-type">long</span> <span class="hljs-variable">stackCost</span> <span class="hljs-operator">=</span> Math.max(Constants.DEFAULT_ANR, TraceDataUtils.stackToString(stack, reportBuilder, logcatBuilder));
         <span class="hljs-comment">// ...</span>
     &#125;
 &#125;</code></pre></div>
@@ -1232,8 +1232,8 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <h3 id="Application-执行耗时"><a href="#Application-执行耗时" class="headerlink" title="Application 执行耗时"></a><code>Application</code> 执行耗时</h3><p>有了上面的插桩，通过给 <code>Application.attachBaseContext</code> 插桩，也就是第一次执行 <code>AppMethodBeat.i</code> 的时候，可以拿到 <code>eggBrokenTime</code> 作为 APP 启动时间</p>
 <p>这里解释下为什么不在 <code>Application</code> 构造函数里插桩并作为 APP 启动时间，那是因为 APP 有冷启动/热启动的概念，冷启动下 fork app process 并构造 <code>Application</code> 实例，此时算出的启动时间是正确的；但如果是热启动，<code>Application</code> 实例并没有销毁也不会执行构造函数，而是直接走 <code>onCreate</code> 函数，此时在构造函数里插桩就无法捕获到正确的启动时间了</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AppMethodBeat</span> </span>&#123;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">i</span><span class="hljs-params">(<span class="hljs-keyword">int</span> methodId)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AppMethodBeat</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">i</span><span class="hljs-params">(<span class="hljs-type">int</span> methodId)</span> &#123;
         <span class="hljs-comment">// ... 第一次执行 AppMethodBeat.i 时</span>
         <span class="hljs-keyword">if</span> (status == STATUS_DEFAULT) &#123;
             <span class="hljs-keyword">synchronized</span> (statusLock) &#123;
@@ -1246,21 +1246,21 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
         <span class="hljs-comment">// ...</span>
     &#125;
 
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">realExecute</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">realExecute</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-comment">// ...</span>
         ActivityThreadHacker.hackSysHandlerCallback();
         <span class="hljs-comment">/// ...</span>
     &#125;        
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityThreadHacker</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ActivityThreadHacker</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">long</span> sApplicationCreateBeginTime = <span class="hljs-number">0L</span>;
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">long</span> <span class="hljs-title">getEggBrokenTime</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-type">long</span> <span class="hljs-variable">sApplicationCreateBeginTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0L</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">long</span> <span class="hljs-title function_">getEggBrokenTime</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-keyword">return</span> ActivityThreadHacker.sApplicationCreateBeginTime;
     &#125;    
 
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">hackSysHandlerCallback</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">hackSysHandlerCallback</span><span class="hljs-params">()</span> &#123;
         sApplicationCreateBeginTime = SystemClock.uptimeMillis();   <span class="hljs-comment">// 记录 Application 的创建时间</span>
         <span class="hljs-comment">// ...</span>
     &#125;    
@@ -1268,13 +1268,13 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <p>初始化 <code>Application</code> 后启动第一个 <code>Activity</code>/<code>Service</code>/<code>BroadcastReceiver</code> 的时刻作为 <code>Application</code> 初始化的完结时间（为啥没有 <code>ContentProvider</code> 呢？因为它是在 <code>onCreate</code> 之前启动的，see <a href="../../../../2021/04/12/leakcanary/">LeakCanary 浅析</a>）</p>
 <p>上述三大组件的启动会通过主线程的消息队列在 <code>ActivityThread.mH</code> 里执行</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">H</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Handler</span> </span>&#123;
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> CREATE_SERVICE          = <span class="hljs-number">114</span>;
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> RECEIVER                = <span class="hljs-number">113</span>;
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> RELAUNCH_ACTIVITY       = <span class="hljs-number">160</span>;
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> EXECUTE_TRANSACTION     = <span class="hljs-number">159</span>;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">H</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Handler</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">CREATE_SERVICE</span>          <span class="hljs-operator">=</span> <span class="hljs-number">114</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">RECEIVER</span>                <span class="hljs-operator">=</span> <span class="hljs-number">113</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">RELAUNCH_ACTIVITY</span>       <span class="hljs-operator">=</span> <span class="hljs-number">160</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">EXECUTE_TRANSACTION</span>     <span class="hljs-operator">=</span> <span class="hljs-number">159</span>;
 
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleMessage</span><span class="hljs-params">(Message msg)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">handleMessage</span><span class="hljs-params">(Message msg)</span> &#123;
         <span class="hljs-keyword">if</span> (DEBUG_MESSAGES) Slog.v(TAG, <span class="hljs-string">&quot;&gt;&gt;&gt; handling: &quot;</span> + codeToString(msg.what));
         <span class="hljs-keyword">switch</span> (msg.what) &#123;
             <span class="hljs-comment">// ...</span>
@@ -1298,7 +1298,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
                 <span class="hljs-keyword">break</span>;
 
             <span class="hljs-keyword">case</span> EXECUTE_TRANSACTION:
-                <span class="hljs-keyword">final</span> ClientTransaction transaction = (ClientTransaction) msg.obj;
+                <span class="hljs-keyword">final</span> <span class="hljs-type">ClientTransaction</span> <span class="hljs-variable">transaction</span> <span class="hljs-operator">=</span> (ClientTransaction) msg.obj;
                 mTransactionExecutor.execute(transaction);
                 <span class="hljs-keyword">if</span> (isSystem()) &#123;
                     <span class="hljs-comment">// Client transactions inside system process are recycled on the client side</span>
@@ -1316,7 +1316,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <p>所以 <code>TraceCanary</code> 选择在第一次执行 <code>AppMethodBeat.i</code> 时，替换 <code>ActivityThread.sCurrentActivityThread.mH.mCallback</code>，在 <code>Handler.Callback.handleMessage(msg)</code> 里监听第一次启动 <code>Activity</code>/<code>Service</code>/<code>BroadcastReceiver</code> 的时刻作为 <code>Application</code> 初始化的结束点</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 第一次执行时</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.i(<span class="hljs-keyword">int</span> methodId) &#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.i(<span class="hljs-type">int</span> methodId) &#123;
     <span class="hljs-keyword">if</span> (status &lt;= STATUS_STOPPED) &#123;
         <span class="hljs-keyword">return</span>;
     &#125;
@@ -1345,18 +1345,18 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
         sApplicationCreateBeginTime = SystemClock.uptimeMillis();
         sApplicationCreateBeginMethodIndex = AppMethodBeat.getInstance().maskIndex(<span class="hljs-string">&quot;ApplicationCreateBeginMethodIndex&quot;</span>);
         Class&lt;?&gt; forName = Class.forName(<span class="hljs-string">&quot;android.app.ActivityThread&quot;</span>);
-        Field field = forName.getDeclaredField(<span class="hljs-string">&quot;sCurrentActivityThread&quot;</span>);
-        field.setAccessible(<span class="hljs-keyword">true</span>);
-        Object activityThreadValue = field.get(forName);
-        Field mH = forName.getDeclaredField(<span class="hljs-string">&quot;mH&quot;</span>);
-        mH.setAccessible(<span class="hljs-keyword">true</span>);
-        Object handler = mH.get(activityThreadValue);
+        <span class="hljs-type">Field</span> <span class="hljs-variable">field</span> <span class="hljs-operator">=</span> forName.getDeclaredField(<span class="hljs-string">&quot;sCurrentActivityThread&quot;</span>);
+        field.setAccessible(<span class="hljs-literal">true</span>);
+        <span class="hljs-type">Object</span> <span class="hljs-variable">activityThreadValue</span> <span class="hljs-operator">=</span> field.get(forName);
+        <span class="hljs-type">Field</span> <span class="hljs-variable">mH</span> <span class="hljs-operator">=</span> forName.getDeclaredField(<span class="hljs-string">&quot;mH&quot;</span>);
+        mH.setAccessible(<span class="hljs-literal">true</span>);
+        <span class="hljs-type">Object</span> <span class="hljs-variable">handler</span> <span class="hljs-operator">=</span> mH.get(activityThreadValue);
         Class&lt;?&gt; handlerClass = handler.getClass().getSuperclass();
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">null</span> != handlerClass) &#123;
-            Field callbackField = handlerClass.getDeclaredField(<span class="hljs-string">&quot;mCallback&quot;</span>);
-            callbackField.setAccessible(<span class="hljs-keyword">true</span>);
-            Handler.Callback originalCallback = (Handler.Callback) callbackField.get(handler);
-            HackCallback callback = <span class="hljs-keyword">new</span> HackCallback(originalCallback);
+        <span class="hljs-keyword">if</span> (<span class="hljs-literal">null</span> != handlerClass) &#123;
+            <span class="hljs-type">Field</span> <span class="hljs-variable">callbackField</span> <span class="hljs-operator">=</span> handlerClass.getDeclaredField(<span class="hljs-string">&quot;mCallback&quot;</span>);
+            callbackField.setAccessible(<span class="hljs-literal">true</span>);
+            Handler.<span class="hljs-type">Callback</span> <span class="hljs-variable">originalCallback</span> <span class="hljs-operator">=</span> (Handler.Callback) callbackField.get(handler);
+            <span class="hljs-type">HackCallback</span> <span class="hljs-variable">callback</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HackCallback</span>(originalCallback);
             callbackField.set(handler, callback);
         &#125;
         MatrixLog.i(TAG, <span class="hljs-string">&quot;hook system handler completed. start:%s SDK_INT:%s&quot;</span>, sApplicationCreateBeginTime, Build.VERSION.SDK_INT);
@@ -1366,9 +1366,9 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 &#125;
 
 <span class="hljs-comment">// 记录时间点</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> HackCallback.handleMessage(Message msg) &#123;
+<span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> HackCallback.handleMessage(Message msg) &#123;
     <span class="hljs-comment">// ...</span>
-    <span class="hljs-keyword">boolean</span> isLaunchActivity = isLaunchActivity(msg);
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">isLaunchActivity</span> <span class="hljs-operator">=</span> isLaunchActivity(msg);
     <span class="hljs-keyword">if</span> (hasPrint &gt; <span class="hljs-number">0</span>) &#123;
         MatrixLog.i(TAG, <span class="hljs-string">&quot;[handleMessage] msg.what:%s begin:%s isLaunchActivity:%s SDK_INT=%s&quot;</span>, msg.what, SystemClock.uptimeMillis()isLaunchActivity, Build.VERSION.SDK_INT);
         hasPrint--;
@@ -1378,7 +1378,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
                 || msg.what == RECEIVER) &#123; <span class="hljs-comment">// todo for provider</span>
             ActivityThreadHacker.sApplicationCreateEndTime = SystemClock.uptimeMillis();
             ActivityThreadHacker.sApplicationCreateScene = msg.what;
-            isCreated = <span class="hljs-keyword">true</span>;
+            isCreated = <span class="hljs-literal">true</span>;
             sIsCreatedByLaunchActivity = isLaunchActivity;
             MatrixLog.i(TAG, <span class="hljs-string">&quot;application create end, sApplicationCreateScene:%d, isLaunchActivity:%s&quot;</span>, msg.what, isLaunchActivity);
             <span class="hljs-keyword">synchronized</span> (listeners) &#123;
@@ -1388,33 +1388,33 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
             &#125;
         &#125;
     &#125;
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span> != mOriginalCallback &amp;&amp; mOriginalCallback.handleMessage(msg);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span> != mOriginalCallback &amp;&amp; mOriginalCallback.handleMessage(msg);
 &#125;</code></pre></div>
 
 <h3 id="页面打开耗时"><a href="#页面打开耗时" class="headerlink" title="页面打开耗时"></a>页面打开耗时</h3><p>注册 <code>ActivityLifecycleCallbacks</code>，在 <code>onActivityCreated</code> 记录 <code>Activity</code> 的创建时间</p>
 <p>在上面的插桩阶段，<code>AppMethodBeat.at(activity, isFocus)</code> 被添加到 <code>Activity.onWindowFocusChanged(hasFocus)</code> 的第一行代码，此时认为 <code>Activity</code> 获得焦点启动完毕（用户可见可交互），与 <code>Activity</code> 创建时间的差即为页面启动耗时</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StartupTracer</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;
 
     <span class="hljs-comment">// &quot;&#123;Activity全限定类名&#125;@&#123;activity.hashCode()&#125;&quot; -&gt; uptimeMillis</span>
-    <span class="hljs-keyword">private</span> HashMap&lt;String, Long&gt; createdTimeMap = <span class="hljs-keyword">new</span> HashMap&lt;&gt;();
+    <span class="hljs-keyword">private</span> HashMap&lt;String, Long&gt; createdTimeMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onAlive</span><span class="hljs-params">()</span> </span>&#123;
-        <span class="hljs-keyword">super</span>.onAlive();
+    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onAlive</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-built_in">super</span>.onAlive();
         MatrixLog.i(TAG, <span class="hljs-string">&quot;[onAlive] isStartupEnable:%s&quot;</span>, isStartupEnable);
         <span class="hljs-keyword">if</span> (isStartupEnable) &#123;
-            AppMethodBeat.getInstance().addListener(<span class="hljs-keyword">this</span>);                              <span class="hljs-comment">// 添加 onWindowFocusChanged(hasFocus) 监视器</span>
-            Matrix.with().getApplication().registerActivityLifecycleCallbacks(<span class="hljs-keyword">this</span>);    <span class="hljs-comment">// 注册 ActivityLifecycleCallbacks</span>
+            AppMethodBeat.getInstance().addListener(<span class="hljs-built_in">this</span>);                              <span class="hljs-comment">// 添加 onWindowFocusChanged(hasFocus) 监视器</span>
+            Matrix.with().getApplication().registerActivityLifecycleCallbacks(<span class="hljs-built_in">this</span>);    <span class="hljs-comment">// 注册 ActivityLifecycleCallbacks</span>
         &#125;
     &#125;
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onActivityCreated</span><span class="hljs-params">(Activity activity, Bundle savedInstanceState)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onActivityCreated</span><span class="hljs-params">(Activity activity, Bundle savedInstanceState)</span> &#123;
         MatrixLog.i(TAG, <span class="hljs-string">&quot;activeActivityCount:%d, coldCost:%d&quot;</span>, activeActivityCount, coldCost);
         <span class="hljs-keyword">if</span> (activeActivityCount == <span class="hljs-number">0</span> &amp;&amp; coldCost &gt; <span class="hljs-number">0</span>) &#123;
             lastCreateActivity = uptimeMillis();
             MatrixLog.i(TAG, <span class="hljs-string">&quot;lastCreateActivity:%d, activity:%s&quot;</span>, lastCreateActivity, activity.getClass().getName());
-            isWarmStartUp = <span class="hljs-keyword">true</span>;
+            isWarmStartUp = <span class="hljs-literal">true</span>;
         &#125;
         activeActivityCount++;
         <span class="hljs-keyword">if</span> (isShouldRecordCreateTime) &#123;
@@ -1424,15 +1424,15 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
     <span class="hljs-comment">// 当 Activity.onWindowFocusChanged(hasFocus) hasFocus == true 时被调用</span>
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onActivityFocused</span><span class="hljs-params">(Activity activity)</span> </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onActivityFocused</span><span class="hljs-params">(Activity activity)</span> &#123;
         <span class="hljs-keyword">if</span> (ActivityThreadHacker.sApplicationCreateScene == Integer.MIN_VALUE) &#123;
             Log.w(TAG, <span class="hljs-string">&quot;start up from unknown scene&quot;</span>);
             <span class="hljs-keyword">return</span>;
         &#125;
 
-        String activityName = activity.getClass().getName();
+        <span class="hljs-type">String</span> <span class="hljs-variable">activityName</span> <span class="hljs-operator">=</span> activity.getClass().getName();
         <span class="hljs-keyword">if</span> (isColdStartup()) &#123;
-            <span class="hljs-keyword">boolean</span> isCreatedByLaunchActivity = ActivityThreadHacker.isCreatedByLaunchActivity();
+            <span class="hljs-type">boolean</span> <span class="hljs-variable">isCreatedByLaunchActivity</span> <span class="hljs-operator">=</span> ActivityThreadHacker.isCreatedByLaunchActivity();
             MatrixLog.i(TAG, <span class="hljs-string">&quot;#ColdStartup# activity:%s, splashActivities:%s, empty:%b, &quot;</span>
                             + <span class="hljs-string">&quot;isCreatedByLaunchActivity:%b, hasShowSplashActivity:%b, &quot;</span>
                             + <span class="hljs-string">&quot;firstScreenCost:%d, now:%d, application_create_begin_time:%d, app_cost:%d&quot;</span>,
@@ -1440,9 +1440,9 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
                     hasShowSplashActivity, firstScreenCost, uptimeMillis(),
                     ActivityThreadHacker.getEggBrokenTime(), ActivityThreadHacker.getApplicationCost());
 
-            String key = activityName + <span class="hljs-string">&quot;@&quot;</span> + activity.hashCode();
-            Long createdTime = createdTimeMap.get(key);
-            <span class="hljs-keyword">if</span> (createdTime == <span class="hljs-keyword">null</span>) &#123;
+            <span class="hljs-type">String</span> <span class="hljs-variable">key</span> <span class="hljs-operator">=</span> activityName + <span class="hljs-string">&quot;@&quot;</span> + activity.hashCode();
+            <span class="hljs-type">Long</span> <span class="hljs-variable">createdTime</span> <span class="hljs-operator">=</span> createdTimeMap.get(key);
+            <span class="hljs-keyword">if</span> (createdTime == <span class="hljs-literal">null</span>) &#123;
                 createdTime = <span class="hljs-number">0L</span>;
             &#125;
             createdTimeMap.put(key, uptimeMillis() - createdTime);      <span class="hljs-comment">// 页面启动耗时</span>
@@ -1451,8 +1451,8 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 &#125;
 
 <span class="hljs-comment">// 当进入 Activity.onWindowFocusChanged(hasFocus) 函数时首先会执行此函数</span>
-AppMethodBeat.at(Activity activity, <span class="hljs-keyword">boolean</span> isFocus) &#123;
-    String activityName = activity.getClass().getName();
+AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFocus) &#123;
+    <span class="hljs-type">String</span> <span class="hljs-variable">activityName</span> <span class="hljs-operator">=</span> activity.getClass().getName();
     <span class="hljs-keyword">if</span> (isFocus) &#123;
         <span class="hljs-keyword">if</span> (sFocusActivitySet.add(activityName)) &#123;
             <span class="hljs-keyword">synchronized</span> (listeners) &#123;
@@ -1470,11 +1470,11 @@ AppMethodBeat.at(Activity activity, <span class="hljs-keyword">boolean</span> is
 &#125;</code></pre></div>
 
 <h3 id="首屏打开耗时"><a href="#首屏打开耗时" class="headerlink" title="首屏打开耗时"></a>首屏打开耗时</h3><p>首屏启动耗时（<code>firstScreenCost</code>） = 第一个页面（splash activity）接收到焦点的时间 - <code>eggBrokenTime</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StartupTracer</span> </span>&#123;    
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onActivityFocused</span><span class="hljs-params">(Activity activity)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;    
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onActivityFocused</span><span class="hljs-params">(Activity activity)</span> &#123;
         <span class="hljs-comment">// ... 记录首屏启动耗时</span>
         <span class="hljs-keyword">if</span> (firstScreenCost == <span class="hljs-number">0</span>) &#123;
-            <span class="hljs-keyword">this</span>.firstScreenCost = uptimeMillis() - ActivityThreadHacker.getEggBrokenTime();
+            <span class="hljs-built_in">this</span>.firstScreenCost = uptimeMillis() - ActivityThreadHacker.getEggBrokenTime();
         &#125;
         <span class="hljs-comment">// ...</span>
     &#125;
@@ -1492,7 +1492,7 @@ AppMethodBeat.at(Activity activity, <span class="hljs-keyword">boolean</span> is
             coldCost = uptimeMillis() - ActivityThreadHacker.getEggBrokenTime();
         &#125; <span class="hljs-keyword">else</span> &#123;
             <span class="hljs-keyword">if</span> (splashActivities.contains(activityName)) &#123;
-                hasShowSplashActivity = <span class="hljs-keyword">true</span>;
+                hasShowSplashActivity = <span class="hljs-literal">true</span>;
             &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (splashActivities.isEmpty()) &#123;            <span class="hljs-comment">// process which is has activity but not main UI process</span>
                 <span class="hljs-keyword">if</span> (isCreatedByLaunchActivity) &#123;
                     coldCost = firstScreenCost;
@@ -1512,16 +1512,16 @@ AppMethodBeat.at(Activity activity, <span class="hljs-keyword">boolean</span> is
 &#125;</code></pre></div>
 
 <p>上面说过冷启动耗时是到第二个页面打开的时间，那如果在第一个页面打开时 <code>coldCost</code> &gt; 0 说明 JVM 没有销毁，是热启动（<code>isWarmStartUp</code>），热启动耗时相当于第一个页面的打开耗时</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StartupTracer</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;
 
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span> lastCreateActivity = <span class="hljs-number">0L</span>;   <span class="hljs-comment">// 当前/上一个 Activity.onCreate 的时间</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-type">long</span> <span class="hljs-variable">lastCreateActivity</span> <span class="hljs-operator">=</span> <span class="hljs-number">0L</span>;   <span class="hljs-comment">// 当前/上一个 Activity.onCreate 的时间</span>
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> StartupTracer.onActivityCreated(Activity activity, Bundle savedInstanceState) &#123;
         MatrixLog.i(TAG, <span class="hljs-string">&quot;activeActivityCount:%d, coldCost:%d&quot;</span>, activeActivityCount, coldCost);
         <span class="hljs-keyword">if</span> (activeActivityCount == <span class="hljs-number">0</span> &amp;&amp; coldCost &gt; <span class="hljs-number">0</span>) &#123;
             lastCreateActivity = uptimeMillis();
             MatrixLog.i(TAG, <span class="hljs-string">&quot;lastCreateActivity:%d, activity:%s&quot;</span>, lastCreateActivity, activity.getClass().getName());
-            isWarmStartUp = <span class="hljs-keyword">true</span>;
+            isWarmStartUp = <span class="hljs-literal">true</span>;
         &#125;
         activeActivityCount++;
         <span class="hljs-keyword">if</span> (isShouldRecordCreateTime) &#123;
@@ -1532,12 +1532,12 @@ AppMethodBeat.at(Activity activity, <span class="hljs-keyword">boolean</span> is
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> StartupTracer.onActivityFocused(Activity activity) &#123;
         <span class="hljs-comment">// ...</span>
         &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (isWarmStartUp()) &#123;
-            isWarmStartUp = <span class="hljs-keyword">false</span>;
-            <span class="hljs-keyword">long</span> warmCost = uptimeMillis() - lastCreateActivity;
+            isWarmStartUp = <span class="hljs-literal">false</span>;
+            <span class="hljs-type">long</span> <span class="hljs-variable">warmCost</span> <span class="hljs-operator">=</span> uptimeMillis() - lastCreateActivity;
             MatrixLog.i(TAG, <span class="hljs-string">&quot;#WarmStartup# activity:%s, warmCost:%d, now:%d, lastCreateActivity:%d&quot;</span>, activityName, warmCost, uptimeMillis(), lastCreateActivity);
 
             <span class="hljs-keyword">if</span> (warmCost &gt; <span class="hljs-number">0</span>) &#123;
-                analyse(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, warmCost, <span class="hljs-keyword">true</span>);
+                analyse(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, warmCost, <span class="hljs-literal">true</span>);
             &#125;
         &#125;
     &#125;

@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-05-hashmap/op_2.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-05-hashmap/op_3.png">
 <meta property="article:published_time" content="2021-04-05T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.937Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.781Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="HashMap">
 <meta property="article:tag" content="红黑树">
@@ -78,11 +78,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -260,11 +260,11 @@
 <li>桶的数量超过 <code>MIN_TREEIFY_CAPACITY</code>（小于这个数量只是进行扩容操作）；无论是链表还是红黑树，都是为了解决哈希冲突，如果桶太少则应该首先增加桶的数量降低哈希冲突出现的概率，其次才是用红黑树增加查找效率</li>
 </ul>
 <p>首先将 <code>Node</code> 转变为 <code>TreeNode</code>，此时还是链表结构；第一个节点即为根，后面的节点作为新节点，按规则依次添加到树里：比父节点小则添加到左子树，比父节点大则添加到右子树，从上往下搜索直到要添加的子树为空即为新节点的位置；每次插入新节点后都需要进行 <strong>平衡</strong> 操作</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">final</span> V <span class="hljs-title">putVal</span><span class="hljs-params">(<span class="hljs-keyword">int</span> hash, K key, V value, <span class="hljs-keyword">boolean</span> onlyIfAbsent, <span class="hljs-keyword">boolean</span> evict)</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> V <span class="hljs-title function_">putVal</span><span class="hljs-params">(<span class="hljs-type">int</span> hash, K key, V value, <span class="hljs-type">boolean</span> onlyIfAbsent, <span class="hljs-type">boolean</span> evict)</span> &#123;
     <span class="hljs-comment">// ... 将新元素添加至链表尾部（桶），如果桶的大小超过 TREEIFY_THRESHOLD，准备树化</span>
-    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> binCount = <span class="hljs-number">0</span>; ; ++binCount) &#123;
-        <span class="hljs-keyword">if</span> ((e = p.next) == <span class="hljs-keyword">null</span>) &#123;
-            p.next = newNode(hash, key, value, <span class="hljs-keyword">null</span>);
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">binCount</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; ; ++binCount) &#123;
+        <span class="hljs-keyword">if</span> ((e = p.next) == <span class="hljs-literal">null</span>) &#123;
+            p.next = newNode(hash, key, value, <span class="hljs-literal">null</span>);
             <span class="hljs-keyword">if</span> (binCount &gt;= TREEIFY_THRESHOLD - <span class="hljs-number">1</span>) <span class="hljs-comment">// -1 for 1st</span>
                 treeifyBin(tab, hash);
             <span class="hljs-keyword">break</span>;
@@ -272,50 +272,50 @@
     <span class="hljs-comment">// ...</span>
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">treeifyBin</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> hash)</span> </span>&#123;
+<span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">treeifyBin</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab, <span class="hljs-type">int</span> hash)</span> &#123;
     <span class="hljs-comment">// 如果桶的数量 &lt; MIN_TREEIFY_CAPACITY，只是扩容</span>
-    <span class="hljs-keyword">int</span> n, index; Node&lt;K,V&gt; e;
-    <span class="hljs-keyword">if</span> (tab == <span class="hljs-keyword">null</span> || (n = tab.length) &lt; MIN_TREEIFY_CAPACITY)
+    <span class="hljs-type">int</span> n, index; Node&lt;K,V&gt; e;
+    <span class="hljs-keyword">if</span> (tab == <span class="hljs-literal">null</span> || (n = tab.length) &lt; MIN_TREEIFY_CAPACITY)
         resize();
     
     <span class="hljs-comment">// 桶多于 MIN_TREEIFY_CAPACITY 才树化</span>
     <span class="hljs-comment">// 将桶 tab[index] 里的节点转变为 TreeNode，但 此时还是链表</span>
-    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((e = tab[index = (n - <span class="hljs-number">1</span>) &amp; hash]) != <span class="hljs-keyword">null</span>) &#123;
-        TreeNode&lt;K,V&gt; hd = <span class="hljs-keyword">null</span>, tl = <span class="hljs-keyword">null</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((e = tab[index = (n - <span class="hljs-number">1</span>) &amp; hash]) != <span class="hljs-literal">null</span>) &#123;
+        TreeNode&lt;K,V&gt; hd = <span class="hljs-literal">null</span>, tl = <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">do</span> &#123;
-            TreeNode&lt;K,V&gt; p = replacementTreeNode(e, <span class="hljs-keyword">null</span>);
-            <span class="hljs-keyword">if</span> (tl == <span class="hljs-keyword">null</span>)
+            TreeNode&lt;K,V&gt; p = replacementTreeNode(e, <span class="hljs-literal">null</span>);
+            <span class="hljs-keyword">if</span> (tl == <span class="hljs-literal">null</span>)
                 hd = p;
             <span class="hljs-keyword">else</span> &#123;
                 p.prev = tl;
                 tl.next = p;
             &#125;
             tl = p;
-        &#125; <span class="hljs-keyword">while</span> ((e = e.next) != <span class="hljs-keyword">null</span>);
-        <span class="hljs-keyword">if</span> ((tab[index] = hd) != <span class="hljs-keyword">null</span>)
+        &#125; <span class="hljs-keyword">while</span> ((e = e.next) != <span class="hljs-literal">null</span>);
+        <span class="hljs-keyword">if</span> ((tab[index] = hd) != <span class="hljs-literal">null</span>)
             <span class="hljs-comment">// hd 是链表头，从它开始树化</span>
             hd.treeify(tab);
     &#125;
 &#125;</code></pre></div>
 
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 将还是链表的桶树化，当前是链表头</span>
-<span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">treeify</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab)</span> </span>&#123;
+<span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">treeify</span><span class="hljs-params">(Node&lt;K,V&gt;[] tab)</span> &#123;
 
     <span class="hljs-comment">// 链表里第一个元素作为红黑树初始的根</span>
     <span class="hljs-comment">// 遍历链表，逐个添加到红黑树中</span>
-    TreeNode&lt;K,V&gt; root = <span class="hljs-keyword">null</span>;
-    <span class="hljs-keyword">for</span> (TreeNode&lt;K,V&gt; x = <span class="hljs-keyword">this</span>, next; x != <span class="hljs-keyword">null</span>; x = next) &#123;
+    TreeNode&lt;K,V&gt; root = <span class="hljs-literal">null</span>;
+    <span class="hljs-keyword">for</span> (TreeNode&lt;K,V&gt; x = <span class="hljs-built_in">this</span>, next; x != <span class="hljs-literal">null</span>; x = next) &#123;
         next = (TreeNode&lt;K,V&gt;)x.next;
-        x.left = x.right = <span class="hljs-keyword">null</span>;
-        <span class="hljs-keyword">if</span> (root == <span class="hljs-keyword">null</span>) &#123;
-            x.parent = <span class="hljs-keyword">null</span>;
-            x.red = <span class="hljs-keyword">false</span>;
+        x.left = x.right = <span class="hljs-literal">null</span>;
+        <span class="hljs-keyword">if</span> (root == <span class="hljs-literal">null</span>) &#123;
+            x.parent = <span class="hljs-literal">null</span>;
+            x.red = <span class="hljs-literal">false</span>;
             root = x;
         &#125;
         <span class="hljs-keyword">else</span> &#123;
-            K k = x.key;
-            <span class="hljs-keyword">int</span> h = x.hash;
-            Class&lt;?&gt; kc = <span class="hljs-keyword">null</span>;
+            <span class="hljs-type">K</span> <span class="hljs-variable">k</span> <span class="hljs-operator">=</span> x.key;
+            <span class="hljs-type">int</span> <span class="hljs-variable">h</span> <span class="hljs-operator">=</span> x.hash;
+            Class&lt;?&gt; kc = <span class="hljs-literal">null</span>;
 
             <span class="hljs-comment">// 从根开始，自上而下找位置</span>
             <span class="hljs-comment">// 比父节点小则插入到左子树，比父节点大则插入到右子树，直到所插入的位置为 null</span>
@@ -323,21 +323,21 @@
 
                 <span class="hljs-comment">// x - 新节点，p - 父节点，h - 新节点 hash，ph - parent hash</span>
                 <span class="hljs-comment">// dir == -1，新节点比父节点小，添加到左子树；dir == 1，新节点比父节点大，添加到右子树</span>
-                <span class="hljs-keyword">int</span> dir, ph;
-                K pk = p.key;
+                <span class="hljs-type">int</span> dir, ph;
+                <span class="hljs-type">K</span> <span class="hljs-variable">pk</span> <span class="hljs-operator">=</span> p.key;
                 <span class="hljs-keyword">if</span> ((ph = p.hash) &gt; h)
                     dir = -<span class="hljs-number">1</span>;
                 <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (ph &lt; h)
                     dir = <span class="hljs-number">1</span>;
-                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((kc == <span class="hljs-keyword">null</span> &amp;&amp;
-                          (kc = comparableClassFor(k)) == <span class="hljs-keyword">null</span>) ||
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((kc == <span class="hljs-literal">null</span> &amp;&amp;
+                          (kc = comparableClassFor(k)) == <span class="hljs-literal">null</span>) ||
                          (dir = compareComparables(kc, k, pk)) == <span class="hljs-number">0</span>)
                     dir = tieBreakOrder(k, pk);
 
                 <span class="hljs-comment">// xp - 新节点的父节点</span>
                 <span class="hljs-comment">// 一直找，直到新节点需要插入的位置是为 null，那么就把新节点放在那</span>
                 TreeNode&lt;K,V&gt; xp = p;
-                <span class="hljs-keyword">if</span> ((p = (dir &lt;= <span class="hljs-number">0</span>) ? p.left : p.right) == <span class="hljs-keyword">null</span>) &#123;
+                <span class="hljs-keyword">if</span> ((p = (dir &lt;= <span class="hljs-number">0</span>) ? p.left : p.right) == <span class="hljs-literal">null</span>) &#123;
                     x.parent = xp;
                     <span class="hljs-keyword">if</span> (dir &lt;= <span class="hljs-number">0</span>)
                         xp.left = x;
@@ -354,21 +354,21 @@
 &#125;</code></pre></div>
 
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 插入新节点后需要平衡红黑树</span>
-<span class="hljs-keyword">static</span> &lt;K,V&gt; <span class="hljs-function">TreeNode&lt;K,V&gt; <span class="hljs-title">balanceInsertion</span><span class="hljs-params">(TreeNode&lt;K,V&gt; root, TreeNode&lt;K,V&gt; x)</span> </span>&#123;
-    x.red = <span class="hljs-keyword">true</span>; <span class="hljs-comment">// 新节点总是红色的</span>
+<span class="hljs-keyword">static</span> &lt;K,V&gt; TreeNode&lt;K,V&gt; <span class="hljs-title function_">balanceInsertion</span><span class="hljs-params">(TreeNode&lt;K,V&gt; root, TreeNode&lt;K,V&gt; x)</span> &#123;
+    x.red = <span class="hljs-literal">true</span>; <span class="hljs-comment">// 新节点总是红色的</span>
 
     <span class="hljs-comment">// xp - 新节点的 parent，xpp - 新节点的祖父，xppl - 祖父的左孩子，xppr - 祖父的右孩子</span>
     <span class="hljs-keyword">for</span> (TreeNode&lt;K,V&gt; xp, xpp, xppl, xppr;;) &#123;
 
         <span class="hljs-comment">// 新节点没有父节点，说明它是根节点，根节点必须是黑色</span>
-        <span class="hljs-keyword">if</span> ((xp = x.parent) == <span class="hljs-keyword">null</span>) &#123;
-            x.red = <span class="hljs-keyword">false</span>;
+        <span class="hljs-keyword">if</span> ((xp = x.parent) == <span class="hljs-literal">null</span>) &#123;
+            x.red = <span class="hljs-literal">false</span>;
             <span class="hljs-keyword">return</span> x;
         &#125;
 
         <span class="hljs-comment">// 1，不是根节点且父节点是黑色，满足红黑树的条件，返回即可</span>
         <span class="hljs-comment">// 2，祖父为 null 说明父节点为根，根一定是黑色，新节点为红色，满足条件</span>
-        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!xp.red || (xpp = xp.parent) == <span class="hljs-keyword">null</span>)
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!xp.red || (xpp = xp.parent) == <span class="hljs-literal">null</span>)
             <span class="hljs-keyword">return</span> root;
 
         <span class="hljs-comment">// 父节点是红色且有祖父节点，那就比较麻烦了，必须要进行旋转和颜色变换操作，此时父节点是祖父的左孩子    </span>
@@ -377,10 +377,10 @@
             <span class="hljs-comment">// 新节点是红色，父节点也是红色，父节点旁边的兄弟节点也是红色（由于当前红黑树除新节点外是平衡的，所以祖父肯定是黑色）</span>
             <span class="hljs-comment">// 那么进行颜色变换：将父节点和它的兄弟节点变为黑色，祖父变为红色，对应图三</span>
             <span class="hljs-comment">// 祖父变色后，可能引起祖父上面不平衡，所以下次循环要操作祖父</span>
-            <span class="hljs-keyword">if</span> ((xppr = xpp.right) != <span class="hljs-keyword">null</span> &amp;&amp; xppr.red) &#123;
-                xppr.red = <span class="hljs-keyword">false</span>;
-                xp.red = <span class="hljs-keyword">false</span>;
-                xpp.red = <span class="hljs-keyword">true</span>;
+            <span class="hljs-keyword">if</span> ((xppr = xpp.right) != <span class="hljs-literal">null</span> &amp;&amp; xppr.red) &#123;
+                xppr.red = <span class="hljs-literal">false</span>;
+                xp.red = <span class="hljs-literal">false</span>;
+                xpp.red = <span class="hljs-literal">true</span>;
                 x = xpp;
             &#125;
             <span class="hljs-keyword">else</span> &#123;
@@ -389,15 +389,15 @@
                 <span class="hljs-comment">// 新节点是右孩子，对应图二的双旋，这里是第一次的左旋</span>
                 <span class="hljs-keyword">if</span> (x == xp.right) &#123;
                     root = rotateLeft(root, x = xp);
-                    xpp = (xp = x.parent) == <span class="hljs-keyword">null</span> ? <span class="hljs-keyword">null</span> : xp.parent;
+                    xpp = (xp = x.parent) == <span class="hljs-literal">null</span> ? <span class="hljs-literal">null</span> : xp.parent;
                 &#125;
 
                 <span class="hljs-comment">// 继续上面的（左旋）后的第二次右旋</span>
                 <span class="hljs-comment">// 或者对应图一的单旋（右旋）</span>
-                <span class="hljs-keyword">if</span> (xp != <span class="hljs-keyword">null</span>) &#123;
-                    xp.red = <span class="hljs-keyword">false</span>;
-                    <span class="hljs-keyword">if</span> (xpp != <span class="hljs-keyword">null</span>) &#123;
-                        xpp.red = <span class="hljs-keyword">true</span>;
+                <span class="hljs-keyword">if</span> (xp != <span class="hljs-literal">null</span>) &#123;
+                    xp.red = <span class="hljs-literal">false</span>;
+                    <span class="hljs-keyword">if</span> (xpp != <span class="hljs-literal">null</span>) &#123;
+                        xpp.red = <span class="hljs-literal">true</span>;
                         root = rotateRight(root, xpp);
                     &#125;
                 &#125;
@@ -406,21 +406,21 @@
 
         <span class="hljs-comment">// 同样是旋转和颜色变换操作，只不过父节点现在是祖父的右孩子，流程跟上面差不多的</span>
         <span class="hljs-keyword">else</span> &#123;
-            <span class="hljs-keyword">if</span> (xppl != <span class="hljs-keyword">null</span> &amp;&amp; xppl.red) &#123;
-                xppl.red = <span class="hljs-keyword">false</span>;
-                xp.red = <span class="hljs-keyword">false</span>;
-                xpp.red = <span class="hljs-keyword">true</span>;
+            <span class="hljs-keyword">if</span> (xppl != <span class="hljs-literal">null</span> &amp;&amp; xppl.red) &#123;
+                xppl.red = <span class="hljs-literal">false</span>;
+                xp.red = <span class="hljs-literal">false</span>;
+                xpp.red = <span class="hljs-literal">true</span>;
                 x = xpp;
             &#125;
             <span class="hljs-keyword">else</span> &#123;
                 <span class="hljs-keyword">if</span> (x == xp.left) &#123;
                     root = rotateRight(root, x = xp);
-                    xpp = (xp = x.parent) == <span class="hljs-keyword">null</span> ? <span class="hljs-keyword">null</span> : xp.parent;
+                    xpp = (xp = x.parent) == <span class="hljs-literal">null</span> ? <span class="hljs-literal">null</span> : xp.parent;
                 &#125;
-                <span class="hljs-keyword">if</span> (xp != <span class="hljs-keyword">null</span>) &#123;
-                    xp.red = <span class="hljs-keyword">false</span>;
-                    <span class="hljs-keyword">if</span> (xpp != <span class="hljs-keyword">null</span>) &#123;
-                        xpp.red = <span class="hljs-keyword">true</span>;
+                <span class="hljs-keyword">if</span> (xp != <span class="hljs-literal">null</span>) &#123;
+                    xp.red = <span class="hljs-literal">false</span>;
+                    <span class="hljs-keyword">if</span> (xpp != <span class="hljs-literal">null</span>) &#123;
+                        xpp.red = <span class="hljs-literal">true</span>;
                         root = rotateLeft(root, xpp);
                     &#125;
                 &#125;
@@ -434,9 +434,9 @@
 <p>第一次扩容时，<code>threshold</code> 取 <code>initialCapacity * loadFactor</code>，而 <code>loadFactor</code> 总是小于等于 1 的，所以 <code>threshold</code> 总是小于等于 <code>capacity</code>，后续即使翻倍 <code>threshold</code> 也是小于等于 <code>capacity</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] resize() &#123;
     Node&lt;K,V&gt;[] oldTab = table;
-    <span class="hljs-keyword">int</span> oldCap = (oldTab == <span class="hljs-keyword">null</span>) ? <span class="hljs-number">0</span> : oldTab.length;
-    <span class="hljs-keyword">int</span> oldThr = threshold;
-    <span class="hljs-keyword">int</span> newCap, newThr = <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">oldCap</span> <span class="hljs-operator">=</span> (oldTab == <span class="hljs-literal">null</span>) ? <span class="hljs-number">0</span> : oldTab.length;
+    <span class="hljs-type">int</span> <span class="hljs-variable">oldThr</span> <span class="hljs-operator">=</span> threshold;
+    <span class="hljs-type">int</span> newCap, newThr = <span class="hljs-number">0</span>;
 
     <span class="hljs-comment">// table 已被初始化的情况（table != null）</span>
     <span class="hljs-keyword">if</span> (oldCap &gt; <span class="hljs-number">0</span>) &#123;
@@ -464,16 +464,16 @@
     <span class="hljs-comment">// 没有传入 initialCapacity，threshold 没有参考值所以为零，那么使用默认值</span>
     <span class="hljs-keyword">else</span> &#123;               <span class="hljs-comment">// zero initial threshold signifies using defaults</span>
         newCap = DEFAULT_INITIAL_CAPACITY;
-        newThr = (<span class="hljs-keyword">int</span>)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
+        newThr = (<span class="hljs-type">int</span>)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
     &#125;
 
     <span class="hljs-comment">// 1，当 table 尚未初始化且 threshold/initialCapacity 有值</span>
     <span class="hljs-comment">// 2，当 table 已初始化但扩容前的容量 &lt; DEFAULT_INITIAL_CAPACITY</span>
     <span class="hljs-comment">// 下一次扩容大小 newThr 为扩容后到达负载因子的水平</span>
     <span class="hljs-keyword">if</span> (newThr == <span class="hljs-number">0</span>) &#123;
-        <span class="hljs-keyword">float</span> ft = (<span class="hljs-keyword">float</span>)newCap * loadFactor;
-        newThr = (newCap &lt; MAXIMUM_CAPACITY &amp;&amp; ft &lt; (<span class="hljs-keyword">float</span>)MAXIMUM_CAPACITY ?
-                  (<span class="hljs-keyword">int</span>)ft : Integer.MAX_VALUE);
+        <span class="hljs-type">float</span> <span class="hljs-variable">ft</span> <span class="hljs-operator">=</span> (<span class="hljs-type">float</span>)newCap * loadFactor;
+        newThr = (newCap &lt; MAXIMUM_CAPACITY &amp;&amp; ft &lt; (<span class="hljs-type">float</span>)MAXIMUM_CAPACITY ?
+                  (<span class="hljs-type">int</span>)ft : Integer.MAX_VALUE);
     &#125;
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
@@ -486,51 +486,51 @@
 <p>为什么拆分链表是可行的？假设当前容量 4 扩容后为 8，那么 hash 的右值为 <code>0011</code> 和 <code>0111</code>（object.hash() * (capacity - 1)，扩容的翻倍操作实际上是左移一位），可以看到区别就是高位对应的 object.hash() 值，高位 hash 为零即使扩容了位置也不变，高位 hash 为 1 则迁移到 oldCap + j 的位置上（obj 相当于高位对应的部分，j 则是低位对应的部分）</p>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> Node&lt;K,V&gt;[] resize() &#123;
     <span class="hljs-comment">// ...</span>
-    Node&lt;K,V&gt;[] newTab = (Node&lt;K,V&gt;[])<span class="hljs-keyword">new</span> Node[newCap];
+    Node&lt;K,V&gt;[] newTab = (Node&lt;K,V&gt;[])<span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>[newCap];
     table = newTab;
-    <span class="hljs-keyword">if</span> (oldTab != <span class="hljs-keyword">null</span>) &#123;
-        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> j = <span class="hljs-number">0</span>; j &lt; oldCap; ++j) &#123;  <span class="hljs-comment">// 遍历旧 table</span>
+    <span class="hljs-keyword">if</span> (oldTab != <span class="hljs-literal">null</span>) &#123;
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; j &lt; oldCap; ++j) &#123;  <span class="hljs-comment">// 遍历旧 table</span>
             Node&lt;K,V&gt; e;
-            <span class="hljs-keyword">if</span> ((e = oldTab[j]) != <span class="hljs-keyword">null</span>) &#123;
-                oldTab[j] = <span class="hljs-keyword">null</span>;
+            <span class="hljs-keyword">if</span> ((e = oldTab[j]) != <span class="hljs-literal">null</span>) &#123;
+                oldTab[j] = <span class="hljs-literal">null</span>;
 
                 <span class="hljs-comment">// 如果桶中只有一个元素，重新计算位置并迁移</span>
-                <span class="hljs-keyword">if</span> (e.next == <span class="hljs-keyword">null</span>)
+                <span class="hljs-keyword">if</span> (e.next == <span class="hljs-literal">null</span>)
                     newTab[e.hash &amp; (newCap - <span class="hljs-number">1</span>)] = e;
 
                 <span class="hljs-comment">// 红黑树，拆分并重建红黑树    </span>
                 <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (e <span class="hljs-keyword">instanceof</span> TreeNode)
-                    ((TreeNode&lt;K,V&gt;)e).split(<span class="hljs-keyword">this</span>, newTab, j, oldCap);
+                    ((TreeNode&lt;K,V&gt;)e).split(<span class="hljs-built_in">this</span>, newTab, j, oldCap);
 
                 <span class="hljs-comment">// 桶里是链表，根据高位是 0 还是 1 把链表拆分为两个链表（low 和 high）</span>
                 <span class="hljs-comment">// low 留在原来的位置，hihg 迁移到新位置</span>
                 <span class="hljs-keyword">else</span> &#123; <span class="hljs-comment">// preserve order</span>
-                    Node&lt;K,V&gt; loHead = <span class="hljs-keyword">null</span>, loTail = <span class="hljs-keyword">null</span>;
-                    Node&lt;K,V&gt; hiHead = <span class="hljs-keyword">null</span>, hiTail = <span class="hljs-keyword">null</span>;
+                    Node&lt;K,V&gt; loHead = <span class="hljs-literal">null</span>, loTail = <span class="hljs-literal">null</span>;
+                    Node&lt;K,V&gt; hiHead = <span class="hljs-literal">null</span>, hiTail = <span class="hljs-literal">null</span>;
                     Node&lt;K,V&gt; next;
                     <span class="hljs-keyword">do</span> &#123;
                         next = e.next;
                         <span class="hljs-keyword">if</span> ((e.hash &amp; oldCap) == <span class="hljs-number">0</span>) &#123;
-                            <span class="hljs-keyword">if</span> (loTail == <span class="hljs-keyword">null</span>)
+                            <span class="hljs-keyword">if</span> (loTail == <span class="hljs-literal">null</span>)
                                 loHead = e;
                             <span class="hljs-keyword">else</span>
                                 loTail.next = e;
                             loTail = e;
                         &#125;
                         <span class="hljs-keyword">else</span> &#123;
-                            <span class="hljs-keyword">if</span> (hiTail == <span class="hljs-keyword">null</span>)
+                            <span class="hljs-keyword">if</span> (hiTail == <span class="hljs-literal">null</span>)
                                 hiHead = e;
                             <span class="hljs-keyword">else</span>
                                 hiTail.next = e;
                             hiTail = e;
                         &#125;
-                    &#125; <span class="hljs-keyword">while</span> ((e = next) != <span class="hljs-keyword">null</span>);
-                    <span class="hljs-keyword">if</span> (loTail != <span class="hljs-keyword">null</span>) &#123;
-                        loTail.next = <span class="hljs-keyword">null</span>;
+                    &#125; <span class="hljs-keyword">while</span> ((e = next) != <span class="hljs-literal">null</span>);
+                    <span class="hljs-keyword">if</span> (loTail != <span class="hljs-literal">null</span>) &#123;
+                        loTail.next = <span class="hljs-literal">null</span>;
                         newTab[j] = loHead;
                     &#125;
-                    <span class="hljs-keyword">if</span> (hiTail != <span class="hljs-keyword">null</span>) &#123;
-                        hiTail.next = <span class="hljs-keyword">null</span>;
+                    <span class="hljs-keyword">if</span> (hiTail != <span class="hljs-literal">null</span>) &#123;
+                        hiTail.next = <span class="hljs-literal">null</span>;
                         newTab[j + oldCap] = hiHead;
                     &#125;
                 &#125;
@@ -541,17 +541,17 @@
 &#125;
 
 <span class="hljs-comment">// 红黑树重新 hash 的过程</span>
-<span class="hljs-function"><span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title">split</span><span class="hljs-params">(HashMap&lt;K,V&gt; map, Node&lt;K,V&gt;[] tab, <span class="hljs-keyword">int</span> index, <span class="hljs-keyword">int</span> bit)</span> </span>&#123;
+<span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">split</span><span class="hljs-params">(HashMap&lt;K,V&gt; map, Node&lt;K,V&gt;[] tab, <span class="hljs-type">int</span> index, <span class="hljs-type">int</span> bit)</span> &#123;
     <span class="hljs-comment">// 跟链表一样根据高位拆分为 low（0）和 high（1）两个链表</span>
-    TreeNode&lt;K,V&gt; b = <span class="hljs-keyword">this</span>;
-    TreeNode&lt;K,V&gt; loHead = <span class="hljs-keyword">null</span>, loTail = <span class="hljs-keyword">null</span>;
-    TreeNode&lt;K,V&gt; hiHead = <span class="hljs-keyword">null</span>, hiTail = <span class="hljs-keyword">null</span>;
-    <span class="hljs-keyword">int</span> lc = <span class="hljs-number">0</span>, hc = <span class="hljs-number">0</span>;
-    <span class="hljs-keyword">for</span> (TreeNode&lt;K,V&gt; e = b, next; e != <span class="hljs-keyword">null</span>; e = next) &#123;
+    TreeNode&lt;K,V&gt; b = <span class="hljs-built_in">this</span>;
+    TreeNode&lt;K,V&gt; loHead = <span class="hljs-literal">null</span>, loTail = <span class="hljs-literal">null</span>;
+    TreeNode&lt;K,V&gt; hiHead = <span class="hljs-literal">null</span>, hiTail = <span class="hljs-literal">null</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">lc</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>, hc = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (TreeNode&lt;K,V&gt; e = b, next; e != <span class="hljs-literal">null</span>; e = next) &#123;
         next = (TreeNode&lt;K,V&gt;)e.next;
-        e.next = <span class="hljs-keyword">null</span>;
+        e.next = <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">if</span> ((e.hash &amp; bit) == <span class="hljs-number">0</span>) &#123;
-            <span class="hljs-keyword">if</span> ((e.prev = loTail) == <span class="hljs-keyword">null</span>)
+            <span class="hljs-keyword">if</span> ((e.prev = loTail) == <span class="hljs-literal">null</span>)
                 loHead = e;
             <span class="hljs-keyword">else</span>
                 loTail.next = e;
@@ -559,7 +559,7 @@
             ++lc;
         &#125;
         <span class="hljs-keyword">else</span> &#123;
-            <span class="hljs-keyword">if</span> ((e.prev = hiTail) == <span class="hljs-keyword">null</span>)
+            <span class="hljs-keyword">if</span> ((e.prev = hiTail) == <span class="hljs-literal">null</span>)
                 hiHead = e;
             <span class="hljs-keyword">else</span>
                 hiTail.next = e;
@@ -569,21 +569,21 @@
     &#125;
 
     <span class="hljs-comment">// 拆分后，如果 &lt; UNTREEIFY_THRESHOLD 则转为链表，否则重新构建红黑树</span>
-    <span class="hljs-keyword">if</span> (loHead != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">if</span> (loHead != <span class="hljs-literal">null</span>) &#123;
         <span class="hljs-keyword">if</span> (lc &lt;= UNTREEIFY_THRESHOLD)
             tab[index] = loHead.untreeify(map);
         <span class="hljs-keyword">else</span> &#123;
             tab[index] = loHead;
-            <span class="hljs-keyword">if</span> (hiHead != <span class="hljs-keyword">null</span>) <span class="hljs-comment">// (else is already treeified)</span>
+            <span class="hljs-keyword">if</span> (hiHead != <span class="hljs-literal">null</span>) <span class="hljs-comment">// (else is already treeified)</span>
                 loHead.treeify(tab);
         &#125;
     &#125;
-    <span class="hljs-keyword">if</span> (hiHead != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">if</span> (hiHead != <span class="hljs-literal">null</span>) &#123;
         <span class="hljs-keyword">if</span> (hc &lt;= UNTREEIFY_THRESHOLD)
             tab[index + bit] = hiHead.untreeify(map);
         <span class="hljs-keyword">else</span> &#123;
             tab[index + bit] = hiHead;
-            <span class="hljs-keyword">if</span> (loHead != <span class="hljs-keyword">null</span>)
+            <span class="hljs-keyword">if</span> (loHead != <span class="hljs-literal">null</span>)
                 hiHead.treeify(tab);
         &#125;
     &#125;

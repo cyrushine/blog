@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-06-22-xcrash/elf.png">
 <meta property="article:published_time" content="2021-06-22T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-12-22T08:43:17.941Z">
+<meta property="article:modified_time" content="2022-02-14T09:50:15.785Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="uncaught exception">
 <meta property="article:tag" content="exception">
@@ -80,11 +80,11 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.13","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
-<meta name="generator" content="Hexo 5.4.0"></head>
+<meta name="generator" content="Hexo 5.4.1"></head>
 
 
 <body>
@@ -247,11 +247,11 @@
 <li><code>ANR</code> 日志文件为 <code>tombstone_[加载 xCrash 的时间，单位为秒的时间戳，宽度为 20]_[app version]__[process name].trace.xcrash</code></li>
 </ol>
 <h2 id="Java-Crash"><a href="#Java-Crash" class="headerlink" title="Java Crash"></a>Java Crash</h2><p>捕获 Java Crash 用的是 <code>DefaultUncaughtExceptionHandler</code>，相关的基础知识参考 <a href="../../../../2021/06/18/uncaught-exception-handler/">Uncaught Exception Handling</a></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JavaCrashHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">UncaughtExceptionHandler</span> </span>&#123;
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">JavaCrashHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">UncaughtExceptionHandler</span> &#123;
 
     <span class="hljs-meta">@Override</span>
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">uncaughtException</span><span class="hljs-params">(Thread thread, Throwable throwable)</span> </span>&#123;
-        <span class="hljs-keyword">if</span> (defaultHandler != <span class="hljs-keyword">null</span>) &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">uncaughtException</span><span class="hljs-params">(Thread thread, Throwable throwable)</span> &#123;
+        <span class="hljs-keyword">if</span> (defaultHandler != <span class="hljs-literal">null</span>) &#123;
             Thread.setDefaultUncaughtExceptionHandler(defaultHandler);
         &#125;
 
@@ -262,36 +262,36 @@
         &#125;
 
         <span class="hljs-comment">// 可以选择重新抛出给上一个 handler，或者杀死 app</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.rethrow) &#123;
-            <span class="hljs-keyword">if</span> (defaultHandler != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.rethrow) &#123;
+            <span class="hljs-keyword">if</span> (defaultHandler != <span class="hljs-literal">null</span>) &#123;
                 defaultHandler.uncaughtException(thread, throwable);
             &#125;
         &#125; <span class="hljs-keyword">else</span> &#123;
             ActivityMonitor.getInstance().finishAllActivities();
-            Process.killProcess(<span class="hljs-keyword">this</span>.pid);
+            Process.killProcess(<span class="hljs-built_in">this</span>.pid);
             System.exit(<span class="hljs-number">10</span>);
         &#125;
     &#125;
 
     <span class="hljs-comment">// 收集各种各样的信息，写入到日志文件</span>
-    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">handleException</span><span class="hljs-params">(Thread thread, Throwable throwable)</span> </span>&#123;
-        Date crashTime = <span class="hljs-keyword">new</span> Date();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">handleException</span><span class="hljs-params">(Thread thread, Throwable throwable)</span> &#123;
+        <span class="hljs-type">Date</span> <span class="hljs-variable">crashTime</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>();
 
         <span class="hljs-comment">//notify the java crash</span>
         NativeHandler.getInstance().notifyJavaCrashed();
         AnrHandler.getInstance().notifyJavaCrashed();
 
         <span class="hljs-comment">//create log file</span>
-        File logFile = <span class="hljs-keyword">null</span>;
+        <span class="hljs-type">File</span> <span class="hljs-variable">logFile</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">try</span> &#123;
-            String logPath = String.format(Locale.US, <span class="hljs-string">&quot;%s/%s_%020d_%s__%s%s&quot;</span>, logDir, Util.logPrefix, startTime.getTime() * <span class="hljs-number">1000</span>, appVersion, processName, Util.javaLogSuffix);
+            <span class="hljs-type">String</span> <span class="hljs-variable">logPath</span> <span class="hljs-operator">=</span> String.format(Locale.US, <span class="hljs-string">&quot;%s/%s_%020d_%s__%s%s&quot;</span>, logDir, Util.logPrefix, startTime.getTime() * <span class="hljs-number">1000</span>, appVersion, processName, Util.javaLogSuffix);
             logFile = FileManager.getInstance().createLogFile(logPath);
         &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
             XCrash.getLogger().e(Util.TAG, <span class="hljs-string">&quot;JavaCrashHandler createLogFile failed&quot;</span>, e);
         &#125;
 
         <span class="hljs-comment">//get emergency</span>
-        String emergency = <span class="hljs-keyword">null</span>;
+        <span class="hljs-type">String</span> <span class="hljs-variable">emergency</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
         <span class="hljs-keyword">try</span> &#123;
             emergency = getEmergency(crashTime, thread, throwable);
         &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
@@ -299,18 +299,18 @@
         &#125;
 
         <span class="hljs-comment">//write info to log file</span>
-        <span class="hljs-keyword">if</span> (logFile != <span class="hljs-keyword">null</span>) &#123;
-            RandomAccessFile raf = <span class="hljs-keyword">null</span>;
+        <span class="hljs-keyword">if</span> (logFile != <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-type">RandomAccessFile</span> <span class="hljs-variable">raf</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
             <span class="hljs-keyword">try</span> &#123;
-                raf = <span class="hljs-keyword">new</span> RandomAccessFile(logFile, <span class="hljs-string">&quot;rws&quot;</span>);
+                raf = <span class="hljs-keyword">new</span> <span class="hljs-title class_">RandomAccessFile</span>(logFile, <span class="hljs-string">&quot;rws&quot;</span>);
 
                 <span class="hljs-comment">//write emergency info</span>
-                <span class="hljs-keyword">if</span> (emergency != <span class="hljs-keyword">null</span>) &#123;
+                <span class="hljs-keyword">if</span> (emergency != <span class="hljs-literal">null</span>) &#123;
                     raf.write(emergency.getBytes(<span class="hljs-string">&quot;UTF-8&quot;</span>));
                 &#125;
 
                 <span class="hljs-comment">//If we wrote the emergency info successfully, we don&#x27;t need to return it from callback again.</span>
-                emergency = <span class="hljs-keyword">null</span>;
+                emergency = <span class="hljs-literal">null</span>;
 
                 <span class="hljs-comment">//write logcat</span>
                 <span class="hljs-keyword">if</span> (logcatMainLines &gt; <span class="hljs-number">0</span> || logcatSystemLines &gt; <span class="hljs-number">0</span> || logcatEventsLines &gt; <span class="hljs-number">0</span>) &#123;
@@ -340,7 +340,7 @@
             &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
                 XCrash.getLogger().e(Util.TAG, <span class="hljs-string">&quot;JavaCrashHandler write log file failed&quot;</span>, e);
             &#125; <span class="hljs-keyword">finally</span> &#123;
-                <span class="hljs-keyword">if</span> (raf != <span class="hljs-keyword">null</span>) &#123;
+                <span class="hljs-keyword">if</span> (raf != <span class="hljs-literal">null</span>) &#123;
                     <span class="hljs-keyword">try</span> &#123;
                         raf.close();
                     &#125; <span class="hljs-keyword">catch</span> (Exception ignored) &#123;
@@ -350,21 +350,21 @@
         &#125;
 
         <span class="hljs-comment">//callback</span>
-        <span class="hljs-keyword">if</span> (callback != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (callback != <span class="hljs-literal">null</span>) &#123;
             <span class="hljs-keyword">try</span> &#123;
-                callback.onCrash(logFile == <span class="hljs-keyword">null</span> ? <span class="hljs-keyword">null</span> : logFile.getAbsolutePath(), emergency);
+                callback.onCrash(logFile == <span class="hljs-literal">null</span> ? <span class="hljs-literal">null</span> : logFile.getAbsolutePath(), emergency);
             &#125; <span class="hljs-keyword">catch</span> (Exception ignored) &#123;
             &#125;
         &#125;
     &#125;        
 &#125;</code></pre></div>
 
-<h3 id="Header"><a href="#Header" class="headerlink" title="Header"></a>Header</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> String <span class="hljs-title">getEmergency</span><span class="hljs-params">(Date crashTime, Thread thread, Throwable throwable)</span> </span>&#123;
+<h3 id="Header"><a href="#Header" class="headerlink" title="Header"></a>Header</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> String <span class="hljs-title function_">getEmergency</span><span class="hljs-params">(Date crashTime, Thread thread, Throwable throwable)</span> &#123;
     <span class="hljs-comment">//stack stace</span>
-    StringWriter sw = <span class="hljs-keyword">new</span> StringWriter();
-    PrintWriter pw = <span class="hljs-keyword">new</span> PrintWriter(sw);
+    <span class="hljs-type">StringWriter</span> <span class="hljs-variable">sw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringWriter</span>();
+    <span class="hljs-type">PrintWriter</span> <span class="hljs-variable">pw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">PrintWriter</span>(sw);
     throwable.printStackTrace(pw);
-    String stacktrace = sw.toString();
+    <span class="hljs-type">String</span> <span class="hljs-variable">stacktrace</span> <span class="hljs-operator">=</span> sw.toString();
     <span class="hljs-keyword">return</span> Util.getLogHeader(startTime, crashTime, Util.javaCrashType, appId, appVersion)
             + <span class="hljs-string">&quot;pid: &quot;</span> + pid + <span class="hljs-string">&quot;, tid: &quot;</span> + Process.myTid() + <span class="hljs-string">&quot;, name: &quot;</span> + thread.getName() + <span class="hljs-string">&quot;  &gt;&gt;&gt; &quot;</span> + processName + <span class="hljs-string">&quot; &lt;&lt;&lt;\n&quot;</span>
             + <span class="hljs-string">&quot;\n&quot;</span>
@@ -374,8 +374,8 @@
             + getBuildId(stacktrace);
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">static</span> String <span class="hljs-title">getLogHeader</span><span class="hljs-params">(Date startTime, Date crashTime, String crashType, String appId, String appVersion)</span> </span>&#123;
-    DateFormat timeFormatter = <span class="hljs-keyword">new</span> SimpleDateFormat(Util.timeFormatterStr, Locale.US);
+<span class="hljs-keyword">static</span> String <span class="hljs-title function_">getLogHeader</span><span class="hljs-params">(Date startTime, Date crashTime, String crashType, String appId, String appVersion)</span> &#123;
+    <span class="hljs-type">DateFormat</span> <span class="hljs-variable">timeFormatter</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SimpleDateFormat</span>(Util.timeFormatterStr, Locale.US);
     <span class="hljs-keyword">return</span> Util.sepHead + <span class="hljs-string">&quot;\n&quot;</span>
         + <span class="hljs-string">&quot;Tombstone maker: &#x27;&quot;</span> + Version.fullVersion + <span class="hljs-string">&quot;&#x27;\n&quot;</span>
         + <span class="hljs-string">&quot;Crash type: &#x27;&quot;</span> + crashType + <span class="hljs-string">&quot;&#x27;\n&quot;</span>
@@ -393,17 +393,17 @@
         + <span class="hljs-string">&quot;Build fingerprint: &#x27;&quot;</span> + Build.FINGERPRINT + <span class="hljs-string">&quot;&#x27;\n&quot;</span>;
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">private</span> String <span class="hljs-title">getBuildId</span><span class="hljs-params">(String stktrace)</span> </span>&#123;
-    String buildId = <span class="hljs-string">&quot;&quot;</span>;
-    List&lt;String&gt; libPathList = <span class="hljs-keyword">new</span> ArrayList&lt;String&gt;();
+<span class="hljs-keyword">private</span> String <span class="hljs-title function_">getBuildId</span><span class="hljs-params">(String stktrace)</span> &#123;
+    <span class="hljs-type">String</span> <span class="hljs-variable">buildId</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;&quot;</span>;
+    List&lt;String&gt; libPathList = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;String&gt;();
     <span class="hljs-keyword">if</span> (stktrace.contains(<span class="hljs-string">&quot;UnsatisfiedLinkError&quot;</span>)) &#123;
-        String libInfo = <span class="hljs-keyword">null</span>;
+        <span class="hljs-type">String</span> <span class="hljs-variable">libInfo</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
         String[] tempLibPathStr;
         tempLibPathStr = stktrace.split(<span class="hljs-string">&quot;\&quot;&quot;</span>); <span class="hljs-comment">// &quot; is the delimiter</span>
         <span class="hljs-keyword">for</span> (String libPathStr :  tempLibPathStr) &#123;
             <span class="hljs-keyword">if</span> (libPathStr.isEmpty() || !libPathStr.endsWith(<span class="hljs-string">&quot;.so&quot;</span>)) <span class="hljs-keyword">continue</span>;
             libPathList.add(libPathStr);
-            String libName = libPathStr.substring(libPathStr.lastIndexOf(<span class="hljs-string">&#x27;/&#x27;</span>) + <span class="hljs-number">1</span>);
+            <span class="hljs-type">String</span> <span class="hljs-variable">libName</span> <span class="hljs-operator">=</span> libPathStr.substring(libPathStr.lastIndexOf(<span class="hljs-string">&#x27;/&#x27;</span>) + <span class="hljs-number">1</span>);
             libPathList.add(XCrash.nativeLibDir + <span class="hljs-string">&quot;/&quot;</span> + libName);
             libPathList.add(<span class="hljs-string">&quot;/vendor/lib/&quot;</span> + libName);
             libPathList.add(<span class="hljs-string">&quot;/vendor/lib64/&quot;</span> + libName);
@@ -461,9 +461,9 @@ Caused by: java.lang.RuntimeException: test java exception
 	... 13 more</code></pre></div>
 
 <h3 id="logcat"><a href="#logcat" class="headerlink" title="logcat"></a>logcat</h3><p>其实就是调用 <code>logcat</code> 命令获取崩溃时的 <code>main</code>、<code>system</code> 和 <code>events</code> 三个 buffer 的日志，如：<code>/system/bin/logcat -b main -d -v threadtime -t 200 --pid 21356 *:D</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">static</span> String <span class="hljs-title">getLogcat</span><span class="hljs-params">(<span class="hljs-keyword">int</span> logcatMainLines, <span class="hljs-keyword">int</span> logcatSystemLines, <span class="hljs-keyword">int</span> logcatEventsLines)</span> </span>&#123;
-    <span class="hljs-keyword">int</span> pid = android.os.Process.myPid();
-    StringBuilder sb = <span class="hljs-keyword">new</span> StringBuilder();
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> String <span class="hljs-title function_">getLogcat</span><span class="hljs-params">(<span class="hljs-type">int</span> logcatMainLines, <span class="hljs-type">int</span> logcatSystemLines, <span class="hljs-type">int</span> logcatEventsLines)</span> &#123;
+    <span class="hljs-type">int</span> <span class="hljs-variable">pid</span> <span class="hljs-operator">=</span> android.os.Process.myPid();
+    <span class="hljs-type">StringBuilder</span> <span class="hljs-variable">sb</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>();
     sb.append(<span class="hljs-string">&quot;logcat:\n&quot;</span>);
     <span class="hljs-keyword">if</span> (logcatMainLines &gt; <span class="hljs-number">0</span>) &#123;
         getLogcatByBufferName(pid, sb, <span class="hljs-string">&quot;main&quot;</span>, logcatMainLines, <span class="hljs-string">&#x27;D&#x27;</span>);
@@ -478,12 +478,12 @@ Caused by: java.lang.RuntimeException: test java exception
     <span class="hljs-keyword">return</span> sb.toString();
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">getLogcatByBufferName</span><span class="hljs-params">(<span class="hljs-keyword">int</span> pid, StringBuilder sb, String bufferName, <span class="hljs-keyword">int</span> lines, <span class="hljs-keyword">char</span> priority)</span> </span>&#123;
-    <span class="hljs-keyword">boolean</span> withPid = (android.os.Build.VERSION.SDK_INT &gt;= <span class="hljs-number">24</span>);
-    String pidString = Integer.toString(pid);
-    String pidLabel = <span class="hljs-string">&quot; &quot;</span> + pidString + <span class="hljs-string">&quot; &quot;</span>;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">getLogcatByBufferName</span><span class="hljs-params">(<span class="hljs-type">int</span> pid, StringBuilder sb, String bufferName, <span class="hljs-type">int</span> lines, <span class="hljs-type">char</span> priority)</span> &#123;
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">withPid</span> <span class="hljs-operator">=</span> (android.os.Build.VERSION.SDK_INT &gt;= <span class="hljs-number">24</span>);
+    <span class="hljs-type">String</span> <span class="hljs-variable">pidString</span> <span class="hljs-operator">=</span> Integer.toString(pid);
+    <span class="hljs-type">String</span> <span class="hljs-variable">pidLabel</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot; &quot;</span> + pidString + <span class="hljs-string">&quot; &quot;</span>;
     <span class="hljs-comment">//command for ProcessBuilder</span>
-    List&lt;String&gt; command = <span class="hljs-keyword">new</span> ArrayList&lt;String&gt;();
+    List&lt;String&gt; command = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;String&gt;();
     command.add(<span class="hljs-string">&quot;/system/bin/logcat&quot;</span>);
     command.add(<span class="hljs-string">&quot;-b&quot;</span>);
     command.add(bufferName);
@@ -491,7 +491,7 @@ Caused by: java.lang.RuntimeException: test java exception
     command.add(<span class="hljs-string">&quot;-v&quot;</span>);
     command.add(<span class="hljs-string">&quot;threadtime&quot;</span>);
     command.add(<span class="hljs-string">&quot;-t&quot;</span>);
-    command.add(Integer.toString(withPid ? lines : (<span class="hljs-keyword">int</span>) (lines * <span class="hljs-number">1.2</span>)));
+    command.add(Integer.toString(withPid ? lines : (<span class="hljs-type">int</span>) (lines * <span class="hljs-number">1.2</span>)));
     <span class="hljs-keyword">if</span> (withPid) &#123;
         command.add(<span class="hljs-string">&quot;--pid&quot;</span>);
         command.add(pidString);
@@ -502,12 +502,12 @@ Caused by: java.lang.RuntimeException: test java exception
     sb.append(<span class="hljs-string">&quot;--------- tail end of log &quot;</span>).append(bufferName);
     sb.append(<span class="hljs-string">&quot; (&quot;</span>).append(android.text.TextUtils.join(<span class="hljs-string">&quot; &quot;</span>, commandArray)).append(<span class="hljs-string">&quot;)\n&quot;</span>);
     <span class="hljs-comment">//append logs</span>
-    BufferedReader br = <span class="hljs-keyword">null</span>;
+    <span class="hljs-type">BufferedReader</span> <span class="hljs-variable">br</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
     String line;
     <span class="hljs-keyword">try</span> &#123;
-        Process process = <span class="hljs-keyword">new</span> ProcessBuilder().command(command).start();
-        br = <span class="hljs-keyword">new</span> BufferedReader(<span class="hljs-keyword">new</span> InputStreamReader(process.getInputStream()));
-        <span class="hljs-keyword">while</span> ((line = br.readLine()) != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-type">Process</span> <span class="hljs-variable">process</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ProcessBuilder</span>().command(command).start();
+        br = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedReader</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">InputStreamReader</span>(process.getInputStream()));
+        <span class="hljs-keyword">while</span> ((line = br.readLine()) != <span class="hljs-literal">null</span>) &#123;
             <span class="hljs-keyword">if</span> (withPid || line.contains(pidLabel)) &#123;
                 sb.append(line).append(<span class="hljs-string">&quot;\n&quot;</span>);
             &#125;
@@ -515,7 +515,7 @@ Caused by: java.lang.RuntimeException: test java exception
     &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
         XCrash.getLogger().w(Util.TAG, <span class="hljs-string">&quot;Util run logcat command failed&quot;</span>, e);
     &#125; <span class="hljs-keyword">finally</span> &#123;
-        <span class="hljs-keyword">if</span> (br != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (br != <span class="hljs-literal">null</span>) &#123;
             <span class="hljs-keyword">try</span> &#123;
                 br.close();
             &#125; <span class="hljs-keyword">catch</span> (IOException ignored) &#123;
@@ -568,20 +568,20 @@ Caused by: java.lang.RuntimeException: test java exception
 10-12 03:23:20.083 21356 21356 I am_on_top_resumed_gained_called: [0,xcrash.sample.MainActivity,topStateChangedWhenResumed]</code></pre></div>
 
 <h3 id="Opened-FD"><a href="#Opened-FD" class="headerlink" title="Opened FD"></a>Opened FD</h3><p>打印已打开的 FD 及其路径，已打开的 FD 在目录 <code>/proc/self/fd</code> 下</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">static</span> String <span class="hljs-title">getFds</span><span class="hljs-params">()</span> </span>&#123;
-    StringBuilder sb = <span class="hljs-keyword">new</span> StringBuilder(<span class="hljs-string">&quot;open files:\n&quot;</span>);
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> String <span class="hljs-title function_">getFds</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-type">StringBuilder</span> <span class="hljs-variable">sb</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>(<span class="hljs-string">&quot;open files:\n&quot;</span>);
     <span class="hljs-keyword">try</span> &#123;
-        File dir = <span class="hljs-keyword">new</span> File(<span class="hljs-string">&quot;/proc/self/fd&quot;</span>);
-        File[] fds = dir.listFiles(<span class="hljs-keyword">new</span> FilenameFilter() &#123;
+        <span class="hljs-type">File</span> <span class="hljs-variable">dir</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(<span class="hljs-string">&quot;/proc/self/fd&quot;</span>);
+        File[] fds = dir.listFiles(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FilenameFilter</span>() &#123;
             <span class="hljs-meta">@Override</span>
-            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">accept</span><span class="hljs-params">(File dir, String name)</span> </span>&#123;
+            <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">accept</span><span class="hljs-params">(File dir, String name)</span> &#123;
                 <span class="hljs-keyword">return</span> TextUtils.isDigitsOnly(name);
             &#125;
         &#125;);
-        <span class="hljs-keyword">int</span> count = <span class="hljs-number">0</span>;
-        <span class="hljs-keyword">if</span> (fds != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-type">int</span> <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+        <span class="hljs-keyword">if</span> (fds != <span class="hljs-literal">null</span>) &#123;
             <span class="hljs-keyword">for</span> (File fd : fds) &#123;
-                String path = <span class="hljs-keyword">null</span>;
+                <span class="hljs-type">String</span> <span class="hljs-variable">path</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
                 <span class="hljs-keyword">try</span> &#123;
                     <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= <span class="hljs-number">21</span>) &#123;
                         path = Os.readlink(fd.getAbsolutePath());
@@ -839,16 +839,16 @@ Caused by: java.lang.RuntimeException: test java exception
                TOTAL:    46650           TOTAL SWAP:     6460
 </code></pre></div>
 
-<h3 id="Other-StackTraces"><a href="#Other-StackTraces" class="headerlink" title="Other StackTraces"></a>Other StackTraces</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> String <span class="hljs-title">getOtherThreadsInfo</span><span class="hljs-params">(Thread crashedThread)</span> </span>&#123;
+<h3 id="Other-StackTraces"><a href="#Other-StackTraces" class="headerlink" title="Other StackTraces"></a>Other StackTraces</h3><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> String <span class="hljs-title function_">getOtherThreadsInfo</span><span class="hljs-params">(Thread crashedThread)</span> &#123;
 
     <span class="hljs-comment">// 其他线程可能有很多，所以有“白名单”机制</span>
-    <span class="hljs-keyword">int</span> thdMatchedRegex = <span class="hljs-number">0</span>;
-    <span class="hljs-keyword">int</span> thdIgnoredByLimit = <span class="hljs-number">0</span>;
-    <span class="hljs-keyword">int</span> thdDumped = <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">thdMatchedRegex</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">thdIgnoredByLimit</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">thdDumped</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
     <span class="hljs-comment">//build whitelist regex list</span>
-    ArrayList&lt;Pattern&gt; whiteList = <span class="hljs-keyword">null</span>;
-    <span class="hljs-keyword">if</span> (dumpAllThreadsWhiteList != <span class="hljs-keyword">null</span>) &#123;
-        whiteList = <span class="hljs-keyword">new</span> ArrayList&lt;Pattern&gt;();
+    ArrayList&lt;Pattern&gt; whiteList = <span class="hljs-literal">null</span>;
+    <span class="hljs-keyword">if</span> (dumpAllThreadsWhiteList != <span class="hljs-literal">null</span>) &#123;
+        whiteList = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;Pattern&gt;();
         <span class="hljs-keyword">for</span> (String s : dumpAllThreadsWhiteList) &#123;
             <span class="hljs-keyword">try</span> &#123;
                 whiteList.add(Pattern.compile(s));
@@ -859,15 +859,15 @@ Caused by: java.lang.RuntimeException: test java exception
     &#125;
 
     <span class="hljs-comment">// dump trace</span>
-    StringBuilder sb = <span class="hljs-keyword">new</span> StringBuilder();
+    <span class="hljs-type">StringBuilder</span> <span class="hljs-variable">sb</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>();
     Map&lt;Thread, StackTraceElement[]&gt; map = Thread.getAllStackTraces();
     <span class="hljs-keyword">for</span> (Map.Entry&lt;Thread, StackTraceElement[]&gt; entry : map.entrySet()) &#123;
-        Thread thd = entry.getKey();
+        <span class="hljs-type">Thread</span> <span class="hljs-variable">thd</span> <span class="hljs-operator">=</span> entry.getKey();
         StackTraceElement[] stacktrace = entry.getValue();
         <span class="hljs-comment">//skip the crashed thread</span>
         <span class="hljs-keyword">if</span> (thd.getName().equals(crashedThread.getName())) <span class="hljs-keyword">continue</span>;
         <span class="hljs-comment">//check regex for thread name</span>
-        <span class="hljs-keyword">if</span> (whiteList != <span class="hljs-keyword">null</span> &amp;&amp; !matchThreadName(whiteList, thd.getName())) <span class="hljs-keyword">continue</span>;
+        <span class="hljs-keyword">if</span> (whiteList != <span class="hljs-literal">null</span> &amp;&amp; !matchThreadName(whiteList, thd.getName())) <span class="hljs-keyword">continue</span>;
         thdMatchedRegex++;
         <span class="hljs-comment">//check dump count limit</span>
         <span class="hljs-keyword">if</span> (dumpAllThreadsCountMax &gt; <span class="hljs-number">0</span> &amp;&amp; thdDumped &gt;= dumpAllThreadsCountMax) &#123;
@@ -891,7 +891,7 @@ Caused by: java.lang.RuntimeException: test java exception
             sb.append(Util.sepOtherThreads + <span class="hljs-string">&quot;\n&quot;</span>);
         &#125;
         sb.append(<span class="hljs-string">&quot;total JVM threads (exclude the crashed thread): &quot;</span>).append(map.size() - <span class="hljs-number">1</span>).append(<span class="hljs-string">&quot;\n&quot;</span>);
-        <span class="hljs-keyword">if</span> (whiteList != <span class="hljs-keyword">null</span>) &#123;
+        <span class="hljs-keyword">if</span> (whiteList != <span class="hljs-literal">null</span>) &#123;
             sb.append(<span class="hljs-string">&quot;JVM threads matched whitelist: &quot;</span>).append(thdMatchedRegex).append(<span class="hljs-string">&quot;\n&quot;</span>);
         &#125;
         <span class="hljs-keyword">if</span> (dumpAllThreadsCountMax &gt; <span class="hljs-number">0</span>) &#123;
@@ -1099,14 +1099,14 @@ dumped JVM threads:24</code></pre></div>
 <p>进程范围的信号会随机选择一个 signal unblocked 的线程来消费（deliver）</p>
 <p><code>sigaction</code> 用来注册信号处理器，是升级版的 <code>signal</code></p>
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 如果 act != null，它被注册为新的信号处理器；如果 oldact != null，上一个信号处理器将被保存在此</span>
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">sigaction</span><span class="hljs-params">(<span class="hljs-keyword">int</span> signum, <span class="hljs-keyword">const</span> struct sigaction *act, struct sigaction *oldact)</span></span>;
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">sigaction</span><span class="hljs-params">(<span class="hljs-type">int</span> signum, <span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> sigaction *act, <span class="hljs-keyword">struct</span> sigaction *oldact)</span></span>;
 
-<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sigaction</span> &#123;</span>
-    <span class="hljs-built_in"><span class="hljs-keyword">void</span></span>     (*sa_handler)(<span class="hljs-keyword">int</span>);                        <span class="hljs-comment">// 只收到 signal 作为参数的处理器</span>
-    <span class="hljs-built_in"><span class="hljs-keyword">void</span></span>     (*sa_sigaction)(<span class="hljs-keyword">int</span>, <span class="hljs-keyword">siginfo_t</span> *, <span class="hljs-keyword">void</span> *); <span class="hljs-comment">// 当指定 SA_SIGINFO 时，替代 sa_handler 作为处理器（能收到三个参数）</span>
-    <span class="hljs-keyword">sigset_t</span>   sa_mask;                                 <span class="hljs-comment">// 处理器运行时，暂时屏蔽指定信号（将它们加到线程的 signal mask）</span>
-    <span class="hljs-keyword">int</span>        sa_flags;
-    <span class="hljs-built_in"><span class="hljs-keyword">void</span></span>     (*sa_restorer)(<span class="hljs-keyword">void</span>);                      <span class="hljs-comment">// not for app</span>
+<span class="hljs-keyword">struct</span> <span class="hljs-title class_">sigaction</span> &#123;
+    <span class="hljs-built_in">void</span>     (*sa_handler)(<span class="hljs-type">int</span>);                        <span class="hljs-comment">// 只收到 signal 作为参数的处理器</span>
+    <span class="hljs-built_in">void</span>     (*sa_sigaction)(<span class="hljs-type">int</span>, <span class="hljs-type">siginfo_t</span> *, <span class="hljs-type">void</span> *); <span class="hljs-comment">// 当指定 SA_SIGINFO 时，替代 sa_handler 作为处理器（能收到三个参数）</span>
+    <span class="hljs-type">sigset_t</span>   sa_mask;                                 <span class="hljs-comment">// 处理器运行时，暂时屏蔽指定信号（将它们加到线程的 signal mask）</span>
+    <span class="hljs-type">int</span>        sa_flags;
+    <span class="hljs-built_in">void</span>     (*sa_restorer)(<span class="hljs-type">void</span>);                      <span class="hljs-comment">// not for app</span>
 &#125;;
 
 <span class="hljs-comment">// sa_flags:</span>
@@ -1115,43 +1115,43 @@ dumped JVM threads:24</code></pre></div>
 <span class="hljs-comment">//                默认是使其返回失败码，此 flag 指示重新执行系统调用/库函数</span>
 <span class="hljs-comment">//     SA_ONSTACK 用另一个方法调用栈来执行处理器函数</span>
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">sa_sigaction</span><span class="hljs-params">(<span class="hljs-keyword">int</span> sig, <span class="hljs-keyword">siginfo_t</span> *info, <span class="hljs-keyword">void</span> *ucontext)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">sa_sigaction</span><span class="hljs-params">(<span class="hljs-type">int</span> sig, <span class="hljs-type">siginfo_t</span> *info, <span class="hljs-type">void</span> *ucontext)</span></span>
 <span class="hljs-function"></span>
-<span class="hljs-function"><span class="hljs-keyword">siginfo_t</span> </span>&#123;
-    <span class="hljs-keyword">int</span>      si_signo;     <span class="hljs-comment">/* Signal number */</span>
-    <span class="hljs-keyword">int</span>      si_errno;     <span class="hljs-comment">/* An errno value */</span>
-    <span class="hljs-keyword">int</span>      si_code;      <span class="hljs-comment">/* Signal code */</span>
-    <span class="hljs-keyword">int</span>      si_trapno;    <span class="hljs-comment">/* Trap number that caused</span>
+<span class="hljs-function"><span class="hljs-type">siginfo_t</span> </span>&#123;
+    <span class="hljs-type">int</span>      si_signo;     <span class="hljs-comment">/* Signal number */</span>
+    <span class="hljs-type">int</span>      si_errno;     <span class="hljs-comment">/* An errno value */</span>
+    <span class="hljs-type">int</span>      si_code;      <span class="hljs-comment">/* Signal code */</span>
+    <span class="hljs-type">int</span>      si_trapno;    <span class="hljs-comment">/* Trap number that caused</span>
 <span class="hljs-comment">                              hardware-generated signal</span>
 <span class="hljs-comment">                              (unused on most architectures) */</span>
-    <span class="hljs-keyword">pid_t</span>    si_pid;       <span class="hljs-comment">/* Sending process ID */</span>
-    <span class="hljs-keyword">uid_t</span>    si_uid;       <span class="hljs-comment">/* Real user ID of sending process */</span>
-    <span class="hljs-keyword">int</span>      si_status;    <span class="hljs-comment">/* Exit value or signal */</span>
-    <span class="hljs-keyword">clock_t</span>  si_utime;     <span class="hljs-comment">/* User time consumed */</span>
-    <span class="hljs-keyword">clock_t</span>  si_stime;     <span class="hljs-comment">/* System time consumed */</span>
-    <span class="hljs-keyword">sigval_t</span> si_value;     <span class="hljs-comment">/* Signal value */</span>
-    <span class="hljs-keyword">int</span>      si_int;       <span class="hljs-comment">/* POSIX.1b signal */</span>
-    <span class="hljs-keyword">void</span>    *si_ptr;       <span class="hljs-comment">/* POSIX.1b signal */</span>
-    <span class="hljs-keyword">int</span>      si_overrun;   <span class="hljs-comment">/* Timer overrun count;</span>
+    <span class="hljs-type">pid_t</span>    si_pid;       <span class="hljs-comment">/* Sending process ID */</span>
+    <span class="hljs-type">uid_t</span>    si_uid;       <span class="hljs-comment">/* Real user ID of sending process */</span>
+    <span class="hljs-type">int</span>      si_status;    <span class="hljs-comment">/* Exit value or signal */</span>
+    <span class="hljs-type">clock_t</span>  si_utime;     <span class="hljs-comment">/* User time consumed */</span>
+    <span class="hljs-type">clock_t</span>  si_stime;     <span class="hljs-comment">/* System time consumed */</span>
+    <span class="hljs-type">sigval_t</span> si_value;     <span class="hljs-comment">/* Signal value */</span>
+    <span class="hljs-type">int</span>      si_int;       <span class="hljs-comment">/* POSIX.1b signal */</span>
+    <span class="hljs-type">void</span>    *si_ptr;       <span class="hljs-comment">/* POSIX.1b signal */</span>
+    <span class="hljs-type">int</span>      si_overrun;   <span class="hljs-comment">/* Timer overrun count;</span>
 <span class="hljs-comment">                              POSIX.1b timers */</span>
-    <span class="hljs-keyword">int</span>      si_timerid;   <span class="hljs-comment">/* Timer ID; POSIX.1b timers */</span>
-    <span class="hljs-keyword">void</span>    *si_addr;      <span class="hljs-comment">/* Memory location which caused fault */</span>
-    <span class="hljs-keyword">long</span>     si_band;      <span class="hljs-comment">/* Band event (was int in</span>
+    <span class="hljs-type">int</span>      si_timerid;   <span class="hljs-comment">/* Timer ID; POSIX.1b timers */</span>
+    <span class="hljs-type">void</span>    *si_addr;      <span class="hljs-comment">/* Memory location which caused fault */</span>
+    <span class="hljs-type">long</span>     si_band;      <span class="hljs-comment">/* Band event (was int in</span>
 <span class="hljs-comment">                              glibc 2.3.2 and earlier) */</span>
-    <span class="hljs-keyword">int</span>      si_fd;        <span class="hljs-comment">/* File descriptor */</span>
-    <span class="hljs-keyword">short</span>    si_addr_lsb;  <span class="hljs-comment">/* Least significant bit of address</span>
+    <span class="hljs-type">int</span>      si_fd;        <span class="hljs-comment">/* File descriptor */</span>
+    <span class="hljs-type">short</span>    si_addr_lsb;  <span class="hljs-comment">/* Least significant bit of address</span>
 <span class="hljs-comment">                              (since Linux 2.6.32) */</span>
-    <span class="hljs-keyword">void</span>    *si_lower;     <span class="hljs-comment">/* Lower bound when address violation</span>
+    <span class="hljs-type">void</span>    *si_lower;     <span class="hljs-comment">/* Lower bound when address violation</span>
 <span class="hljs-comment">                              occurred (since Linux 3.19) */</span>
-    <span class="hljs-keyword">void</span>    *si_upper;     <span class="hljs-comment">/* Upper bound when address violation</span>
+    <span class="hljs-type">void</span>    *si_upper;     <span class="hljs-comment">/* Upper bound when address violation</span>
 <span class="hljs-comment">                              occurred (since Linux 3.19) */</span>
-    <span class="hljs-keyword">int</span>      si_pkey;      <span class="hljs-comment">/* Protection key on PTE that caused</span>
+    <span class="hljs-type">int</span>      si_pkey;      <span class="hljs-comment">/* Protection key on PTE that caused</span>
 <span class="hljs-comment">                              fault (since Linux 4.6) */</span>
-    <span class="hljs-keyword">void</span>    *si_call_addr; <span class="hljs-comment">/* Address of system call instruction</span>
+    <span class="hljs-type">void</span>    *si_call_addr; <span class="hljs-comment">/* Address of system call instruction</span>
 <span class="hljs-comment">                              (since Linux 3.5) */</span>
-    <span class="hljs-keyword">int</span>      si_syscall;   <span class="hljs-comment">/* Number of attempted system call</span>
+    <span class="hljs-type">int</span>      si_syscall;   <span class="hljs-comment">/* Number of attempted system call</span>
 <span class="hljs-comment">                              (since Linux 3.5) */</span>
-    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> si_arch;  <span class="hljs-comment">/* Architecture of attempted system call</span>
+    <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> si_arch;  <span class="hljs-comment">/* Architecture of attempted system call</span>
 <span class="hljs-comment">                              (since Linux 3.5) */</span>
 &#125;</code></pre></div>
 
@@ -1162,13 +1162,13 @@ dumped JVM threads:24</code></pre></div>
 <span class="hljs-comment"> * in this case, a signal handler for SIGSEGV cannot be invoked on the process stack; </span>
 <span class="hljs-comment"> * if we wish to handle it, we must use an alternate signal stack</span>
 <span class="hljs-comment"> */</span>
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">sigaltstack</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">stack_t</span> *ss, <span class="hljs-keyword">stack_t</span> *old_ss)</span></span>;
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">sigaltstack</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">stack_t</span> *ss, <span class="hljs-type">stack_t</span> *old_ss)</span></span>;
 
-<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> &#123;</span>
-    <span class="hljs-keyword">void</span>  *ss_sp;     <span class="hljs-comment">/* Base address of stack */</span>
-    <span class="hljs-keyword">int</span>    ss_flags;  <span class="hljs-comment">/* Flags */</span>
-    <span class="hljs-keyword">size_t</span> ss_size;   <span class="hljs-comment">/* Number of bytes in stack */</span>
-&#125; <span class="hljs-keyword">stack_t</span>;</code></pre></div>
+<span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> &#123;
+    <span class="hljs-type">void</span>  *ss_sp;     <span class="hljs-comment">/* Base address of stack */</span>
+    <span class="hljs-type">int</span>    ss_flags;  <span class="hljs-comment">/* Flags */</span>
+    <span class="hljs-type">size_t</span> ss_size;   <span class="hljs-comment">/* Number of bytes in stack */</span>
+&#125; <span class="hljs-type">stack_t</span>;</code></pre></div>
 
 <h3 id="xc-crash-signal-handler"><a href="#xc-crash-signal-handler" class="headerlink" title="xc_crash_signal_handler"></a>xc_crash_signal_handler</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// XCrash.init</span>
 <span class="hljs-comment">// NativeHandler.initialize</span>
@@ -1177,7 +1177,7 @@ dumped JVM threads:24</code></pre></div>
 <span class="hljs-comment">// xc_crash_init</span>
 
 <span class="hljs-comment">// 需要捕获的信号</span>
-<span class="hljs-keyword">static</span> <span class="hljs-keyword">xcc_signal_crash_info_t</span> xcc_signal_crash_info[] =
+<span class="hljs-type">static</span> <span class="hljs-type">xcc_signal_crash_info_t</span> xcc_signal_crash_info[] =
 &#123;
     &#123;.signum = SIGABRT&#125;,
     &#123;.signum = SIGBUS&#125;,
@@ -1189,24 +1189,24 @@ dumped JVM threads:24</code></pre></div>
     &#123;.signum = SIGSTKFLT&#125;
 &#125;;
 
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xcc_signal_crash_register</span><span class="hljs-params">(<span class="hljs-keyword">void</span> (*handler)(<span class="hljs-keyword">int</span>, <span class="hljs-keyword">siginfo_t</span> *, <span class="hljs-keyword">void</span> *))</span></span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">xcc_signal_crash_register</span><span class="hljs-params">(<span class="hljs-type">void</span> (*handler)(<span class="hljs-type">int</span>, <span class="hljs-type">siginfo_t</span> *, <span class="hljs-type">void</span> *))</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">// 预先为处理器分配一块内存</span>
-    <span class="hljs-keyword">stack_t</span> ss;
+    <span class="hljs-type">stack_t</span> ss;
     <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> == (ss.ss_sp = <span class="hljs-built_in">calloc</span>(<span class="hljs-number">1</span>, XCC_SIGNAL_CRASH_STACK_SIZE))) <span class="hljs-keyword">return</span> XCC_ERRNO_NOMEM;
     ss.ss_size  = XCC_SIGNAL_CRASH_STACK_SIZE;
     ss.ss_flags = <span class="hljs-number">0</span>;
     <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">sigaltstack</span>(&amp;ss, <span class="hljs-literal">NULL</span>)) <span class="hljs-keyword">return</span> XCC_ERRNO_SYS;
 
-    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sigaction</span> <span class="hljs-title">act</span>;</span>
-    <span class="hljs-built_in">memset</span>(&amp;act, <span class="hljs-number">0</span>, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(act));
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">sigaction</span> act;
+    <span class="hljs-built_in">memset</span>(&amp;act, <span class="hljs-number">0</span>, <span class="hljs-built_in">sizeof</span>(act));
     <span class="hljs-built_in">sigfillset</span>(&amp;act.sa_mask);
     act.sa_sigaction = handler;
     act.sa_flags = SA_RESTART | SA_SIGINFO | SA_ONSTACK;
     
     <span class="hljs-comment">// 为上述信号注册处理器</span>
-    <span class="hljs-keyword">size_t</span> i;
-    <span class="hljs-keyword">for</span>(i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(xcc_signal_crash_info) / <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(xcc_signal_crash_info[<span class="hljs-number">0</span>]); i++)
+    <span class="hljs-type">size_t</span> i;
+    <span class="hljs-keyword">for</span>(i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-built_in">sizeof</span>(xcc_signal_crash_info) / <span class="hljs-built_in">sizeof</span>(xcc_signal_crash_info[<span class="hljs-number">0</span>]); i++)
         <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">sigaction</span>(xcc_signal_crash_info[i].signum, &amp;act, &amp;(xcc_signal_crash_info[i].oldact)))
             <span class="hljs-keyword">return</span> XCC_ERRNO_SYS;
 
@@ -1215,7 +1215,7 @@ dumped JVM threads:24</code></pre></div>
 
 <span class="hljs-comment">// 信号处理器，跟上面的 JavaCrashHandler 一样，主要是收集各种信息，写入 tombstone 文件</span>
 <span class="hljs-comment">// 比较复杂，下一章节进行分析</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">xc_crash_signal_handler</span><span class="hljs-params">(<span class="hljs-keyword">int</span> sig, <span class="hljs-keyword">siginfo_t</span> *si, <span class="hljs-keyword">void</span> *uc)</span></span></code></pre></div>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">xc_crash_signal_handler</span><span class="hljs-params">(<span class="hljs-type">int</span> sig, <span class="hljs-type">siginfo_t</span> *si, <span class="hljs-type">void</span> *uc)</span></span></code></pre></div>
 
 <h3 id="核心步骤"><a href="#核心步骤" class="headerlink" title="核心步骤"></a>核心步骤</h3><ol>
 <li>信号处理器（<code>xc_crash_signal_handler</code>，在 APP 进程）收集相关的信息到 <code>xc_crash_spot</code></li>
@@ -1226,34 +1226,34 @@ dumped JVM threads:24</code></pre></div>
 <li>signal handler 线程从阻塞中恢复，退出 APP 进程</li>
 </ol>
 <div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// APP 进程，signal hander 线程，dump 开始的地方</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">xc_crash_signal_handler</span><span class="hljs-params">(<span class="hljs-keyword">int</span> sig, <span class="hljs-keyword">siginfo_t</span> *si, <span class="hljs-keyword">void</span> *uc)</span></span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">xc_crash_signal_handler</span><span class="hljs-params">(<span class="hljs-type">int</span> sig, <span class="hljs-type">siginfo_t</span> *si, <span class="hljs-type">void</span> *uc)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">// set crash spot info</span>
     xc_crash_spot.crash_time = xc_crash_time;
     xc_crash_spot.crash_tid = xc_crash_tid;
-    <span class="hljs-built_in">memcpy</span>(&amp;(xc_crash_spot.siginfo), si, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">siginfo_t</span>));
-    <span class="hljs-built_in">memcpy</span>(&amp;(xc_crash_spot.ucontext), uc, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">ucontext_t</span>));
+    <span class="hljs-built_in">memcpy</span>(&amp;(xc_crash_spot.siginfo), si, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">siginfo_t</span>));
+    <span class="hljs-built_in">memcpy</span>(&amp;(xc_crash_spot.ucontext), uc, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">ucontext_t</span>));
     xc_crash_spot.log_pathname_len = <span class="hljs-built_in">strlen</span>(xc_crash_log_pathname);
 
     <span class="hljs-comment">// spawn crash dumper process</span>
-    <span class="hljs-keyword">pid_t</span> dumper_pid = <span class="hljs-built_in">xc_crash_fork</span>(xc_crash_exec_dumper);
+    <span class="hljs-type">pid_t</span> dumper_pid = <span class="hljs-built_in">xc_crash_fork</span>(xc_crash_exec_dumper);
 
     <span class="hljs-comment">// wait the crash dumper process terminated</span>
-    <span class="hljs-keyword">int</span> wait_r = <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">waitpid</span>(dumper_pid, &amp;status, __WALL));
+    <span class="hljs-type">int</span> wait_r = <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">waitpid</span>(dumper_pid, &amp;status, __WALL));
 
     <span class="hljs-comment">// exit</span>
 &#125;
 
 <span class="hljs-comment">// dumper 进程的入口</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> <span class="hljs-title">xc_crash_exec_dumper</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *arg)</span></span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">xc_crash_exec_dumper</span><span class="hljs-params">(<span class="hljs-type">void</span> *arg)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">// 创建一个管道，第一个用来读，第二个用来写</span>
-    <span class="hljs-keyword">int</span> pipefd[<span class="hljs-number">2</span>];
+    <span class="hljs-type">int</span> pipefd[<span class="hljs-number">2</span>];
     <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">pipe2</span>(pipefd, O_CLOEXEC))
 
     <span class="hljs-comment">// 将 xc_crash_spot 写入管道</span>
-    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">iovec</span> <span class="hljs-title">iovs</span>[12] =</span> &#123;
-        &#123;.iov_base = &amp;xc_crash_spot,                      .iov_len = <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">xcc_spot_t</span>)&#125;,
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">iovec</span> iovs[<span class="hljs-number">12</span>] = &#123;
+        &#123;.iov_base = &amp;xc_crash_spot,                      .iov_len = <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">xcc_spot_t</span>)&#125;,
         &#123;.iov_base = xc_crash_log_pathname,               .iov_len = xc_crash_spot.log_pathname_len&#125;,
         &#123;.iov_base = xc_common_os_version,                .iov_len = xc_crash_spot.os_version_len&#125;,
         &#123;.iov_base = xc_common_kernel_version,            .iov_len = xc_crash_spot.kernel_version_len&#125;,
@@ -1266,8 +1266,8 @@ dumped JVM threads:24</code></pre></div>
         &#123;.iov_base = xc_common_app_version,               .iov_len = xc_crash_spot.app_version_len&#125;,
         &#123;.iov_base = xc_crash_dump_all_threads_whitelist, .iov_len = xc_crash_spot.dump_all_threads_whitelist_len&#125;
     &#125;;
-    <span class="hljs-keyword">int</span> iovs_cnt = (<span class="hljs-number">0</span> == xc_crash_spot.dump_all_threads_whitelist_len ? <span class="hljs-number">11</span> : <span class="hljs-number">12</span>);
-    <span class="hljs-keyword">ssize_t</span> ret = <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">writev</span>(pipefd[<span class="hljs-number">1</span>], iovs, iovs_cnt));
+    <span class="hljs-type">int</span> iovs_cnt = (<span class="hljs-number">0</span> == xc_crash_spot.dump_all_threads_whitelist_len ? <span class="hljs-number">11</span> : <span class="hljs-number">12</span>);
+    <span class="hljs-type">ssize_t</span> ret = <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">writev</span>(pipefd[<span class="hljs-number">1</span>], iovs, iovs_cnt));
 
     <span class="hljs-comment">// 将 stdin (fd 0) 指向管道的读端口</span>
     <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">dup2</span>(pipefd[<span class="hljs-number">0</span>], STDIN_FILENO));
@@ -1281,7 +1281,7 @@ dumped JVM threads:24</code></pre></div>
 &#125;
 
 <span class="hljs-comment">// libxcrash_dumper.so 的入口点，在 xcd_core.c</span>
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span>** argv)</span></span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span>** argv)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">// 从 stdin 读取 xc_crash_spot</span>
     <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xcd_core_read_args</span>()) <span class="hljs-built_in">exit</span>(<span class="hljs-number">1</span>);
@@ -1352,34 +1352,34 @@ dumped JVM threads:24</code></pre></div>
 <li>SIGSEGV 会将错误地址写入 <code>siginfo_t.si_addr</code></li>
 <li>有关 <code>siginfo_t</code> 的更详细信息请参考 <code>man sigaction.2</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> <span class="hljs-title">xcd_process_record_signal_info</span><span class="hljs-params">(<span class="hljs-keyword">xcd_process_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">xcd_process_record_signal_info</span><span class="hljs-params">(<span class="hljs-type">xcd_process_t</span> *self, <span class="hljs-type">int</span> log_fd)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">//fault addr</span>
-    <span class="hljs-keyword">char</span> addr_desc[<span class="hljs-number">64</span>];
+    <span class="hljs-type">char</span> addr_desc[<span class="hljs-number">64</span>];
     <span class="hljs-keyword">if</span>(<span class="hljs-built_in">xcc_util_signal_has_si_addr</span>(self-&gt;si))
     &#123;
-        <span class="hljs-keyword">void</span> *addr = self-&gt;si-&gt;si_addr;
+        <span class="hljs-type">void</span> *addr = self-&gt;si-&gt;si_addr;
         <span class="hljs-keyword">if</span>(self-&gt;si-&gt;si_signo == SIGILL)
         &#123;
-            <span class="hljs-keyword">uint32_t</span> instruction = <span class="hljs-number">0</span>;
-            <span class="hljs-built_in">xcd_util_ptrace_read</span>(self-&gt;pid, (<span class="hljs-keyword">uintptr_t</span>)addr, &amp;instruction, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(instruction));
-            <span class="hljs-built_in">snprintf</span>(addr_desc, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(addr_desc), <span class="hljs-string">&quot;%p (*pc=%#08x)&quot;</span>, addr, instruction);
+            <span class="hljs-type">uint32_t</span> instruction = <span class="hljs-number">0</span>;
+            <span class="hljs-built_in">xcd_util_ptrace_read</span>(self-&gt;pid, (<span class="hljs-type">uintptr_t</span>)addr, &amp;instruction, <span class="hljs-built_in">sizeof</span>(instruction));
+            <span class="hljs-built_in">snprintf</span>(addr_desc, <span class="hljs-built_in">sizeof</span>(addr_desc), <span class="hljs-string">&quot;%p (*pc=%#08x)&quot;</span>, addr, instruction);
         &#125;
         <span class="hljs-keyword">else</span>
         &#123;
-            <span class="hljs-built_in">snprintf</span>(addr_desc, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(addr_desc), <span class="hljs-string">&quot;%p&quot;</span>, addr);
+            <span class="hljs-built_in">snprintf</span>(addr_desc, <span class="hljs-built_in">sizeof</span>(addr_desc), <span class="hljs-string">&quot;%p&quot;</span>, addr);
         &#125;
     &#125;
     <span class="hljs-keyword">else</span>
     &#123;
-        <span class="hljs-built_in">snprintf</span>(addr_desc, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(addr_desc), <span class="hljs-string">&quot;--------&quot;</span>);
+        <span class="hljs-built_in">snprintf</span>(addr_desc, <span class="hljs-built_in">sizeof</span>(addr_desc), <span class="hljs-string">&quot;--------&quot;</span>);
     &#125;
 
     <span class="hljs-comment">//from</span>
-    <span class="hljs-keyword">char</span> sender_desc[<span class="hljs-number">64</span>] = <span class="hljs-string">&quot;&quot;</span>;
+    <span class="hljs-type">char</span> sender_desc[<span class="hljs-number">64</span>] = <span class="hljs-string">&quot;&quot;</span>;
     <span class="hljs-keyword">if</span>(<span class="hljs-built_in">xcc_util_signal_has_sender</span>(self-&gt;si, self-&gt;pid))
     &#123;
-        <span class="hljs-built_in">snprintf</span>(sender_desc, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(sender_desc), <span class="hljs-string">&quot; from pid %d, uid %d&quot;</span>, self-&gt;si-&gt;si_pid, self-&gt;si-&gt;si_uid);
+        <span class="hljs-built_in">snprintf</span>(sender_desc, <span class="hljs-built_in">sizeof</span>(sender_desc), <span class="hljs-string">&quot; from pid %d, uid %d&quot;</span>, self-&gt;si-&gt;si_pid, self-&gt;si-&gt;si_uid);
     &#125;
 
     <span class="hljs-keyword">return</span> <span class="hljs-built_in">xcc_util_write_format</span>(log_fd, <span class="hljs-string">&quot;signal %d (%s), code %d (%s%s), fault addr %s\n&quot;</span>,
@@ -1437,13 +1437,13 @@ sp  0000007fe0ef2070  lr  00000074b9bcc8cc  pc  00000074b9bcc884</code></pre></d
 <li><code>PTRACE_PEEKDATA</code>（读内存）、 <code>PTRACE_POKEDATA</code>（写内存）、<code>PTRACE_GETREGS</code>（读寄存器）、<code>PTRACE_SETREGS</code>（写寄存器）…</li>
 <li><code>PTRACE_DETACH</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">long</span> <span class="hljs-title">ptrace</span><span class="hljs-params">(<span class="hljs-keyword">enum</span> __ptrace_request request, <span class="hljs-keyword">pid_t</span> pid, <span class="hljs-keyword">void</span> *addr, <span class="hljs-keyword">void</span> *data)</span></span>;
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">long</span> <span class="hljs-title">ptrace</span><span class="hljs-params">(<span class="hljs-keyword">enum</span> __ptrace_request request, <span class="hljs-type">pid_t</span> pid, <span class="hljs-type">void</span> *addr, <span class="hljs-type">void</span> *data)</span></span>;
 
 <span class="hljs-comment">// 通过 ptrace 获取寄存器的值并保存到 xcd_thread_t.regs</span>
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">xcd_thread_load_regs</span><span class="hljs-params">(<span class="hljs-keyword">xcd_thread_t</span> *self)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">xcd_thread_load_regs</span><span class="hljs-params">(<span class="hljs-type">xcd_thread_t</span> *self)</span></span>
 <span class="hljs-function"></span>&#123;
-    <span class="hljs-keyword">uintptr_t</span> regs[<span class="hljs-number">64</span>]; <span class="hljs-comment">//big enough for all architectures</span>
-    <span class="hljs-keyword">size_t</span>    regs_len;
+    <span class="hljs-type">uintptr_t</span> regs[<span class="hljs-number">64</span>]; <span class="hljs-comment">//big enough for all architectures</span>
+    <span class="hljs-type">size_t</span>    regs_len;
 
     <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">ptrace</span>(PTRACE_GETREGS, self-&gt;tid, <span class="hljs-literal">NULL</span>, &amp;regs))
     &#123;
@@ -1455,14 +1455,14 @@ sp  0000007fe0ef2070  lr  00000074b9bcc8cc  pc  00000074b9bcc884</code></pre></d
     <span class="hljs-built_in">xcd_regs_load_from_ptregs</span>(&amp;(self-&gt;regs), regs, regs_len);
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">xcd_regs_load_from_ptregs</span><span class="hljs-params">(<span class="hljs-keyword">xcd_regs_t</span> *self, <span class="hljs-keyword">uintptr_t</span> *regs, <span class="hljs-keyword">size_t</span> regs_len)</span></span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">xcd_regs_load_from_ptregs</span><span class="hljs-params">(<span class="hljs-type">xcd_regs_t</span> *self, <span class="hljs-type">uintptr_t</span> *regs, <span class="hljs-type">size_t</span> regs_len)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-keyword">if</span>(regs_len &gt; XCD_REGS_USER_NUM) regs_len = XCD_REGS_USER_NUM;
-    <span class="hljs-built_in">memcpy</span>(&amp;(self-&gt;r), regs, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(<span class="hljs-keyword">uintptr_t</span>) * regs_len);
+    <span class="hljs-built_in">memcpy</span>(&amp;(self-&gt;r), regs, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uintptr_t</span>) * regs_len);
 &#125;
 
 <span class="hljs-comment">// 打印寄存器的值</span>
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xcd_regs_record</span><span class="hljs-params">(<span class="hljs-keyword">xcd_regs_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">xcd_regs_record</span><span class="hljs-params">(<span class="hljs-type">xcd_regs_t</span> *self, <span class="hljs-type">int</span> log_fd)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-keyword">return</span> <span class="hljs-built_in">xcc_util_write_format</span>(log_fd,
                                  <span class="hljs-string">&quot;    x0  %016lx  x1  %016lx  x2  %016lx  x3  %016lx\n&quot;</span>
@@ -1771,25 +1771,25 @@ Key to Flags:
 <td>函数与 pc 的偏移</td>
 </tr>
 </tbody></table>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xcd_thread_record_backtrace</span><span class="hljs-params">(<span class="hljs-keyword">xcd_thread_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
+<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">xcd_thread_record_backtrace</span><span class="hljs-params">(<span class="hljs-type">xcd_thread_t</span> *self, <span class="hljs-type">int</span> log_fd)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-keyword">if</span>(XCD_THREAD_STATUS_OK != self-&gt;status) <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>; <span class="hljs-comment">//ignore</span>
 
     <span class="hljs-keyword">return</span> <span class="hljs-built_in">xcd_frames_record_backtrace</span>(self-&gt;frames, log_fd);
 &#125;
 
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xcd_frames_record_backtrace</span><span class="hljs-params">(<span class="hljs-keyword">xcd_frames_t</span> *self, <span class="hljs-keyword">int</span> log_fd)</span></span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">xcd_frames_record_backtrace</span><span class="hljs-params">(<span class="hljs-type">xcd_frames_t</span> *self, <span class="hljs-type">int</span> log_fd)</span></span>
 <span class="hljs-function"></span>&#123;
-    <span class="hljs-keyword">xcd_frame_t</span> *frame;
-    <span class="hljs-keyword">xcd_elf_t</span>   *elf;
-    <span class="hljs-keyword">char</span>        *name;
-    <span class="hljs-keyword">char</span>         name_buf[<span class="hljs-number">512</span>];
-    <span class="hljs-keyword">char</span>        *name_embedded;
-    <span class="hljs-keyword">char</span>        *offset;
-    <span class="hljs-keyword">char</span>         offset_buf[<span class="hljs-number">64</span>];
-    <span class="hljs-keyword">char</span>        *func;
-    <span class="hljs-keyword">char</span>         func_buf[<span class="hljs-number">512</span>];
-    <span class="hljs-keyword">int</span>          r;
+    <span class="hljs-type">xcd_frame_t</span> *frame;
+    <span class="hljs-type">xcd_elf_t</span>   *elf;
+    <span class="hljs-type">char</span>        *name;
+    <span class="hljs-type">char</span>         name_buf[<span class="hljs-number">512</span>];
+    <span class="hljs-type">char</span>        *name_embedded;
+    <span class="hljs-type">char</span>        *offset;
+    <span class="hljs-type">char</span>         offset_buf[<span class="hljs-number">64</span>];
+    <span class="hljs-type">char</span>        *func;
+    <span class="hljs-type">char</span>         func_buf[<span class="hljs-number">512</span>];
+    <span class="hljs-type">int</span>          r;
 
     <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != (r = <span class="hljs-built_in">xcc_util_write_str</span>(log_fd, <span class="hljs-string">&quot;backtrace:\n&quot;</span>))) <span class="hljs-keyword">return</span> r;
     
@@ -1803,20 +1803,20 @@ Key to Flags:
         &#125;
         <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> == frame-&gt;map-&gt;name || <span class="hljs-string">&#x27;\0&#x27;</span> == frame-&gt;map-&gt;name[<span class="hljs-number">0</span>])
         &#123;
-            <span class="hljs-built_in">snprintf</span>(name_buf, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(name_buf), <span class="hljs-string">&quot;&lt;anonymous:%&quot;</span>XCC_UTIL_FMT_ADDR<span class="hljs-string">&quot;&gt;&quot;</span>, frame-&gt;map-&gt;start);
+            <span class="hljs-built_in">snprintf</span>(name_buf, <span class="hljs-built_in">sizeof</span>(name_buf), <span class="hljs-string">&quot;&lt;anonymous:%&quot;</span>XCC_UTIL_FMT_ADDR<span class="hljs-string">&quot;&gt;&quot;</span>, frame-&gt;map-&gt;start);
             name = name_buf;
         &#125;
         <span class="hljs-keyword">else</span>
         &#123;
             <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != frame-&gt;map-&gt;elf_start_offset)
             &#123;
-                elf = <span class="hljs-built_in">xcd_map_get_elf</span>(frame-&gt;map, self-&gt;pid, (<span class="hljs-keyword">void</span> *)self-&gt;maps);
+                elf = <span class="hljs-built_in">xcd_map_get_elf</span>(frame-&gt;map, self-&gt;pid, (<span class="hljs-type">void</span> *)self-&gt;maps);
                 <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> != elf)
                 &#123;
                     name_embedded = <span class="hljs-built_in">xcd_elf_get_so_name</span>(elf);
                     <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> != name_embedded &amp;&amp; <span class="hljs-built_in">strlen</span>(name_embedded) &gt; <span class="hljs-number">0</span>)
                     &#123;
-                        <span class="hljs-built_in">snprintf</span>(name_buf, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(name_buf), <span class="hljs-string">&quot;%s!%s&quot;</span>, frame-&gt;map-&gt;name, name_embedded);
+                        <span class="hljs-built_in">snprintf</span>(name_buf, <span class="hljs-built_in">sizeof</span>(name_buf), <span class="hljs-string">&quot;%s!%s&quot;</span>, frame-&gt;map-&gt;name, name_embedded);
                         name = name_buf;
                     &#125;
                 &#125;
@@ -1827,7 +1827,7 @@ Key to Flags:
         <span class="hljs-comment">//offset</span>
         <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> != frame-&gt;map &amp;&amp; <span class="hljs-number">0</span> != frame-&gt;map-&gt;elf_start_offset)
         &#123;
-            <span class="hljs-built_in">snprintf</span>(offset_buf, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(offset_buf), <span class="hljs-string">&quot; (offset 0x%&quot;</span>PRIxPTR<span class="hljs-string">&quot;)&quot;</span>, frame-&gt;map-&gt;elf_start_offset);
+            <span class="hljs-built_in">snprintf</span>(offset_buf, <span class="hljs-built_in">sizeof</span>(offset_buf), <span class="hljs-string">&quot; (offset 0x%&quot;</span>PRIxPTR<span class="hljs-string">&quot;)&quot;</span>, frame-&gt;map-&gt;elf_start_offset);
             offset = offset_buf;
         &#125;
         <span class="hljs-keyword">else</span>
@@ -1839,9 +1839,9 @@ Key to Flags:
         <span class="hljs-keyword">if</span>(<span class="hljs-literal">NULL</span> != frame-&gt;func_name)
         &#123;
             <span class="hljs-keyword">if</span>(frame-&gt;func_offset &gt; <span class="hljs-number">0</span>)
-                <span class="hljs-built_in">snprintf</span>(func_buf, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(func_buf), <span class="hljs-string">&quot; (%s+%zu)&quot;</span>, frame-&gt;func_name, frame-&gt;func_offset);
+                <span class="hljs-built_in">snprintf</span>(func_buf, <span class="hljs-built_in">sizeof</span>(func_buf), <span class="hljs-string">&quot; (%s+%zu)&quot;</span>, frame-&gt;func_name, frame-&gt;func_offset);
             <span class="hljs-keyword">else</span>
-                <span class="hljs-built_in">snprintf</span>(func_buf, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(func_buf), <span class="hljs-string">&quot; (%s)&quot;</span>, frame-&gt;func_name);
+                <span class="hljs-built_in">snprintf</span>(func_buf, <span class="hljs-built_in">sizeof</span>(func_buf), <span class="hljs-string">&quot; (%s)&quot;</span>, frame-&gt;func_name);
             func = func_buf;
         &#125;
         <span class="hljs-keyword">else</span>
@@ -1993,16 +1993,16 @@ memory near x3:
 <span class="hljs-comment">// xc_jni_init</span>
 
 <span class="hljs-comment">// 起 dumper 线程，注册 SIGQUIT 处理器</span>
-<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">xc_trace_init</span><span class="hljs-params">(JNIEnv *env,</span></span>
-<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">int</span> rethrow,</span></span>
-<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> logcat_system_lines,</span></span>
-<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> logcat_events_lines,</span></span>
-<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> logcat_main_lines,</span></span>
-<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">int</span> dump_fds,</span></span>
-<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-keyword">int</span> dump_network_info)</span></span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">xc_trace_init</span><span class="hljs-params">(JNIEnv *env,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-type">int</span> rethrow,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> logcat_system_lines,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> logcat_events_lines,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> logcat_main_lines,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-type">int</span> dump_fds,</span></span>
+<span class="hljs-params"><span class="hljs-function">                  <span class="hljs-type">int</span> dump_network_info)</span></span>
 <span class="hljs-function"></span>&#123;
-    <span class="hljs-keyword">int</span> r;
-    <span class="hljs-keyword">pthread_t</span> thd;
+    <span class="hljs-type">int</span> r;
+    <span class="hljs-type">pthread_t</span> thd;
 
     <span class="hljs-comment">//capture SIGQUIT only for ART</span>
     <span class="hljs-keyword">if</span>(xc_common_api_level &lt; <span class="hljs-number">21</span>) <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
@@ -2042,17 +2042,17 @@ memory near x3:
 &#125;
 
 <span class="hljs-comment">// ANR 发生时，收到 SIGQUIT，此 dumper 线程唤醒，调用 ANR 报告函数</span>
-<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> *<span class="hljs-title">xc_trace_dumper</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *arg)</span></span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title">xc_trace_dumper</span><span class="hljs-params">(<span class="hljs-type">void</span> *arg)</span></span>
 <span class="hljs-function"></span>&#123;
     JNIEnv         *env = <span class="hljs-literal">NULL</span>;
-    <span class="hljs-keyword">uint64_t</span>        data;
-    <span class="hljs-keyword">uint64_t</span>        trace_time;
-    <span class="hljs-keyword">int</span>             fd;
-    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">timeval</span>  <span class="hljs-title">tv</span>;</span>
-    <span class="hljs-keyword">char</span>            pathname[<span class="hljs-number">1024</span>];
+    <span class="hljs-type">uint64_t</span>        data;
+    <span class="hljs-type">uint64_t</span>        trace_time;
+    <span class="hljs-type">int</span>             fd;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">timeval</span>  tv;
+    <span class="hljs-type">char</span>            pathname[<span class="hljs-number">1024</span>];
     jstring         j_pathname;
     
-    (<span class="hljs-keyword">void</span>)arg;
+    (<span class="hljs-type">void</span>)arg;
     
     <span class="hljs-built_in">pthread_detach</span>(<span class="hljs-built_in">pthread_self</span>());
 
@@ -2066,20 +2066,20 @@ memory near x3:
     <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>)
     &#123;
         <span class="hljs-comment">//block here, waiting for sigquit</span>
-        <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">read</span>(xc_trace_notifier, &amp;data, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(data)));
+        <span class="hljs-built_in">XCC_UTIL_TEMP_FAILURE_RETRY</span>(<span class="hljs-built_in">read</span>(xc_trace_notifier, &amp;data, <span class="hljs-built_in">sizeof</span>(data)));
         
         <span class="hljs-comment">//check if process already crashed</span>
         <span class="hljs-keyword">if</span>(xc_common_native_crashed || xc_common_java_crashed) <span class="hljs-keyword">break</span>;
 
         <span class="hljs-comment">//trace time</span>
         <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">gettimeofday</span>(&amp;tv, <span class="hljs-literal">NULL</span>)) <span class="hljs-keyword">break</span>;
-        trace_time = (<span class="hljs-keyword">uint64_t</span>)(tv.tv_sec) * <span class="hljs-number">1000</span> * <span class="hljs-number">1000</span> + (<span class="hljs-keyword">uint64_t</span>)tv.tv_usec;
+        trace_time = (<span class="hljs-type">uint64_t</span>)(tv.tv_sec) * <span class="hljs-number">1000</span> * <span class="hljs-number">1000</span> + (<span class="hljs-type">uint64_t</span>)tv.tv_usec;
 
         <span class="hljs-comment">//Keep only one current trace.</span>
         <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xc_trace_logs_clean</span>()) <span class="hljs-keyword">continue</span>;
 
         <span class="hljs-comment">//create and open log file</span>
-        <span class="hljs-keyword">if</span>((fd = <span class="hljs-built_in">xc_common_open_trace_log</span>(pathname, <span class="hljs-built_in"><span class="hljs-keyword">sizeof</span></span>(pathname), trace_time)) &lt; <span class="hljs-number">0</span>) <span class="hljs-keyword">continue</span>;
+        <span class="hljs-keyword">if</span>((fd = <span class="hljs-built_in">xc_common_open_trace_log</span>(pathname, <span class="hljs-built_in">sizeof</span>(pathname), trace_time)) &lt; <span class="hljs-number">0</span>) <span class="hljs-keyword">continue</span>;
 
         <span class="hljs-comment">//write header info</span>
         <span class="hljs-keyword">if</span>(<span class="hljs-number">0</span> != <span class="hljs-built_in">xc_trace_write_header</span>(fd, trace_time)) <span class="hljs-keyword">goto</span> end;
