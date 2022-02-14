@@ -1,5 +1,57 @@
 (viomi-statistics-lib)[https://gitlab.viomi.com.cn/app/Android/Libs/Statistical] 是云米科技自研的 Android 埋点库
 
+用一个 `JSON` 对象来描述一次事件，如下所示：
+
+```json
+// 焦点图广告的一次曝光
+{
+    "category": "focus",
+    "action_type": "show",
+    "action": "",
+    "act_time": {System.currentTimeMillis()},
+    "bu": "",
+    "value": [{                // 自定义的内容，这里填入广告 ID
+        "content_id": 9456
+    }]
+}
+
+// 调节音量到 50%
+{
+    "category": "control_volume",
+    "action_type": "scroll",
+    "action": "",
+    "act_time": {System.currentTimeMillis()},
+    "bu": "",
+    "value": [{
+        "value_present": 50
+    }]
+}
+
+// 长按息屏
+{
+    "category": "screen_off",
+    "action_type": "press",
+    "action": "",
+    "act_time": {System.currentTimeMillis()},
+    "bu": "",
+    "value": [{
+        "from": "manual"
+    }]
+}
+
+// 切换天气城市为广州
+{
+    "category": "weather_switch",
+    "action_type": "click",
+    "action": "{
+        "city": "广州"
+    }",
+    "act_time": {System.currentTimeMillis()},
+    "bu": "",
+    "value": []
+}
+```
+
 1. `StatisticsManager.writeClickStatistics` 记录点击事件
 2. `StatisticsManager.writeShowStatistics` 记录曝光事件
 3. `StatisticsManager.writeStatistics` 记录通用的事件
@@ -57,7 +109,6 @@ public static void writeStatisticsNew(String category, String actionType, String
 HTTP POST 上传到服务器（手动触发）
 
 ```java
-
 public class StatisticsManager {
     /**
      * 手动触发日志上报
