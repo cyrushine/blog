@@ -1,6 +1,6 @@
 ---
 title: 【转】今日头条 ANR 优化实践系列（4）- Barrier 导致主线程假死
-date: 2022-02-16 12:00:00 +0800
+date: 2022-02-16 15:00:00 +0800
 tags: [ANR, bytedance, toutiao, 字节, 头条]
 ---
 
@@ -94,7 +94,7 @@ tags: [ANR, bytedance, toutiao, 字节, 头条]
 
 既然 mMessage 不是 null，那么就说明"msg=mMessage"肯定不是 null，但是到了下面却为 null，说明在此过程肯定被某个逻辑给重新赋值了，继续分析。
 
-![12.webp](../../../../image/2022-02-16-toutiao-anr-barrier/12webp)
+![12.webp](../../../../image/2022-02-16-toutiao-anr-barrier/12.webp)
 
 通过上图可以看到只有这个场景可能将 msg 重新赋值，那么这部分逻辑是做什么的呢？
 

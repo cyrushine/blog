@@ -99,7 +99,7 @@ final void broadcastTimeoutLocked(boolean fromMsg) {
             mHandler.post(new AppNotResponding(app, anrMessage));
         }
     }
-```    
+```
 
 到这里，广播发送和超时监控逻辑的分析就基本结束了，通过介绍，我们基本知道了广播超时机制是如何设计和工作的，整体流程图示意图如下：
 

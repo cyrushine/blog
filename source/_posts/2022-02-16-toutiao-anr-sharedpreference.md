@@ -1,6 +1,6 @@
 ---
 title: 【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待
-date: 2022-02-16 12:00:00 +0800
+date: 2022-02-16 16:00:00 +0800
 tags: [ANR, bytedance, toutiao, 字节, 头条]
 ---
 
