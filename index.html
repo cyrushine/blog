@@ -178,6 +178,246 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2022/02/16/toutiao-anr-barrier/" target="_self">
+          【转】今日头条 ANR 优化实践系列（4）- Barrier 导致主线程假死
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2022/02/16/toutiao-anr-barrier/" target="_self">
+          
+          简述：前文，我们通过线上案例对影响 ANR 问题的六大场景进行剖析，这几类场景基本覆盖了线上大部分问题，详见 ANR 案例分析集锦。同时我们选取了较多 NativePollOnce 场景的案例，便于大家更好理解，ANR 时看到的 NativePollOnce 场景的问题，并不是导致 ANR 的根本问题。 下面要介绍的这类问题，Trace 现场依然是 NativePollOnce 信息，但与前几类问
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-16 04:00" pubdate>
+              2022-02-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+              <a href="/tags/bytedance/">bytedance</a>
+            
+              <a href="/tags/toutiao/">toutiao</a>
+            
+              <a href="/tags/%E5%AD%97%E8%8A%82/">字节</a>
+            
+              <a href="/tags/%E5%A4%B4%E6%9D%A1/">头条</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/02/16/toutiao-anr-principle/" target="_self">
+          【转】今日头条 ANR 优化实践系列（1）- 设计原理及影响因素
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2022/02/16/toutiao-anr-principle/" target="_self">
+          
+          写在前面ANR 问题，对于从事 Android 开发的同学来说并不陌生，日常开发中，经常会遇到应用乃至系统层面引起的各种问题，很多时候因为不了解其运行原理，在面对该类问题时可能会一头雾水。与此同时，因为现有监控能力不足或获取信息有限，使得这类问题如同镜中花水中月，让我们在追求真理的道路上举步维艰。如下图：  工作中在帮助大家分析问题时，发现有不少同学问到，在哪里可以更加系统的学习？于是本人抱着“授
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-16 04:00" pubdate>
+              2022-02-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+              <a href="/tags/bytedance/">bytedance</a>
+            
+              <a href="/tags/toutiao/">toutiao</a>
+            
+              <a href="/tags/%E5%AD%97%E8%8A%82/">字节</a>
+            
+              <a href="/tags/%E5%A4%B4%E6%9D%A1/">头条</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/02/16/toutiao-anr-samples/" target="_self">
+          【转】今日头条 ANR 优化实践系列（3）- 实例剖析集锦
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2022/02/16/toutiao-anr-samples/" target="_self">
+          
+          简述：在前文，我们用了较多的篇幅介绍了 ANR 设计原理及影响因素，并根据不同场景进行了分类，如：当前消息严重耗时，历史消息耗时严重，业务异常密集执行，进程内资源抢占，进程间资源抢占等场景。为了应对系统监控能力不足以及应用侧获取信息受限的情况，我们在应用侧实现了一套 消息调度监控工具，重点监控主线程的“过去，现在和将来”，同时结合相关日志对 ANR 问题的分析思路进行了总结。 为了便于大家更好的理
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-16 04:00" pubdate>
+              2022-02-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+              <a href="/tags/bytedance/">bytedance</a>
+            
+              <a href="/tags/toutiao/">toutiao</a>
+            
+              <a href="/tags/%E5%AD%97%E8%8A%82/">字节</a>
+            
+              <a href="/tags/%E5%A4%B4%E6%9D%A1/">头条</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
+          【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
+          
+          简述前面系列文章（详见文末）中介绍了安卓系统 ANR 设计原理以及我们在实际工作中对 ANR 进行监控得到的方案，基于常规的监控治理方案，ANR 问题得到了有效的抑制，但是有些系统组件的设计初衷与开发人员在实际使用过程中实际使用的背离，导致的冲突问题亟待解决，当前文章针对实际开发过程中滥用 sp 导致的 ANR 问题，如何从系统层面跳过 Google 设计缺陷，规避 ANR 问题。 Google
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-16 04:00" pubdate>
+              2022-02-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+              <a href="/tags/bytedance/">bytedance</a>
+            
+              <a href="/tags/toutiao/">toutiao</a>
+            
+              <a href="/tags/%E5%AD%97%E8%8A%82/">字节</a>
+            
+              <a href="/tags/%E5%A4%B4%E6%9D%A1/">头条</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/02/16/toutiao-anr-tools/" target="_self">
+          【转】今日头条 ANR 优化实践系列（2）- 监控工具与分析思路
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2022/02/16/toutiao-anr-tools/" target="_self">
+          
+          前言：在前文，我们对 ANR 设计原理及影响因素 进行了介绍，并对影响 ANR 的不同场景进行归类。但是依靠现有的系统日志，不足以完成复杂场景的问题归因，而且有些信息从应用侧无法获取，这就导致很多线上问题更加棘手；因此我们在应用侧探索了新的监控能力，以弥补信息获取不足的短板。同时对日常分析过程中用到日志信息和分析思路进行总结，以帮忙大家更好的掌握分析技巧，下面我们就来看看相关实现。 Raster
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-16 04:00" pubdate>
+              2022-02-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+              <a href="/tags/bytedance/">bytedance</a>
+            
+              <a href="/tags/toutiao/">toutiao</a>
+            
+              <a href="/tags/%E5%AD%97%E8%8A%82/">字节</a>
+            
+              <a href="/tags/%E5%A4%B4%E6%9D%A1/">头条</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2022/02/14/anr-bigpicture/" target="_self">
           ANR 设计思路：埋雷和除雷
         </a>
@@ -392,227 +632,11 @@
     </article>
   </div>
 
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/07/20/kotlin-coroutine-2/" target="_self">
-          深入分析 Kotlin Coroutines 是如何实现的（二）
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/07/20/kotlin-coroutine-2/" target="_self">
-          
-          async &#x2F; awaitasync 和 await 是一对较为现代的 API 用以实现 **结构化并发编程 (Structured Concurrency)**，如下面代码所示，虽然 runBlocking 底层是单个线程，但是 delay 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO job1、job2 和 job3 三个任务并发执行，不需要编写任何线程同步代码如 Condi
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-07-20 04:00" pubdate>
-              2021-07-20
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/kotlin/">kotlin</a>
-            
-              <a href="/tags/coroutine/">coroutine</a>
-            
-              <a href="/tags/%E5%8D%8F%E7%A8%8B/">协程</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/07/15/kotlin-coroutine/" target="_self">
-          深入分析 Kotlin Coroutines 是如何实现的
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/07/15/kotlin-coroutine/" target="_self">
-          
-          launch - 启动协程从 kotlin coroutines 的 Hello World! 看起 &#x2F;&#x2F; https:&#x2F;&#x2F;github.com&#x2F;Kotlin&#x2F;kotlinx.coroutines&#x2F;blob&#x2F;master&#x2F;kotlinx-coroutines-core&#x2F;jvm&#x2F;test&#x2F;guide&#x2F;example-basic-01.kt fun main() &#x3D; runBlocking &amp;#123
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-07-15 04:00" pubdate>
-              2021-07-15
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/kotlin/">kotlin</a>
-            
-              <a href="/tags/coroutine/">coroutine</a>
-            
-              <a href="/tags/%E5%8D%8F%E7%A8%8B/">协程</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/07/10/deep-drive-into-anr/" target="_self">
-          深入 ANR：产生的根源、处理流程和日志文件
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/07/10/deep-drive-into-anr/" target="_self">
-          
-          overview在 阅读源码系列：ANR 是怎么产生的 聊过不及时消费 input event 会产生 ANR：  InputReaderThread 不断地从 &#x2F;dev&#x2F;input 读取 input event 并放入 InputDispatcher.mInboundQueue 等待分发 InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送队列里
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-07-10 04:00" pubdate>
-              2021-07-10
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/anr/">anr</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/07/05/mp4-structure/" target="_self">
-          MP4 文件结构浅析
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/07/05/mp4-structure/" target="_self">
-          
-          概述mp4 文件由一个个连续的 box 组成 mp4 &#x3D; box + box + box + ...  box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：  moov - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息 mdat - 保存了 H264 NALU  本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念 chunk一
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-07-05 04:00" pubdate>
-              2021-07-05
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/mp4/">mp4</a>
-            
-              <a href="/tags/pts/">pts</a>
-            
-              <a href="/tags/dts/">dts</a>
-            
-              <a href="/tags/box/">box</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/06/28/logan/" target="_self">
-          日志库 Logan
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/06/28/logan/" target="_self">
-          
-          简介Logan 是 美团点评技术团队 开源的包含前端 SDK 和后端 Server 的一整套日志系统，也是公司日志库 VLog 的基础 Logan Android SDK 提供了这么几个 API：    API Description    Logan#w(log, type) 写日志（严谨地说应该是发送日志请求，因为日志是放在消息队列里等待被处理的）   Logan#init 初始化   Log
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-06-28 04:00" pubdate>
-              2021-06-28
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/log/">log</a>
-            
-              <a href="/tags/logcat/">logcat</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
 
 
   <nav aria-label="navigation">
     <span class="pagination" id="pagination">
-      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="page-number" href="/page/3/#board">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/#board">5</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
+      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="page-number" href="/page/3/#board">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/#board">6</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
     </span>
   </nav>
 

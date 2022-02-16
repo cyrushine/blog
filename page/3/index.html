@@ -178,6 +178,222 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
+          老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
+          
+          DalvikDalvik HeapDalvik 的堆空间分为 Zygote Heap 和 Active Heap Android 系统的第一个 Dalvik 虚拟机是由 Zygote 进程创建的。应用程序进程是由 Zygote 进程 fork 出来的。也就是说应用程序进程使用了一种 写时拷贝技术（COW）来复制了 Zygote 进程的地址空间。这意味着一开始的时候，应用程序进程和 Zygote 进
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-28 04:00" pubdate>
+              2021-05-28
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Dalvik/">Dalvik</a>
+            
+              <a href="/tags/ART/">ART</a>
+            
+              <a href="/tags/JVM/">JVM</a>
+            
+              <a href="/tags/VM/">VM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/05/21/mmap/" target="_self">
+          【转】mmap 和零拷贝
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/05/21/mmap/" target="_self">
+          
+          平时在面试中你肯定会经常碰见的问题就是：RocketMQ 为什么快？Kafka 为什么快？什么是 mmap？ 这一类的问题都逃不过的一个点就是 零拷贝，虽然还有一些其他的原因，但是今天我们的话题主要就是零拷贝。 传统 IO在开始谈零拷贝之前，首先要对传统的 IO 方式有一个概念。基于传统的 IO 方式，底层实际上通过调用 read() 和 write() 来实现。 通过 read() 把数据从硬盘
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-21 04:00" pubdate>
+              2021-05-21
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mmap/">mmap</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98%EF%BC%8C%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80/">内存，虚拟地址</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/05/11/nonblocking-io/" target="_self">
+          【转】网络 IO 演变发展过程和模型介绍
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/05/11/nonblocking-io/" target="_self">
+          
+          在互联网中提起网络，我们都会避免不了讨论高并发、百万连接。而此处的百万连接的实现，脱离不了网络 IO 的选择，因此本文作为一篇个人学习的笔记，特此进行记录一下整个网络 IO 的发展演变过程。以及目前广泛使用的网络模型。 网络 IO 的发展在本节内容中，我们将一步一步介绍网络 IO 的演变发展过程。介绍完发展过程后，再对网络 IO 中几组容易混淆的概念进行对比、分析。 ​ 网络 IO 的各个发展阶段
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-11 04:00" pubdate>
+              2021-05-11
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/epoll/">epoll</a>
+            
+              <a href="/tags/select/">select</a>
+            
+              <a href="/tags/poll/">poll</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/05/07/koom/" target="_self">
+          KOOM - 利用子进程 dump hprof
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/05/07/koom/" target="_self">
+          
+          不冻结 APP 的 dump hprof在 LeakCanary 浅析 和 Matrix - ResourcesCanary 浅析 这两篇文章里，介绍了检测内存泄漏的两种相似的思路：  WeakReference + ReferenceQueue + 延迟 5s 检查是否被 GC WeakReference + ConcurrentLinkedQueue，子线程轮询的方式每隔 1m 检查队列里的对
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-05-07 04:00" pubdate>
+              2021-05-07
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
+            
+              <a href="/tags/APM/">APM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/04/26/matrix-tracecanary/" target="_self">
+          Matrix - TraceCanary 浅析
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/04/26/matrix-tracecanary/" target="_self">
+          
+          捕获掉帧&#x2F;卡顿什么是掉帧&#x2F;卡顿 什么是卡顿，很多人能马上联系到的是帧率 FPS (每秒显示帧数)。那么多低的 FPS 才是卡顿呢？又或者低 FPS 真的就是卡顿吗？（以下 FPS 默认指平均帧率） 其实并非如此，举个例子，游戏玩家通常追求更流畅的游戏画面体验一般要达到 60FPS 以上，但我们平时看到的大部分电影或视频 FPS 其实不高，一般只有 25FPS ~ 30FPS，而实际上我们也没有觉得
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-04-26 04:00" pubdate>
+              2021-04-26
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/APM/">APM</a>
+            
+              <a href="/tags/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">性能优化</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/04/23/matrix-resourcescanary/" target="_self">
           Matrix - ResourcesCanary 浅析
         </a>
@@ -382,217 +598,11 @@
     </article>
   </div>
 
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/31/juc-collection/" target="_self">
-          JUC 下一些线程安全的容器
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/31/juc-collection/" target="_self">
-          
-          写时复制（Copy On Write）CopyOnWriteArrayList使用 写时复制 实现的线程安全版 ArrayList，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组 public boolean add(E e) &amp;#123;     synchronized (lock) &amp;#123;         Obje
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-31 04:00" pubdate>
-              2021-03-31
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/JUC/">JUC</a>
-            
-              <a href="/tags/%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8/">线程安全</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/30/https/" target="_self">
-          什么是 https ？
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/30/https/" target="_self">
-          
-          https &#x3D; http + tls tcp 三次握手建立连接后，再进行 tls 握手&#x2F;协商得到一个秘钥，然后双方使用这个秘钥加密（对称加密）明文的 http 为密文后再发送，同样双方收到密文后也用这个秘钥解密得到明文 对称加密 使用同一秘钥加密和解密，性能高，http 明文就是通过对称加密后才进行传输的，对称加密算法有：DES、3DES、AES 等；但秘钥交换是个问题，所以需要非对称加密的帮助
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-30 04:00" pubdate>
-              2021-03-30
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/https/">https</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/13/tcp-handshake-goodbye/" target="_self">
-          TCP 的三次握手和四次挥手
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/13/tcp-handshake-goodbye/" target="_self">
-          
-          序号和确认号 从 TCP 连接建立的开始，到 TCP 连接的断开，你要传输的所有数据的每一个字节都要编号，这个序号称为 字节序号 如果一个 TCP 报文的 报文序号 为 301，它携带了 100 字节的数据，就表示这 100 个字节的数据的字节序号范围是 [301, 400]，该报文携带的第一个字节序号是 301，最后一个字节序号是 400 每传送一个 TCP 报文都要等待对方回复一个确认，但这
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-13 04:00" pubdate>
-              2021-03-13
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/tcp/">tcp</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/12/how-tinker-work/" target="_self">
-          解析 Tinker 是如何实现热修复的
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/12/how-tinker-work/" target="_self">
-          
-          简介Tinker 是微信团队开源的一款 android 热修复框架，它的使用流程大体是：  client 安装 V1.apk 提交了一些 hotfix，打包出 V2.apk 利用 Tinker 提供的差分工具，在 server 计算出补丁包 patch1.apk，并下发给 client client 收到补丁包后，在后台给 V1.apk 打上 patch1.apk 得到 V2.apk（V1.apk
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-12 04:00" pubdate>
-              2021-03-12
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/hotfix/">hotfix</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/03/02/how-application-being-created-and-init/" target="_self">
-          Application 是如何被创建和初始化的？
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/03/02/how-application-being-created-and-init/" target="_self">
-          
-          时序图从 startActivity 开始，比如打开一个 app 的首页，当 app 未启动时就会走创建 Application 这条路  AMS 承担的工作其中的转折点在 resumeTopActivityInnerLocked，发现 app process 不存在，走启动 app process 的流程 private boolean ActivityStack.resumeTopActivi
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-03-02 04:00" pubdate>
-              2021-03-02
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/Application/">Application</a>
-            
-              <a href="/tags/AMS/">AMS</a>
-            
-              <a href="/tags/Zygote/">Zygote</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
 
 
   <nav aria-label="navigation">
     <span class="pagination" id="pagination">
-      <a class="extend prev" rel="prev" href="/page/2/#board"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/#board">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/#board">4</a><a class="page-number" href="/page/5/#board">5</a><a class="extend next" rel="next" href="/page/4/#board"><i class="iconfont icon-arrowright"></i></a>
+      <a class="extend prev" rel="prev" href="/page/2/#board"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/#board">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/#board">4</a><a class="page-number" href="/page/5/#board">5</a><a class="page-number" href="/page/6/#board">6</a><a class="extend next" rel="next" href="/page/4/#board"><i class="iconfont icon-arrowright"></i></a>
     </span>
   </nav>
 
