@@ -178,15 +178,15 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/02/16/toutiao-anr-barrier/" target="_self">
-          【转】今日头条 ANR 优化实践系列（4）- Barrier 导致主线程假死
+        <a href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
+          【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待
         </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/2022/02/16/toutiao-anr-barrier/" target="_self">
+        <a href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
           
-          简述：前文，我们通过线上案例对影响 ANR 问题的六大场景进行剖析，这几类场景基本覆盖了线上大部分问题，详见 ANR 案例分析集锦。同时我们选取了较多 NativePollOnce 场景的案例，便于大家更好理解，ANR 时看到的 NativePollOnce 场景的问题，并不是导致 ANR 的根本问题。 下面要介绍的这类问题，Trace 现场依然是 NativePollOnce 信息，但与前几类问
+          简述前面系列文章（详见文末）中介绍了安卓系统 ANR 设计原理以及我们在实际工作中对 ANR 进行监控得到的方案，基于常规的监控治理方案，ANR 问题得到了有效的抑制，但是有些系统组件的设计初衷与开发人员在实际使用过程中实际使用的背离，导致的冲突问题亟待解决，当前文章针对实际开发过程中滥用 sp 导致的 ANR 问题，如何从系统层面跳过 Google 设计缺陷，规避 ANR 问题。 Google
         </a>
       </p>
 
@@ -194,7 +194,7 @@
         
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
-            <time datetime="2022-02-16 04:00" pubdate>
+            <time datetime="2022-02-16 08:00" pubdate>
               2022-02-16
             </time>
           </div>
@@ -226,15 +226,15 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/02/16/toutiao-anr-principle/" target="_self">
-          【转】今日头条 ANR 优化实践系列（1）- 设计原理及影响因素
+        <a href="/2022/02/16/toutiao-anr-barrier/" target="_self">
+          【转】今日头条 ANR 优化实践系列（4）- Barrier 导致主线程假死
         </a>
       </h1>
 
       <p class="index-excerpt">
-        <a href="/2022/02/16/toutiao-anr-principle/" target="_self">
+        <a href="/2022/02/16/toutiao-anr-barrier/" target="_self">
           
-          写在前面ANR 问题，对于从事 Android 开发的同学来说并不陌生，日常开发中，经常会遇到应用乃至系统层面引起的各种问题，很多时候因为不了解其运行原理，在面对该类问题时可能会一头雾水。与此同时，因为现有监控能力不足或获取信息有限，使得这类问题如同镜中花水中月，让我们在追求真理的道路上举步维艰。如下图：  工作中在帮助大家分析问题时，发现有不少同学问到，在哪里可以更加系统的学习？于是本人抱着“授
+          简述：前文，我们通过线上案例对影响 ANR 问题的六大场景进行剖析，这几类场景基本覆盖了线上大部分问题，详见 ANR 案例分析集锦。同时我们选取了较多 NativePollOnce 场景的案例，便于大家更好理解，ANR 时看到的 NativePollOnce 场景的问题，并不是导致 ANR 的根本问题。 下面要介绍的这类问题，Trace 现场依然是 NativePollOnce 信息，但与前几类问
         </a>
       </p>
 
@@ -242,7 +242,7 @@
         
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
-            <time datetime="2022-02-16 04:00" pubdate>
+            <time datetime="2022-02-16 07:00" pubdate>
               2022-02-16
             </time>
           </div>
@@ -290,55 +290,7 @@
         
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
-            <time datetime="2022-02-16 04:00" pubdate>
-              2022-02-16
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/ANR/">ANR</a>
-            
-              <a href="/tags/bytedance/">bytedance</a>
-            
-              <a href="/tags/toutiao/">toutiao</a>
-            
-              <a href="/tags/%E5%AD%97%E8%8A%82/">字节</a>
-            
-              <a href="/tags/%E5%A4%B4%E6%9D%A1/">头条</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
-          【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
-          
-          简述前面系列文章（详见文末）中介绍了安卓系统 ANR 设计原理以及我们在实际工作中对 ANR 进行监控得到的方案，基于常规的监控治理方案，ANR 问题得到了有效的抑制，但是有些系统组件的设计初衷与开发人员在实际使用过程中实际使用的背离，导致的冲突问题亟待解决，当前文章针对实际开发过程中滥用 sp 导致的 ANR 问题，如何从系统层面跳过 Google 设计缺陷，规避 ANR 问题。 Google
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-02-16 04:00" pubdate>
+            <time datetime="2022-02-16 06:00" pubdate>
               2022-02-16
             </time>
           </div>
@@ -379,6 +331,54 @@
         <a href="/2022/02/16/toutiao-anr-tools/" target="_self">
           
           前言：在前文，我们对 ANR 设计原理及影响因素 进行了介绍，并对影响 ANR 的不同场景进行归类。但是依靠现有的系统日志，不足以完成复杂场景的问题归因，而且有些信息从应用侧无法获取，这就导致很多线上问题更加棘手；因此我们在应用侧探索了新的监控能力，以弥补信息获取不足的短板。同时对日常分析过程中用到日志信息和分析思路进行总结，以帮忙大家更好的掌握分析技巧，下面我们就来看看相关实现。 Raster
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-16 05:00" pubdate>
+              2022-02-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">ANR</a>
+            
+              <a href="/tags/bytedance/">bytedance</a>
+            
+              <a href="/tags/toutiao/">toutiao</a>
+            
+              <a href="/tags/%E5%AD%97%E8%8A%82/">字节</a>
+            
+              <a href="/tags/%E5%A4%B4%E6%9D%A1/">头条</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/02/16/toutiao-anr-principle/" target="_self">
+          【转】今日头条 ANR 优化实践系列（1）- 设计原理及影响因素
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2022/02/16/toutiao-anr-principle/" target="_self">
+          
+          写在前面ANR 问题，对于从事 Android 开发的同学来说并不陌生，日常开发中，经常会遇到应用乃至系统层面引起的各种问题，很多时候因为不了解其运行原理，在面对该类问题时可能会一头雾水。与此同时，因为现有监控能力不足或获取信息有限，使得这类问题如同镜中花水中月，让我们在追求真理的道路上举步维艰。如下图：  工作中在帮助大家分析问题时，发现有不少同学问到，在哪里可以更加系统的学习？于是本人抱着“授
         </a>
       </p>
 

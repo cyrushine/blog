@@ -57,8 +57,8 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-samples/30.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-samples/31.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-samples/32.webp">
-<meta property="article:published_time" content="2022-02-16T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-02-16T07:05:21.725Z">
+<meta property="article:published_time" content="2022-02-16T06:00:00.000Z">
+<meta property="article:modified_time" content="2022-02-16T07:21:46.822Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="bytedance">
@@ -214,7 +214,7 @@
   
     <span class="post-meta">
       <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2022-02-16 04:00" pubdate>
+      <time datetime="2022-02-16 06:00" pubdate>
         2022年2月16日
       </time>
     </span>
@@ -266,7 +266,7 @@
             <h1 style="display: none">【转】今日头条 ANR 优化实践系列（3）- 实例剖析集锦</h1>
             
             <div class="markdown-body">
-              <h1 id="简述："><a href="#简述：" class="headerlink" title="简述："></a>简述：</h1><p>在前文，我们用了较多的篇幅介绍了 <a href="../../../../2022/02/16/2022-02-16-toutiao-anr-principle/">ANR 设计原理及影响因素</a>，并根据不同场景进行了分类，如：当前消息严重耗时，历史消息耗时严重，业务异常密集执行，进程内资源抢占，进程间资源抢占等场景。为了应对系统监控能力不足以及应用侧获取信息受限的情况，我们在应用侧实现了一套 <a href="../../../../2022/02/16/2022-02-16-toutiao-anr-tools/">消息调度监控工具</a>，重点监控主线程的“过去，现在和将来”，同时结合相关日志对 ANR 问题的分析思路进行了总结。</p>
+              <h1 id="简述："><a href="#简述：" class="headerlink" title="简述："></a>简述：</h1><p>在前文，我们用了较多的篇幅介绍了 <a href="../../../../2022/02/16/toutiao-anr-principle/">ANR 设计原理及影响因素</a>，并根据不同场景进行了分类，如：当前消息严重耗时，历史消息耗时严重，业务异常密集执行，进程内资源抢占，进程间资源抢占等场景。为了应对系统监控能力不足以及应用侧获取信息受限的情况，我们在应用侧实现了一套 <a href="../../../../2022/02/16/toutiao-anr-tools/">消息调度监控工具</a>，重点监控主线程的“过去，现在和将来”，同时结合相关日志对 ANR 问题的分析思路进行了总结。</p>
 <p>为了便于大家更好的理解上述知识，接下来我们将结合工作中遇到的一些比较有代表性的问题，并按照前文归因分类，由浅入深进行实例解剖，下面就来看看这几类问题，我们是如何借助系统日志和监控工具进行分析及定位的。</p>
 <h1 id="案例一：当前业务耗时严重"><a href="#案例一：当前业务耗时严重" class="headerlink" title="案例一：当前业务耗时严重"></a>案例一：当前业务耗时严重</h1><h2 id="主线程-Trace-堆栈："><a href="#主线程-Trace-堆栈：" class="headerlink" title="主线程 Trace 堆栈："></a>主线程 Trace 堆栈：</h2><p><img src="../../../../image/2022-02-16-toutiao-anr-samples/1.webp" srcset="/image/loading.gif" lazyload alt="1.webp"></p>
 <h2 id="分析过程："><a href="#分析过程：" class="headerlink" title="分析过程："></a>分析过程：</h2><h3 id="分析堆栈："><a href="#分析堆栈：" class="headerlink" title="分析堆栈："></a>分析堆栈：</h3><p>根据前文讲到的问题分析思路，首先观察 Trace 主线程堆栈，从上面堆栈，可以看到正在业务逻辑，但是当前这个业务逻辑是否耗时呢？如果耗时较长，是不是受到系统调度影响呢？带着这些疑问，我们来看一下系统侧的表现。</p>
@@ -282,7 +282,7 @@
 </li>
 </ul>
 <h3 id="业务耗时："><a href="#业务耗时：" class="headerlink" title="业务耗时："></a>业务耗时：</h3><p>根据上面的分析，我们将思路再次回到主线程，进一步观察 Trace 堆栈，发现上面有一个明显的系统调用(read)，难道是本次系统调用导致的 kernel 占比较高吗？那么当前逻辑在 ANR 发生前已经持续了多久呢？分析到这里，如果没有进一步的监控，或者业务不认可当前业务逻辑耗时，那么事情到这里可能就要告一段落，或者需要在业务层添加监控埋点进行复现了，但是如果每次遇到这类问题都要添加埋点，那么将是一个非常糟糕的事情。</p>
-<p>别忘了，在前面介绍 ANR 问题分析思路时，我们还有一个杀手锏(参见：<a href="../../../../2022/02/16/2022-02-16-toutiao-anr-tools/">监控工具 Raster</a>)，通过这个监控工具可以看到很清晰的看到：<strong>历史消息耗时，当前消息持续时间以及消息队列未调度消息 Block 耗时</strong>。结合上面这个问题，我们看到了本次主线程消息调度情况，参见下图：</p>
+<p>别忘了，在前面介绍 ANR 问题分析思路时，我们还有一个杀手锏(参见：<a href="../../../../2022/02/16/toutiao-anr-tools/">监控工具 Raster</a>)，通过这个监控工具可以看到很清晰的看到：<strong>历史消息耗时，当前消息持续时间以及消息队列未调度消息 Block 耗时</strong>。结合上面这个问题，我们看到了本次主线程消息调度情况，参见下图：</p>
 <p><img src="../../../../image/2022-02-16-toutiao-anr-samples/3.webp" srcset="/image/loading.gif" lazyload alt="3.webp"></p>
 <p>通过还原的时序图，可以清晰看到 ANR 之前，主线程消息调度及耗时基本正常，没有发现明显耗时严重的消息，但是观察正在调度的消息，其 Wall duration 超过 9000ms，并且 Cpu duration 长达 4800ms+，说明该消息耗时非常严重。而且上图灰色部分显示第一个消息，被 Block 了 9S 以上，因此可以进一步的说明该消息被 Block 的时长，基本都是当前正在执行的消息导致。</p>
 <h2 id="问题结论："><a href="#问题结论：" class="headerlink" title="问题结论："></a>问题结论：</h2><p>通过上面这些分析信息和实际数据，我们可以得出如下结论：<strong>发生 ANR 问题时，系统负载良好。发生问题前，应用主线程消息调度状态良好，但是当前正在调度的消息耗时严重，导致了后续消息未能及时响应，引起了 ANR</strong>。</p>
@@ -310,7 +310,7 @@
 <p><img src="../../../../image/2022-02-16-toutiao-anr-samples/7.webp" srcset="/image/loading.gif" lazyload alt="7.webp"></p>
 <p>通过上图可以看到当前消息调度 Wall Duration 为 46ms。**在 ANR 之前存在一个索引为 46 的历史消息耗时严重(wall duration:10747ms)**，同时还有一个索引为 32 的历史消息耗时也比较严重(wall duration:10747ms)。</p>
 <p>进一步观察消息队列第一个待调度消息，发现其实际 block 时长为 9487ms，因此我们排除了索引为 32 的历史消息，<strong>认为索引为 46 的消息耗时是导致后续消息未能及时调度的主要原因</strong>。</p>
-<p>在锁定索引为 46 的历史消息之后，接下来利用监控工具中的<a href="../../../../2022/02/16/2022-02-16-toutiao-anr-tools/">消息堆栈采样监控</a>，发现该消息执行过程，多次堆栈采样均命中创建 Webview 逻辑，原来业务在 UI 绘制过程直接实例化 Webview！(涉及到业务代码，采用堆栈详情不在此展示)</p>
+<p>在锁定索引为 46 的历史消息之后，接下来利用监控工具中的<a href="../../../../2022/02/16/toutiao-anr-tools/">消息堆栈采样监控</a>，发现该消息执行过程，多次堆栈采样均命中创建 Webview 逻辑，原来业务在 UI 绘制过程直接实例化 Webview！(涉及到业务代码，采用堆栈详情不在此展示)</p>
 <h2 id="问题结论：-1"><a href="#问题结论：-1" class="headerlink" title="问题结论："></a>问题结论：</h2><p>通过上面的分析并利用监控工具，我们可以很清晰看到发生 ANR 问题时，<strong>NativePollOnce 场景耗时并不长，导致本次 ANR 的主要原因是历史消息在 UI 绘制过程中同步创建 Webview，导致耗时严重。但是期间系统超时监控并没有触发，待主线程继续调度后续消息时，系统监控客户端响应超时，捕获了主线程正在执行的逻辑</strong>。</p>
 <p>这类场景在线上线下都大量存在，但是从 ANR 设计原理和 Trace 采集流程来看，很多并不耗时的消息在调度过程中都成为了“替罪羊”。</p>
 <h1 id="案例三：业务异常密集执行"><a href="#案例三：业务异常密集执行" class="headerlink" title="案例三：业务异常密集执行"></a>案例三：业务异常密集执行</h1><p>接下来分析的这个 Case，在多个产品都有遇到，仅从堆栈上面看，也是经常遇到并困惑我们的，现象和上面分析的案例有些类似，即业务逻辑很简单，实际耗时很少，但是经常出现在各种 ANR Trace 上面，只是依照堆栈信息，就把这个问题草率的分配给相应业务方去解决，业务同学大概率也是一头雾水，不知道从何下手。</p>
@@ -338,7 +338,7 @@
 <p>至此我们再次确认主线程存在严重耗时，难道又是当前消息或某个历史消息耗时严重？于是快速切换到消息调度监控，一探究竟。</p>
 <p><img src="../../../../image/2022-02-16-toutiao-anr-samples/12.webp" srcset="/image/loading.gif" lazyload alt="12.webp"></p>
 <p>但是看到上面的消息调度监控时序图，发现 <strong>当前消息执行时长才 300ms，并不是我们期待的耗时很严重哪种场景，进一步观察 ANR 之前历史消息调度，也没有看到有单次耗时严重的消息。继续观察上图待调度消息，发现确实被严重 Block。既然主线程没有看到严重耗时，系统负载也比较正常，那么主线程 CPU 使用率为何会这么高呢，这个情况与预期不符，不符合常理啊！</strong></p>
-<p>观察 Block 消息： 之前我们介绍 <a href="../../../../2022/02/16/2022-02-16-toutiao-anr-tools/">Raster 工具</a> 时，介绍该工具不仅可以记录历史消息，标记严重耗时，关键消息之外。还有一个作用就是获取消息队列待调度的消息，于是我们继续观察这些被 Block 的消息，发现了一个非常奇怪的现象（由于时序图只能在鼠标停留时展示单个消息详情，因此直接截取原始数据)，如下图：</p>
+<p>观察 Block 消息： 之前我们介绍 <a href="../../../../2022/02/16/toutiao-anr-tools/">Raster 工具</a> 时，介绍该工具不仅可以记录历史消息，标记严重耗时，关键消息之外。还有一个作用就是获取消息队列待调度的消息，于是我们继续观察这些被 Block 的消息，发现了一个非常奇怪的现象（由于时序图只能在鼠标停留时展示单个消息详情，因此直接截取原始数据)，如下图：</p>
 <p><img src="../../../../image/2022-02-16-toutiao-anr-samples/13.webp" srcset="/image/loading.gif" lazyload alt="13.webp"></p>
 <p>通过对比，<strong>发现消息队列待调度的消息中，除了第一个消息之外，其余的 200 多个消息(为了便于展示，目前只获取最多前 300 个)，竟然是同一个 Handler 对象(hash:1173da0)的消息</strong>，再进一步对比发现当前正在调度的也是该 Handler 对象的消息。</p>
 <p><img src="../../../../image/2022-02-16-toutiao-anr-samples/14.webp" srcset="/image/loading.gif" lazyload alt="14.webp"></p>
@@ -445,9 +445,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/02/16/toutiao-anr-principle/">
+                      <a href="/2022/02/16/toutiao-anr-barrier/">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（1）- 设计原理及影响因素</span>
+                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（4）- Barrier 导致主线程假死</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -455,8 +455,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/02/16/toutiao-anr-sharedpreference/">
-                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待</span>
+                      <a href="/2022/02/16/toutiao-anr-tools/">
+                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（2）- 监控工具与分析思路</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

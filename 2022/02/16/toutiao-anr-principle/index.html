@@ -30,6 +30,13 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/3.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/4.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/5.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/6.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/7.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/8.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/9.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/10.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/11.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/12.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/13.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/14.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/15.webp">
@@ -43,7 +50,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/23.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-principle/24.webp">
 <meta property="article:published_time" content="2022-02-16T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-02-16T07:05:21.725Z">
+<meta property="article:modified_time" content="2022-02-16T07:21:46.822Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="bytedance">
@@ -210,7 +217,7 @@
   
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      9.9k 字
+      9.4k 字
     </span>
   
 
@@ -219,7 +226,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      83 分钟
+      79 分钟
     </span>
   
 
@@ -316,49 +323,26 @@
              <span class="hljs-comment">//开始通知AMS服务处理当前超时行为</span>
             mHandler.post(<span class="hljs-keyword">new</span> <span class="hljs-title class_">AppNotResponding</span>(app, anrMessage));
         &#125;
-    &#125;
-```    
+    &#125;</code></pre></div>
 
-到这里，广播发送和超时监控逻辑的分析就基本结束了，通过介绍，我们基本知道了广播超时机制是如何设计和工作的，整体流程图示意图如下：
-
-![<span class="hljs-number">6.</span>webp](../../../../image/<span class="hljs-number">2022</span>-<span class="hljs-number">02</span>-<span class="hljs-number">16</span>-toutiao-anr-principle/<span class="hljs-number">6.</span>webp)
-
-# ANR Trace Dump 流程
-
-上面我们以广播接收为例，介绍了系统监控原理，下面再来介绍一下，发生 ANR 时系统工作流程。
-
-## ANR 信息获取：
-
-继续以广播接收为例，在上面介绍到当判定超时后，会调用系统服务 AMS 接口，搜集本次 ANR 相关信息并存档(data/anr/trace，data/system/dropbox)，入口如下。
-
-![<span class="hljs-number">7.</span>webp](../../../../image/<span class="hljs-number">2022</span>-<span class="hljs-number">02</span>-<span class="hljs-number">16</span>-toutiao-anr-principle/<span class="hljs-number">7.</span>webp)
-
-进入系统服务 AMS 之后，AppError 先进行场景判断，以过滤当前进程是不是已经发生并正在执行 Dump 流程，或者已经发生 Crash，或者已经被系统 Kill 之类的情况。并且还考虑了系统是否正在关机等场景，如果都不符合上述条件，则认为当前进程真的发生 ANR。
-
-![<span class="hljs-number">8.</span>webp](../../../../image/<span class="hljs-number">2022</span>-<span class="hljs-number">02</span>-<span class="hljs-number">16</span>-toutiao-anr-principle/<span class="hljs-number">8.</span>webp)
-
-接下来系统再判断当前 ANR 进程对用户是否可感知，如后台低优先级进程(没有重要服务或者 Activity 界面)。
-
-然后开始统计与该进程有关联的进程，或系统核心服务进程的信息；例如与应用进程经常交互的 SurfaceFligner，SystemServer 等系统进程，如果这些系统服务进程在响应时被阻塞，那么将导致应用进程 IPC 通信过程被卡死。
-
-首先把自身进程(系统服务 SystemServer)加进来，逻辑如下：
-
-![<span class="hljs-number">9.</span>webp](../../../../image/<span class="hljs-number">2022</span>-<span class="hljs-number">02</span>-<span class="hljs-number">16</span>-toutiao-anr-principle/<span class="hljs-number">9.</span>webp)
-
-接着获取其它系统核心进程，因为这些服务进程是 Init 进程直接创建的，并不在 SystemServer 或 Zygote 进程管理范围。
-
-![<span class="hljs-number">10.</span>webp](../../../../image/<span class="hljs-number">2022</span>-<span class="hljs-number">02</span>-<span class="hljs-number">16</span>-toutiao-anr-principle/<span class="hljs-number">10.</span>webp)
-
-![<span class="hljs-number">11.</span>webp](../../../../image/<span class="hljs-number">2022</span>-<span class="hljs-number">02</span>-<span class="hljs-number">16</span>-toutiao-anr-principle/<span class="hljs-number">11.</span>webp)
-
-在搜集完第一步信息之后，接下来便开始统计各进程本地的更多信息，如虚拟机相关信息、Java 线程状态及堆栈。以便于知道此刻这些进程乃至系统都发生了什么情况。理想很丰满，现实很骨感，后面我们会重点讲述为何有此感受。
-
-![<span class="hljs-number">12.</span>webp](../../../../image/<span class="hljs-number">2022</span>-<span class="hljs-number">02</span>-<span class="hljs-number">16</span>-toutiao-anr-principle/<span class="hljs-number">12.</span>webp)
-
-系统为何要收集其它进程信息呢？因为从性能角度来说，任何进程出现高 CPU 或高 IO 情况，都会抢占系统资源，进而影响其它进程调度不及时的现象。下面从代码角度看看系统 dump 流程：
-
-```java
-<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dumpStackTraces</span><span class="hljs-params">(String tracesFile, ArrayList&lt;Integer&gt; firstPids, ArrayList&lt;Integer&gt; nativePids, ArrayList&lt;Integer&gt; extraPids,</span>
+<p>到这里，广播发送和超时监控逻辑的分析就基本结束了，通过介绍，我们基本知道了广播超时机制是如何设计和工作的，整体流程图示意图如下：</p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-principle/6.webp" srcset="/image/loading.gif" lazyload alt="6.webp"></p>
+<h1 id="ANR-Trace-Dump-流程"><a href="#ANR-Trace-Dump-流程" class="headerlink" title="ANR Trace Dump 流程"></a>ANR Trace Dump 流程</h1><p>上面我们以广播接收为例，介绍了系统监控原理，下面再来介绍一下，发生 ANR 时系统工作流程。</p>
+<h2 id="ANR-信息获取："><a href="#ANR-信息获取：" class="headerlink" title="ANR 信息获取："></a>ANR 信息获取：</h2><p>继续以广播接收为例，在上面介绍到当判定超时后，会调用系统服务 AMS 接口，搜集本次 ANR 相关信息并存档(data/anr/trace，data/system/dropbox)，入口如下。</p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-principle/7.webp" srcset="/image/loading.gif" lazyload alt="7.webp"></p>
+<p>进入系统服务 AMS 之后，AppError 先进行场景判断，以过滤当前进程是不是已经发生并正在执行 Dump 流程，或者已经发生 Crash，或者已经被系统 Kill 之类的情况。并且还考虑了系统是否正在关机等场景，如果都不符合上述条件，则认为当前进程真的发生 ANR。</p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-principle/8.webp" srcset="/image/loading.gif" lazyload alt="8.webp"></p>
+<p>接下来系统再判断当前 ANR 进程对用户是否可感知，如后台低优先级进程(没有重要服务或者 Activity 界面)。</p>
+<p>然后开始统计与该进程有关联的进程，或系统核心服务进程的信息；例如与应用进程经常交互的 SurfaceFligner，SystemServer 等系统进程，如果这些系统服务进程在响应时被阻塞，那么将导致应用进程 IPC 通信过程被卡死。</p>
+<p>首先把自身进程(系统服务 SystemServer)加进来，逻辑如下：</p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-principle/9.webp" srcset="/image/loading.gif" lazyload alt="9.webp"></p>
+<p>接着获取其它系统核心进程，因为这些服务进程是 Init 进程直接创建的，并不在 SystemServer 或 Zygote 进程管理范围。</p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-principle/10.webp" srcset="/image/loading.gif" lazyload alt="10.webp"></p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-principle/11.webp" srcset="/image/loading.gif" lazyload alt="11.webp"></p>
+<p>在搜集完第一步信息之后，接下来便开始统计各进程本地的更多信息，如虚拟机相关信息、Java 线程状态及堆栈。以便于知道此刻这些进程乃至系统都发生了什么情况。理想很丰满，现实很骨感，后面我们会重点讲述为何有此感受。</p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-principle/12.webp" srcset="/image/loading.gif" lazyload alt="12.webp"></p>
+<p>系统为何要收集其它进程信息呢？因为从性能角度来说，任何进程出现高 CPU 或高 IO 情况，都会抢占系统资源，进而影响其它进程调度不及时的现象。下面从代码角度看看系统 dump 流程：</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dumpStackTraces</span><span class="hljs-params">(String tracesFile, ArrayList&lt;Integer&gt; firstPids, ArrayList&lt;Integer&gt; nativePids, ArrayList&lt;Integer&gt; extraPids,</span>
 <span class="hljs-params">            <span class="hljs-type">boolean</span> useTombstonedForJavaTraces)</span> &#123;
         ......
         ......
@@ -517,9 +501,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/02/16/toutiao-anr-barrier/">
+                      <a href="/2022/02/16/toutiao-anr-tools/">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（4）- Barrier 导致主线程假死</span>
+                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（2）- 监控工具与分析思路</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -527,8 +511,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/02/16/toutiao-anr-samples/">
-                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（3）- 实例剖析集锦</span>
+                      <a href="/2022/02/14/anr-bigpicture/">
+                        <span class="hidden-mobile">ANR 设计思路：埋雷和除雷</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

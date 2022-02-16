@@ -36,7 +36,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/9.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/10.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/11.webp">
-<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/12webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/12.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/13.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/14.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/15.webp">
@@ -49,8 +49,8 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/22.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/23.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-barrier/24.webp">
-<meta property="article:published_time" content="2022-02-16T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-02-16T07:05:21.725Z">
+<meta property="article:published_time" content="2022-02-16T07:00:00.000Z">
+<meta property="article:modified_time" content="2022-02-16T07:21:46.822Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="bytedance">
@@ -206,7 +206,7 @@
   
     <span class="post-meta">
       <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2022-02-16 04:00" pubdate>
+      <time datetime="2022-02-16 07:00" pubdate>
         2022年2月16日
       </time>
     </span>
@@ -306,7 +306,7 @@
 <p>通过上图可以看到，只有一个地点将 nextPollTimeoutMillis 设置为-1，但是通过注释可以清晰的看到提示”msg=mMessage”，没有消息？这与现实严重不符啊，ANR 发生时，消息队列明显有很多消息待执行，这里却提示”msg=mMessage”。</p>
 <p>通过进一步观察上述逻辑发现，该提示发生在 else 分支，如果进入到该分支，那么则说明 msg 对象获取为空，但是在上面明明看到赋值过程”msg=mMessage”，而且当前这种场景 mMessage 肯定不为 null，毕竟在 ANR 时获取的待调度消息也是通过 mMessage 遍历得到的。</p>
 <p>既然 mMessage 不是 null，那么就说明”msg=mMessage”肯定不是 null，但是到了下面却为 null，说明在此过程肯定被某个逻辑给重新赋值了，继续分析。</p>
-<p><img src="../../../../image/2022-02-16-toutiao-anr-barrier/12webp" srcset="/image/loading.gif" lazyload alt="12.webp"></p>
+<p><img src="../../../../image/2022-02-16-toutiao-anr-barrier/12.webp" srcset="/image/loading.gif" lazyload alt="12.webp"></p>
 <p>通过上图可以看到只有这个场景可能将 msg 重新赋值，那么这部分逻辑是做什么的呢？</p>
 <h2 id="Barrier-机制介绍："><a href="#Barrier-机制介绍：" class="headerlink" title="Barrier 机制介绍："></a>Barrier 机制介绍：</h2><p>看到上面的注释瞬间明白了，原来是 Barrier 机制，是 Android 系统用来保障部分系统消息高优调度的一种机制，实现原理很简单：会在每次消息返回前，检测该消息是否是 barrier 消息，barrier 消息的典型特征就是 msg.target 对象为 null，如下图：</p>
 <p><img src="../../../../image/2022-02-16-toutiao-anr-barrier/13.webp" srcset="/image/loading.gif" lazyload alt="13.webp"></p>
@@ -405,12 +405,18 @@
                   <article class="post-prev col-6">
                     
                     
+                      <a href="/2022/02/16/toutiao-anr-sharedpreference/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/02/16/toutiao-anr-principle/">
-                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（1）- 设计原理及影响因素</span>
+                      <a href="/2022/02/16/toutiao-anr-samples/">
+                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（3）- 实例剖析集锦</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
