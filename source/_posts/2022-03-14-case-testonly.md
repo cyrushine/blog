@@ -1,7 +1,7 @@
 ---
 title: 排查 Launcher AppStore 静默安装 App 失败的问题
 date: 2022-03-14 12:00:00 +0800
-tags: []
+tags: [case, 案例, 源码]
 ---
 
 Launcher 里的 AppStore 模块会根据服务端的配置安装/卸载 APP，当然用户也可以手动安装 AppStore 里的 APP
