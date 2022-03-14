@@ -1,0 +1,579 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Launcher 里的 AppStore 模块会根据服务端的配置安装&#x2F;卸载 APP，当然用户也可以手动安装 AppStore 里的 APP 某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的  静默安装是指 AppStore 自动在后台安装，无须用户手动点击安装 静默安装是通过广播 android.intent.action.SILENCE_INSTALL 实现的，由">
+<meta property="og:type" content="article">
+<meta property="og:title" content="排查 Launcher AppStore 静默安装 App 失败的问题">
+<meta property="og:url" content="https://www.dalvik.work/2022/03/14/case-testonly/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="Launcher 里的 AppStore 模块会根据服务端的配置安装&#x2F;卸载 APP，当然用户也可以手动安装 AppStore 里的 APP 某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的  静默安装是指 AppStore 自动在后台安装，无须用户手动点击安装 静默安装是通过广播 android.intent.action.SILENCE_INSTALL 实现的，由">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-03-14-case-testonly/01.png">
+<meta property="article:published_time" content="2022-03-14T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-03-14T07:52:09.141Z">
+<meta property="article:author" content="Cyrus">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.dalvik.work/image/2022-03-14-case-testonly/01.png">
+  
+  
+  <title>排查 Launcher AppStore 静默安装 App 失败的问题 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.1"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="排查 Launcher AppStore 静默安装 App 失败的问题">
+              
+                排查 Launcher AppStore 静默安装 App 失败的问题
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2022-03-14 04:00" pubdate>
+        2022年3月14日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      8.5k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      71 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">排查 Launcher AppStore 静默安装 App 失败的问题</h1>
+            
+            <div class="markdown-body">
+              <p>Launcher 里的 AppStore 模块会根据服务端的配置安装/卸载 APP，当然用户也可以手动安装 AppStore 里的 APP</p>
+<p>某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的</p>
+<blockquote>
+<p>静默安装是指 AppStore 自动在后台安装，无须用户手动点击安装</p>
+<p>静默安装是通过广播 <code>android.intent.action.SILENCE_INSTALL</code> 实现的，由 ROM 鉴权和实现</p>
+</blockquote>
+<p>本地在 <code>YUNMI.21FACE-1.0.UniVer.071320_V8.1 绿联 6810 Android 5.1</code> 还原，我首先通过查询关键字 <code>SILENCE_INSTALL</code> 没找到有用的日志</p>
+<div class="hljs code-wrapper"><pre><code class="hljs bash">D/ActivityThread: BDC-Calling onReceive: intent=Intent &#123; act=android.intent.action.SILENCE_INSTALL flg=0x10 cmp=com.android.settings/.SilenceInstallApkReciver (has extras) &#125;, receiver=com.android.settings.SilenceInstallApkReciver@14f877ad
+D/ActivityThread: BDC-RECEIVER handled : 0 / ReceiverData&#123;intent=Intent &#123; act=android.intent.action.SILENCE_INSTALL flg=0x10 cmp=com.android.settings/.SilenceInstallApkReciver (has extras) &#125; packageName=com.android.settings resultCode=-1 resultData=null resultExtras=null&#125;</code></pre></div>
+
+<p>然后搜索包名 <code>com.viomi.materialassistant</code> 找到 <code>PackageManager</code> 的日志，看起来它的日志是有用的；但是它的日志里并没有错误出现，只是记录了安装过程中的各个阶段</p>
+<p>况且我也不了解安装的具体流程，PMS 不用想就知道代码量巨大，直接从代码里找日志出现的地方不显示，所以决定跟正常的安装流程日志进行对比</p>
+<div class="hljs code-wrapper"><pre><code class="hljs bash">I/PackageManager: init_copy idx=0: InstallParams&#123;3488adaa file=/storage/emulated/0/viomi/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
+I/PackageManager: Trying to <span class="hljs-built_in">bind</span> to DefaultContainerService
+I/PackageManager: onServiceConnected
+I/PackageManager: onServiceConnected: <span class="hljs-literal">true</span>, 0
+I/PackageManager: mcs_bound
+I/PackageManager: startCopy UserHandle&#123;0&#125;: InstallParams&#123;3488adaa file=/storage/emulated/0/viomi/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
+I/PackageManager: Apk copy <span class="hljs-keyword">done</span>
+I/PackageManager: Checking <span class="hljs-keyword">for</span> more work or unbind...
+I/PackageManager: Posting delayed MCS_UNBIND
+D/PackageManager: installPackageLI: path=/data/app/vmdl885444489.tmp
+I/PackageManager: Start parsing apk: null
+I/PackageManager: Parsing <span class="hljs-keyword">done</span> <span class="hljs-keyword">for</span> apk: null
+W/PackageManager: installPackageLI
+I/PackageManager: mcs_check
+I/PackageManager: mcs_check(<span class="hljs-literal">true</span>, 1)
+I/PackageManager: mcs_unbind
+I/PackageManager: calling disconnectService()
+I/PackageManager: disconnectService: <span class="hljs-literal">false</span></code></pre></div>
+
+<p>这是一个正常的安装日志，第 10 行就是差异开始的地方，正常的安装会将 APP 复制到 /data/app/packagename 并进行 dexopt 生产本地代码，异常的流程完全没有这些后续操作且也没有异常日志出现</p>
+<p>看来只好 <code>show me the code</code>，关键字是 <code>PackageManagerService</code> 和 <code>installPackageLI</code></p>
+<div class="hljs code-wrapper"><pre><code class="hljs bash">I/PackageManager(  980): init_copy idx=0: InstallParams&#123;23c92659 file=/data/local/tmp/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
+I/PackageManager(  980): Trying to <span class="hljs-built_in">bind</span> to DefaultContainerService
+I/PackageManager(  980): onServiceConnected
+I/PackageManager(  980): onServiceConnected: <span class="hljs-literal">true</span>, 0
+I/PackageManager(  980): mcs_bound
+I/PackageManager(  980): startCopy UserHandle&#123;-1&#125;: InstallParams&#123;23c92659 file=/data/local/tmp/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
+I/PackageManager(  980): Apk copy <span class="hljs-keyword">done</span>
+I/PackageManager(  980): Checking <span class="hljs-keyword">for</span> more work or unbind...
+I/PackageManager(  980): Posting delayed MCS_UNBIND
+D/PackageManager(  980): installPackageLI: path=/data/app/vmdl1595486398.tmp
+I/PackageManager(  980): Start parsing apk: null
+I/PackageManager(  980): Parsing <span class="hljs-keyword">done</span> <span class="hljs-keyword">for</span> apk: null
+D/PackageManager(  980): manifestDigest was not present, but parser got: ManifestDigest &#123;mDigest=0d,c6,33,12,73,a9,31,fa,52,ea,e1,61,0a,f0,71,10,59,9a,49,67,f9,54,1a,1b,92,7e,cb,f1,b9,6c,c0,c6,&#125;
+D/PackageManager(  980): Renaming /data/app/vmdl1595486398.tmp to /data/app/com.viomi.materialassistant-1
+I/PackageManager(  980): Start installation <span class="hljs-keyword">for</span> package: null
+D/PackageManager(  980): installNewPackageLI: Package&#123;33bad6f6 com.viomi.materialassistant&#125;
+I/PackageManager(  980): Linking native library <span class="hljs-built_in">dir</span> <span class="hljs-keyword">for</span> /data/app/com.viomi.materialassistant-1
+D/installd(  211): do_linklib : com.viomi.materialassistant /data/app/com.viomi.materialassistant-1/lib/arm 0
+I/PackageManager(  980): Perform pre-dex opt <span class="hljs-keyword">for</span> package: com.viomi.materialassistant
+I/PackageManager(  980): Running dexopt on: /data/app/com.viomi.materialassistant-1/base.apk pkg=com.viomi.materialassistant isa=arm vmSafeMode=<span class="hljs-literal">false</span>
+I/PackageManager(  980): Dexopt <span class="hljs-keyword">done</span> on: com.viomi.materialassistant
+W/PackageManager(  980): Skipping provider name com.viomi.materialassistant.provider (<span class="hljs-keyword">in</span> package com.viomi.materialassistant): name already used by com.viomi.materialassistant
+D/PackageManager(  980): New package installed <span class="hljs-keyword">in</span> /data/app/com.viomi.materialassistant-1
+W/PackageManager(  980): Unknown permission com.android.vending.CHECK_LICENSE <span class="hljs-keyword">in</span> package com.viomi.materialassistant
+W/PackageManager(  980): Unknown permission android.permission.SYSTEM_OVERLAY_WINDOW <span class="hljs-keyword">in</span> package com.viomi.materialassistant
+W/PackageManager(  980): Unknown permission com.google.android.c2dm.permission.RECEIVE <span class="hljs-keyword">in</span> package com.viomi.materialassistant
+I/PackageManager(  980): Installation <span class="hljs-keyword">done</span> <span class="hljs-keyword">for</span> package: null
+V/PackageManager(  980): + starting restore round-trip 3
+V/PackageManager(  980): token 3 to BM <span class="hljs-keyword">for</span> possible restore
+V/PackageManager(  980): BM finishing package install <span class="hljs-keyword">for</span> 3
+I/PackageManager(  980): mcs_check
+I/PackageManager(  980): mcs_check(<span class="hljs-literal">true</span>, 1)
+I/PackageManager(  980): mcs_unbind
+I/PackageManager(  980): disconnectService: <span class="hljs-literal">false</span>
+I/PackageManager(  980): calling disconnectService()
+V/PackageManager(  980): Handling post-install <span class="hljs-keyword">for</span> 3
+I/PackageManager(  980): mcs_unbind
+I/PackageManager(  980): calling disconnectService()</code></pre></div>
+
+<p>找到 PackageManagerService.java 文件，切换到 android-5.1.0_r5，搜索 <code>installPackageLI</code> 能找到如下代码片段</p>
+<p>正常流程能走到 <code>manifestDigest was not present</code> 但异常流程在此之前被 <code>return</code> 中断了，那么就从这行代码往前找找看是什么逻辑触发 <code>return</code></p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">installPackageLI</span><span class="hljs-params">(InstallArgs args, PackageInstalledInfo res)</span> &#123;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">installFlags</span> <span class="hljs-operator">=</span> args.installFlags;
+        <span class="hljs-type">String</span> <span class="hljs-variable">installerPackageName</span> <span class="hljs-operator">=</span> args.installerPackageName;
+        <span class="hljs-type">File</span> <span class="hljs-variable">tmpPackageFile</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(args.getCodePath());
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">forwardLocked</span> <span class="hljs-operator">=</span> ((installFlags &amp; PackageManager.INSTALL_FORWARD_LOCK) != <span class="hljs-number">0</span>);
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">onSd</span> <span class="hljs-operator">=</span> ((installFlags &amp; PackageManager.INSTALL_EXTERNAL) != <span class="hljs-number">0</span>);
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">replace</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">scanFlags</span> <span class="hljs-operator">=</span> SCAN_NEW_INSTALL | SCAN_FORCE_DEX | SCAN_UPDATE_SIGNATURE;
+        <span class="hljs-comment">// Result object to be returned</span>
+        res.returnCode = PackageManager.INSTALL_SUCCEEDED;
+
+        <span class="hljs-keyword">if</span> (DEBUG_INSTALL) Slog.d(TAG, <span class="hljs-string">&quot;installPackageLI: path=&quot;</span> + tmpPackageFile);
+        <span class="hljs-comment">// Retrieve PackageSettings and parse package</span>
+        <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">parseFlags</span> <span class="hljs-operator">=</span> mDefParseFlags | PackageParser.PARSE_CHATTY
+                | (forwardLocked ? PackageParser.PARSE_FORWARD_LOCK : <span class="hljs-number">0</span>)
+                | (onSd ? PackageParser.PARSE_ON_SDCARD : <span class="hljs-number">0</span>);
+        <span class="hljs-type">PackageParser</span> <span class="hljs-variable">pp</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">PackageParser</span>();
+        pp.setSeparateProcesses(mSeparateProcesses);
+        pp.setDisplayMetrics(mMetrics);
+
+        <span class="hljs-keyword">final</span> PackageParser.Package pkg;
+        <span class="hljs-keyword">try</span> &#123;
+            pkg = pp.parsePackage(tmpPackageFile, parseFlags);
+        &#125; <span class="hljs-keyword">catch</span> (PackageParserException e) &#123;
+            res.setError(<span class="hljs-string">&quot;Failed parse during installPackageLI&quot;</span>, e);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+
+        <span class="hljs-comment">// Mark that we have an install time CPU ABI override.</span>
+        pkg.cpuAbiOverride = args.abiOverride;
+
+        <span class="hljs-comment">// 终于找到你！虽然 PackageManager.INSTALL_FAILED_TEST_ONLY 是 -15，但是实际上并没有把 int 输出到 logcat</span>
+        <span class="hljs-comment">// 所以日志就出现了奇怪的一行 installPackageLI 不带任何错误代码！</span>
+        <span class="hljs-type">String</span> <span class="hljs-variable">pkgName</span> <span class="hljs-operator">=</span> res.name = pkg.packageName;
+        <span class="hljs-keyword">if</span> ((pkg.applicationInfo.flags&amp;ApplicationInfo.FLAG_TEST_ONLY) != <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">if</span> ((installFlags &amp; PackageManager.INSTALL_ALLOW_TEST) == <span class="hljs-number">0</span>) &#123;
+                res.setError(INSTALL_FAILED_TEST_ONLY, <span class="hljs-string">&quot;installPackageLI&quot;</span>);
+                <span class="hljs-keyword">return</span>;
+            &#125;
+        &#125;
+
+        <span class="hljs-comment">// setError 干了什么，往下可以看到会把错误输出到 logcat，然而异常流程也没有这行日志，所以不是这里 return 的</span>
+        <span class="hljs-keyword">try</span> &#123;
+            pp.collectCertificates(pkg, parseFlags);
+            pp.collectManifestDigest(pkg);
+        &#125; <span class="hljs-keyword">catch</span> (PackageParserException e) &#123;
+            res.setError(<span class="hljs-string">&quot;Failed collect during installPackageLI&quot;</span>, e);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+
+        <span class="hljs-comment">// 异常流程并没有出现 Comparing manifests: 这行日志，所以并不是在这里 return 的</span>
+        <span class="hljs-comment">/* If the installer passed in a manifest digest, compare it now. */</span>
+        <span class="hljs-keyword">if</span> (args.manifestDigest != <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">if</span> (DEBUG_INSTALL) &#123;
+                <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">parsedManifest</span> <span class="hljs-operator">=</span> pkg.manifestDigest == <span class="hljs-literal">null</span> ? <span class="hljs-string">&quot;null&quot;</span>
+                        : pkg.manifestDigest.toString();
+                Slog.d(TAG, <span class="hljs-string">&quot;Comparing manifests: &quot;</span> + args.manifestDigest.toString() + <span class="hljs-string">&quot; vs. &quot;</span>
+                        + parsedManifest);
+            &#125;
+
+            <span class="hljs-keyword">if</span> (!args.manifestDigest.equals(pkg.manifestDigest)) &#123;
+                res.setError(INSTALL_FAILED_PACKAGE_CHANGED, <span class="hljs-string">&quot;Manifest digest changed&quot;</span>);
+                <span class="hljs-keyword">return</span>;
+            &#125;
+        &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (DEBUG_INSTALL) &#123;
+            <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">parsedManifest</span> <span class="hljs-operator">=</span> pkg.manifestDigest == <span class="hljs-literal">null</span>
+                    ? <span class="hljs-string">&quot;null&quot;</span> : pkg.manifestDigest.toString();
+            Slog.d(TAG, <span class="hljs-string">&quot;manifestDigest was not present, but parser got: &quot;</span> + parsedManifest);
+        &#125;
+        ...
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">PackageInstalledInfo</span> &#123;
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setError</span><span class="hljs-params">(<span class="hljs-type">int</span> code, String msg)</span> &#123;
+            returnCode = code;
+            returnMsg = msg;
+            Slog.w(TAG, msg);
+        &#125;
+
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setError</span><span class="hljs-params">(String msg, PackageParserException e)</span> &#123;
+            returnCode = e.error;
+            returnMsg = ExceptionUtils.getCompleteMessage(msg, e);
+            Slog.w(TAG, msg, e);
+        &#125;
+
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setError</span><span class="hljs-params">(String msg, PackageManagerException e)</span> &#123;
+            returnCode = e.error;
+            returnMsg = ExceptionUtils.getCompleteMessage(msg, e);
+            Slog.w(TAG, msg, e);
+        &#125;
+&#125;</code></pre></div>
+
+<p>看来安装流程就是在这里被中断了：APK 带有 <code>FLAG_TEST_ONLY</code> 标识，但安装时缺少参数 <code>INSTALL_ALLOW_TEST</code></p>
+<p>原来如此，我记得安装这种 test only 的包时 adb 要带上 -t 选项，也就说 <code>android.intent.action.SILENCE_INSTALL</code> 时没有开启 -t 选项</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">if</span> ((pkg.applicationInfo.flags&amp;ApplicationInfo.FLAG_TEST_ONLY) != <span class="hljs-number">0</span>) &#123;
+    <span class="hljs-keyword">if</span> ((installFlags &amp; PackageManager.INSTALL_ALLOW_TEST) == <span class="hljs-number">0</span>) &#123;
+        res.setError(INSTALL_FAILED_TEST_ONLY, <span class="hljs-string">&quot;installPackageLI&quot;</span>);
+        <span class="hljs-keyword">return</span>;
+    &#125;
+&#125;</code></pre></div>
+
+<p><img src="../../../../image/2022-03-14-case-testonly/01.png" srcset="/image/loading.gif" lazyload alt="01.png"></p>
+<p>把 AppStore 上的 APK 下载下来看下，果然 <code>testOnly=”true”</code>，看来是不小心上传错安装包了（这里是测试环境，所以不要求放 release 包，debug 包也是可以的）</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+              </div>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/02/16/toutiao-anr-sharedpreference/">
+                        <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
