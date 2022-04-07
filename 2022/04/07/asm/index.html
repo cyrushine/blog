@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/transformation.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/change_version_transformation.png">
 <meta property="article:published_time" content="2022-04-07T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-04-07T07:08:36.280Z">
+<meta property="article:modified_time" content="2022-04-07T07:31:37.250Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="asm">
 <meta property="article:tag" content="字节码">
@@ -205,7 +205,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      93 分钟
+      95 分钟
     </span>
   
 
@@ -364,7 +364,10 @@
   <span class="hljs-type">int</span> <span class="hljs-variable">ACC_MODULE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x8000</span>; <span class="hljs-comment">// class  </span>
 &#125;</code></pre></div>
 
-<h1 id="MethodVisitor"><a href="#MethodVisitor" class="headerlink" title="MethodVisitor"></a>MethodVisitor</h1><p>修改函数里的代码，建议用 <a target="_blank" rel="noopener" href="https://github.com/Konloch/bytecode-viewer">bytecode-viewer</a> 对比源文件和修改文件的字节码，将它们之间的差异翻译为 <code>MethodVisitor.visitXXX</code> 方法调用</p>
+<h1 id="MethodVisitor"><a href="#MethodVisitor" class="headerlink" title="MethodVisitor"></a>MethodVisitor</h1><ul>
+<li>修改函数里的代码，建议用 <a target="_blank" rel="noopener" href="https://github.com/Konloch/bytecode-viewer">bytecode-viewer</a> 对比源文件和修改文件的字节码，将它们之间的差异翻译为 <code>MethodVisitor.visitXXX</code> 方法调用</li>
+<li>使用 <code>AdviceAdapter</code>、<code>GeneratorAdapter</code> 等辅助类</li>
+</ul>
 <div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MethodVisitor</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitParameter</span><span class="hljs-params">(String name, <span class="hljs-type">int</span> access)</span>
     <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitAnnotationDefault</span><span class="hljs-params">()</span>
@@ -397,6 +400,12 @@
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitLineNumber</span><span class="hljs-params">(<span class="hljs-type">int</span> line, Label start)</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitMaxs</span><span class="hljs-params">(<span class="hljs-type">int</span> maxStack, <span class="hljs-type">int</span> maxLocals)</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitEnd</span><span class="hljs-params">()</span>
+&#125;
+
+<span class="hljs-comment">// 可以在方法的前面、后面或者前后织入字节码</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AdviceAdapter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">GeneratorAdapter</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Opcodes</span> &#123;
+  <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onMethodEnter</span><span class="hljs-params">()</span> &#123;&#125;
+  <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onMethodExit</span><span class="hljs-params">(<span class="hljs-keyword">final</span> <span class="hljs-type">int</span> opcode)</span> &#123;&#125;
 &#125;</code></pre></div>
 
 <h1 id="FieldVisitor"><a href="#FieldVisitor" class="headerlink" title="FieldVisitor"></a>FieldVisitor</h1><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FieldVisitor</span> &#123;
