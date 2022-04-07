@@ -1,0 +1,692 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="ASM 是一款广为使用的字节码操作库，很多 Gradle Transform 会用它对编译后的代码进行插桩和修改操作，源码仓库在 GitLab 访问者模式（Visitor pattern） Visitor pattern represent an operation to be performed on the elements of an object structure. Visitor le">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ASM - 字节码操作库">
+<meta property="og:url" content="https://www.dalvik.work/2022/04/07/asm/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="ASM 是一款广为使用的字节码操作库，很多 Gradle Transform 会用它对编译后的代码进行插桩和修改操作，源码仓库在 GitLab 访问者模式（Visitor pattern） Visitor pattern represent an operation to be performed on the elements of an object structure. Visitor le">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/structure_of_class.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/type_descriptors.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/sample_of_method_descriptors.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/transformation.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/change_version_transformation.png">
+<meta property="article:published_time" content="2022-04-07T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-04-07T07:08:36.280Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="asm">
+<meta property="article:tag" content="字节码">
+<meta property="article:tag" content="插桩">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.dalvik.work/image/2022-04-07-asm/structure_of_class.png">
+  
+  
+  <title>ASM - 字节码操作库 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.1"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="ASM - 字节码操作库">
+              
+                ASM - 字节码操作库
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2022-04-07 04:00" pubdate>
+        2022年4月7日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      11k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      93 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">ASM - 字节码操作库</h1>
+            
+            <div class="markdown-body">
+              <p><a target="_blank" rel="noopener" href="https://asm.ow2.io/">ASM</a> 是一款广为使用的字节码操作库，很多 Gradle Transform 会用它对编译后的代码进行插桩和修改操作，源码仓库在 <a target="_blank" rel="noopener" href="https://gitlab.ow2.org/asm/asm">GitLab</a></p>
+<h1 id="访问者模式（Visitor-pattern）"><a href="#访问者模式（Visitor-pattern）" class="headerlink" title="访问者模式（Visitor pattern）"></a>访问者模式（Visitor pattern）</h1><blockquote>
+<p>Visitor pattern represent an operation to be performed on the elements of an object structure. Visitor lets you define a new operation without changing the classes of the elements on which it operates.</p>
+</blockquote>
+<p><a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/%E8%AE%BF%E9%97%AE%E8%80%85%E6%A8%A1%E5%BC%8F">访问者模式</a> 是一种将数据结构与数据操作分离的设计模式，它封装一些作用于某种数据结构中的各元素的操作，可以在不改变数据结构的前提下定义作用于这些元素的新的操作，属于行为型模式</p>
+<p>访问者模式被称为最复杂的设计模式，并且使用频率不高，设计模式的作者也评价为：大多情况下，你不需要使用访问者模式，但是一旦需要使用它时，那就真的需要使用了，其基本思想是：</p>
+<ul>
+<li>针对系统中拥有固定类型数的对象结构（元素），在其内提供一个 <code>accept()</code> 方法用来接受访问者对象的访问</li>
+<li>不同的访问者对同一元素的访问内容不同，使得相同的元素集合可以产生不同的数据结果（视图）</li>
+<li><code>accept()</code> 方法可以接收不同的访问者对象，然后在内部将自己（元素）转发到接收到的访问者对象的 <code>visit()</code> 方法内，访问者内部对应类型的 <code>visit()</code> 方法就会得到回调执行</li>
+<li>对元素进行操作也就是通过两次动态分发：第一次是对访问者分发 <code>accept()</code> 方法，第二次是对元素的分发 <code>visit()</code> 方法，才最终将一个具体的元素传递到一个具体的访问者，如此一来就解耦了数据结构与操作，且数据操作不会改变元素状态</li>
+</ul>
+<p>访问者模式的核心是解耦数据结构与数据操作，使得对元素的操作具备优秀的扩展性，可以通过扩展不同的数据操作类型（访问者）实现对相同元素集的不同的操作</p>
+<h1 id="ASM-概览"><a href="#ASM-概览" class="headerlink" title="ASM 概览"></a>ASM 概览</h1><p>整个 ASM 库的核心概念是访问者模式</p>
+<p>字节码（<code>.class</code> 文件）是一种固定格式的文件，它的数据结构如下图，对应的解析逻辑定义在 <code>ClassReader</code>，然后提供了 <code>ClassVisitor</code>、<code>MethodVisitor</code>、<code>FieldVisitor</code> 和 <code>AnnotationVisitor</code> 等各种 Visitor 来访问</p>
+<p><img src="../../../../image/2022-04-07-asm/structure_of_class.png" srcset="/image/loading.gif" lazyload alt="structure_of_class.png"></p>
+<h1 id="ClassVisitor"><a href="#ClassVisitor" class="headerlink" title="ClassVisitor"></a>ClassVisitor</h1><p><code>ClassVisitor</code> 提供了以下的 visitor 方法去访问对应的数据结构，下面以 <code>java.lang.String</code> 为例</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ClassVisitor</span> &#123;
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visit</span><span class="hljs-params">(</span>
+<span class="hljs-params">      <span class="hljs-type">int</span> version,           // <span class="hljs-number">52</span></span>
+<span class="hljs-params">      <span class="hljs-type">int</span> access,            // <span class="hljs-number">49</span></span>
+<span class="hljs-params">      String name,           // java/lang/String</span>
+<span class="hljs-params">      String signature,      // Ljava/lang/Object;Ljava/io/Serializable;Ljava/lang/Comparable&lt;Ljava/lang/String;&gt;;Ljava/lang/CharSequence;</span>
+<span class="hljs-params">      String superName,      // java/lang/Object</span>
+<span class="hljs-params">      String[] interfaces    // java/io/Serializable,java/lang/Comparable,java/lang/CharSequence</span>
+<span class="hljs-params">  )</span>
+
+  <span class="hljs-comment">// access:18, name:value, descriptor:[C, signature:null, value:null</span>
+  <span class="hljs-comment">// access:26, name:serialVersionUID, descriptor:J, signature:null, value:-6849794470754667710</span>
+  <span class="hljs-comment">// access:25, name:CASE_INSENSITIVE_ORDER, descriptor:Ljava/util/Comparator;, signature:Ljava/util/Comparator&lt;Ljava/lang/String;&gt;;, value:null</span>
+  <span class="hljs-comment">// ...</span>
+  <span class="hljs-keyword">public</span> FieldVisitor <span class="hljs-title function_">visitField</span><span class="hljs-params">(<span class="hljs-type">int</span> access, String name, String descriptor, String signature, Object value)</span>
+
+  <span class="hljs-comment">// access:1, name:&lt;init&gt;, descriptor:(Ljava/lang/String;)V, signature:null, exceptions:null</span>
+  <span class="hljs-comment">// access:1, name:&lt;init&gt;, descriptor:([BIILjava/lang/String;)V, signature:null, exceptions:java/io/UnsupportedEncodingException</span>
+  <span class="hljs-comment">// access:1, name:getBytes, descriptor:(Ljava/lang/String;)[B, signature:null, exceptions:java/io/UnsupportedEncodingException</span>
+  <span class="hljs-comment">// access:9, name:valueOf, descriptor:(Ljava/lang/Object;)Ljava/lang/String;, signature:null, exceptions:null</span>
+  <span class="hljs-comment">// ...</span>
+  <span class="hljs-keyword">public</span> MethodVisitor <span class="hljs-title function_">visitMethod</span><span class="hljs-params">(<span class="hljs-type">int</span> access, String name, String descriptor, String signature, String[] exceptions)</span>
+
+  <span class="hljs-comment">// name:java/lang/String$CaseInsensitiveComparator, outerName:java/lang/String, innerName:CaseInsensitiveComparator, access:10</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitInnerClass</span><span class="hljs-params">(String name, String outerName, String innerName, <span class="hljs-type">int</span> access)</span>
+
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitSource</span><span class="hljs-params">(String source, String debug)</span>
+  <span class="hljs-keyword">public</span> ModuleVisitor <span class="hljs-title function_">visitModule</span><span class="hljs-params">(String name, <span class="hljs-type">int</span> access, String version)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitNestHost</span><span class="hljs-params">(String nestHost)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitOuterClass</span><span class="hljs-params">(String owner, String name, String descriptor)</span>
+  <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitAnnotation</span><span class="hljs-params">(String descriptor, <span class="hljs-type">boolean</span> visible)</span>
+  <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitTypeAnnotation</span><span class="hljs-params">(<span class="hljs-type">int</span> typeRef, TypePath typePath, String descriptor, <span class="hljs-type">boolean</span> visible)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitAttribute</span><span class="hljs-params">(Attribute attribute)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitNestMember</span><span class="hljs-params">(String nestMember)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitPermittedSubclass</span><span class="hljs-params">(String permittedSubclass)</span>
+  <span class="hljs-keyword">public</span> RecordComponentVisitor <span class="hljs-title function_">visitRecordComponent</span><span class="hljs-params">(String name, String descriptor, String signature)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitEnd</span><span class="hljs-params">()</span>
+&#125;</code></pre></div>
+
+<p>描述符（descriptor）的规则和例子如下图：</p>
+<p><img src="../../../../image/2022-04-07-asm/type_descriptors.png" srcset="/image/loading.gif" lazyload alt="type_descriptors.png"></p>
+<p><img src="../../../../image/2022-04-07-asm/sample_of_method_descriptors.png" srcset="/image/loading.gif" lazyload alt="sample_of_method_descriptors.png"></p>
+<p><code>version</code> 是 class 文件格式的版本号，有如下版本号的定义：</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">Opcodes</span> &#123;
+
+  <span class="hljs-comment">// Java ClassFile versions (the minor version is stored in the 16 most significant bits, and the</span>
+  <span class="hljs-comment">// major version in the 16 least significant bits).</span>
+
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_1</span> <span class="hljs-operator">=</span> <span class="hljs-number">3</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">45</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_2</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">46</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_3</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">47</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_4</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">48</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_5</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">49</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_6</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">50</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_7</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">51</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V1_8</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">52</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V9</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">53</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V10</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">54</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V11</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">55</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V12</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">56</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V13</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">57</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V14</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">58</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V15</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">59</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V16</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">60</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V17</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">61</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V18</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">62</span>;
+  <span class="hljs-type">int</span> <span class="hljs-variable">V19</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span> &lt;&lt; <span class="hljs-number">16</span> | <span class="hljs-number">63</span>;
+
+  <span class="hljs-comment">/**</span>
+<span class="hljs-comment">   * Version flag indicating that the class is using &#x27;preview&#x27; features.</span>
+<span class="hljs-comment">   *</span>
+<span class="hljs-comment">   * &lt;p&gt;&#123;<span class="hljs-doctag">@code</span> version &amp; V_PREVIEW == V_PREVIEW&#125; tests if a version is flagged with &#123;<span class="hljs-doctag">@code</span></span>
+<span class="hljs-comment">   * V_PREVIEW&#125;.</span>
+<span class="hljs-comment">   */</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">V_PREVIEW</span> <span class="hljs-operator">=</span> <span class="hljs-number">0xFFFF0000</span>;  
+&#125;</code></pre></div>
+
+<p><code>access</code> 是修饰符控制位的组合，有以下控制位：</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">Opcodes</span> &#123;
+  <span class="hljs-comment">// Access flags values, defined in</span>
+  <span class="hljs-comment">// - https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.1-200-E.1</span>
+  <span class="hljs-comment">// - https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.5-200-A.1</span>
+  <span class="hljs-comment">// - https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.6-200-A.1</span>
+  <span class="hljs-comment">// - https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.25</span>
+
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_PUBLIC</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0001</span>; <span class="hljs-comment">// class, field, method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_PRIVATE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0002</span>; <span class="hljs-comment">// class, field, method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_PROTECTED</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0004</span>; <span class="hljs-comment">// class, field, method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_STATIC</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0008</span>; <span class="hljs-comment">// field, method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_FINAL</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0010</span>; <span class="hljs-comment">// class, field, method, parameter</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_SUPER</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0020</span>; <span class="hljs-comment">// class</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_SYNCHRONIZED</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0020</span>; <span class="hljs-comment">// method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_OPEN</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0020</span>; <span class="hljs-comment">// module</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_TRANSITIVE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0020</span>; <span class="hljs-comment">// module requires</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_VOLATILE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0040</span>; <span class="hljs-comment">// field</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_BRIDGE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0040</span>; <span class="hljs-comment">// method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_STATIC_PHASE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0040</span>; <span class="hljs-comment">// module requires</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_VARARGS</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0080</span>; <span class="hljs-comment">// method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_TRANSIENT</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0080</span>; <span class="hljs-comment">// field</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_NATIVE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0100</span>; <span class="hljs-comment">// method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_INTERFACE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0200</span>; <span class="hljs-comment">// class</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_ABSTRACT</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0400</span>; <span class="hljs-comment">// class, method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_STRICT</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x0800</span>; <span class="hljs-comment">// method</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_SYNTHETIC</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x1000</span>; <span class="hljs-comment">// class, field, method, parameter, module *</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_ANNOTATION</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x2000</span>; <span class="hljs-comment">// class</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_ENUM</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x4000</span>; <span class="hljs-comment">// class(?) field inner</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_MANDATED</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x8000</span>; <span class="hljs-comment">// field, method, parameter, module, module *</span>
+  <span class="hljs-type">int</span> <span class="hljs-variable">ACC_MODULE</span> <span class="hljs-operator">=</span> <span class="hljs-number">0x8000</span>; <span class="hljs-comment">// class  </span>
+&#125;</code></pre></div>
+
+<h1 id="MethodVisitor"><a href="#MethodVisitor" class="headerlink" title="MethodVisitor"></a>MethodVisitor</h1><p>修改函数里的代码，建议用 <a target="_blank" rel="noopener" href="https://github.com/Konloch/bytecode-viewer">bytecode-viewer</a> 对比源文件和修改文件的字节码，将它们之间的差异翻译为 <code>MethodVisitor.visitXXX</code> 方法调用</p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MethodVisitor</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitParameter</span><span class="hljs-params">(String name, <span class="hljs-type">int</span> access)</span>
+    <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitAnnotationDefault</span><span class="hljs-params">()</span>
+    <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitAnnotation</span><span class="hljs-params">(String desc, <span class="hljs-type">boolean</span> visible)</span>
+    <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitTypeAnnotation</span><span class="hljs-params">(<span class="hljs-type">int</span> typeRef, TypePath typePath, String desc, <span class="hljs-type">boolean</span> visible)</span>
+    <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitParameterAnnotation</span><span class="hljs-params">(<span class="hljs-type">int</span> parameter, String desc, <span class="hljs-type">boolean</span> visible)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitAttribute</span><span class="hljs-params">(Attribute attr)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitCode</span><span class="hljs-params">()</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitFrame</span><span class="hljs-params">(<span class="hljs-type">int</span> type, <span class="hljs-type">int</span> nLocal, Object[] local, <span class="hljs-type">int</span> nStack, Object[] stack)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitIntInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode, <span class="hljs-type">int</span> operand)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitVarInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode, <span class="hljs-type">int</span> <span class="hljs-keyword">var</span>)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitTypeInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode, String type)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitFieldInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode, String owner, String name, String desc)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitMethodInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode, String owner, String name, String desc)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitMethodInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode, String owner, String name, String desc, <span class="hljs-type">boolean</span> itf)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitInvokeDynamicInsn</span><span class="hljs-params">(String name, String desc, Handle bsm, Object... bsmArgs)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitJumpInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> opcode, Label label)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitLabel</span><span class="hljs-params">(Label label)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitLdcInsn</span><span class="hljs-params">(Object cst)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitIincInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> <span class="hljs-keyword">var</span>, <span class="hljs-type">int</span> increment)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitTableSwitchInsn</span><span class="hljs-params">(<span class="hljs-type">int</span> min, <span class="hljs-type">int</span> max, Label dflt, Label... labels)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitLookupSwitchInsn</span><span class="hljs-params">(Label dflt, <span class="hljs-type">int</span>[] keys, Label[] labels)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitMultiANewArrayInsn</span><span class="hljs-params">(String desc, <span class="hljs-type">int</span> dims)</span>
+    <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitInsnAnnotation</span><span class="hljs-params">(<span class="hljs-type">int</span> typeRef, TypePath typePath, String desc, <span class="hljs-type">boolean</span> visible)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitTryCatchBlock</span><span class="hljs-params">(Label start, Label end, Label handler, String type)</span>
+    <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitTryCatchAnnotation</span><span class="hljs-params">(<span class="hljs-type">int</span> typeRef, TypePath typePath, String desc, <span class="hljs-type">boolean</span> visible)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitLocalVariable</span><span class="hljs-params">(String name, String desc, String signature, Label start, Label end, <span class="hljs-type">int</span> index)</span>
+    <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitLocalVariableAnnotation</span><span class="hljs-params">(<span class="hljs-type">int</span> typeRef, TypePath typePath, Label[] start, Label[] end, <span class="hljs-type">int</span>[] index, String desc, <span class="hljs-type">boolean</span> visible)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitLineNumber</span><span class="hljs-params">(<span class="hljs-type">int</span> line, Label start)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitMaxs</span><span class="hljs-params">(<span class="hljs-type">int</span> maxStack, <span class="hljs-type">int</span> maxLocals)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitEnd</span><span class="hljs-params">()</span>
+&#125;</code></pre></div>
+
+<h1 id="FieldVisitor"><a href="#FieldVisitor" class="headerlink" title="FieldVisitor"></a>FieldVisitor</h1><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FieldVisitor</span> &#123;
+  <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitAnnotation</span><span class="hljs-params">(<span class="hljs-keyword">final</span> String descriptor, <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> visible)</span>
+  <span class="hljs-keyword">public</span> AnnotationVisitor <span class="hljs-title function_">visitTypeAnnotation</span><span class="hljs-params">(<span class="hljs-keyword">final</span> <span class="hljs-type">int</span> typeRef, <span class="hljs-keyword">final</span> TypePath typePath, <span class="hljs-keyword">final</span> String descriptor, <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> visible)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitAttribute</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Attribute attribute)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitEnd</span><span class="hljs-params">()</span>
+&#125;</code></pre></div>
+
+<h1 id="解析和访问-class"><a href="#解析和访问-class" class="headerlink" title="解析和访问 class"></a>解析和访问 class</h1><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">main</span><span class="hljs-params">(args: <span class="hljs-type">Array</span>&lt;<span class="hljs-type">String</span>&gt;)</span></span> &#123;
+    <span class="hljs-keyword">val</span> reader = ClassReader(<span class="hljs-string">&quot;java.lang.String&quot;</span>)
+    <span class="hljs-keyword">val</span> printer = ClassPrinter()
+    reader.accept(printer, <span class="hljs-number">0</span>)
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ClassPrinter</span>: <span class="hljs-type">ClassVisitor</span></span>(ASM9) &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">visit</span><span class="hljs-params">(version: <span class="hljs-type">Int</span>, access: <span class="hljs-type">Int</span>, name: <span class="hljs-type">String</span>?, signature: <span class="hljs-type">String</span>?, superName: <span class="hljs-type">String</span>?, interfaces: <span class="hljs-type">Array</span>&lt;<span class="hljs-type">out</span> <span class="hljs-type">String</span>&gt;?)</span></span> &#123;
+        println(...)
+    &#125;
+    <span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
+
+<h1 id="构造-class"><a href="#构造-class" class="headerlink" title="构造 class"></a>构造 class</h1><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 构造如下一个接口</span>
+<span class="hljs-keyword">package</span> pkg; 
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Comparable</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Mesurable</span> &#123; 
+  <span class="hljs-type">int</span> <span class="hljs-variable">LESS</span> <span class="hljs-operator">=</span>-<span class="hljs-number">1</span>; 
+  <span class="hljs-type">int</span> <span class="hljs-variable">EQUAL</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; 
+  <span class="hljs-type">int</span> <span class="hljs-variable">GREATER</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>; 
+  <span class="hljs-type">int</span> <span class="hljs-title function_">compareTo</span><span class="hljs-params">(Object o)</span>; 
+&#125;
+
+<span class="hljs-comment">// 利用一个特殊的 Visitor：ClassWriter 来动态构造 class</span>
+<span class="hljs-type">ClassWriter</span> <span class="hljs-variable">cw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassWriter</span>(<span class="hljs-number">0</span>); 
+cw.visit(V1_5, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, <span class="hljs-string">&quot;pkg/Comparable&quot;</span>, <span class="hljs-literal">null</span>, <span class="hljs-string">&quot;java/lang/Object&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>[] &#123; <span class="hljs-string">&quot;pkg/Mesurable&quot;</span> &#125;); 
+cw.visitField(ACC_PUBLIC + ACC_FINAL + ACC_STATIC, <span class="hljs-string">&quot;LESS&quot;</span>, <span class="hljs-string">&quot;I&quot;</span>, <span class="hljs-literal">null</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Integer</span>(-<span class="hljs-number">1</span>)).visitEnd(); 
+cw.visitField(ACC_PUBLIC + ACC_FINAL + ACC_STATIC, <span class="hljs-string">&quot;EQUAL&quot;</span>, <span class="hljs-string">&quot;I&quot;</span>, <span class="hljs-literal">null</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Integer</span>(<span class="hljs-number">0</span>)).visitEnd(); 
+cw.visitField(ACC_PUBLIC + ACC_FINAL + ACC_STATIC, <span class="hljs-string">&quot;GREATER&quot;</span>, <span class="hljs-string">&quot;I&quot;</span>, <span class="hljs-literal">null</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Integer</span>(<span class="hljs-number">1</span>)).visitEnd(); 
+cw.visitMethod(ACC_PUBLIC + ACC_ABSTRACT, <span class="hljs-string">&quot;compareTo&quot;</span>, <span class="hljs-string">&quot;(Ljava/lang/Object;)I&quot;</span>, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>).visitEnd(); 
+cw.visitEnd(); 
+<span class="hljs-type">byte</span>[] b = cw.toByteArray();
+
+<span class="hljs-comment">// 可以将生成的 class 保存在 Comparable.class 文件里待将来加载和使用</span>
+<span class="hljs-comment">// 也可以通过 ClassLoader.defineClass 直接将其加载进来</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">MyClassLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ClassLoader</span> &#123;
+  <span class="hljs-keyword">public</span> Class <span class="hljs-title function_">defineClass</span><span class="hljs-params">(String name, <span class="hljs-type">byte</span>[] b)</span> &#123;          <span class="hljs-comment">// 将 defineClass 暴露出来</span>
+    <span class="hljs-keyword">return</span> defineClass(name, b, <span class="hljs-number">0</span>, b.length); 
+  &#125; 
+&#125;
+<span class="hljs-type">Class</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> myClassLoader.defineClass(<span class="hljs-string">&quot;pkg.Comparable&quot;</span>, b);    <span class="hljs-comment">// 直接加载进来</span></code></pre></div>
+
+<h1 id="转换已有的-class（Transforming）"><a href="#转换已有的-class（Transforming）" class="headerlink" title="转换已有的 class（Transforming）"></a>转换已有的 class（Transforming）</h1><p>如下图所示，<code>ClassReader</code> + <code>ClassWriter</code> = 将原有的 class 复制一份</p>
+<p><img src="../../../../image/2022-04-07-asm/transformation.png" srcset="/image/loading.gif" lazyload alt="transformation.png"></p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-type">byte</span>[] b1 = ...; 
+<span class="hljs-type">ClassWriter</span> <span class="hljs-variable">cw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassWriter</span>(<span class="hljs-number">0</span>); 
+<span class="hljs-type">ClassReader</span> <span class="hljs-variable">cr</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassReader</span>(b1); 
+cr.accept(cw, <span class="hljs-number">0</span>); 
+<span class="hljs-type">byte</span>[] b2 = cw.toByteArray();    <span class="hljs-comment">// b2 represents the same class as b1</span></code></pre></div>
+
+<p>如下图，往中间插入 Visitor 就可以高效地修改原有的 class</p>
+<p><img src="../../../../image/2022-04-07-asm/change_version_transformation.png" srcset="/image/loading.gif" lazyload alt="change_version_transformation.png"></p>
+<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ChangeVersionAdapter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ClassVisitor</span> &#123; 
+  <span class="hljs-keyword">public</span> <span class="hljs-title function_">ChangeVersionAdapter</span><span class="hljs-params">(ClassVisitor cv)</span> &#123; 
+    <span class="hljs-built_in">super</span>(ASM4, cv); 
+  &#125; 
+  
+  <span class="hljs-meta">@Override</span> 
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visit</span><span class="hljs-params">(<span class="hljs-type">int</span> version, <span class="hljs-type">int</span> access, String name, String signature, String superName, String[] interfaces)</span> &#123; 
+    cv.visit(V1_5, access, name, signature, superName, interfaces); 
+  &#125; 
+&#125;
+
+<span class="hljs-type">byte</span>[] b1 = ... 
+<span class="hljs-type">ClassReader</span> <span class="hljs-variable">cr</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassReader</span>(b1); 
+<span class="hljs-type">ClassWriter</span> <span class="hljs-variable">cw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassWriter</span>(cr, <span class="hljs-number">0</span>); 
+<span class="hljs-type">ChangeVersionAdapter</span> <span class="hljs-variable">ca</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ChangeVersionAdapter</span>(cw); 
+cr.accept(ca, <span class="hljs-number">0</span>); 
+<span class="hljs-type">byte</span>[] b2 = cw.toByteArray();</code></pre></div>
+
+<h1 id="删除成员"><a href="#删除成员" class="headerlink" title="删除成员"></a>删除成员</h1><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// the following class adapter removes the information about outer and inner classes, as well as the name of the source file from which the class was compiled</span>
+<span class="hljs-comment">// the resulting class remains fully functional, because these elements are only used for debugging purposes</span>
+<span class="hljs-comment">// This is done by not forwarding anything in the appropriate visit methods</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">RemoveDebugAdapter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ClassVisitor</span> &#123; 
+  <span class="hljs-keyword">public</span> <span class="hljs-title function_">RemoveDebugAdapter</span><span class="hljs-params">(ClassVisitor cv)</span> &#123; <span class="hljs-built_in">super</span>(ASM4, cv); &#125; 
+  <span class="hljs-meta">@Override</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitSource</span><span class="hljs-params">(String source, String debug)</span> &#123;&#125; 
+  <span class="hljs-meta">@Override</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitOuterClass</span><span class="hljs-params">(String owner, String name, String desc)</span> &#123;&#125; 
+  <span class="hljs-meta">@Override</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">visitInnerClass</span><span class="hljs-params">(String name, String outerName, String innerName, <span class="hljs-type">int</span> access)</span> &#123;&#125; 
+&#125;
+
+<span class="hljs-comment">// 删除指定的函数</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">RemoveMethodAdapter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ClassVisitor</span> &#123; 
+  <span class="hljs-keyword">private</span> String mName; 
+  <span class="hljs-keyword">private</span> String mDesc; 
+  
+  <span class="hljs-keyword">public</span> <span class="hljs-title function_">RemoveMethodAdapter</span><span class="hljs-params">( ClassVisitor cv, String mName, String mDesc)</span> &#123; 
+    <span class="hljs-built_in">super</span>(ASM4, cv); 
+    <span class="hljs-built_in">this</span>.mName = mName;
+    <span class="hljs-built_in">this</span>.mDesc = mDesc; 
+  &#125; 
+  
+  <span class="hljs-meta">@Override</span> 
+  <span class="hljs-keyword">public</span> MethodVisitor <span class="hljs-title function_">visitMethod</span><span class="hljs-params">(<span class="hljs-type">int</span> access, String name, String desc, String signature, String[] exceptions)</span> &#123;
+    <span class="hljs-keyword">if</span> (name.equals(mName) &amp;&amp; desc.equals(mDesc)) &#123;
+      <span class="hljs-comment">// do not delegate to next visitor-&gt; this removes the method </span>
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+    &#125;
+    <span class="hljs-keyword">return</span> cv.visitMethod(access, name, desc, signature, exceptions); 
+  &#125; 
+&#125;</code></pre></div>
+
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://asm.ow2.io/asm4-guide.pdf">ASM User Guide</a></li>
+</ol>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/asm/">asm</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%AD%97%E8%8A%82%E7%A0%81/">字节码</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E6%8F%92%E6%A1%A9/">插桩</a>
+                    
+                  </div>
+                
+              </div>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/03/14/case-testonly/">
+                        <span class="hidden-mobile">排查 Launcher AppStore 静默安装 App 失败的问题</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

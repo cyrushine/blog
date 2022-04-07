@@ -178,6 +178,50 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/06/12/okio/" target="_self">
+          浅析 IO 框架：Okio
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/06/12/okio/" target="_self">
+          
+          基本概念   Okio java.io    ByteString String   Buffer ByteArray   Source InputStream   Sink OutputStream   Segment    SegmentPool    ByteString虽然 okio.ByteString 对标的是 java.lang.String，但是它操作的对象却是 String 内部
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-06-12 04:00" pubdate>
+              2021-06-12
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/nio/">nio</a>
+            
+              <a href="/tags/okio/">okio</a>
+            
+              <a href="/tags/io/">io</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/06/05/io-and-nio/" target="_self">
           深入探索 java.io 和 nio
         </a>
@@ -549,48 +593,6 @@
               <a href="/tags/tailrec/">tailrec</a>
             
               <a href="/tags/%E5%B0%BE%E9%80%92%E5%BD%92/">尾递归</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/04/12/leakcanary/" target="_self">
-          LeakCanary 浅析
-        </a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2021/04/12/leakcanary/" target="_self">
-          
-          检测内存泄漏四种引用类型   引用类型 GC 时机    强引用 平时写代码最常用的引用类型，对象只要被强引用就不会被 GC   软引用 SoftReference 只有当内存不足时才会被 GC   弱引用 WeakReference 会被正常 GC   虚引用 PhantomReference 会被正常 GC，因为 get() 总是返回 null，一般用来跟踪对象的生命周期   所有的引用类型都
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-04-12 04:00" pubdate>
-              2021-04-12
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/LeakCanary/">LeakCanary</a>
-            
-              <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">内存优化，OOM</a>
             
           </div>
         
