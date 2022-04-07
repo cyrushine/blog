@@ -422,7 +422,253 @@ class Constants {
 
 ## 字节码插桩
 
+利用 [ASM](../../../../2022/04/07/asm/) 的 `AdviceAdapter` 在函数调用前后织入 `AppMethodBeat.i` 和 `AppMethodBeat.o`
 
+```java
+private class TraceMethodAdapter extends AdviceAdapter {
+    
+    protected void onMethodEnter() {
+        TraceMethod traceMethod = collectedMethodMap.get(methodName);
+        if (traceMethod != null) {
+            traceMethodCount.incrementAndGet();
+            mv.visitLdcInsn(traceMethod.id);
+            mv.visitMethodInsn(INVOKESTATIC, TraceBuildConstants.MATRIX_TRACE_CLASS, "i", "(I)V", false);
+            if (checkNeedTraceWindowFocusChangeMethod(traceMethod)) {
+                traceWindowFocusChangeMethod(mv, className);
+            }
+        }
+    }
 
-下一步就是要将 `AppMethodBeat.i/o` 通过字节码工程插桩到合适的函数里
+    protected void onMethodExit(int opcode) {
+        TraceMethod traceMethod = collectedMethodMap.get(methodName);
+        if (traceMethod != null) {
+            traceMethodCount.incrementAndGet();
+            mv.visitLdcInsn(traceMethod.id);
+            mv.visitMethodInsn(INVOKESTATIC, TraceBuildConstants.MATRIX_TRACE_CLASS, "o", "(I)V", false);
+        }
+    }
+}
+```
+
+注册 Gradle Transform
+
+```kotlin
+// 注册 Gradle Plugin
+// /META-INF/gradle-plugins/com.tencent.matrix-plugin.properties
+// implementation-class=com.tencent.matrix.plugin.MatrixPlugin
+
+class MatrixPlugin : Plugin<Project> {
+    override fun apply(project: Project) {
+
+        // 创建配置块
+        val matrix = project.extensions.create("matrix", MatrixExtension::class.java)
+        val traceExtension = (matrix as ExtensionAware).extensions.create("trace", MatrixTraceExtension::class.java)
+        val removeUnusedResourcesExtension = matrix.extensions.create("removeUnusedResources", MatrixRemoveUnusedResExtension::class.java)
+
+        if (!project.plugins.hasPlugin("com.android.application")) {
+            throw GradleException("Matrix Plugin, Android Application plugin required.")
+        }
+
+        project.afterEvaluate {
+            Log.setLogLevel(matrix.logLevel)
+        }
+
+        MatrixTasksManager().createMatrixTasks(
+                project.extensions.getByName("android") as AppExtension,
+                project,
+                traceExtension,
+                removeUnusedResourcesExtension
+        )
+    }
+}
+
+// 注册 Gradle Transform
+class MatrixTraceInjection : ITraceSwitchListener {
+    private fun injectTransparentTransform(appExtension: AppExtension,
+                                           project: Project,
+                                           extension: MatrixTraceExtension) {
+        transparentTransform = MatrixTraceTransform(project, extension)
+        appExtension.registerTransform(transparentTransform!!)
+    }
+}
+
+class MatrixTraceTransform: Transform() {
+
+    override fun getName(): String {
+        return "MatrixTraceTransform"
+    }
+
+    override fun getInputTypes(): Set<QualifiedContent.ContentType> {
+        return TransformManager.CONTENT_CLASS
+    }
+
+    override fun getScopes(): MutableSet<in QualifiedContent.Scope>? {
+        return TransformManager.SCOPE_FULL_PROJECT
+    }
+
+    override fun isIncremental(): Boolean {
+        return true
+    }
+
+    override fun transform(transformInvocation: TransformInvocation) {
+        super.transform(transformInvocation)
+
+        if (transparent) {
+            transparent(transformInvocation)
+        } else {
+            transforming(transformInvocation)
+        }
+    }
+
+    private fun transforming(invocation: TransformInvocation) {
+
+        val start = System.currentTimeMillis()
+
+        val outputProvider = invocation.outputProvider!!
+        val isIncremental = invocation.isIncremental && this.isIncremental
+
+        if (!isIncremental) {
+            outputProvider.deleteAll()
+        }
+
+        val config = configure(invocation)
+
+        val changedFiles = ConcurrentHashMap<File, Status>()
+        val inputToOutput = ConcurrentHashMap<File, File>()
+        val inputFiles = ArrayList<File>()
+
+        var transformDirectory: File? = null
+
+        for (input in invocation.inputs) {
+            for (directoryInput in input.directoryInputs) {
+                changedFiles.putAll(directoryInput.changedFiles)
+                val inputDir = directoryInput.file
+                inputFiles.add(inputDir)
+                val outputDirectory = outputProvider.getContentLocation(
+                        directoryInput.name,
+                        directoryInput.contentTypes,
+                        directoryInput.scopes,
+                        Format.DIRECTORY)
+
+                inputToOutput[inputDir] = outputDirectory
+                if (transformDirectory == null) transformDirectory = outputDirectory.parentFile
+            }
+
+            for (jarInput in input.jarInputs) {
+                val inputFile = jarInput.file
+                changedFiles[inputFile] = jarInput.status
+                inputFiles.add(inputFile)
+                val outputJar = outputProvider.getContentLocation(
+                        jarInput.name,
+                        jarInput.contentTypes,
+                        jarInput.scopes,
+                        Format.JAR)
+
+                inputToOutput[inputFile] = outputJar
+                if (transformDirectory == null) transformDirectory = outputJar.parentFile
+            }
+        }
+
+        if (inputFiles.size == 0 || transformDirectory == null) {
+            Log.i(TAG, "Matrix trace do not find any input files")
+            return
+        }
+
+        // Get transform root dir.
+        val outputDirectory = transformDirectory
+
+        MatrixTrace(
+                ignoreMethodMapFilePath = config.ignoreMethodMapFilePath,
+                methodMapFilePath = config.methodMapFilePath,
+                baseMethodMapPath = config.baseMethodMapPath,
+                blockListFilePath = config.blockListFilePath,
+                mappingDir = config.mappingDir,
+                project = project
+        ).doTransform(
+                classInputs = inputFiles,
+                changedFiles = changedFiles,
+                isIncremental = isIncremental,
+                skipCheckClass = config.skipCheckClass,
+                traceClassDirectoryOutput = outputDirectory,
+                inputToOutput = inputToOutput,
+                legacyReplaceChangedFile = null,
+                legacyReplaceFile = null,
+                uniqueOutputName = true
+        )
+
+        val cost = System.currentTimeMillis() - start
+        Log.i(TAG, " Insert matrix trace instrumentations cost time: %sms.", cost)
+    }
+}
+
+// MatrixTrace.doTransform
+// MethodTracer.trace
+// MethodTracer.traceMethodFromSrc
+
+public class MethodTracer {
+    private void innerTraceMethodFromSrc(File input, File output, ClassLoader classLoader, boolean ignoreCheckClass) {
+
+        ArrayList<File> classFileList = new ArrayList<>();
+        if (input.isDirectory()) {
+            listClassFiles(classFileList, input);
+        } else {
+            classFileList.add(input);
+        }
+
+        for (File classFile : classFileList) {
+            InputStream is = null;
+            FileOutputStream os = null;
+            try {
+                final String changedFileInputFullPath = classFile.getAbsolutePath();
+                final File changedFileOutput = new File(changedFileInputFullPath.replace(input.getAbsolutePath(), output.getAbsolutePath()));
+
+                if (changedFileOutput.getCanonicalPath().equals(classFile.getCanonicalPath())) {
+                    throw new RuntimeException("Input file(" + classFile.getCanonicalPath() + ") should not be same with output!");
+                }
+
+                if (!changedFileOutput.exists()) {
+                    changedFileOutput.getParentFile().mkdirs();
+                }
+                changedFileOutput.createNewFile();
+
+                if (MethodCollector.isNeedTraceFile(classFile.getName())) {
+
+                    // Reader - Adapter - Write 修改源字节码文件
+                    is = new FileInputStream(classFile);
+                    ClassReader classReader = new ClassReader(is);
+                    ClassWriter classWriter = new TraceClassWriter(ClassWriter.COMPUTE_FRAMES, classLoader);
+                    ClassVisitor classVisitor = new TraceClassAdapter(AgpCompat.getAsmApi(), classWriter);
+                    classReader.accept(classVisitor, ClassReader.EXPAND_FRAMES);
+                    is.close();
+
+                    byte[] data = classWriter.toByteArray();
+
+                    // 用 CheckClassAdapter 检查结果的正确性
+                    if (!ignoreCheckClass) {
+                        try {
+                            ClassReader cr = new ClassReader(data);
+                            ClassWriter cw = new ClassWriter(0);
+                            ClassVisitor check = new CheckClassAdapter(cw);
+                            cr.accept(check, ClassReader.EXPAND_FRAMES);
+                        } catch (Throwable e) {
+                            System.err.println("trace output ERROR : " + e.getMessage() + ", " + classFile);
+                            traceError = true;
+                        }
+                    }
+
+                    if (output.isDirectory()) {
+                        os = new FileOutputStream(changedFileOutput);
+                    } else {
+                        os = new FileOutputStream(output);
+                    }
+                    os.write(data);
+                    os.close();
+                } else {
+                    FileUtil.copyFileUsingStream(classFile, changedFileOutput);
+                }
+            } // ...
+        }
+    }    
+}
+```
 
