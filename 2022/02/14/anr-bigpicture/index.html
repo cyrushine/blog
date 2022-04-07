@@ -26,7 +26,7 @@
 <meta property="og:description" content="埋雷 和 除雷 是 Android 设计 ANR 时的一个重要思路，ANR 的实质是超时，那么只需要在执行前埋下延迟爆炸的雷，如果在规定时间内执行完毕则把雷移除，否则到点雷爆炸抛出 ANR 下面以 startService 为例：  startService 时记录下当前时间，并埋下延时任务 sendMessageDelayed bindService 表示启动完毕，移除上面埋下的雷 SERVIC">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-02-14T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-04-07T07:31:37.250Z">
+<meta property="article:modified_time" content="2022-04-07T10:52:36.802Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta name="twitter:card" content="summary_large_image">
