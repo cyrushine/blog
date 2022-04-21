@@ -1,0 +1,954 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="for 操作符具有以下特征的对象可以被 for 操作符遍历：  具有 operator 函数 iterator() 其返回 Iterator 具有 operator 函数 hasNext() 和 next()  public interface Sequence&lt;out T&gt; &amp;#123;     public operator fun iterator(): Iterator&lt;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kotlin Flow - 初识">
+<meta property="og:url" content="https://www.dalvik.work/2022/04/09/flow-basic/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="for 操作符具有以下特征的对象可以被 for 操作符遍历：  具有 operator 函数 iterator() 其返回 Iterator 具有 operator 函数 hasNext() 和 next()  public interface Sequence&lt;out T&gt; &amp;#123;     public operator fun iterator(): Iterator&lt;">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-04-09T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-04-21T09:03:59.628Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="kotlin">
+<meta property="article:tag" content="coroutine">
+<meta property="article:tag" content="协程">
+<meta property="article:tag" content="flow">
+<meta property="article:tag" content="sequence">
+<meta property="article:tag" content="热流">
+<meta property="article:tag" content="冷流">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  <title>Kotlin Flow - 初识 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="Kotlin Flow - 初识">
+              
+                Kotlin Flow - 初识
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2022-04-09 04:00" pubdate>
+        2022年4月9日
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      15k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      124 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Kotlin Flow - 初识</h1>
+            
+            <div class="markdown-body">
+              <h1 id="for-操作符"><a href="#for-操作符" class="headerlink" title="for 操作符"></a>for 操作符</h1><p>具有以下特征的对象可以被 <code>for</code> 操作符遍历：</p>
+<ol>
+<li>具有 <code>operator</code> 函数 <code>iterator()</code></li>
+<li>其返回 <code>Iterator</code> 具有 <code>operator</code> 函数 <code>hasNext()</code> 和 <code>next()</code></li>
+</ol>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Sequence</span>&lt;<span class="hljs-type">out T</span>&gt; </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">iterator</span><span class="hljs-params">()</span></span>: Iterator&lt;T&gt;
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Iterator</span>&lt;<span class="hljs-type">out T</span>&gt; </span>&#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">next</span><span class="hljs-params">()</span></span>: T
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">hasNext</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Boolean</span>
+&#125;</code></pre></div>
+
+<p><code>Sequence</code> 就是可以被 <code>for</code> 操作符遍历的接口</p>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">val</span> fruits = sequence &#123;
+    yield(<span class="hljs-string">&quot;Apple&quot;</span>)
+    yield(<span class="hljs-string">&quot;Banana&quot;</span>)
+    yield(<span class="hljs-string">&quot;Guava&quot;</span>)
+&#125;
+<span class="hljs-keyword">for</span> (fruit <span class="hljs-keyword">in</span> fruits) &#123; println(<span class="hljs-string">&quot;we got <span class="hljs-variable">$fruit</span>&quot;</span>) &#125;</code></pre></div>
+
+<h1 id="热流（hot-stream）和冷流（cold-stream）"><a href="#热流（hot-stream）和冷流（cold-stream）" class="headerlink" title="热流（hot stream）和冷流（cold stream）"></a>热流（hot stream）和冷流（cold stream）</h1><ul>
+<li>已计算出结果的序列叫 <code>热流</code>，平时常用的 <code>Collection</code>、<code>List</code>、<code>Set</code> 和 <code>Map</code> 等容器都属于热流</li>
+<li>尚未计算出结果的序列叫 <code>冷流</code>，<code>sequence</code>、<code>flow</code> 和 <code>RxJava</code> 都可以创建冷流</li>
+<li>冷流的概念类似于 ORM Entity 的懒加载以及其关联关系的懒加载，就是等用到成员时才执行 DB 查询</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">val</span> log = &#123; msg: String -&gt;
+    println(<span class="hljs-string">&quot;<span class="hljs-subst">$&#123;SimpleDateFormat(<span class="hljs-string">&quot;HH:mm:ss&quot;</span>).format(Date())&#125;</span> <span class="hljs-variable">$msg</span>&quot;</span>)
+&#125;
+
+<span class="hljs-keyword">val</span> collect: <span class="hljs-keyword">suspend</span> SequenceScope&lt;String&gt;.(String) -&gt; <span class="hljs-built_in">Unit</span> = &#123;
+    log(<span class="hljs-string">&quot;collecting <span class="hljs-subst">$&#123;it&#125;</span>...&quot;</span>)
+    Thread.sleep(<span class="hljs-number">2</span> * <span class="hljs-number">1000L</span>)
+    yield(it)
+&#125;
+
+<span class="hljs-comment">// 热流已计算出结果</span>
+<span class="hljs-keyword">var</span> fruits = arrayOf(<span class="hljs-string">&quot;watermelon&quot;</span>, <span class="hljs-string">&quot;peach&quot;</span>, <span class="hljs-string">&quot;orange&quot;</span>).asSequence()
+<span class="hljs-keyword">for</span> (fruit <span class="hljs-keyword">in</span> fruits) &#123; log(<span class="hljs-string">&quot;we got <span class="hljs-variable">$fruit</span>&quot;</span>) &#125;
+<span class="hljs-comment">// 16:22:14 we got watermelon</span>
+<span class="hljs-comment">// 16:22:14 we got peach</span>
+<span class="hljs-comment">// 16:22:14 we got orange</span>
+
+<span class="hljs-comment">// 冷流的每个结果都是实时计算出来的</span>
+fruits = sequence &#123;
+    collect(<span class="hljs-string">&quot;Apple&quot;</span>)
+    collect(<span class="hljs-string">&quot;Banana&quot;</span>)
+    collect(<span class="hljs-string">&quot;Guava&quot;</span>)
+&#125;
+<span class="hljs-keyword">for</span> (fruit <span class="hljs-keyword">in</span> fruits) &#123; log(<span class="hljs-string">&quot;we got <span class="hljs-variable">$fruit</span>&quot;</span>) &#125;
+<span class="hljs-comment">// 16:22:14 collecting Apple...</span>
+<span class="hljs-comment">// 16:22:16 we got Apple</span>
+<span class="hljs-comment">// 16:22:16 collecting Banana...</span>
+<span class="hljs-comment">// 16:22:18 we got Banana</span>
+<span class="hljs-comment">// 16:22:18 collecting Guava...</span>
+<span class="hljs-comment">// 16:22:20 we got Guava</span>
+<span class="hljs-keyword">for</span> (fruit <span class="hljs-keyword">in</span> fruits) &#123; log(<span class="hljs-string">&quot;we got <span class="hljs-variable">$fruit</span>&quot;</span>) &#125;
+<span class="hljs-comment">// 16:22:14 collecting Apple...</span>
+<span class="hljs-comment">// 16:22:16 we got Apple</span>
+<span class="hljs-comment">// 16:22:16 collecting Banana...</span>
+<span class="hljs-comment">// 16:22:18 we got Banana</span>
+<span class="hljs-comment">// 16:22:18 collecting Guava...</span>
+<span class="hljs-comment">// 16:22:20 we got Guava</span>
+
+<span class="hljs-comment">// 像这些操作符是实时计算的，不会存储计算结果，不会改变热流的本质</span>
+<span class="hljs-comment">// The operation is _intermediate_ and _stateless_.</span>
+fruits
+    .filter &#123; it.startsWith(<span class="hljs-string">&quot;B&quot;</span>) &#125;
+    .map &#123; it.last() &#125;
+
+<span class="hljs-comment">// 这些操作符的计算结果将不再是热流</span>
+<span class="hljs-comment">// The operation is _terminal_.</span>
+fruits.toList()
+fruits.groupBy &#123; it.first() &#125;</code></pre></div>
+
+<h1 id="flow"><a href="#flow" class="headerlink" title="flow"></a>flow</h1><p>协程版热流（Asynchronous Flow）：<code>flow</code> = <code>sequence</code> + <code>coroutine</code>，上面 <code>sequence</code> 版热流可以用 <code>flow</code> 改造为协程版本</p>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">val</span> log = &#123; msg: String -&gt;
+    println(<span class="hljs-string">&quot;<span class="hljs-subst">$&#123;SimpleDateFormat(<span class="hljs-string">&quot;HH:mm:ss&quot;</span>).format(Date())&#125;</span> <span class="hljs-variable">$msg</span>&quot;</span>)
+&#125;
+
+<span class="hljs-keyword">val</span> collect: <span class="hljs-keyword">suspend</span> FlowCollector&lt;String&gt;.(String) -&gt; <span class="hljs-built_in">Unit</span> = &#123;
+    log(<span class="hljs-string">&quot;collecting <span class="hljs-subst">$&#123;it&#125;</span>...&quot;</span>)
+    delay(<span class="hljs-number">2</span> * <span class="hljs-number">1000L</span>)
+    emit(it)
+&#125;
+
+<span class="hljs-keyword">val</span> fruits = flow &#123;
+    collect(<span class="hljs-string">&quot;Apple&quot;</span>)
+    collect(<span class="hljs-string">&quot;Banana&quot;</span>)
+    collect(<span class="hljs-string">&quot;Guava&quot;</span>)
+&#125;
+runBlocking &#123; fruits.collect &#123; log(<span class="hljs-string">&quot;we got <span class="hljs-variable">$it</span>&quot;</span>) &#125; &#125;
+<span class="hljs-comment">// 16:46:25 collecting Apple...</span>
+<span class="hljs-comment">// 16:46:27 we got Apple</span>
+<span class="hljs-comment">// 16:46:27 collecting Banana...</span>
+<span class="hljs-comment">// 16:46:29 we got Banana</span>
+<span class="hljs-comment">// 16:46:29 collecting Guava...</span>
+<span class="hljs-comment">// 16:46:31 we got Guava</span></code></pre></div>
+
+<h2 id="线程切换"><a href="#线程切换" class="headerlink" title="线程切换"></a>线程切换</h2><ul>
+<li><code>collect</code> 在当前 <code>CoroutineContext</code> 上执行</li>
+<li><code>flowOn</code> 使 upstream 在指定的 <code>CoroutineContext</code> 上执行</li>
+<li>下游的 <code>flowOn</code> 不会影响上游的 <code>flowOn</code> 的效果</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin">println(<span class="hljs-string">&quot;current thread: <span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)
+<span class="hljs-comment">// current thread: Test worker @coroutine#1</span>
+
+<span class="hljs-keyword">val</span> fruits = arrayOf(<span class="hljs-string">&quot;apple&quot;</span>, <span class="hljs-string">&quot;banana&quot;</span>, <span class="hljs-string">&quot;watermelon&quot;</span>, <span class="hljs-string">&quot;blackcurrant&quot;</span>)
+<span class="hljs-keyword">val</span> produce: <span class="hljs-keyword">suspend</span> FlowCollector&lt;String&gt;.(String) -&gt; <span class="hljs-built_in">Unit</span> = &#123;
+    delay(<span class="hljs-number">500L</span>)
+    println(<span class="hljs-string">&quot;produce <span class="hljs-variable">$it</span> @<span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)
+    emit(it)
+&#125;
+<span class="hljs-keyword">val</span> consume: FlowCollector&lt;String&gt; = FlowCollector &#123;
+    println(<span class="hljs-string">&quot;consume <span class="hljs-variable">$it</span> @<span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)
+&#125;
+
+<span class="hljs-keyword">val</span> collectFruits = flow &#123; fruits.forEach &#123; produce(it) &#125; &#125;
+collectFruits.collect(consume)
+<span class="hljs-comment">// produce apple        @Test worker @coroutine#1</span>
+<span class="hljs-comment">// consume apple        @Test worker @coroutine#1</span>
+<span class="hljs-comment">// produce banana       @Test worker @coroutine#1</span>
+<span class="hljs-comment">// consume banana       @Test worker @coroutine#1</span>
+<span class="hljs-comment">// produce watermelon   @Test worker @coroutine#1</span>
+<span class="hljs-comment">// consume watermelon   @Test worker @coroutine#1</span>
+<span class="hljs-comment">// produce blackcurrant @Test worker @coroutine#1</span>
+<span class="hljs-comment">// consume blackcurrant @Test worker @coroutine#1</span>
+
+<span class="hljs-keyword">val</span> worker1 = Executors.newSingleThreadExecutor &#123; Thread(it, <span class="hljs-string">&quot;worker_1&quot;</span>) &#125;.asCoroutineDispatcher()
+<span class="hljs-keyword">val</span> worker2 = Executors.newSingleThreadExecutor &#123; Thread(it, <span class="hljs-string">&quot;worker_2&quot;</span>) &#125;.asCoroutineDispatcher()
+collectFruits
+    .flowOn(worker1)
+    .map &#123;
+        println(<span class="hljs-string">&quot;map <span class="hljs-variable">$it</span> @<span class="hljs-subst">$&#123;Thread.currentThread().name&#125;</span>&quot;</span>)
+        it
+    &#125;
+    .flowOn(worker2)
+    .collect(consume)
+<span class="hljs-comment">// produce apple        @worker_1    @coroutine#3</span>
+<span class="hljs-comment">// map apple            @worker_2    @coroutine#2</span>
+<span class="hljs-comment">// consume apple        @Test worker @coroutine#1</span>
+<span class="hljs-comment">// produce banana       @worker_1    @coroutine#3</span>
+<span class="hljs-comment">// map banana           @worker_2    @coroutine#2</span>
+<span class="hljs-comment">// consume banana       @Test worker @coroutine#1</span>
+<span class="hljs-comment">// produce watermelon   @worker_1    @coroutine#3</span>
+<span class="hljs-comment">// map watermelon       @worker_2    @coroutine#2</span>
+<span class="hljs-comment">// consume watermelon   @Test worker @coroutine#1</span>
+<span class="hljs-comment">// produce blackcurrant @worker_1    @coroutine#3</span>
+<span class="hljs-comment">// map blackcurrant     @worker_2    @coroutine#2</span>
+<span class="hljs-comment">// consume blackcurrant @Test worker @coroutine#1    </span></code></pre></div>
+
+<h2 id="异常处理"><a href="#异常处理" class="headerlink" title="异常处理"></a>异常处理</h2><ul>
+<li>exception 会中断 <code>flow</code></li>
+<li>未被 try-catch 的 exception，无论是在 <code>emitter</code>、<code>operator</code> 还是 <code>collector</code> 都会导致 flow 抛出 exception</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">val</span> fruits = arrayOf(<span class="hljs-string">&quot;apple&quot;</span>, <span class="hljs-string">&quot;banana&quot;</span>, <span class="hljs-string">&quot;watermelon&quot;</span>, <span class="hljs-string">&quot;blackcurrant&quot;</span>)
+<span class="hljs-keyword">try</span> &#123;
+    flow &#123;
+        fruits.forEach &#123;
+            println(<span class="hljs-string">&quot;emit <span class="hljs-variable">$it</span>&quot;</span>)
+            check(it != <span class="hljs-string">&quot;watermelon&quot;</span>) &#123; <span class="hljs-string">&quot;emitter exception: <span class="hljs-variable">$it</span>&quot;</span> &#125;
+            emit(it)
+        &#125;
+    &#125;.collect &#123; println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>) &#125;
+&#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+    println(<span class="hljs-string">&quot;caught <span class="hljs-subst">$&#123;e.message&#125;</span>&quot;</span>)
+&#125;
+<span class="hljs-comment">// emit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emit banana</span>
+<span class="hljs-comment">// collect banana</span>
+<span class="hljs-comment">// emit watermelon</span>
+<span class="hljs-comment">// caught emitter exception: watermelon</span>
+
+<span class="hljs-keyword">try</span> &#123;
+    flow &#123;
+        fruits.forEach &#123;
+            println(<span class="hljs-string">&quot;emit <span class="hljs-variable">$it</span>&quot;</span>)
+            emit(it)
+        &#125;
+    &#125;.map &#123;
+        check(it != <span class="hljs-string">&quot;watermelon&quot;</span>) &#123; <span class="hljs-string">&quot;operator exception: <span class="hljs-variable">$it</span>&quot;</span> &#125;
+        it
+    &#125;.collect &#123; println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>) &#125;
+&#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+    println(<span class="hljs-string">&quot;caught <span class="hljs-subst">$&#123;e.message&#125;</span>&quot;</span>)
+&#125;
+<span class="hljs-comment">// emit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emit banana</span>
+<span class="hljs-comment">// collect banana</span>
+<span class="hljs-comment">// emit watermelon</span>
+<span class="hljs-comment">// caught operator exception: watermelon</span>
+
+<span class="hljs-keyword">try</span> &#123;
+    flow &#123;
+        fruits.forEach &#123;
+            println(<span class="hljs-string">&quot;emit <span class="hljs-variable">$it</span>&quot;</span>)
+            emit(it)
+        &#125;
+    &#125;.collect &#123;
+        check(it != <span class="hljs-string">&quot;watermelon&quot;</span>) &#123; <span class="hljs-string">&quot;collector exception: <span class="hljs-variable">$it</span>&quot;</span> &#125;
+        println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>)
+    &#125;
+&#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+    println(<span class="hljs-string">&quot;caught <span class="hljs-subst">$&#123;e.message&#125;</span>&quot;</span>)
+&#125;
+<span class="hljs-comment">// emit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emit banana</span>
+<span class="hljs-comment">// collect banana</span>
+<span class="hljs-comment">// emit watermelon</span>
+<span class="hljs-comment">// caught collector exception: watermelon    </span></code></pre></div>
+
+<ul>
+<li><code>catch</code> 操作符可以捕获 <code>flow</code> 中抛出的异常</li>
+<li>catch 里可以忽略异常、打印日志、重新抛出异常以及 emit 新数据来替代异常</li>
+<li>catch 不能恢复因异常导致中断的 flow</li>
+<li>catch 不能捕获 downstream 里发生的异常</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">val</span> fruits = arrayOf(<span class="hljs-string">&quot;apple&quot;</span>, <span class="hljs-string">&quot;banana&quot;</span>, <span class="hljs-string">&quot;watermelon&quot;</span>, <span class="hljs-string">&quot;blackcurrant&quot;</span>)
+<span class="hljs-keyword">val</span> flow = flow &#123;
+    fruits.forEach &#123;
+        println(<span class="hljs-string">&quot;emit <span class="hljs-variable">$it</span>&quot;</span>)
+        check(it != <span class="hljs-string">&quot;watermelon&quot;</span>) &#123; <span class="hljs-string">&quot;emitter exception: <span class="hljs-variable">$it</span>&quot;</span> &#125;
+        emit(it)
+    &#125;
+&#125;
+flow.<span class="hljs-keyword">catch</span> &#123; emit(<span class="hljs-string">&quot;orange&quot;</span>) &#125;.collect &#123; println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>) &#125;
+println()
+<span class="hljs-comment">// emit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emit banana</span>
+<span class="hljs-comment">// collect banana</span>
+<span class="hljs-comment">// emit watermelon</span>
+<span class="hljs-comment">// collect orange</span>
+
+flow.<span class="hljs-keyword">catch</span> &#123; println(<span class="hljs-string">&quot;ignore <span class="hljs-subst">$&#123;it.message&#125;</span>&quot;</span>) &#125;.collect &#123; println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>) &#125;
+println()
+<span class="hljs-comment">// emit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emit banana</span>
+<span class="hljs-comment">// collect banana</span>
+<span class="hljs-comment">// emit watermelon</span>
+<span class="hljs-comment">// ignore emitter exception: watermelon</span>
+
+<span class="hljs-keyword">try</span> &#123;
+    flow.<span class="hljs-keyword">catch</span> &#123; <span class="hljs-keyword">throw</span> it &#125;.collect &#123; println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>) &#125;
+&#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+    println(<span class="hljs-string">&quot;caught <span class="hljs-subst">$&#123;e.message&#125;</span>&quot;</span>)
+&#125;
+<span class="hljs-comment">// emit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emit banana</span>
+<span class="hljs-comment">// collect banana</span>
+<span class="hljs-comment">// emit watermelon</span>
+<span class="hljs-comment">// caught emitter exception: watermelon</span>
+
+<span class="hljs-keyword">try</span> &#123;
+    flow.<span class="hljs-keyword">catch</span> &#123; println(<span class="hljs-string">&quot;ignore <span class="hljs-subst">$&#123;it.message&#125;</span>&quot;</span>) &#125;
+        .map &#123;
+            check(it != <span class="hljs-string">&quot;banana&quot;</span>) &#123; <span class="hljs-string">&quot;map throw <span class="hljs-variable">$it</span>&quot;</span> &#125;
+            it
+        &#125;
+        .collect &#123; println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>) &#125;
+&#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+    println(<span class="hljs-string">&quot;caught <span class="hljs-subst">$&#123;e.message&#125;</span>&quot;</span>)
+&#125;
+<span class="hljs-comment">// emit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emit banana</span>
+<span class="hljs-comment">// caught map throw banana</span>
+
+<span class="hljs-keyword">try</span> &#123;
+    flow &#123;
+        fruits.forEach &#123;
+            println(<span class="hljs-string">&quot;emmit <span class="hljs-variable">$it</span>&quot;</span>)
+            emit(it)
+        &#125;
+    &#125;.<span class="hljs-keyword">catch</span> &#123;
+        println(<span class="hljs-string">&quot;ignore <span class="hljs-subst">$&#123;it.message&#125;</span>&quot;</span>)    
+    &#125;.map &#123;
+        check(it != <span class="hljs-string">&quot;watermelon&quot;</span>) &#123; <span class="hljs-string">&quot;map throw <span class="hljs-variable">$it</span>&quot;</span> &#125;
+        it
+    &#125;.collect &#123; println(<span class="hljs-string">&quot;collect <span class="hljs-variable">$it</span>&quot;</span>) &#125;
+&#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+    println(<span class="hljs-string">&quot;caught <span class="hljs-subst">$&#123;e.message&#125;</span>&quot;</span>)
+&#125;
+<span class="hljs-comment">// emmit apple</span>
+<span class="hljs-comment">// collect apple</span>
+<span class="hljs-comment">// emmit banana</span>
+<span class="hljs-comment">// collect banana</span>
+<span class="hljs-comment">// emmit watermelon</span>
+<span class="hljs-comment">// caught map throw watermelon</span></code></pre></div>
+
+<h1 id="用-Flow-替代-LiveData"><a href="#用-Flow-替代-LiveData" class="headerlink" title="用 Flow 替代 LiveData"></a>用 Flow 替代 LiveData</h1><p>Android 正在大力推广 coroutine，然而 <code>LiveData</code> 并不能很好地与 coroutine 结合使用，而 <code>StateFlow</code> 正是其继任者</p>
+<p>flow 需要配合着 repeatOnLifecycle 一起使用才不会造成 Activity/Fragment 的泄漏</p>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LatestNewsViewModel</span></span>(
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> newsRepository: NewsRepository
+) : ViewModel() &#123;
+
+    <span class="hljs-comment">// Backing property to avoid state updates from other classes</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> _uiState = MutableStateFlow(LatestNewsUiState.Success(emptyList()))
+    <span class="hljs-comment">// The UI collects from this StateFlow to get its state updates</span>
+    <span class="hljs-keyword">val</span> uiState: StateFlow&lt;LatestNewsUiState&gt; = _uiState
+
+    <span class="hljs-keyword">init</span> &#123;
+        viewModelScope.launch &#123;
+            newsRepository.favoriteLatestNews
+                <span class="hljs-comment">// Update View with the latest favorite news</span>
+                <span class="hljs-comment">// Writes to the value property of MutableStateFlow,</span>
+                <span class="hljs-comment">// adding a new element to the flow and updating all</span>
+                <span class="hljs-comment">// of its collectors</span>
+                .collect &#123; favoriteNews -&gt;
+                    _uiState.value = LatestNewsUiState.Success(favoriteNews)
+                &#125;
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-comment">// Represents different states for the LatestNews screen</span>
+<span class="hljs-keyword">sealed</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LatestNewsUiState</span> </span>&#123;
+    <span class="hljs-keyword">data</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Success</span></span>(news: List&lt;ArticleHeadline&gt;): LatestNewsUiState()
+    <span class="hljs-keyword">data</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Error</span></span>(exception: Throwable): LatestNewsUiState()
+&#125;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LatestNewsActivity</span> : <span class="hljs-type">AppCompatActivity</span></span>() &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> latestNewsViewModel = <span class="hljs-comment">// getViewModel()</span>
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">onCreate</span><span class="hljs-params">(savedInstanceState: <span class="hljs-type">Bundle</span>?)</span></span> &#123;
+        ...
+        <span class="hljs-comment">// Start a coroutine in the lifecycle scope</span>
+        lifecycleScope.launch &#123;
+            <span class="hljs-comment">// repeatOnLifecycle launches the block in a new coroutine every time the</span>
+            <span class="hljs-comment">// lifecycle is in the STARTED state (or above) and cancels it when it&#x27;s STOPPED.</span>
+            repeatOnLifecycle(Lifecycle.State.STARTED) &#123;
+                <span class="hljs-comment">// Trigger the flow and start listening for values.</span>
+                <span class="hljs-comment">// Note that this happens when lifecycle is STARTED and stops</span>
+                <span class="hljs-comment">// collecting when the lifecycle is STOPPED</span>
+                latestNewsViewModel.uiState.collect &#123; uiState -&gt;
+                    <span class="hljs-comment">// New value received</span>
+                    <span class="hljs-keyword">when</span> (uiState) &#123;
+                        <span class="hljs-keyword">is</span> LatestNewsUiState.Success -&gt; showFavoriteNews(uiState.news)
+                        <span class="hljs-keyword">is</span> LatestNewsUiState.Error -&gt; showError(uiState.exception)
+                    &#125;
+                &#125;
+            &#125;
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="viewModelScope"><a href="#viewModelScope" class="headerlink" title="viewModelScope"></a>viewModelScope</h1><ul>
+<li><code>viewModelScope</code> 将任务分发到主线程，而且是 <code>Dispatchers.Main.immediate</code>，也就说在分发任务时如果执行线程是主线程，则立即执行而不是插入到任务队列里</li>
+<li><code>SupervisorJob()</code> 里各个子任务是相互独立的，一个子任务的取消和失败并不会影响其他子任务的执行</li>
+<li><code>ViewModel.onCleared</code> 将会取消整个 viewModelScope，那么里面的子任务也都会被取消掉</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">val</span> ViewModel.viewModelScope: CoroutineScope
+    <span class="hljs-keyword">get</span>() &#123;
+        <span class="hljs-keyword">val</span> scope: CoroutineScope? = <span class="hljs-keyword">this</span>.getTag(JOB_KEY)
+        <span class="hljs-keyword">if</span> (scope != <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">return</span> scope
+        &#125;
+        <span class="hljs-keyword">return</span> setTagIfAbsent(
+            JOB_KEY,
+            CloseableCoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        )
+    &#125;
+
+<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CloseableCoroutineScope</span></span>(context: CoroutineContext) : Closeable, CoroutineScope &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> coroutineContext: CoroutineContext = context
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">close</span><span class="hljs-params">()</span></span> &#123;
+        coroutineContext.cancel()
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="lifecycleScope"><a href="#lifecycleScope" class="headerlink" title="lifecycleScope"></a>lifecycleScope</h1><ul>
+<li><code>lifecycleScope</code> 也是将任务分发到主线程</li>
+<li>当状态变为 <code>Lifecycle.State.DESTROYED</code> 时整个 scope 将会被取消</li>
+<li><code>repeatOnLifecycle</code> 当进入指定状态时执行一次 block，当退出这个状态时 Job 将会被取消</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">val</span> LifecycleOwner.lifecycleScope: LifecycleCoroutineScope
+    <span class="hljs-keyword">get</span>() = lifecycle.coroutineScope
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">val</span> Lifecycle.coroutineScope: LifecycleCoroutineScope
+    <span class="hljs-keyword">get</span>() &#123;
+        <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
+            <span class="hljs-keyword">val</span> existing = mInternalScopeRef.<span class="hljs-keyword">get</span>() <span class="hljs-keyword">as</span> LifecycleCoroutineScopeImpl?
+            <span class="hljs-keyword">if</span> (existing != <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-keyword">return</span> existing
+            &#125;
+            <span class="hljs-keyword">val</span> newScope = LifecycleCoroutineScopeImpl(
+                <span class="hljs-keyword">this</span>,
+                SupervisorJob() + Dispatchers.Main.immediate
+            )
+            <span class="hljs-keyword">if</span> (mInternalScopeRef.compareAndSet(<span class="hljs-literal">null</span>, newScope)) &#123;
+                newScope.register()
+                <span class="hljs-keyword">return</span> newScope
+            &#125;
+        &#125;
+    &#125;
+
+<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LifecycleCoroutineScopeImpl</span></span>(
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> lifecycle: Lifecycle,
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> coroutineContext: CoroutineContext
+) : LifecycleCoroutineScope(), LifecycleEventObserver &#123;
+    <span class="hljs-keyword">init</span> &#123;
+        <span class="hljs-comment">// in case we are initialized on a non-main thread, make a best effort check before</span>
+        <span class="hljs-comment">// we return the scope. This is not sync but if developer is launching on a non-main</span>
+        <span class="hljs-comment">// dispatcher, they cannot be 100% sure anyways.</span>
+        <span class="hljs-keyword">if</span> (lifecycle.currentState == Lifecycle.State.DESTROYED) &#123;
+            coroutineContext.cancel()
+        &#125;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">register</span><span class="hljs-params">()</span></span> &#123;
+        launch(Dispatchers.Main.immediate) &#123;
+            <span class="hljs-keyword">if</span> (lifecycle.currentState &gt;= Lifecycle.State.INITIALIZED) &#123;
+                lifecycle.addObserver(<span class="hljs-keyword">this</span><span class="hljs-symbol">@LifecycleCoroutineScopeImpl</span>)
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                coroutineContext.cancel()
+            &#125;
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">onStateChanged</span><span class="hljs-params">(source: <span class="hljs-type">LifecycleOwner</span>, event: <span class="hljs-type">Lifecycle</span>.<span class="hljs-type">Event</span>)</span></span> &#123;
+        <span class="hljs-keyword">if</span> (lifecycle.currentState &lt;= Lifecycle.State.DESTROYED) &#123;
+            lifecycle.removeObserver(<span class="hljs-keyword">this</span>)
+            coroutineContext.cancel()
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="StateFlow"><a href="#StateFlow" class="headerlink" title="StateFlow"></a>StateFlow</h1><p>它们跟上面的 <code>flow</code> 是完全不同的概念，而是与 <code>LiveData</code> 类似，是一个可被观察的对象（<code>Observable</code>）</p>
+<ul>
+<li>使用 <code>collect</code> 观察状态的变化，接收状态变化的通知</li>
+<li>collect 的返回值是 <code>Nothing</code>，表示此函数永远不会返回，后续的代码永远不可能被执行（因为它会抛出异常来结束代码的执行）</li>
+<li>所以每个 collect 都需要在各自的 <code>launch</code> 里执行</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">collect</span><span class="hljs-params">(collector: <span class="hljs-type">FlowCollector</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span>: <span class="hljs-built_in">Nothing</span>
+
+launch &#123;
+    state.collect &#123;  &#125;
+    <span class="hljs-comment">// never reach...</span>
+&#125;
+launch &#123; state.collect &#123;  &#125; &#125;
+launch &#123; state.collect &#123;  &#125; &#125;</code></pre></div>
+
+<p>LiveData 通过 LifecycleEventObserver 在 Lifecycle.State.DESTROYED 时与 Activity 断开联系，而 StateFlow 则是通过 lifecycleScope 的取消断开与 Activity 的联系，如下面代码所示：</p>
+<ul>
+<li>Activity 被匿名内部类实例 collector 持有引用</li>
+<li>collect 是个 infinite loop，会一直等待 state 的改变直到发生异常中断 loop</li>
+<li><code>suspendCancellableCoroutine</code> 即将返回前，coroutine 进入 suspend 状态，等待 state 的改变，如果此时 coroutine 被 cancel 则 suspendCancellableCoroutine 会抛出 CancellationException，从而结束 collect 里的循环</li>
+<li>一旦 collect 返回，state 将不再持有 collector，也就不再持有 Activity</li>
+<li>当 state 改变时，<code>collectorJob?.ensureActive()</code> 确保 destroyed activity 不会再执行任何逻辑</li>
+</ul>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StateFlowImpl</span> </span>&#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">collect</span><span class="hljs-params">(collector: <span class="hljs-type">FlowCollector</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span>: <span class="hljs-built_in">Nothing</span> &#123;
+        <span class="hljs-keyword">val</span> slot = allocateSlot()
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-keyword">if</span> (collector <span class="hljs-keyword">is</span> SubscribedFlowCollector) collector.onSubscription()
+            <span class="hljs-keyword">val</span> collectorJob = currentCoroutineContext()[Job]
+            <span class="hljs-keyword">var</span> oldState: Any? = <span class="hljs-literal">null</span> <span class="hljs-comment">// previously emitted T!! | NULL (null -- nothing emitted yet)</span>
+            <span class="hljs-comment">// The loop is arranged so that it starts delivering current value without waiting first</span>
+            <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123;
+                <span class="hljs-comment">// Here the coroutine could have waited for a while to be dispatched,</span>
+                <span class="hljs-comment">// so we use the most recent state here to ensure the best possible conflation of stale values</span>
+                <span class="hljs-keyword">val</span> newState = _state.value
+                <span class="hljs-comment">// always check for cancellation</span>
+                collectorJob?.ensureActive()
+                <span class="hljs-comment">// Conflate value emissions using equality</span>
+                <span class="hljs-keyword">if</span> (oldState == <span class="hljs-literal">null</span> || oldState != newState) &#123;
+                    collector.emit(NULL.unbox(newState))
+                    oldState = newState
+                &#125;
+                <span class="hljs-comment">// Note: if awaitPending is cancelled, then it bails out of this loop and calls freeSlot</span>
+                <span class="hljs-keyword">if</span> (!slot.takePending()) &#123; <span class="hljs-comment">// try fast-path without suspending first</span>
+                    slot.awaitPending() <span class="hljs-comment">// only suspend for new values when needed</span>
+                &#125;
+            &#125;
+        &#125; <span class="hljs-keyword">finally</span> &#123;
+            freeSlot(slot)
+        &#125;
+    &#125;    
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> Job.<span class="hljs-title">ensureActive</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Unit</span> &#123;
+    <span class="hljs-keyword">if</span> (!isActive) <span class="hljs-keyword">throw</span> getCancellationException()
+&#125;
+
+<span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StateFlowSlot</span> </span>&#123;
+    <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">awaitPending</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Unit</span> = suspendCancellableCoroutine <span class="hljs-symbol">sc@</span> &#123; cont -&gt;
+        assert &#123; _state.value !<span class="hljs-keyword">is</span> CancellableContinuationImpl&lt;*&gt; &#125; <span class="hljs-comment">// can be NONE or PENDING</span>
+        <span class="hljs-keyword">if</span> (_state.compareAndSet(NONE, cont)) <span class="hljs-keyword">return</span><span class="hljs-symbol">@sc</span> <span class="hljs-comment">// installed continuation, waiting for pending</span>
+        <span class="hljs-comment">// CAS failed -- the only possible reason is that it is already in pending state now</span>
+        assert &#123; _state.value === PENDING &#125;
+        cont.resume(<span class="hljs-built_in">Unit</span>)
+    &#125;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * Suspends the coroutine like [suspendCoroutine], but providing a [CancellableContinuation] to</span>
+<span class="hljs-comment"> * the [block]. This function throws a [CancellationException] if the [Job] of the coroutine is</span>
+<span class="hljs-comment"> * cancelled or completed while it is suspended.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">suspend</span> <span class="hljs-keyword">inline</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">suspendCancellableCoroutine</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">    <span class="hljs-keyword">crossinline</span> block: (<span class="hljs-type">CancellableContinuation</span>&lt;<span class="hljs-type">T</span>&gt;) -&gt; <span class="hljs-type">Unit</span></span></span>
+<span class="hljs-params"><span class="hljs-function">)</span></span>: T</code></pre></div>
+
+<p>StateFlow.value 是线程安全的</p>
+<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">MutableStateFlow</span>&lt;<span class="hljs-type">T</span>&gt; : <span class="hljs-type">StateFlow</span>&lt;<span class="hljs-type">T</span>&gt;, <span class="hljs-type">MutableSharedFlow</span>&lt;<span class="hljs-type">T</span>&gt; </span>&#123;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * The current value of this state flow.</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * Setting a value that is [equal][Any.equals] to the previous one does nothing.</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * This property is **thread-safe** and can be safely updated from concurrent coroutines without</span>
+<span class="hljs-comment">     * external synchronization.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-keyword">var</span> value: T
+&#125;</code></pre></div>
+
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://kotlinlang.org/docs/flow.html">Kotlin Docs - Asynchronous Flow</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.android.com/kotlin/flow">Android Developers - Kotlin Flow</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.android.com/kotlin/flow/stateflow-and-sharedflow">StateFlow and SharedFlow</a></li>
+</ol>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/kotlin/">kotlin</a>
+                    
+                      <a class="hover-with-bg" href="/tags/coroutine/">coroutine</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%8D%8F%E7%A8%8B/">协程</a>
+                    
+                      <a class="hover-with-bg" href="/tags/flow/">flow</a>
+                    
+                      <a class="hover-with-bg" href="/tags/sequence/">sequence</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E7%83%AD%E6%B5%81/">热流</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%86%B7%E6%B5%81/">冷流</a>
+                    
+                  </div>
+                
+              </div>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/04/07/asm/">
+                        <span class="hidden-mobile">ASM - 字节码操作库</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
