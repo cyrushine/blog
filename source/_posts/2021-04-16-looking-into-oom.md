@@ -10,17 +10,21 @@ tags: [OOM]
 
 采用下述 API 来度量 APP 或系统的内存使用情况
 
-| 类别 | API                                     | 说明                                                                       |
-|-----|-----------------------------------------|---------------------------------------------------------------------------|
-| APP | `Runtime.maxMemory()`                   | JVM 可以从系统那申请到的内存的最大值，`ActivityManager.getMemoryClass()` 和 `ActivityManager.getLargeMemoryClass()` 其中之一，超过此阈值会发生 OOM |
-|     | `Runtime.totalMemory()`                 | JVM 已申请到的内存大小，小于等于 `Runtime.maxMemory()` 且大于 `Runtime.freeMemory()`；当需要的内存（比如创建 1M 的字节数组）超过 `Runtime.freeMemory()` 时 JVM 会向系统申请内存，此时 `Runtime.totalMemory()` 会逐渐增大；直到等于 `Runtime.maxMemory()` 时，如果需要的内存超过 `Runtime.freeMemory()` 则抛出 OOM |
-|     | `Runtime.freeMemory()`                  | JVM 已申请到但仍未使用的内存，当需要的内存超过此值时，JVM 会向系统申请内存                                           |
-|     | `ActivityManager.getMemoryClass()`      | APP 可申请的内存上限                                                                                         |
-|     | `ActivityManager.getLargeMemoryClass()` | 设置 `android:largeHeap="true"` 后 APP 可申请的内存上限，一般是 `ActivityManager.getLargeMemoryClass()` 的两倍  |
-| 系统 | `ActivityManager.MemoryInfo.availMem`   | 当前系统可用内存大小，即设置里可用运存的值                                                                       |
-|     | `ActivityManager.MemoryInfo.totalMem`   | 系统总内存大小，即设置里运存总空间的值                                                                           |
-|     | `ActivityManager.MemoryInfo.lowMemory`  | 标识系统是否处于低内存状态                                                                                     |
-|     | `ActivityManager.MemoryInfo.threshold`  | 当系统可用内存小于此阈值时，系统处于低内存状态                                                                    |
+| 类别 | API | 说明 |
+|-----|------|-----|
+| APP | Runtime.maxMemory()                   | JVM 可以从系统那申请到的内存的最大值，`ActivityManager.getMemoryClass()` 和 `ActivityManager.getLargeMemoryClass()` 其中之一，超过此阈值会发生 OOM |
+|     | Runtime.totalMemory()                 | JVM 已申请到的内存大小，小于等于 `Runtime.maxMemory()` 且大于 `Runtime.freeMemory()`；当需要的内存（比如创建 1M 的字节数组）超过 `Runtime.freeMemory()` 时 JVM 会向系统申请内存，此时 `Runtime.totalMemory()` 会逐渐增大；直到等于 `Runtime.maxMemory()` 时，如果需要的内存超过 `Runtime.freeMemory()` 则抛出 OOM |
+|     | Runtime.freeMemory()                  | JVM 已申请到但仍未使用的内存，当需要的内存超过此值时，JVM 会向系统申请内存                                           |
+|     | ActivityManager.getMemoryClass()      | APP 可申请的内存上限                                                                                         |
+|     | ActivityManager.getLargeMemoryClass() | 设置 `android:largeHeap="true"` 后 APP 可申请的内存上限，一般是 `ActivityManager.getLargeMemoryClass()` 的两倍  |
+| system | ActivityManager.MemoryInfo.availMem   | 当前系统可用内存大小，即设置里可用运存的值 |
+|        | ActivityManager.MemoryInfo.totalMem   | 系统总内存大小，即设置里运存总空间的值 |
+|        | ActivityManager.MemoryInfo.lowMemory  | 标识系统是否处于低内存状态 |
+|        | ActivityManager.MemoryInfo.threshold  | 当系统可用内存小于此阈值时，系统处于低内存状态 |
+| 虚拟机配置项 | dalvik.vm.heapgrowthlimit | 默认情况下 App 可使用的 Heap 的最大值，比如 256m, 超过这个值就会产生 OOM |
+|             | dalvik.vm.heapsize        | 如果配置了 largeHeap 则 App 可使用的 Heap 的最大值为此项设定值，比如 512m |
+|             | dalvik.vm.heapstartsize   | App 启动后系统分配给它的 Heap 初始大小，随着App使用可增加 |
+|             |                           | 以上配置项可以通过 `cat /system/build.prop` 或者 `adb shell getprop dalvik.vm.heapsize` 获取 |
 
 ### 测试
 
