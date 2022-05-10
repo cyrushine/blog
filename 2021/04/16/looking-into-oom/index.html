@@ -28,7 +28,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory_log.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory.png">
 <meta property="article:published_time" content="2021-04-16T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-04-21T09:03:59.624Z">
+<meta property="article:modified_time" content="2022-05-10T02:26:59.978Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="OOM">
 <meta name="twitter:card" content="summary_large_image">
@@ -200,7 +200,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      138 分钟
+      140 分钟
     </span>
   
 
@@ -243,48 +243,68 @@
 </thead>
 <tbody><tr>
 <td>APP</td>
-<td><code>Runtime.maxMemory()</code></td>
+<td>Runtime.maxMemory()</td>
 <td>JVM 可以从系统那申请到的内存的最大值，<code>ActivityManager.getMemoryClass()</code> 和 <code>ActivityManager.getLargeMemoryClass()</code> 其中之一，超过此阈值会发生 OOM</td>
 </tr>
 <tr>
 <td></td>
-<td><code>Runtime.totalMemory()</code></td>
+<td>Runtime.totalMemory()</td>
 <td>JVM 已申请到的内存大小，小于等于 <code>Runtime.maxMemory()</code> 且大于 <code>Runtime.freeMemory()</code>；当需要的内存（比如创建 1M 的字节数组）超过 <code>Runtime.freeMemory()</code> 时 JVM 会向系统申请内存，此时 <code>Runtime.totalMemory()</code> 会逐渐增大；直到等于 <code>Runtime.maxMemory()</code> 时，如果需要的内存超过 <code>Runtime.freeMemory()</code> 则抛出 OOM</td>
 </tr>
 <tr>
 <td></td>
-<td><code>Runtime.freeMemory()</code></td>
+<td>Runtime.freeMemory()</td>
 <td>JVM 已申请到但仍未使用的内存，当需要的内存超过此值时，JVM 会向系统申请内存</td>
 </tr>
 <tr>
 <td></td>
-<td><code>ActivityManager.getMemoryClass()</code></td>
+<td>ActivityManager.getMemoryClass()</td>
 <td>APP 可申请的内存上限</td>
 </tr>
 <tr>
 <td></td>
-<td><code>ActivityManager.getLargeMemoryClass()</code></td>
+<td>ActivityManager.getLargeMemoryClass()</td>
 <td>设置 <code>android:largeHeap=&quot;true&quot;</code> 后 APP 可申请的内存上限，一般是 <code>ActivityManager.getLargeMemoryClass()</code> 的两倍</td>
 </tr>
 <tr>
-<td>系统</td>
-<td><code>ActivityManager.MemoryInfo.availMem</code></td>
+<td>system</td>
+<td>ActivityManager.MemoryInfo.availMem</td>
 <td>当前系统可用内存大小，即设置里可用运存的值</td>
 </tr>
 <tr>
 <td></td>
-<td><code>ActivityManager.MemoryInfo.totalMem</code></td>
+<td>ActivityManager.MemoryInfo.totalMem</td>
 <td>系统总内存大小，即设置里运存总空间的值</td>
 </tr>
 <tr>
 <td></td>
-<td><code>ActivityManager.MemoryInfo.lowMemory</code></td>
+<td>ActivityManager.MemoryInfo.lowMemory</td>
 <td>标识系统是否处于低内存状态</td>
 </tr>
 <tr>
 <td></td>
-<td><code>ActivityManager.MemoryInfo.threshold</code></td>
+<td>ActivityManager.MemoryInfo.threshold</td>
 <td>当系统可用内存小于此阈值时，系统处于低内存状态</td>
+</tr>
+<tr>
+<td>虚拟机配置项</td>
+<td>dalvik.vm.heapgrowthlimit</td>
+<td>默认情况下 App 可使用的 Heap 的最大值，比如 256m, 超过这个值就会产生 OOM</td>
+</tr>
+<tr>
+<td></td>
+<td>dalvik.vm.heapsize</td>
+<td>如果配置了 largeHeap 则 App 可使用的 Heap 的最大值为此项设定值，比如 512m</td>
+</tr>
+<tr>
+<td></td>
+<td>dalvik.vm.heapstartsize</td>
+<td>App 启动后系统分配给它的 Heap 初始大小，随着App使用可增加</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>以上配置项可以通过 <code>cat /system/build.prop</code> 或者 <code>adb shell getprop dalvik.vm.heapsize</code> 获取</td>
 </tr>
 </tbody></table>
 <h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>使用下面的测试代码在我的测试机（iQOO 3）上，循环申请 30M/5M/500K 的内存，每次间隔 1s 并打印内存统计情况</p>
