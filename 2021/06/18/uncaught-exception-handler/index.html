@@ -26,7 +26,7 @@
 <meta property="og:description" content="测试根据 Thread.setDefaultUncaughtExceptionHandler 的方法文档  Uncaught exception handling is controlled first by the thread, then by the thread’s ThreadGroup object and finally by the default uncaught excepti">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-06-18T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.982Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.007Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="uncaught exception">
 <meta property="article:tag" content="exception">
@@ -36,30 +36,25 @@
 <meta name="twitter:card" content="summary_large_image">
   
   
+  
   <title>Uncaught Exception Handling - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -68,7 +63,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -77,16 +76,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -156,6 +168,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -163,59 +176,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="Uncaught Exception Handling">
-              
-                Uncaught Exception Handling
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-06-18 04:00" pubdate>
-        2021年6月18日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      38k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      318 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">Uncaught Exception Handling</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-06-18 04:00" pubdate>
+          2021年6月18日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          38k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          318 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -224,22 +249,27 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">Uncaught Exception Handling</h1>
             
             <div class="markdown-body">
+              
               <h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>根据 <code>Thread.setDefaultUncaughtExceptionHandler</code> 的方法文档</p>
 <blockquote>
 <p>Uncaught exception handling is controlled first by the thread, then by the thread’s ThreadGroup object and finally by the default uncaught exception handler. If the thread does not have an explicit uncaught exception handler set, and the thread’s thread group (including parent thread groups) does not specialize its uncaughtException method, then the default handler’s uncaughtException method will be invoked.</p>
 </blockquote>
 <p>当发生 <code>Uncaught Exception</code> 时，将会按照 <code>Thread.uncaughtExceptionHandler -&gt; ThreadGroup.uncaughtException -&gt; Thread.defaultUncaughtExceptionHandler</code> 的优先级次序去寻找异常处理器</p>
 <p>而 <code>ThreadGroup.uncaughtException</code> 的默认实现仅仅是像事件冒泡那样把异常往上传递，跑到 root ThreadGroup 后中止冒泡并交由 <code>DefaultUncaughtExceptionHandler</code> 处理 or 打印至标准错误流，所以可以把 <code>ThreadGroup.uncaughtException</code> 当作透明的层忽略之</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">uncaughtException</span><span class="hljs-params">(Thread t, Throwable e)</span> &#123;
     <span class="hljs-keyword">if</span> (parent != <span class="hljs-literal">null</span>) &#123;
         parent.uncaughtException(t, e);
     &#125; <span class="hljs-keyword">else</span> &#123;
@@ -257,7 +287,7 @@
 
 <p>下面仅考虑 <code>Thread.uncaughtExceptionHandler</code>、<code>DefaultUncaughtExceptionHandler</code> 和 <code>主线程</code> 三个因素</p>
 <h3 id="主线程"><a href="#主线程" class="headerlink" title="主线程"></a>主线程</h3><p>Thread.uncaughtExceptionHandler/DefaultUncaughtExceptionHandler 可以捕获异常，但无法改变 app 被 blocked 住，然后出现 ANR（即使点击 <code>等待</code> 依然被 blocked 住），点击 <code>确定</code> 后被 kill 的命运</p>
-<div class="hljs code-wrapper"><pre><code class="hljs log">2021-06-12 11:13:29.464 28055-28055/com.example.myapplication D/AndroidRuntime: Shutting down VM
+<div class="code-wrapper"><pre><code class="hljs log">2021-06-12 11:13:29.464 28055-28055/com.example.myapplication D/AndroidRuntime: Shutting down VM
 
     --------- beginning of crash
 2021-06-12 11:13:29.465 28055-28055/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: main
@@ -425,7 +455,7 @@
 
 
 <h3 id="子线程且-UEH-null"><a href="#子线程且-UEH-null" class="headerlink" title="子线程且 UEH != null"></a>子线程且 UEH != null</h3><p>app 没有发生 ANR 也没有崩溃，且无论 <code>DefaultUncaughtExceptionHandler</code> 是否为 null，<code>Thread.uncaughtExceptionHandler</code> 都能够有限捕获异常，说明线程的 UncaughtExceptionHandler 比默认的 UncaughtExceptionHandler 优先级要高</p>
-<div class="hljs code-wrapper"><pre><code class="hljs log">2021-06-12 17:20:41.503 20615-22015/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-10
+<div class="code-wrapper"><pre><code class="hljs log">2021-06-12 17:20:41.503 20615-22015/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-10
     Process: com.example.myapplication, PID: 20615
     java.lang.RuntimeException: Test Exception
         at com.example.myapplication.MainActivityKt.throwException(MainActivity.kt:75)
@@ -442,7 +472,7 @@
 
 
 <h3 id="两个UEH都置空-or-DUEH-null"><a href="#两个UEH都置空-or-DUEH-null" class="headerlink" title="两个UEH都置空 or DUEH != null"></a>两个UEH都置空 or DUEH != null</h3><p>app 没有发生 ANR 也没有崩溃</p>
-<div class="hljs code-wrapper"><pre><code class="hljs log">    --------- beginning of crash
+<div class="code-wrapper"><pre><code class="hljs log">    --------- beginning of crash
 2021-06-12 11:06:58.817 27816-27929/com.example.myapplication E/AndroidRuntime: FATAL EXCEPTION: Thread-3
     Process: com.example.myapplication, PID: 27816
     java.lang.RuntimeException: Test Exception
@@ -468,7 +498,7 @@
 
 
 <h3 id="子线程且为默认-DUEH"><a href="#子线程且为默认-DUEH" class="headerlink" title="子线程且为默认 DUEH"></a>子线程且为默认 DUEH</h3><p>默认的 DefaultUncaughtExceptionHandler 是 KillApplicationHandler，它会杀死 app</p>
-<div class="hljs code-wrapper"><pre><code class="hljs log">// 除了有上一节的日志外，还会有以下日志并且 app 被 kill
+<div class="code-wrapper"><pre><code class="hljs log">// 除了有上一节的日志外，还会有以下日志并且 app 被 kill
 // app process 收到信号 SIGKILL(9) 被迫退出，app 立刻崩溃掉
 2021-06-12 11:06:58.870 27816-27929/com.example.myapplication I/Process: Sending signal. PID: 27816 SIG: 9
 2021-06-12 11:06:58.910 1764-1802/? I/Process: PerfMonitor : current process killing process group. PID: 27816
@@ -505,7 +535,7 @@
 </tbody></table>
 <h2 id="代码跟踪"><a href="#代码跟踪" class="headerlink" title="代码跟踪"></a>代码跟踪</h2><h3 id="抛出-UE-时发生了什么"><a href="#抛出-UE-时发生了什么" class="headerlink" title="抛出 UE 时发生了什么"></a>抛出 UE 时发生了什么</h3><p>有一个 API 可以抛出异常：<code>JNIEnv-&gt;Throw</code>，所以我猜当 java 层发生 uncaught exception 时相当于调用了它</p>
 <p>这个方法的实现很简单，就是把 exception 记录在 Thread::tlsPtr_::exception</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/jni/jni_internal.cc</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/jni/jni_internal.cc</span>
 <span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">Throw</span><span class="hljs-params">(JNIEnv* env, jthrowable java_exception)</span> </span>&#123;
   <span class="hljs-function">ScopedObjectAccess <span class="hljs-title">soa</span><span class="hljs-params">(env)</span></span>;
   ObjPtr&lt;mirror::Throwable&gt; exception = soa.<span class="hljs-built_in">Decode</span>&lt;mirror::Throwable&gt;(java_exception);
@@ -528,7 +558,7 @@ mirror::Throwable* exception;   <span class="hljs-comment">// The pending except
 
 <p>接下来我猜想埋点在代码里的异常检查流程在发现 pending exception != null 后，会中断字节码的执行（<code>Thread.run()</code>）从而回到 native 代码</p>
 <p>让我们从开启一个线程 <code>Thread.start()</code> 看看这个流程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp">Thread.<span class="hljs-built_in">start</span>()
+<div class="code-wrapper"><pre><code class="hljs cpp">Thread.<span class="hljs-built_in">start</span>()
 Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 <span class="hljs-comment">// java_lang_Thread.cc</span>
@@ -887,7 +917,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 <p>线程进入 VM 的入口点是 <code>Thread.run()</code>，执行完毕（或者发生 uncaught exception 被中断字节码的执行）退出 VM 回到 native 代码后，就执行销毁线程的流程：<code>ThreadList::Unregister</code> -&gt; <code>Thread::Destroy</code>，其中 <code>HandleUncaughtExceptions</code> 会检查是否有 uncaught exception/pending exception，有的话再次进入 VM 执行 <code>Thread.dispatchUncaughtException</code></p>
 <h4 id="UEH-的入口点"><a href="#UEH-的入口点" class="headerlink" title="UEH 的入口点"></a>UEH 的入口点</h4><p>如果有 <code>Thread.uncaughtExceptionHandler</code> 则直接给它处理，否则事件冒泡给到 ThreadGroup，ThreadGroup 会把异常一直冒泡到 root ThreadGroup，然后交由 <code>DefaultUncaughtExceptionHandler</code> 处理</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Thread</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Thread</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchUncaughtException</span><span class="hljs-params">(Throwable e)</span> &#123;
         <span class="hljs-comment">// BEGIN Android-added: uncaughtExceptionPreHandler for use by platform.</span>
         Thread.<span class="hljs-type">UncaughtExceptionHandler</span> <span class="hljs-variable">initialUeh</span> <span class="hljs-operator">=</span>
@@ -929,7 +959,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 
 <h2 id="谁打印了-FATAL-EXCEPTION"><a href="#谁打印了-FATAL-EXCEPTION" class="headerlink" title="谁打印了 FATAL EXCEPTION"></a>谁打印了 FATAL EXCEPTION</h2><p>在上面的代码块里 dispatchUncaughtException 还调用了 <code>Thread.uncaughtExceptionPreHandler</code>，这个 handler 是在 app 进程初始化时配置的，而且没有暴露给用户，就是它打印了 <code>AndroidRuntime: FATAL EXCEPTION</code> 的日志</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">RuntimeInit</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">RuntimeInit</span> &#123;
     <span class="hljs-keyword">protected</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">commonInit</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-keyword">if</span> (DEBUG) Slog.d(TAG, <span class="hljs-string">&quot;Entered RuntimeInit!&quot;</span>);
 
@@ -1012,7 +1042,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 <li>弹出 <code>异常退出</code> 对话框，可以让用户选择重启 app</li>
 <li>退出 app 进程</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">KillApplicationHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Thread</span>.UncaughtExceptionHandler &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">KillApplicationHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Thread</span>.UncaughtExceptionHandler &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> LoggingHandler mLoggingHandler;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Create a new KillApplicationHandler that follows the given LoggingHandler.</span>
@@ -1090,7 +1120,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 
 
 <h2 id="主线程遇到-UE-时发生了什么"><a href="#主线程遇到-UE-时发生了什么" class="headerlink" title="主线程遇到 UE 时发生了什么"></a>主线程遇到 UE 时发生了什么</h2><p>上面在研究子线程时已经发现：Uncaught Exception 会中断字节码的执行流程从而回到 native 代码，主线程在回到 native 代码后选择依次执行 <code>DetachCurrentThread</code> 和 <code>DestroyJavaVM</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// zygote 进程的 native 层入口点，app 进程是由 zygote fork 出来的，所以这也算是 app 进程的入口点</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// zygote 进程的 native 层入口点，app 进程是由 zygote fork 出来的，所以这也算是 app 进程的入口点</span>
 <span class="hljs-comment">// frameworks/base/cmds/app_process/app_main.cpp</span>
 <span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span>* <span class="hljs-type">const</span> argv[])</span></span>
 <span class="hljs-function"></span>
@@ -1118,7 +1148,7 @@ Thread.<span class="hljs-built_in">nativeCreate</span>()
 &#125;</code></pre></div>
 
 <p>DetachCurrentThread 会调用 <code>HandleUncaughtExceptions</code>，这个方法也在上面介绍过了，它会检查是否有 uncaught exception/pending exception，有的话则再次进入 VM 执行 <code>Thread.dispatchUncaughtException()</code>，所以主线程的 uncaught exception 也是能够被捕获的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/jni/java_vm_ext.cc</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// art/runtime/jni/java_vm_ext.cc</span>
 <span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">DetachCurrentThread</span><span class="hljs-params">(JavaVM* vm)</span> </span>&#123;
   <span class="hljs-keyword">if</span> (vm == <span class="hljs-literal">nullptr</span> || Thread::<span class="hljs-built_in">Current</span>() == <span class="hljs-literal">nullptr</span>) &#123;
     <span class="hljs-keyword">return</span> JNI_ERR;
@@ -1157,35 +1187,39 @@ HandleUncaughtExceptions</code></pre></div>
 <li><a href="../../../../2021/06/20/kill-exit/">Shutdown Hook</a></li>
 </ul>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/uncaught-exception/">uncaught exception</a>
-                    
-                      <a class="hover-with-bg" href="/tags/exception/">exception</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E5%B4%A9%E6%BA%83%E6%97%A5%E5%BF%97/">崩溃日志</a>
-                    
-                      <a class="hover-with-bg" href="/tags/crash/">crash</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/uncaught-exception/">#uncaught exception</a>
+      
+        <a href="/tags/exception/">#exception</a>
+      
+        <a href="/tags/%E5%B4%A9%E6%BA%83/">#崩溃</a>
+      
+        <a href="/tags/%E5%B4%A9%E6%BA%83%E6%97%A5%E5%BF%97/">#崩溃日志</a>
+      
+        <a href="/tags/crash/">#crash</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/06/20/kill-exit/">
+                      <a href="/2021/06/20/kill-exit/" title="killProcess 和 exit 的区别">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">killProcess 和 exit 的区别</span>
                         <span class="visible-mobile">上一篇</span>
@@ -1195,7 +1229,7 @@ HandleUncaughtExceptions</code></pre></div>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/06/12/okio/">
+                      <a href="/2021/06/12/okio/" title="浅析 IO 框架：Okio">
                         <span class="hidden-mobile">浅析 IO 框架：Okio</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -1211,19 +1245,49 @@ HandleUncaughtExceptions</code></pre></div>
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -1248,32 +1312,34 @@ HandleUncaughtExceptions</code></pre></div>
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -1292,10 +1358,9 @@ HandleUncaughtExceptions</code></pre></div>
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -1305,45 +1370,153 @@ HandleUncaughtExceptions</code></pre></div>
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

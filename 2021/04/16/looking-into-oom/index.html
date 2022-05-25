@@ -28,11 +28,12 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory_log.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory.png">
 <meta property="article:published_time" content="2021-04-16T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.978Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.007Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="OOM">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2021-04-16-looking-into-oom/oom_memory_log.png">
+  
   
   
   <title>深入 OOM - Cyrus Blog</title>
@@ -40,25 +41,19 @@
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -67,7 +62,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -76,16 +75,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -155,6 +167,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -162,59 +175,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="深入 OOM">
-              
-                深入 OOM
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-04-16 04:00" pubdate>
-        2021年4月16日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      17k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      140 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">深入 OOM</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-04-16 04:00" pubdate>
+          2021年4月16日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          17k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          140 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -223,15 +248,20 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">深入 OOM</h1>
             
             <div class="markdown-body">
+              
               <h2 id="堆内存分配失败导致的-OOM"><a href="#堆内存分配失败导致的-OOM" class="headerlink" title="堆内存分配失败导致的 OOM"></a>堆内存分配失败导致的 OOM</h2><h3 id="度量"><a href="#度量" class="headerlink" title="度量"></a>度量</h3><p>采用下述 API 来度量 APP 或系统的内存使用情况</p>
 <table>
 <thead>
@@ -311,7 +341,7 @@
 <p>可以看到 JVM 使用内存上限 <code>max</code> 是 256M（刚好是 <code>memoryClass</code>，如果配置了 <code>largeHeap=&quot;true&quot;</code> 则是 <code>largeMemoryClass</code>），已申请内存 <code>total</code> 逐步上升直到 256M，<code>total</code> - <code>free</code> 等于申请内存的累计量；运行内存为 11.36GB，可用运存徘徊在 5GB 左右，当运存掉到 216M 时进入低内存状态，所以目前并不是低内存；APP 可申请内存上限为 256MB，设置 <code>largeHeap=&quot;true&quot;</code> 后翻倍到 512MB</p>
 <p>抛出 OOM 时的信息为：<code>Failed to allocate a 512016 byte allocation with 22760 free bytes and 22KB until OOM, target footprint 268435456, growth limit 268435456</code></p>
 <p>参考日志的最后一行，当时正在申请 500KB 的内存（<code>Failed to allocate a 512016 byte allocation</code>），还剩 14.95KB（<code>with 22760 free bytes and 22KB until OOM</code>），上限是 256MB（<code>target footprint 268435456, growth limit 268435456</code>）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 循环申请内存直到 OOM</span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 循环申请内存直到 OOM</span>
 <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">mallocJVM</span><span class="hljs-params">()</span></span> &#123;
     <span class="hljs-keyword">val</span> steps = arrayOf(<span class="hljs-number">1024L</span> * <span class="hljs-number">1024</span> * <span class="hljs-number">30</span>, <span class="hljs-number">1024L</span> * <span class="hljs-number">1024</span> * <span class="hljs-number">5</span>, <span class="hljs-number">1024L</span> * <span class="hljs-number">500</span>)
     <span class="hljs-keyword">val</span> pool = mutableListOf&lt;ByteArray&gt;()
@@ -348,7 +378,7 @@
 <p><img src="../../../../image/2021-04-16-looking-into-oom/oom_memory_log.png" srcset="/image/loading.gif" lazyload alt="oom_memory_log.png"></p>
 <p><img src="../../../../image/2021-04-16-looking-into-oom/oom_memory.png" srcset="/image/loading.gif" lazyload alt="oom_memory.png"></p>
 <h3 id="定位抛出-OOM-的位置"><a href="#定位抛出-OOM-的位置" class="headerlink" title="定位抛出 OOM 的位置"></a>定位抛出 OOM 的位置</h3><p>最终抛出 <code>OutOfMemoryError</code> 的代码 是 <code>Thread::ThrowOutOfMemoryError</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::ThrowOutOfMemoryError</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* msg)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Thread::ThrowOutOfMemoryError</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* msg)</span> </span>&#123;
   <span class="hljs-built_in">LOG</span>(WARNING) &lt;&lt; <span class="hljs-string">&quot;Throwing OutOfMemoryError &quot;</span>
                &lt;&lt; <span class="hljs-string">&#x27;&quot;&#x27;</span> &lt;&lt; msg &lt;&lt; <span class="hljs-string">&#x27;&quot;&#x27;</span>
                &lt;&lt; <span class="hljs-string">&quot; (VmSize &quot;</span> &lt;&lt; <span class="hljs-built_in">GetProcessStatus</span>(<span class="hljs-string">&quot;VmSize&quot;</span>)
@@ -377,7 +407,7 @@
 
 <p>而因为堆内存分配失败抛出 OOM 的代码在 <code>Heap::ThrowOutOfMemoryError</code>，其中异常信息为：</p>
 <p><code>&quot;Failed to allocate a (x) byte allocation with (x) free bytes and (x) until OOM, target footprint (x), growth limit (x)&quot;</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Heap::ThrowOutOfMemoryError</span><span class="hljs-params">(Thread* self, <span class="hljs-type">size_t</span> byte_count, AllocatorType allocator_type)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">Heap::ThrowOutOfMemoryError</span><span class="hljs-params">(Thread* self, <span class="hljs-type">size_t</span> byte_count, AllocatorType allocator_type)</span> </span>&#123;
   <span class="hljs-comment">// If we&#x27;re in a stack overflow, do not create a new exception. It would require running the</span>
   <span class="hljs-comment">// constructor, which will of course still be in a stack overflow.</span>
   <span class="hljs-keyword">if</span> (self-&gt;<span class="hljs-built_in">IsHandlingStackOverflow</span>()) &#123;
@@ -421,7 +451,7 @@
 &#125;</code></pre></div>
 
 <h2 id="创建线程时-Could-not-allocate-JNI-Env-导致的-OOM"><a href="#创建线程时-Could-not-allocate-JNI-Env-导致的-OOM" class="headerlink" title="创建线程时 Could not allocate JNI Env 导致的 OOM"></a>创建线程时 <code>Could not allocate JNI Env</code> 导致的 OOM</h2><h3 id="测试代码"><a href="#测试代码" class="headerlink" title="测试代码"></a>测试代码</h3><p>线程数量可以通过 <code>/proc/&#123;pid&#125;/status</code> 里 <code>Threads</code> 那行拿到</p>
-<div class="hljs code-wrapper"><pre><code class="hljs javascript"><span class="hljs-title class_">Name</span>:	m.<span class="hljs-property">myapplication</span>
+<div class="code-wrapper"><pre><code class="hljs javascript"><span class="hljs-title class_">Name</span>:	m.<span class="hljs-property">myapplication</span>
 <span class="hljs-title class_">State</span>:	R (running)
 <span class="hljs-title class_">Tgid</span>:	<span class="hljs-number">26939</span>
 <span class="hljs-title class_">Ngid</span>:	<span class="hljs-number">0</span>
@@ -437,7 +467,7 @@
 ...</code></pre></div>
 
 <p>不断地创建新线程，新线程啥也不干就阻塞住，从而使 APP 进程的线程数量持续上涨，模拟 APP 随意创建线程/线程池而没有做统一的管理，导致创建大量线程的情况，最后抛出 <code>Could not allocate JNI Env: Failed anonymous mmap(0x0, 8192, 0x3, 0x2, 53, 0): Permission denied. See process maps in the log.</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MemoryKillerService</span> : <span class="hljs-type">IntentService</span></span>(<span class="hljs-string">&quot;MemoryKillerService&quot;</span>) &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MemoryKillerService</span> : <span class="hljs-type">IntentService</span></span>(<span class="hljs-string">&quot;MemoryKillerService&quot;</span>) &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">onHandleIntent</span><span class="hljs-params">(intent: <span class="hljs-type">Intent</span>?)</span></span> &#123;
         <span class="hljs-comment">// 一个线程不断地创建测试线程（间隔 1ms）</span>
         thread &#123;
@@ -475,7 +505,7 @@
     regexGroupInFile(pattern = <span class="hljs-string">&quot;.*Threads:\\s+(\\d+).*&quot;</span>, path = <span class="hljs-string">&quot;/proc/<span class="hljs-subst">$&#123;myPid()&#125;</span>/status&quot;</span>)?.toInt()
 &#125;.getOrDefault(<span class="hljs-number">0</span>)</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs javascript"><span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.067</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1633</span>
+<div class="code-wrapper"><pre><code class="hljs javascript"><span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.067</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1633</span>
 <span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.170</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1680</span>
 <span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.272</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1731</span>
 <span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">58</span>:<span class="hljs-number">10.374</span> <span class="hljs-number">29743</span>-<span class="hljs-number">29769</span>/com.<span class="hljs-property">myapplication</span> D/<span class="hljs-attr">memkiller</span>: <span class="hljs-attr">threadCount</span>: <span class="hljs-number">1784</span>
@@ -500,7 +530,7 @@
         at com.<span class="hljs-property">myapplication</span>.<span class="hljs-property">MemoryKillerService$onHandleIntent$1</span>.<span class="hljs-title function_">invoke</span>(<span class="hljs-title class_">MemoryKillerService</span>.<span class="hljs-property">kt</span>:<span class="hljs-number">22</span>)
         at kotlin.<span class="hljs-property">concurrent</span>.<span class="hljs-property">ThreadsKt$thread$thread$1</span>.<span class="hljs-title function_">run</span>(<span class="hljs-title class_">Thread</span>.<span class="hljs-property">kt</span>:<span class="hljs-number">30</span>)</code></pre></div>
 
-<h3 id="代码追踪"><a href="#代码追踪" class="headerlink" title="代码追踪"></a>代码追踪</h3><div class="hljs code-wrapper"><pre><code class="hljs cpp">Thread.<span class="hljs-built_in">start</span>()
+<h3 id="代码追踪"><a href="#代码追踪" class="headerlink" title="代码追踪"></a>代码追踪</h3><div class="code-wrapper"><pre><code class="hljs cpp">Thread.<span class="hljs-built_in">start</span>()
 Thread.<span class="hljs-function">nativeCreate</span>
 <span class="hljs-function">Thread_nativeCreate</span>
 <span class="hljs-function"></span>
@@ -639,7 +669,7 @@ mmap</code></pre></div>
 <li><code>Permission denied. See process maps in the log.</code> 我用的模拟器，可能是说超出内存限制后不能用其他方式获得内存？</li>
 </ol>
 <h2 id="创建线程时-pthread-create-failed-导致的-OOM"><a href="#创建线程时-pthread-create-failed-导致的-OOM" class="headerlink" title="创建线程时 pthread_create failed 导致的 OOM"></a>创建线程时 <code>pthread_create failed</code> 导致的 OOM</h2><p>用上面的测试代码还会出现另外一种 OOM 如下</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">55</span>:<span class="hljs-number">37.488</span> <span class="hljs-number">27404</span>-<span class="hljs-number">27431</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1702</span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">55</span>:<span class="hljs-number">37.488</span> <span class="hljs-number">27404</span>-<span class="hljs-number">27431</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1702</span>
 <span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">55</span>:<span class="hljs-number">37.590</span> <span class="hljs-number">27404</span>-<span class="hljs-number">27431</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1747</span>
 <span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">55</span>:<span class="hljs-number">37.692</span> <span class="hljs-number">27404</span>-<span class="hljs-number">27431</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1796</span>
 <span class="hljs-number">2021</span>-<span class="hljs-number">04</span>-<span class="hljs-number">20</span> <span class="hljs-number">13</span>:<span class="hljs-number">55</span>:<span class="hljs-number">37.794</span> <span class="hljs-number">27404</span>-<span class="hljs-number">27431</span>/com.myapplication D/memkiller: threadCount: <span class="hljs-number">1848</span>
@@ -666,7 +696,7 @@ mmap</code></pre></div>
 
 <p>创建线程最终会执行系统调用 <code>pthread_create</code>，如果失败会抛出 <code>pthread_create (1040KB stack) failed</code>，1040KB 是线程的栈大小</p>
 <p>上面 <code>pthread_create failed: couldn&#39;t allocate TLS: Permission denied</code> 表示为线程分配 Thread Local（TLS，THREAD LOCAL STORAGE）相关的内存时因为内存不足失败了</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp">Thread.<span class="hljs-built_in">start</span>()
+<div class="code-wrapper"><pre><code class="hljs cpp">Thread.<span class="hljs-built_in">start</span>()
 Thread.<span class="hljs-function">nativeCreate</span>
 <span class="hljs-function">Thread_nativeCreate</span>
 <span class="hljs-function"></span>
@@ -710,11 +740,11 @@ Thread.<span class="hljs-function">nativeCreate</span>
 &#125;</code></pre></div>
 
 <h3 id="更多的例子"><a href="#更多的例子" class="headerlink" title="更多的例子"></a>更多的例子</h3><p>线程数超出了限制</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin">W/libc: pthread_create failed: clone failed: Out of memory
+<div class="code-wrapper"><pre><code class="hljs kotlin">W/libc: pthread_create failed: clone failed: Out of memory
 W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create (1040KB stack) failed: Out of memory&quot;</span></code></pre></div>
 
 <p>内存不足</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin">W/libc: pthread_create failed: couldn<span class="hljs-string">&#x27;t allocate 1073152-bytes mapped space: Out of memory</span>
+<div class="code-wrapper"><pre><code class="hljs kotlin">W/libc: pthread_create failed: couldn<span class="hljs-string">&#x27;t allocate 1073152-bytes mapped space: Out of memory</span>
 <span class="hljs-string">W/art: Throwing OutOfMemoryError with VmSize  4191668 kB &quot;pthread_create (1040KB stack) failed: Try again&quot;</span></code></pre></div>
 
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
@@ -723,27 +753,31 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
 <li><a target="_blank" rel="noopener" href="https://github.com/CharonChui/AndroidNote/blob/master/AdavancedPart/OOM%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90.md">OOM问题分析</a></li>
 </ol>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/OOM/">OOM</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/OOM/">#OOM</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/04/23/matrix-resourcescanary/">
+                      <a href="/2021/04/23/matrix-resourcescanary/" title="Matrix - ResourcesCanary 浅析">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">Matrix - ResourcesCanary 浅析</span>
                         <span class="visible-mobile">上一篇</span>
@@ -753,7 +787,7 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/04/15/tailrec/">
+                      <a href="/2021/04/15/tailrec/" title="尾递归及尾递归优化">
                         <span class="hidden-mobile">尾递归及尾递归优化</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -769,19 +803,49 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -806,32 +870,34 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -850,10 +916,9 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -863,45 +928,153 @@ W/art: Throwing OutOfMemoryError <span class="hljs-string">&quot;pthread_create 
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

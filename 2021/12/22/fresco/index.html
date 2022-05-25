@@ -26,7 +26,7 @@
 <meta property="og:description" content="第一行代码Fresco 最简单和入门级的 API 是 SimpleDraweeView.setImageURI(uri)，那就先从这个方法走下去看看会遇到哪些概念 SimpleDraweeView.setImageURI(uri) SimpleDraweeView.setImageURI(uri, null) DraweeView.setController DraweeHolder.setCon">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-12-22T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.982Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.011Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="glide">
 <meta property="article:tag" content="fresco">
@@ -35,30 +35,25 @@
 <meta name="twitter:card" content="summary_large_image">
   
   
+  
   <title>初识 Fresco - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -67,7 +62,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -76,16 +75,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -155,6 +167,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -162,59 +175,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="初识 Fresco">
-              
-                初识 Fresco
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-12-22 04:00" pubdate>
-        2021年12月22日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      76k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      632 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">初识 Fresco</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-12-22 04:00" pubdate>
+          2021年12月22日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          76k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          632 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -223,17 +248,22 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">初识 Fresco</h1>
             
             <div class="markdown-body">
+              
               <h1 id="第一行代码"><a href="#第一行代码" class="headerlink" title="第一行代码"></a>第一行代码</h1><p><a target="_blank" rel="noopener" href="https://github.com/facebook/fresco">Fresco</a> 最简单和入门级的 API 是 <code>SimpleDraweeView.setImageURI(uri)</code>，那就先从这个方法走下去看看会遇到哪些概念</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+<div class="code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
 SimpleDraweeView.setImageURI(uri, <span class="hljs-literal">null</span>)
 DraweeView.setController
 DraweeHolder.setController
@@ -745,7 +775,7 @@ PipelineDraweeControllerBuilder.getDataSourceForRequest
 <li>HttpUrlConnectionNetworkFetcher</li>
 <li>PriorityNetworkFetcher，它是一个装饰器（Decorator），具体的网络加载功能由上面的那些实现提供，它给请求提供了【优先队列】的特性，后续会说到</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> *  Interface that specifies network fetcher used by the image pipeline.</span>
 <span class="hljs-comment"> */</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">NetworkFetcher</span>&lt;FETCH_STATE <span class="hljs-keyword">extends</span> <span class="hljs-title class_">FetchState</span>&gt; &#123;
@@ -771,7 +801,7 @@ PipelineDraweeControllerBuilder.getDataSourceForRequest
 
 <p><code>NetworkFetchProducer</code> 从 Response 里读取 ByteArray 格式的内容，并包装为 <code>EncodedImage</code> 输出给下一节点；考虑到性能问题，在这一阶段 ByteArray 并没有 decode 为 <code>Bitmap</code>，而是通过解析前 N 个字节长度的数据来获取图片格式、尺寸等一些元信息</p>
 <p>同时加载进度 <code>Consumer.onProgressUpdate</code> 也是由 NetworkFetchProducer 在 Response Reading 时发出</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">NetworkFetchProducer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">NetworkFetchProducer</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">produceResults</span><span class="hljs-params">(Consumer&lt;EncodedImage&gt; consumer, ProducerContext context)</span> &#123;    <span class="hljs-comment">// 网络加载功能交由 NetworkFetcher 实现</span>
     context.getProducerListener().onProducerStart(context, PRODUCER_NAME);
     <span class="hljs-keyword">final</span> <span class="hljs-type">FetchState</span> <span class="hljs-variable">fetchState</span> <span class="hljs-operator">=</span> mNetworkFetcher.createFetchState(consumer, context);
@@ -1058,7 +1088,7 @@ PipelineDraweeControllerBuilder.getDataSourceForRequest
 <td>ContentResolver.openInputStream</td>
 </tr>
 </tbody></table>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">ImageRequest</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">ImageRequest</span> &#123;
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-meta">@SourceUriType</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getSourceUriType</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Uri uri)</span> &#123;
     <span class="hljs-keyword">if</span> (uri == <span class="hljs-literal">null</span>) &#123;
       <span class="hljs-keyword">return</span> SOURCE_TYPE_UNKNOWN;
@@ -1094,7 +1124,7 @@ PipelineDraweeControllerBuilder.getDataSourceForRequest
 <li>DiskCacheReadProducer</li>
 </ol>
 <p>添加 ImagePipeline 节点的方法栈如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+<div class="code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
 SimpleDraweeView.setImageURI(uri, <span class="hljs-literal">null</span>)
 AbstractDraweeControllerBuilder.build
 AbstractDraweeControllerBuilder.buildController
@@ -1156,7 +1186,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li>收到响应后（必须包含 <code>Content-Range</code>，否则不认为是 partial content，没有 <code>IS_PARTIAL_RESULT</code> 标志），合并 partial content 和 partial cache 为完整的资源返回，删除 partial cache</li>
 </ol>
 <p>问题就来了，什么场景下会只请求部分内容（Range 头部）、请求一个完整的资源服务器却只返回部分资源（206，Content-Range）？不是很能理解它的使用场景</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">PartialDiskCacheProducer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">PartialDiskCacheProducer</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">produceResults</span><span class="hljs-params">(</span>
 <span class="hljs-params">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> &#123;
     <span class="hljs-keyword">final</span> <span class="hljs-type">ImageRequest</span> <span class="hljs-variable">imageRequest</span> <span class="hljs-operator">=</span> producerContext.getImageRequest();
@@ -1376,7 +1406,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 </ul>
 <p>发起加载请求是，disk reader 从磁盘缓存里找是否有对应的缓存文件，有的话就无须做网络请求，加载缓存文件至内存后返回；因为是先添加 disk reader 后添加 disk writer 的，请求被 disk reader 截胡后就不经过 disk writer 和 network fetcher 了</p>
 <p>如果没能找到磁盘缓存，请求流转到 network fetcher，拿到 response 后 disk writer 将其保存为磁盘缓存</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">DiskCacheReadProducer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">DiskCacheReadProducer</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">produceResults</span><span class="hljs-params">(</span>
 <span class="hljs-params">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> &#123;
     <span class="hljs-keyword">final</span> <span class="hljs-type">ImageRequest</span> <span class="hljs-variable">imageRequest</span> <span class="hljs-operator">=</span> producerContext.getImageRequest();
@@ -1480,7 +1510,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li><code>回程</code> 时将原始数据添加到内存缓存中，然后继续往下传递原始数据</li>
 </ul>
 <p>默认开启，由 <code>ImageRequestBuilder.disableMemoryCache</code> 关闭 </p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">EncodedMemoryCacheProducer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">EncodedMemoryCacheProducer</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">produceResults</span><span class="hljs-params">(</span>
 <span class="hljs-params">      <span class="hljs-keyword">final</span> Consumer&lt;EncodedImage&gt; consumer, <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> &#123;
     <span class="hljs-keyword">try</span> &#123;
@@ -1618,7 +1648,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li>去程时从缓存里读，命中的话截胡，返回缓存在内存中的 Bitmap</li>
 <li>回程时写入缓存</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">BitmapMemoryCacheProducer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">BitmapMemoryCacheProducer</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">produceResults</span><span class="hljs-params">(</span>
 <span class="hljs-params">      <span class="hljs-keyword">final</span> Consumer&lt;CloseableReference&lt;CloseableImage&gt;&gt; consumer,</span>
 <span class="hljs-params">      <span class="hljs-keyword">final</span> ProducerContext producerContext)</span> &#123;
@@ -1746,7 +1776,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 </ol>
 </li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LruCountingMemoryCache</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LruCountingMemoryCache</span> &#123;
 
   <span class="hljs-comment">// Contains the items that are not being used by any client and are hence viable for eviction.</span>
   <span class="hljs-keyword">final</span> CountingLruMap&lt;K, Entry&lt;K, V&gt;&gt; mExclusiveEntries;
@@ -1769,7 +1799,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li>执行 <code>evict</code> 逻辑，淘汰/释放一些 <code>mExclusiveEntries</code> 中的 Entry 以满足约束条件</li>
 <li>返回一个 <code>CloseableReference</code>，当它的 <code>CloseableReference.close</code> 被调用的同时 <code>LruCountingMemoryCache.releaseClientReference(entry)</code> 也被执行</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LruCountingMemoryCache</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LruCountingMemoryCache</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-meta">@Nullable</span> CloseableReference&lt;V&gt; <span class="hljs-title function_">cache</span><span class="hljs-params">(</span>
 <span class="hljs-params">      <span class="hljs-keyword">final</span> K key,</span>
 <span class="hljs-params">      <span class="hljs-keyword">final</span> CloseableReference&lt;V&gt; valueRef,</span>
@@ -1843,7 +1873,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li>如果没有被引用且是孤儿，则将引用置空释放对象</li>
 <li>往空闲集合添加了元素后可能会不符合 MemoryCache 的约束条件，需要执行一次 <code>evict</code> 逻辑</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">releaseClientReference</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Entry&lt;K, V&gt; entry)</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">releaseClientReference</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Entry&lt;K, V&gt; entry)</span> &#123;
   Preconditions.checkNotNull(entry);
   <span class="hljs-type">boolean</span> isExclusiveAdded;
   CloseableReference&lt;V&gt; oldRefToClose;
@@ -1866,7 +1896,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li>从 <code>mExclusiveEntries</code> 逐个剔除 Entry 直到满足上面的容量和大小的约束条件，而剔除的顺序就是 <code>LinkedHashMap</code> 迭代器的顺序，上面说过最终顺序是按访问排序（也就实现了 <code>LRU</code>）</li>
 <li>将剔除的 Entry 集合标识为 <code>孤儿</code> 并删除（<code>CloseableReference.close</code> 最终会调用 <code>LruCountingMemoryCache.releaseClientReference(entry)</code>）</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LruCountingMemoryCache</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LruCountingMemoryCache</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">maybeEvictEntries</span><span class="hljs-params">()</span> &#123;
     ArrayList&lt;Entry&lt;K, V&gt;&gt; oldEntries;
     <span class="hljs-keyword">synchronized</span> (<span class="hljs-built_in">this</span>) &#123;
@@ -1921,7 +1951,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 &#125;</code></pre></div>
 
 <p>取缓存时，是直接从 <code>mExclusiveEntries</code> 删除，<code>CloseableReference.close</code> 的时候再重新插入到 <code>mExclusiveEntries</code> 里，所以虽然 <code>mExclusiveEntries</code> 里的 <code>LinkedHashMap</code> 是按插入排序的，但从 MemoryCache 的角度看 <code>mExclusiveEntries</code> 是按访问排序的，<code>evict</code> 时就从最久未访问的 Entry 迭代起</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> CloseableReference&lt;V&gt; <span class="hljs-title function_">get</span><span class="hljs-params">(<span class="hljs-keyword">final</span> K key)</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> CloseableReference&lt;V&gt; <span class="hljs-title function_">get</span><span class="hljs-params">(<span class="hljs-keyword">final</span> K key)</span> &#123;
   Preconditions.checkNotNull(key);
   Entry&lt;K, V&gt; oldExclusive;
   CloseableReference&lt;V&gt; clientRef = <span class="hljs-literal">null</span>;
@@ -1979,7 +2009,7 @@ ProducerSequenceFactory.newEncodedCacheMultiplexToTranscodeSequence
 <li>DataSource 是一个异步的结果（类似于 <code>Future</code>），通过订阅获得异步的结果（成功 or 失败），在 <code>AbstractDraweeController.submitRequest</code> 订阅之，从而拿到 <code>Bitmap</code></li>
 <li>也就说一个图像加载请求是保存在 <code>DraweeView.mDraweeHolder.mController.mDataSource</code></li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+<div class="code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
 SimpleDraweeView.setImageURI(uri, <span class="hljs-literal">null</span>)
 AbstractDraweeControllerBuilder.build
 AbstractDraweeControllerBuilder.buildController
@@ -2107,7 +2137,7 @@ AbstractDraweeController.submitRequest
 <p>通过 <code>DraweeView</code> 可以看出，Fresco image request 绑定的是 UI 层 <code>View</code> 组件的生命周期：<code>onAttachedToWindow</code> 和 <code>onDetachedFromWindow</code></p>
 <p>当 <code>onDetachedFromWindow</code> 触发时，事件会沿着 <code>DraweeView -&gt; DraweeHolder -&gt; DraweeController -&gt; DataSource -&gt; ProducerContext -&gt; ProducerContextCallbacks</code> 的方向传递，凡是注册了 <code>ProducerContextCallbacks</code> 的都能收到 <code>onCancellationRequested</code></p>
 <p>上面介绍过的 ImagePipeline 节点随便拿两个看看（<code>OkHttpNetworkFetcher</code> 和 <code>DiskCacheReadProducer</code>）都能够发现它们是注册了 callback 的，这样无论 request 流转至哪个节点都能及时响应 cancel 事件停止工作，从而实现 image request 与 <code>View</code> 生命周期的绑定</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">DraweeView</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">DraweeView</span> &#123;
 
   <span class="hljs-meta">@Override</span>
   <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onAttachedToWindow</span><span class="hljs-params">()</span> &#123;
@@ -2254,7 +2284,7 @@ ProducerContextCallbacks.onCancellationRequested    <span class="hljs-comment">/
 
 <h1 id="请求错乱的问题"><a href="#请求错乱的问题" class="headerlink" title="请求错乱的问题"></a>请求错乱的问题</h1><p>比如在 <code>RecyclerView</code> 里快速地滑动，同一个 <code>DraweeView</code> 会在短时间内多次设置网络图像，但网络加载是需要较长时间的，如何保证旧的 request 不会覆盖掉新的 request？</p>
 <p>如下面所示，通过 <code>setImageURI</code> 设置图片的同时会 <code>close</code> 旧的 <code>DataSource</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
+<div class="code-wrapper"><pre><code class="hljs java">SimpleDraweeView.setImageURI(uri)
 SimpleDraweeView.setImageURI(uri, <span class="hljs-literal">null</span>)
 DraweeView.setController
 
@@ -2316,7 +2346,7 @@ DraweeView.setController
 &#125;</code></pre></div>
 
 <h1 id="DecodeProducer-解码"><a href="#DecodeProducer-解码" class="headerlink" title="DecodeProducer - 解码"></a>DecodeProducer - 解码</h1><p>负责将各种压缩图片格式（JPEG、WEBP 等）解码（比如 <code>Bitmap</code>）的 ImagePipeline 节点，它通过 <code>SOI</code> 识别其格式并交由对应的 <code>ImageDecoder</code> 处理，方法栈如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">DecodeProducer.produceResults
+<div class="code-wrapper"><pre><code class="hljs java">DecodeProducer.produceResults
 ProgressiveDecoder.onNewResultImpl
 NetworkImagesProgressiveDecoder.updateDecodeJob
 ProgressiveDecoder.doDecode
@@ -2355,7 +2385,7 @@ ProgressiveDecoder.internalDecode
 
 <p>Fresco 内置了对常用图片格式如：JPEG、GIF、WEBP 等的支持，这些图片格式定义在 <code>DefaultImageFormats</code>，并在 <code>DefaultImageFormatChecker.determineFormat(headerBytes, headerSize)</code> 实现了高效的、基于 <code>SOI</code> 的图片格式判别逻辑（start of image，也就是图片文件头几个字节的内容，作为特征码进行识别）</p>
 <p>对于 Fresco 不支持的格式，可以通过 <code>ImageDecoderConfig.Builder.addDecodingCapability(imageFormat, imageFormatChecker, decoder)</code> 添加自定义解码器</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">DefaultImageFormats</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">DefaultImageFormats</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ImageFormat</span> <span class="hljs-variable">JPEG</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ImageFormat</span>(<span class="hljs-string">&quot;JPEG&quot;</span>, <span class="hljs-string">&quot;jpeg&quot;</span>);
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ImageFormat</span> <span class="hljs-variable">PNG</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ImageFormat</span>(<span class="hljs-string">&quot;PNG&quot;</span>, <span class="hljs-string">&quot;png&quot;</span>);
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ImageFormat</span> <span class="hljs-variable">GIF</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ImageFormat</span>(<span class="hljs-string">&quot;GIF&quot;</span>, <span class="hljs-string">&quot;gif&quot;</span>);
@@ -2491,7 +2521,7 @@ ProgressiveDecoder.internalDecode
 <li>第一个（也是唯一一个）请求的 response 将被分发给各个 consumer</li>
 <li>涉及到多线程，创建 Multiplexer 和添加 consumer 的操作需要被 <code>synchronized</code> 保护</li>
 </ol>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">MultiplexProducer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">MultiplexProducer</span> &#123;
   <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">produceResults</span><span class="hljs-params">(Consumer&lt;T&gt; consumer, ProducerContext context)</span> &#123;
     <span class="hljs-keyword">try</span> &#123;
       <span class="hljs-keyword">if</span> (FrescoSystrace.isTracing()) &#123;
@@ -2532,33 +2562,37 @@ ProgressiveDecoder.internalDecode
     &#125;
   &#125;    
 &#125;</code></pre></div>
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/glide/">glide</a>
-                    
-                      <a class="hover-with-bg" href="/tags/fresco/">fresco</a>
-                    
-                      <a class="hover-with-bg" href="/tags/imageloader/">imageloader</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E5%9B%BE%E7%89%87%E5%8A%A0%E8%BD%BD/">图片加载</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/glide/">#glide</a>
+      
+        <a href="/tags/fresco/">#fresco</a>
+      
+        <a href="/tags/imageloader/">#imageloader</a>
+      
+        <a href="/tags/%E5%9B%BE%E7%89%87%E5%8A%A0%E8%BD%BD/">#图片加载</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/02/14/anr-bigpicture/">
+                      <a href="/2022/02/14/anr-bigpicture/" title="ANR 设计思路：埋雷和除雷">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">ANR 设计思路：埋雷和除雷</span>
                         <span class="visible-mobile">上一篇</span>
@@ -2568,7 +2602,7 @@ ProgressiveDecoder.internalDecode
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/12/16/http-range/">
+                      <a href="/2021/12/16/http-range/" title="HTTP Range - 分段下载">
                         <span class="hidden-mobile">HTTP Range - 分段下载</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -2584,19 +2618,49 @@ ProgressiveDecoder.internalDecode
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -2621,32 +2685,34 @@ ProgressiveDecoder.internalDecode
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -2665,10 +2731,9 @@ ProgressiveDecoder.internalDecode
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -2678,45 +2743,153 @@ ProgressiveDecoder.internalDecode
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

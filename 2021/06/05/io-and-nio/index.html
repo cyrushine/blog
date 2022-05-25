@@ -26,11 +26,12 @@
 <meta property="og:description" content="FileInputStream&#x2F;FileOutputStreamFileInputStream 和 FileOutputStream 都属于“流式” API，就像流水（Stream）一样只能朝着一个方向读写，不能后退 FileInputStream 相当于以只读模式读文件：open(O_RDONLY) -&gt; read -&gt; close(fd) FileOutputStream 相当于以">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-06-05T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.982Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.007Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ART">
 <meta property="article:tag" content="nio">
 <meta name="twitter:card" content="summary_large_image">
+  
   
   
   <title>深入探索 java.io 和 nio - Cyrus Blog</title>
@@ -38,25 +39,19 @@
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -65,7 +60,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -74,16 +73,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -153,6 +165,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -160,59 +173,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="深入探索 java.io 和 nio">
-              
-                深入探索 java.io 和 nio
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-06-05 04:00" pubdate>
-        2021年6月5日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      15k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      128 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">深入探索 java.io 和 nio</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-06-05 04:00" pubdate>
+          2021年6月5日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          15k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          128 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -221,19 +246,24 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">深入探索 java.io 和 nio</h1>
             
             <div class="markdown-body">
+              
               <h3 id="FileInputStream-FileOutputStream"><a href="#FileInputStream-FileOutputStream" class="headerlink" title="FileInputStream/FileOutputStream"></a>FileInputStream/FileOutputStream</h3><p><code>FileInputStream</code> 和 <code>FileOutputStream</code> 都属于“流式” API，就像流水（<code>Stream</code>）一样只能朝着一个方向读写，不能后退</p>
 <p><code>FileInputStream</code> 相当于以只读模式读文件：open(O_RDONLY) -&gt; read -&gt; close(fd)</p>
 <p><code>FileOutputStream</code> 相当于以只写模式写文件：open(O_WRONLY | O_CREAT | (append ? O_APPEND : O_TRUNC)) -&gt; write -&gt; close(fd)</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// open</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// open</span>
 FileInputStream(File file)
 IoBridge.open(name, O_RDONLY)
 Libcore.os.open(path, flags, <span class="hljs-number">0666</span>)
@@ -274,7 +304,7 @@ Linux_close(JNIEnv* env, jobject, jobject javaFd)    <span class="hljs-comment">
 close(fd)    <span class="hljs-comment">// 系统调用</span></code></pre></div>
 
 <h3 id="RandomAccessFile"><a href="#RandomAccessFile" class="headerlink" title="RandomAccessFile"></a>RandomAccessFile</h3><p><code>RandomAccessFile</code> 提供了读写操作，相当于 <code>FileInputStream</code> 和 <code>FileOutputStream</code> 的组合</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// open，其中 mode 与 imode 之间的映射关系为 </span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// open，其中 mode 与 imode 之间的映射关系为 </span>
 <span class="hljs-comment">// r  - O_RDONLY         - 只读</span>
 <span class="hljs-comment">// rw - O_RDWR | O_CREAT - 读写</span>
 RandomAccessFile(File file, String mode)
@@ -318,7 +348,7 @@ lseek(<span class="hljs-type">int</span> fd, off_t offset, <span class="hljs-typ
 <p><code>read()</code> attempts to read up to count bytes from file descriptor fd into the buffer starting at buf. On  files  that  support seeking, the read operation commences at the file offset, and the file offset is incremented by the number of bytes read.</p>
 <p><code>read()</code> attempts to read up to count bytes from file descriptor fd into the buffer starting at buf. On  files  that  support seeking, the read operation commences at the file offset, and the file offset is incremented by the number of bytes read.</p>
 </blockquote>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// read</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// read</span>
 FileChannel.read(ByteBuffer dst, <span class="hljs-type">long</span> position)
 FileChannelImpl.read(ByteBuffer dst, <span class="hljs-type">long</span> position)
 IOUtil.read(FileDescriptor fd, ByteBuffer dst, <span class="hljs-type">long</span> position, NativeDispatcher nd)
@@ -340,7 +370,7 @@ pwrite64(<span class="hljs-type">int</span> __fd, const <span class="hljs-keywor
 
 <h3 id="数组的两次复制"><a href="#数组的两次复制" class="headerlink" title="数组的两次复制"></a>数组的两次复制</h3><p>咋一看，<code>FileInputStream/FileOutputStream</code> 和 <code>FileChannel</code> 最终都是通过系统调用 <code>read/write</code> 完成文件的读写操作，那 NIO 的优势体现在哪呢？</p>
 <p>其实在 C 层的入口点就可以看出来了，看下面的读操作，<code>Byte[]</code> 是作为 java object 传给 C 层的，对它的读写操作需要包裹在 <code>GetByteArrayElements/ReleaseByteArrayElements</code> 之间（通过 <code>ScopedBytesRW</code> 的构造函数和析构函数），<code>GetByteArrayElements</code> 会从 <code>Byte[]</code> 复制一份数据出来，<code>ReleaseByteArrayElements</code> 会回写数据到 <code>Byte[]</code>，也就是说 <code>Byte[]</code> 在 C 层走一圈会有两次额外的复制操作，数组越大越耗资源</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">Linux_readBytes</span><span class="hljs-params">(JNIEnv* env, jobject, jobject javaFd, jobject javaBytes, jint byteOffset, jint byteCount)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">Linux_readBytes</span><span class="hljs-params">(JNIEnv* env, jobject, jobject javaFd, jobject javaBytes, jint byteOffset, jint byteCount)</span> </span>&#123;
     <span class="hljs-function">ScopedBytesRW <span class="hljs-title">bytes</span><span class="hljs-params">(env, javaBytes)</span></span>;
     <span class="hljs-keyword">if</span> (bytes.<span class="hljs-built_in">get</span>() == <span class="hljs-literal">NULL</span>) &#123;
         <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;
@@ -412,7 +442,7 @@ pwrite64(<span class="hljs-type">int</span> __fd, const <span class="hljs-keywor
 <li>还有 <code>Compacting GC</code> 会通过两个 <code>Bump Pointer Space</code> 来回捣鼓堆上的对象以实现内存的整理和压缩，释放小块的内存碎片，这会导致堆上对象的地址发生变动，VM 可以找到堆上所有对此对象的引用并修改它们的地址，但 VM 没法修改 native 代码对此对象的引用</li>
 </ol>
 <h3 id="DirectByteBuffer"><a href="#DirectByteBuffer" class="headerlink" title="DirectByteBuffer"></a>DirectByteBuffer</h3><p>看 <code>FileChannel</code> 读操作的 C 层入口，不再是 <code>Byte[]</code> 对象而是 C 代码可以直接操作的虚拟地址 <code>address</code>，系统调用 <code>pread64</code> 可以直接把数据写到 <code>address</code> 上，省去了两次复制数据的操作</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-built_in">FileDispatcherImpl_pread0</span>(JNIEnv *env, jclass clazz, jobject fdo, jlong address, jint len, jlong offset)
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-built_in">FileDispatcherImpl_pread0</span>(JNIEnv *env, jclass clazz, jobject fdo, jlong address, jint len, jlong offset)
 &#123;
     jint fd = <span class="hljs-built_in">fdval</span>(env, fdo);
     <span class="hljs-type">void</span> *buf = (<span class="hljs-type">void</span> *)<span class="hljs-built_in">jlong_to_ptr</span>(address);
@@ -427,7 +457,7 @@ pwrite64(<span class="hljs-type">int</span> __fd, const <span class="hljs-keywor
 </ol>
 <p><code>HeapByteBuffer</code> 就是对 <code>Byte[]</code> 的包装，主要看下 <code>DirectByteBuffer</code></p>
 <p><code>DirectByteBuffer</code> 其实也持有一个字节数组 <code>DirectByteBuffer.MemoryRef.buffer</code>，不同于普通的 <code>Byte[]</code> 它是直接在 non_moving_space 上分配的，也就说它不会被 GC 整理和移动所以它的地址是固定不变的，native 代码可以直接在这块内存上进行读写操作</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ByteBuffer.allocateDirect(<span class="hljs-type">int</span> capacity)
+<div class="code-wrapper"><pre><code class="hljs java">ByteBuffer.allocateDirect(<span class="hljs-type">int</span> capacity)
 DirectByteBuffer.MemoryRef(capacity)
 VMRuntime.newNonMovableArray(componentType, length)
 VMRuntime_newNonMovableArray(env, jobject, javaElementClass, length)
@@ -447,7 +477,7 @@ Heap-&gt;non_moving_space-&gt;Alloc(Thread* self, size_t num_bytes, size_t* byte
 <p>This function allows native code to access the same memory region that is accessible to Java code via the buffer object.</p>
 </blockquote>
 <p><code>FileChannel</code> 在进行读写操作时，也即 java 层和 native 层之间进行数据传递时，总是会使用 <code>DirectByteBuffer</code> 避免数组的两次拷贝</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">FileChannelImpl.read(FileDescriptor fd, ByteBuffer dst, <span class="hljs-type">long</span> position, NativeDispatcher nd) <span class="hljs-keyword">throws</span> IOException &#123;
+<div class="code-wrapper"><pre><code class="hljs java">FileChannelImpl.read(FileDescriptor fd, ByteBuffer dst, <span class="hljs-type">long</span> position, NativeDispatcher nd) <span class="hljs-keyword">throws</span> IOException &#123;
     <span class="hljs-keyword">if</span> (dst.isReadOnly())
         <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;Read-only buffer&quot;</span>);
     <span class="hljs-keyword">if</span> (dst <span class="hljs-keyword">instanceof</span> DirectBuffer)
@@ -520,7 +550,7 @@ FileChannelImpl.write(FileDescriptor fd, ByteBuffer src, <span class="hljs-type"
 
 
 <h3 id="File-Lock-Supporting"><a href="#File-Lock-Supporting" class="headerlink" title="File Lock Supporting"></a>File Lock Supporting</h3><p><code>FileChannel.lock</code> 通过 <code>fcntl(F_SETLKW)</code> 获得一个文件锁（阻塞，<code>tryLock</code> 是 <code>fcntl(F_SETLK)</code> 非阻塞），<code>FileLock.release</code> 则通过 <code>F_UNLCK</code> 释放锁</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 获得锁</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 获得锁</span>
 FileChannel.lock()
 FileChannel.lock(<span class="hljs-number">0</span>, Long.MAX_VALUE, <span class="hljs-literal">false</span>)
 FileChannelImpl.lock(<span class="hljs-type">long</span> position, <span class="hljs-type">long</span> size, <span class="hljs-type">boolean</span> shared)
@@ -542,7 +572,7 @@ fcntl(<span class="hljs-type">int</span> __fd, <span class="hljs-type">int</span
 <p><code>int fcntl(int fd, int cmd, ... /* arg */ )</code></p>
 <p>Linux implements traditional (“process-associated”) UNIX record locks, as standardized by POSIX.  For a Linux-specific alternative with better semantics, see the discussion of open file description locks below.</p>
 <p>F_SETLK, F_SETLKW, and F_GETLK are used to acquire, release, and test for the existence of record locks (also known as byte-range, file-segment, or file-region locks).  The third argument, lock, is a pointer to a structure that has at least the following fields (in unspecified order).</p>
-<div class="hljs code-wrapper"><pre><code class="hljs">struct flock &#123;
+<div class="code-wrapper"><pre><code class="hljs">struct flock &#123;
     ...
     short l_type;    /* Type of lock: F_RDLCK,
                         F_WRLCK, F_UNLCK */
@@ -620,29 +650,33 @@ fcntl(<span class="hljs-type">int</span> __fd, <span class="hljs-type">int</span
 </tr>
 </tbody></table>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/ART/">ART</a>
-                    
-                      <a class="hover-with-bg" href="/tags/nio/">nio</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/ART/">#ART</a>
+      
+        <a href="/tags/nio/">#nio</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/06/12/okio/">
+                      <a href="/2021/06/12/okio/" title="浅析 IO 框架：Okio">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">浅析 IO 框架：Okio</span>
                         <span class="visible-mobile">上一篇</span>
@@ -652,7 +686,7 @@ fcntl(<span class="hljs-type">int</span> __fd, <span class="hljs-type">int</span
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/05/28/dalvik-art-heap-gc/">
+                      <a href="/2021/05/28/dalvik-art-heap-gc/" title="老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）">
                         <span class="hidden-mobile">老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -668,19 +702,49 @@ fcntl(<span class="hljs-type">int</span> __fd, <span class="hljs-type">int</span
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -705,32 +769,34 @@ fcntl(<span class="hljs-type">int</span> __fd, <span class="hljs-type">int</span
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -749,10 +815,9 @@ fcntl(<span class="hljs-type">int</span> __fd, <span class="hljs-type">int</span
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -762,45 +827,153 @@ fcntl(<span class="hljs-type">int</span> __fd, <span class="hljs-type">int</span
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

@@ -26,11 +26,12 @@
 <meta property="og:description" content="接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法 syncFrameState重要的方法有三个：makeCurrent，">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-12-27T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.978Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.007Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="vsync">
 <meta property="article:tag" content="render thread">
 <meta name="twitter:card" content="summary_large_image">
+  
   
   
   <title>Android 图形栈（三）render thread - Cyrus Blog</title>
@@ -38,25 +39,19 @@
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -65,7 +60,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -74,16 +73,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -153,6 +165,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -160,59 +173,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="Android 图形栈（三）render thread">
-              
-                Android 图形栈（三）render thread
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2020-12-27 04:00" pubdate>
-        2020年12月27日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      21k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      173 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">Android 图形栈（三）render thread</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2020-12-27 04:00" pubdate>
+          2020年12月27日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          21k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          173 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -221,19 +246,24 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">Android 图形栈（三）render thread</h1>
             
             <div class="markdown-body">
+              
               <p>接着<a href="../../../../2020/12/13/ui-thread-in-vsync/">上一篇文章</a>，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 <code>DisplayList</code>，而 render thread 会根据 <code>DisplayList</code> 执行真正的渲染工作，主要是 <code>DrawFrameTask.syncFrameState</code> 和 <code>CanvasContext.draw</code> 这两个方法</p>
 <h2 id="syncFrameState"><a href="#syncFrameState" class="headerlink" title="syncFrameState"></a>syncFrameState</h2><p>重要的方法有三个：<code>makeCurrent</code>，<code>unpinImages</code> 和 <code>prepareTree</code></p>
 <p><code>TreeInfo</code> 用来在后续的一系列操作中收集信息，你会看到它在各个方法中作为参数传递</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">DrawFrameTask::syncFrameState</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">DrawFrameTask::syncFrameState</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-type">bool</span> canDraw = mContext-&gt;<span class="hljs-built_in">makeCurrent</span>();
     mContext-&gt;<span class="hljs-built_in">unpinImages</span>();
@@ -244,7 +274,7 @@
     <span class="hljs-keyword">return</span> info.prepareTextures;
 &#125;</code></pre></div>
 
-<h2 id="makeCurrent"><a href="#makeCurrent" class="headerlink" title="makeCurrent"></a>makeCurrent</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">CanvasContext::makeCurrent</span><span class="hljs-params">()</span></span>
+<h2 id="makeCurrent"><a href="#makeCurrent" class="headerlink" title="makeCurrent"></a>makeCurrent</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">CanvasContext::makeCurrent</span><span class="hljs-params">()</span></span>
 <span class="hljs-function">MakeCurrentResult <span class="hljs-title">SkiaOpenGLPipeline::makeCurrent</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (!mEglManager.<span class="hljs-built_in">makeCurrent</span>(mEglSurface, &amp;error)) &#123;
@@ -261,7 +291,7 @@
 
 <p>最终是调用了 opengl 的 <code>[eglMakeCurrent](https://www.khronos.org/registry/EGL/sdk/docs/man/html/eglMakeCurrent.xhtml)</code> 方法准备 opengl 环境；现在是 ui thread，并不会在这里进行渲染，而是为了待会将 mutable images 上传到 gpu</p>
 <p>opengl api 都是像 <code>glDrawArrays</code>、<code>glDrawElements</code>、<code>glBindTexture</code> 这样只有方法名和参数的，它的上下文是绑定在 thread 上的，在调用 opengl api 前 <code>eglMakeCurrent</code> 就是确保当前线程有 opengl 上下文；mEglDisplay 可以理解为设备的屏幕；opengl 有双缓冲，一个被主线程读取，一个被渲染线程写入，就是第二和第三个参数，渲染完交换一下，读变写，写变读，当前都是用得同一个 surface；第四个就是 opengl 的上下文，保存了 opengl 状态机</p>
-<h2 id="unpinImages"><a href="#unpinImages" class="headerlink" title="unpinImages"></a>unpinImages</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/** \class SkImage</span>
+<h2 id="unpinImages"><a href="#unpinImages" class="headerlink" title="unpinImages"></a>unpinImages</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/** \class SkImage</span>
 <span class="hljs-comment">    SkImage describes a two dimensional array of pixels to draw. The pixels may be</span>
 <span class="hljs-comment">    decoded in a raster bitmap, encoded in a SkPicture or compressed data stream,</span>
 <span class="hljs-comment">    or located in GPU memory as a GPU texture.</span>
@@ -300,7 +330,7 @@
 <p><code>pinImages</code> 把在内存的 SkImage 作为纹理上传到 gpu 内存，然后可以通过纹理 id 引用，从而避免在内存里操作（复制）像素</p>
 <p><code>unpinImages</code> 从 gpu 内存里移除纹理</p>
 <h2 id="DamageAccumulator"><a href="#DamageAccumulator" class="headerlink" title="DamageAccumulator"></a>DamageAccumulator</h2><p><code>DamageAccumulator</code> 是 <code>DirtyStack</code> stack（FIFO，用双向链表实现），用来累计脏区，它的一般用法是这样的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp">info.damageAccumulator-&gt;<span class="hljs-built_in">pushTransform</span>(<span class="hljs-keyword">this</span>);
+<div class="code-wrapper"><pre><code class="hljs cpp">info.damageAccumulator-&gt;<span class="hljs-built_in">pushTransform</span>(<span class="hljs-keyword">this</span>);
 <span class="hljs-built_in">damageSelf</span>(info);
 info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
@@ -345,7 +375,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="prepareTree"><a href="#prepareTree" class="headerlink" title="prepareTree"></a>prepareTree</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CanvasContext::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info, <span class="hljs-type">int64_t</span>* uiFrameInfo, <span class="hljs-type">int64_t</span> syncQueued, RenderNode* target)</span> </span>&#123;
+<h2 id="prepareTree"><a href="#prepareTree" class="headerlink" title="prepareTree"></a>prepareTree</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CanvasContext::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info, <span class="hljs-type">int64_t</span>* uiFrameInfo, <span class="hljs-type">int64_t</span> syncQueued, RenderNode* target)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">for</span> (<span class="hljs-type">const</span> sp&lt;RenderNode&gt;&amp; node : mRenderNodes) &#123;
         <span class="hljs-comment">// Only the primary target node will be drawn full - all other nodes would get drawn in</span>
@@ -358,7 +388,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>target 是 <code>HardwareRenderer.mRootNode</code> 对应的 native <code>RootRenderNode</code>，<code>mRenderNodes</code> 正常情况下应该只有一个元素 target，所以这里应该总是 <code>TreeInfo::MODE_FULL</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info)</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::prepareTree</span><span class="hljs-params">(TreeInfo&amp; info)</span></span>
 <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::prepareTreeImpl</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-type">bool</span> functorsNeedLayer)</span> </span>&#123;    
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.mode == TreeInfo::MODE_FULL) &#123;
@@ -403,7 +433,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>还记得在<a href="../../../../2020/12/13/ui-thread-in-vsync/">上篇文章</a>里提到， DisplayList 在 endRecording 阶段被放在 <code>RenderNode.mStagingDisplayList</code>，这时候转移到 <code>mDisplayList</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">SkiaDisplayList::prepareListAndChildren</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-type">bool</span> functorsNeedLayer,</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">SkiaDisplayList::prepareListAndChildren</span><span class="hljs-params">(TreeObserver&amp; observer, TreeInfo&amp; info, <span class="hljs-type">bool</span> functorsNeedLayer,</span></span>
 <span class="hljs-params"><span class="hljs-function">        std::function&lt;<span class="hljs-type">void</span>(RenderNode*, TreeObserver&amp;, TreeInfo&amp;, <span class="hljs-type">bool</span>)&gt; childFn)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.prepareTextures &amp;&amp; !info.canvasContext.<span class="hljs-built_in">pinImages</span>(mMutableImages)) &#123;
@@ -426,7 +456,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <p><code>SkiaRecordingCanvas.drawBitmap</code> 等方法会将 mutable image 放入 <code>mMutableImages</code>，然后在 prepare 阶段上传到 gpu；为什么这么做呢，我猜想是在渲染之前需要确保所有内容都计算完毕并确保不变，mutable image 可以被修改，所以放到 gpu 里确保不被改动，immutable image 因为本身就不可修改所以无需这样处理</p>
 <p><code>TreeInfo.prepareTextures</code> 标识 mutable images 有没上传成功；如果上传成功，ui thread 在 <code>DrawFrameTask::syncFrameState</code> 之后就会被唤醒，否则会一直阻塞直到 <code>CanvasContext.draw</code> 完成；这对 ui thread 有着很大的影响</p>
 <p><code>SkiaDisplayList.mChildNodes</code> 应该只有一个 <code>DecorView.mRenderNode</code>，在这里它的 <code>prepareTreeImpl</code> 被调用</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::pushLayerUpdate</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">RenderNode::pushLayerUpdate</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (info.canvasContext.<span class="hljs-built_in">createOrUpdateLayer</span>(<span class="hljs-keyword">this</span>, *info.damageAccumulator, info.errorHandler)) &#123;
         <span class="hljs-built_in">damageSelf</span>(info);
@@ -457,7 +487,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 <p>我们知道 <code>View</code> 是 framework ui api，<code>RenderNode</code> 相当于绘制这块 <code>View</code> 所需的配置文件；这里新增了一个新的概念 layer，它是这块 <code>View</code> 对应的 surface，它所呈现的内容将绘制在这个 surface 上，同 opengl 里 surface 的概念</p>
 <p><code>RenderNode</code> 和它的脏区被添加到 <code>TreeInfo.layerUpdateQueue</code>；queue 里应该有两个元素，一个是 <code>HardwareRenderer.mRootNode</code> 对应的 native <code>RootRenderNode</code>，一个是 <code>DecorView.mRenderNode</code></p>
-<h2 id="CanvasContext-draw"><a href="#CanvasContext-draw" class="headerlink" title="CanvasContext.draw"></a>CanvasContext.draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CanvasContext::draw</span><span class="hljs-params">()</span> </span>&#123;
+<h2 id="CanvasContext-draw"><a href="#CanvasContext-draw" class="headerlink" title="CanvasContext.draw"></a>CanvasContext.draw</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CanvasContext::draw</span><span class="hljs-params">()</span> </span>&#123;
     <span class="hljs-comment">// 还记得上面说的吗，脏区是累加的，这里是总的脏区</span>
     SkRect dirty;
     mDamageAccumulator.<span class="hljs-built_in">finish</span>(&amp;dirty);
@@ -478,7 +508,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <h2 id="getFrame"><a href="#getFrame" class="headerlink" title="getFrame"></a>getFrame</h2><p>看下 <code>Frame</code>，它包含 <code>EGLSurface</code> 和 surface 宽高</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">Frame <span class="hljs-title">SkiaOpenGLPipeline::getFrame</span><span class="hljs-params">()</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">Frame <span class="hljs-title">SkiaOpenGLPipeline::getFrame</span><span class="hljs-params">()</span></span>
 <span class="hljs-function">Frame <span class="hljs-title">EglManager::beginFrame</span><span class="hljs-params">(EGLSurface surface)</span> </span>&#123;
     <span class="hljs-comment">// ... </span>
     <span class="hljs-built_in">makeCurrent</span>(surface);
@@ -491,7 +521,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">return</span> frame;
 &#125;</code></pre></div>
 
-<h2 id="IRenderPipeline-draw"><a href="#IRenderPipeline-draw" class="headerlink" title="IRenderPipeline::draw"></a>IRenderPipeline::draw</h2><div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">SkiaOpenGLPipeline::draw</span><span class="hljs-params">(...)</span></span>
+<h2 id="IRenderPipeline-draw"><a href="#IRenderPipeline-draw" class="headerlink" title="IRenderPipeline::draw"></a>IRenderPipeline::draw</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">SkiaOpenGLPipeline::draw</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaPipeline::renderFrame</span><span class="hljs-params">(...)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
     SkCanvas* canvas = <span class="hljs-built_in">tryCapture</span>(surface.<span class="hljs-built_in">get</span>(), nodes[<span class="hljs-number">0</span>].<span class="hljs-built_in">get</span>(), layers);
@@ -508,7 +538,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p><code>SkiaPipeline::renderLayersImpl</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 看上面，layers 是在 RenderNode::prepareTree 阶段加入的，包括 </span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 看上面，layers 是在 RenderNode::prepareTree 阶段加入的，包括 </span>
 <span class="hljs-comment">// HardwareRenderer.mRootNode 对应的 native RootRenderNode 和 DecorView.mRenderNode</span>
 <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkiaPipeline::renderLayersImpl</span><span class="hljs-params">(<span class="hljs-type">const</span> LayerUpdateQueue&amp; layers, <span class="hljs-type">bool</span> opaque)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
@@ -548,7 +578,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <p>它在 <code>SkiaPipeline::createOrUpdateLayer</code> 里通过 <code>RenderNode::setLayerSurface</code> 被赋予 <code>SkSurface_Gpu</code>；那么上面的 canvas 则是以 <code>SkGpuDevice</code> 为 backend 的 <code>SkCanvas</code>，所有的 draw 操作（onDrawXXX）都被重定向到 <code>SkGpuDevice</code>（drawXXX）；而在 <code>SkGpuDevice</code> 里，draw 操作又被重定向到 <code>GrRenderTargetContext</code>；在 <code>GrRenderTargetContext</code> 里，draw 操作被封装为 <code>GrDrawOp</code>，通过 <code>GrOpsTask::addDrawOp</code> 加入到 <code>GrRenderTargetContext::fOpsTask</code>；而 <code>GrRenderTargetContext::fOpsTask</code> 会被 <code>GrDrawingManager::fDAG</code> 持有</p>
 <p>drawing op 在这里被再次包装，由 <code>DisplayList</code> 包装为 <code>GrDrawOp</code></p>
 <p><code>RenderNode</code> 的 <code>DisplayList</code> 会被渲染到 layer 上</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * Call to ensure all drawing to the context has been issued to the underlying 3D API.</span>
 <span class="hljs-comment"> */</span>
 <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrContext::flush</span><span class="hljs-params">()</span></span>
@@ -675,7 +705,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>最终 <code>flush</code> 将 <code>GrDrawOp</code> 转换为 opengl 命令并提交给 gpu 执行，下面看看绘制一个矩形 <code>GrFillRectOp</code> 是怎么转换为 opengl 命令的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkCanvas::drawRect</span><span class="hljs-params">(<span class="hljs-type">const</span> SkRect&amp; r, <span class="hljs-type">const</span> SkPaint&amp; paint)</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkCanvas::drawRect</span><span class="hljs-params">(<span class="hljs-type">const</span> SkRect&amp; r, <span class="hljs-type">const</span> SkPaint&amp; paint)</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">SkCanvas::onDrawRect</span><span class="hljs-params">(<span class="hljs-type">const</span> SkRect&amp; r, <span class="hljs-type">const</span> SkPaint&amp; paint)</span> </span>&#123;
     <span class="hljs-comment">// ...</span>
@@ -709,7 +739,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 &#125;</code></pre></div>
 
 <p>看看 <code>GrFillRectOp</code> 的定义</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">GrFillRectOp::Make</span><span class="hljs-params">(...)</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function">std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">GrFillRectOp::Make</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"><span class="hljs-type">static</span> std::unique_ptr&lt;GrDrawOp&gt; <span class="hljs-title">Make</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"></span>
 <span class="hljs-function"><span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> Op, <span class="hljs-keyword">typename</span>... OpArgs&gt;</span>
@@ -738,7 +768,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrRenderTargetContext::addDrawOp</span><span class="hljs-params">(<span class="hljs-type">const</span> GrClip&amp; clip, std::unique_ptr&lt;GrDrawOp&gt; op,</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">GrRenderTargetContext::addDrawOp</span><span class="hljs-params">(<span class="hljs-type">const</span> GrClip&amp; clip, std::unique_ptr&lt;GrDrawOp&gt; op,</span></span>
 <span class="hljs-params"><span class="hljs-function">                                      <span class="hljs-type">const</span> std::function&lt;WillAddOpFn&gt;&amp; willAddFn)</span> </span>&#123;
     <span class="hljs-keyword">auto</span> opList = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">getRTOpList</span>();
     <span class="hljs-comment">// ...</span>
@@ -776,7 +806,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
     <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">recordOp</span>(std::<span class="hljs-built_in">move</span>(op), processorAnalysis, clip.<span class="hljs-built_in">doesClip</span>() ? &amp;clip : <span class="hljs-literal">nullptr</span>, &amp;dstProxy, caps);
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">class</span> <span class="hljs-title class_">FillRectOp</span> <span class="hljs-keyword">final</span> : <span class="hljs-keyword">public</span> GrMeshDrawOp &#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">class</span> <span class="hljs-title class_">FillRectOp</span> <span class="hljs-keyword">final</span> : <span class="hljs-keyword">public</span> GrMeshDrawOp &#123;
     <span class="hljs-function">VertexSpec <span class="hljs-title">vertexSpec</span><span class="hljs-params">()</span> <span class="hljs-type">const</span> </span>&#123;
         <span class="hljs-keyword">auto</span> indexBufferOption = GrQuadPerEdgeAA::<span class="hljs-built_in">CalcIndexBufferOption</span>(fHelper.<span class="hljs-built_in">aaType</span>(), fQuads.<span class="hljs-built_in">count</span>());
         <span class="hljs-keyword">return</span> <span class="hljs-built_in">VertexSpec</span>(fQuads.<span class="hljs-built_in">deviceQuadType</span>(), fColorType, fQuads.<span class="hljs-built_in">localQuadType</span>(),
@@ -804,29 +834,33 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
         <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">tessellate</span>(vertexSpec, fPrePreparedVertices);
     &#125;
 &#125;</code></pre></div>
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/vsync/">vsync</a>
-                    
-                      <a class="hover-with-bg" href="/tags/render-thread/">render thread</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/vsync/">#vsync</a>
+      
+        <a href="/tags/render-thread/">#render thread</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/01/10/aqs-basic/">
+                      <a href="/2021/01/10/aqs-basic/" title="Lock（一）AQS 基础">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">Lock（一）AQS 基础</span>
                         <span class="visible-mobile">上一篇</span>
@@ -836,7 +870,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2020/12/13/ui-thread-in-vsync/">
+                      <a href="/2020/12/13/ui-thread-in-vsync/" title="Android 图形栈（二）ui thread">
                         <span class="hidden-mobile">Android 图形栈（二）ui thread</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -852,19 +886,49 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -889,32 +953,34 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -933,10 +999,9 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -946,45 +1011,153 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

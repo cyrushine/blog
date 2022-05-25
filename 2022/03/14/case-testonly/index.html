@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-03-14-case-testonly/01.png">
 <meta property="article:published_time" content="2022-03-14T05:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.986Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.011Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="case">
 <meta property="article:tag" content="案例">
@@ -36,30 +36,25 @@
 <meta name="twitter:image" content="https://www.dalvik.work/image/2022-03-14-case-testonly/01.png">
   
   
+  
   <title>排查 Launcher AppStore 静默安装 App 失败的问题 - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -68,7 +63,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -77,16 +76,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -156,6 +168,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -163,59 +176,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="排查 Launcher AppStore 静默安装 App 失败的问题">
-              
-                排查 Launcher AppStore 静默安装 App 失败的问题
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2022-03-14 05:00" pubdate>
-        2022年3月14日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      8.5k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      71 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">排查 Launcher AppStore 静默安装 App 失败的问题</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-03-14 05:00" pubdate>
+          2022年3月14日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          8.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          71 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -224,15 +249,20 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">排查 Launcher AppStore 静默安装 App 失败的问题</h1>
             
             <div class="markdown-body">
+              
               <p>Launcher 里的 AppStore 模块会根据服务端的配置安装/卸载 APP，当然用户也可以手动安装 AppStore 里的 APP</p>
 <p>某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的</p>
 <blockquote>
@@ -240,12 +270,12 @@
 <p>静默安装是通过广播 <code>android.intent.action.SILENCE_INSTALL</code> 实现的，由 ROM 鉴权和实现</p>
 </blockquote>
 <p>本地在 <code>YUNMI.21FACE-1.0.UniVer.071320_V8.1 绿联 6810 Android 5.1</code> 还原，我首先通过查询关键字 <code>SILENCE_INSTALL</code> 没找到有用的日志</p>
-<div class="hljs code-wrapper"><pre><code class="hljs bash">D/ActivityThread: BDC-Calling onReceive: intent=Intent &#123; act=android.intent.action.SILENCE_INSTALL flg=0x10 cmp=com.android.settings/.SilenceInstallApkReciver (has extras) &#125;, receiver=com.android.settings.SilenceInstallApkReciver@14f877ad
+<div class="code-wrapper"><pre><code class="hljs bash">D/ActivityThread: BDC-Calling onReceive: intent=Intent &#123; act=android.intent.action.SILENCE_INSTALL flg=0x10 cmp=com.android.settings/.SilenceInstallApkReciver (has extras) &#125;, receiver=com.android.settings.SilenceInstallApkReciver@14f877ad
 D/ActivityThread: BDC-RECEIVER handled : 0 / ReceiverData&#123;intent=Intent &#123; act=android.intent.action.SILENCE_INSTALL flg=0x10 cmp=com.android.settings/.SilenceInstallApkReciver (has extras) &#125; packageName=com.android.settings resultCode=-1 resultData=null resultExtras=null&#125;</code></pre></div>
 
 <p>然后搜索包名 <code>com.viomi.materialassistant</code> 找到 <code>PackageManager</code> 的日志，看起来它的日志是有用的；但是它的日志里并没有错误出现，只是记录了安装过程中的各个阶段</p>
 <p>况且我也不了解安装的具体流程，PMS 不用想就知道代码量巨大，直接从代码里找日志出现的地方不显示，所以决定跟正常的安装流程日志进行对比</p>
-<div class="hljs code-wrapper"><pre><code class="hljs bash">I/PackageManager: init_copy idx=0: InstallParams&#123;3488adaa file=/storage/emulated/0/viomi/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
+<div class="code-wrapper"><pre><code class="hljs bash">I/PackageManager: init_copy idx=0: InstallParams&#123;3488adaa file=/storage/emulated/0/viomi/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
 I/PackageManager: Trying to <span class="hljs-built_in">bind</span> to DefaultContainerService
 I/PackageManager: onServiceConnected
 I/PackageManager: onServiceConnected: <span class="hljs-literal">true</span>, 0
@@ -266,7 +296,7 @@ I/PackageManager: disconnectService: <span class="hljs-literal">false</span></co
 
 <p>这是一个正常的安装日志，第 10 行就是差异开始的地方，正常的安装会将 APP 复制到 /data/app/packagename 并进行 dexopt 生产本地代码，异常的流程完全没有这些后续操作且也没有异常日志出现</p>
 <p>看来只好 <code>show me the code</code>，关键字是 <code>PackageManagerService</code> 和 <code>installPackageLI</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs bash">I/PackageManager(  980): init_copy idx=0: InstallParams&#123;23c92659 file=/data/local/tmp/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
+<div class="code-wrapper"><pre><code class="hljs bash">I/PackageManager(  980): init_copy idx=0: InstallParams&#123;23c92659 file=/data/local/tmp/com.viomi.materialassistant-debug-v20001.apk cid=null&#125;
 I/PackageManager(  980): Trying to <span class="hljs-built_in">bind</span> to DefaultContainerService
 I/PackageManager(  980): onServiceConnected
 I/PackageManager(  980): onServiceConnected: <span class="hljs-literal">true</span>, 0
@@ -307,7 +337,7 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
 
 <p>找到 PackageManagerService.java 文件，切换到 android-5.1.0_r5，搜索 <code>installPackageLI</code> 能找到如下代码片段</p>
 <p>正常流程能走到 <code>manifestDigest was not present</code> 但异常流程在此之前被 <code>return</code> 中断了，那么就从这行代码往前找找看是什么逻辑触发 <code>return</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">installPackageLI</span><span class="hljs-params">(InstallArgs args, PackageInstalledInfo res)</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">installPackageLI</span><span class="hljs-params">(InstallArgs args, PackageInstalledInfo res)</span> &#123;
         <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">installFlags</span> <span class="hljs-operator">=</span> args.installFlags;
         <span class="hljs-type">String</span> <span class="hljs-variable">installerPackageName</span> <span class="hljs-operator">=</span> args.installerPackageName;
         <span class="hljs-type">File</span> <span class="hljs-variable">tmpPackageFile</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(args.getCodePath());
@@ -401,7 +431,7 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
 
 <p>看来安装流程就是在这里被中断了：APK 带有 <code>FLAG_TEST_ONLY</code> 标识，但安装时缺少参数 <code>INSTALL_ALLOW_TEST</code></p>
 <p>原来如此，我记得安装这种 test only 的包时 adb 要带上 -t 选项，也就说 <code>android.intent.action.SILENCE_INSTALL</code> 时没有开启 -t 选项</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">if</span> ((pkg.applicationInfo.flags&amp;ApplicationInfo.FLAG_TEST_ONLY) != <span class="hljs-number">0</span>) &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">if</span> ((pkg.applicationInfo.flags&amp;ApplicationInfo.FLAG_TEST_ONLY) != <span class="hljs-number">0</span>) &#123;
     <span class="hljs-keyword">if</span> ((installFlags &amp; PackageManager.INSTALL_ALLOW_TEST) == <span class="hljs-number">0</span>) &#123;
         res.setError(INSTALL_FAILED_TEST_ONLY, <span class="hljs-string">&quot;installPackageLI&quot;</span>);
         <span class="hljs-keyword">return</span>;
@@ -411,31 +441,35 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
 <p><img src="../../../../image/2022-03-14-case-testonly/01.png" srcset="/image/loading.gif" lazyload alt="01.png"></p>
 <p>把 AppStore 上的 APK 下载下来看下，果然 <code>testOnly=”true”</code>，看来是不小心上传错安装包了（这里是测试环境，所以不要求放 release 包，debug 包也是可以的）</p>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/case/">case</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E6%A1%88%E4%BE%8B/">案例</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E6%BA%90%E7%A0%81/">源码</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/case/">#case</a>
+      
+        <a href="/tags/%E6%A1%88%E4%BE%8B/">#案例</a>
+      
+        <a href="/tags/%E6%BA%90%E7%A0%81/">#源码</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/04/07/asm/">
+                      <a href="/2022/04/07/asm/" title="ASM - 字节码操作库">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">ASM - 字节码操作库</span>
                         <span class="visible-mobile">上一篇</span>
@@ -445,7 +479,7 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/02/16/toutiao-anr-sharedpreference/">
+                      <a href="/2022/02/16/toutiao-anr-sharedpreference/" title="【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待">
                         <span class="hidden-mobile">【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -461,19 +495,49 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -498,32 +562,34 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -542,10 +608,9 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -555,45 +620,153 @@ I/PackageManager(  980): calling disconnectService()</code></pre></div>
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

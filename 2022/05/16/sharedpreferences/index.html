@@ -1,0 +1,1148 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="提问 apply 和 commit 有何区别？ SharedPreferences 是线程安全的吗？它是如何保证线程安全的？ SharedPreferences 是进程安全的吗？ 数据丢失时，其最终的屏障 —— 文件备份机制是如何实现的？ 如何实现进程安全的 SharedPreferences SharedPreferences 导致 ANR 的原因  从磁盘加载 以下代码基于 Android 3">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入 SharedPreferences：架构、缺点和优化">
+<meta property="og:url" content="https://www.dalvik.work/2022/05/16/sharedpreferences/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="提问 apply 和 commit 有何区别？ SharedPreferences 是线程安全的吗？它是如何保证线程安全的？ SharedPreferences 是进程安全的吗？ 数据丢失时，其最终的屏障 —— 文件备份机制是如何实现的？ 如何实现进程安全的 SharedPreferences SharedPreferences 导致 ANR 的原因  从磁盘加载 以下代码基于 Android 3">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-05-16T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.011Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="SharedPreferences">
+<meta property="article:tag" content="SP">
+<meta property="article:tag" content="MMKV">
+<meta property="article:tag" content="Jetpack-DataStore">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>深入 SharedPreferences：架构、缺点和优化 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">深入 SharedPreferences：架构、缺点和优化</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-05-16 04:00" pubdate>
+          2022年5月16日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          117 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">深入 SharedPreferences：架构、缺点和优化</h1>
+            
+            <div class="markdown-body">
+              
+              <h1 id="提问"><a href="#提问" class="headerlink" title="提问"></a>提问</h1><ul>
+<li><code>apply</code> 和 <code>commit</code> 有何区别？</li>
+<li>SharedPreferences 是线程安全的吗？它是如何保证线程安全的？</li>
+<li>SharedPreferences 是进程安全的吗？</li>
+<li>数据丢失时，其最终的屏障 —— 文件备份机制是如何实现的？</li>
+<li>如何实现进程安全的 SharedPreferences</li>
+<li>SharedPreferences 导致 ANR 的原因</li>
+</ul>
+<h1 id="从磁盘加载"><a href="#从磁盘加载" class="headerlink" title="从磁盘加载"></a>从磁盘加载</h1><blockquote>
+<p>以下代码基于 Android 31</p>
+</blockquote>
+<p>SharedPreferences 本质上是：</p>
+<ul>
+<li>在磁盘上是一个 XML 文件：<code>/&#123;app internal data dir&#125;/shared_prefs/&#123;name&#125;.xml</code></li>
+<li>在内存中是一个 <code>Map&lt;String, Object&gt;</code></li>
+</ul>
+<p>构造 SharedPreferences 实例时会立即起一个线程来将磁盘上的 xml 文件加载并解析为内存中的 Map，在加载任务完成前，会通过 <code>mLock</code> 阻塞所有的 get/set 操作</p>
+<p>所以在主线程上操作 SharedPreferences 是有可能阻塞主线程导致 ANR 的</p>
+<div class="code-wrapper"><pre><code class="hljs java">SharedPreferencesImpl(File file, <span class="hljs-type">int</span> mode) &#123;
+    mFile = file;
+    mBackupFile = makeBackupFile(file);
+    mMode = mode;
+    mLoaded = <span class="hljs-literal">false</span>;
+    mMap = <span class="hljs-literal">null</span>;
+    mThrowable = <span class="hljs-literal">null</span>;
+    startLoadFromDisk();
+&#125;
+
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startLoadFromDisk</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+        mLoaded = <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-keyword">new</span> <span class="hljs-title class_">Thread</span>(<span class="hljs-string">&quot;SharedPreferencesImpl-load&quot;</span>) &#123;
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+            loadFromDisk();
+        &#125;
+    &#125;.start();
+&#125;
+
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadFromDisk</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+        <span class="hljs-keyword">if</span> (mLoaded) &#123;
+            <span class="hljs-keyword">return</span>;
+        &#125;
+        <span class="hljs-keyword">if</span> (mBackupFile.exists()) &#123;
+            mFile.delete();
+            mBackupFile.renameTo(mFile);
+        &#125;
+    &#125;
+
+    <span class="hljs-comment">// Debugging</span>
+    <span class="hljs-keyword">if</span> (mFile.exists() &amp;&amp; !mFile.canRead()) &#123;
+        Log.w(TAG, <span class="hljs-string">&quot;Attempt to read preferences file &quot;</span> + mFile + <span class="hljs-string">&quot; without permission&quot;</span>);
+    &#125;
+
+    Map&lt;String, Object&gt; map = <span class="hljs-literal">null</span>;
+    <span class="hljs-type">StructStat</span> <span class="hljs-variable">stat</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-type">Throwable</span> <span class="hljs-variable">thrown</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-keyword">try</span> &#123;
+        stat = Os.stat(mFile.getPath());
+        <span class="hljs-keyword">if</span> (mFile.canRead()) &#123;
+            <span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">str</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+            <span class="hljs-keyword">try</span> &#123;
+                str = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(
+                        <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(mFile), <span class="hljs-number">16</span> * <span class="hljs-number">1024</span>);
+                map = (Map&lt;String, Object&gt;) XmlUtils.readMapXml(str);
+            &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+                Log.w(TAG, <span class="hljs-string">&quot;Cannot read &quot;</span> + mFile.getAbsolutePath(), e);
+            &#125; <span class="hljs-keyword">finally</span> &#123;
+                IoUtils.closeQuietly(str);
+            &#125;
+        &#125;
+    &#125; <span class="hljs-keyword">catch</span> (ErrnoException e) &#123;
+        <span class="hljs-comment">// An errno exception means the stat failed. Treat as empty/non-existing by</span>
+        <span class="hljs-comment">// ignoring.</span>
+    &#125; <span class="hljs-keyword">catch</span> (Throwable t) &#123;
+        thrown = t;
+    &#125;
+
+    <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+        mLoaded = <span class="hljs-literal">true</span>;
+        mThrowable = thrown;
+        <span class="hljs-comment">// It&#x27;s important that we always signal waiters, even if we&#x27;ll make</span>
+        <span class="hljs-comment">// them fail with an exception. The try-finally is pretty wide, but</span>
+        <span class="hljs-comment">// better safe than sorry.</span>
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-keyword">if</span> (thrown == <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-keyword">if</span> (map != <span class="hljs-literal">null</span>) &#123;
+                    mMap = map;
+                    mStatTimestamp = stat.st_mtim;
+                    mStatSize = stat.st_size;
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    mMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+                &#125;
+            &#125;
+            <span class="hljs-comment">// In case of a thrown exception, we retain the old map. That allows</span>
+            <span class="hljs-comment">// any open editors to commit and store updates.</span>
+        &#125; <span class="hljs-keyword">catch</span> (Throwable t) &#123;
+            mThrowable = t;
+        &#125; <span class="hljs-keyword">finally</span> &#123;
+            mLock.notifyAll();
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> String <span class="hljs-title function_">getString</span><span class="hljs-params">(String key, <span class="hljs-meta">@Nullable</span> String defValue)</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+        awaitLoadedLocked();
+        <span class="hljs-type">String</span> <span class="hljs-variable">v</span> <span class="hljs-operator">=</span> (String)mMap.get(key);
+        <span class="hljs-keyword">return</span> v != <span class="hljs-literal">null</span> ? v : defValue;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> Editor <span class="hljs-title function_">edit</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+        awaitLoadedLocked();
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">EditorImpl</span>();
+&#125;    
+
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">awaitLoadedLocked</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">if</span> (!mLoaded) &#123;
+        <span class="hljs-comment">// Raise an explicit StrictMode onReadFromDisk for this</span>
+        <span class="hljs-comment">// thread, since the real read will be in a different</span>
+        <span class="hljs-comment">// thread and otherwise ignored by StrictMode.</span>
+        BlockGuard.getThreadPolicy().onReadFromDisk();
+    &#125;
+    <span class="hljs-keyword">while</span> (!mLoaded) &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            mLock.wait();
+        &#125; <span class="hljs-keyword">catch</span> (InterruptedException unused) &#123;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">if</span> (mThrowable != <span class="hljs-literal">null</span>) &#123;
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalStateException</span>(mThrowable);
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="编辑器-Editor"><a href="#编辑器-Editor" class="headerlink" title="编辑器 Editor"></a>编辑器 Editor</h1><ul>
+<li><code>SharedPreferences.Editor</code> 是线程安全的</li>
+<li>编辑的过程其实是在记录编辑操作，在最终 <code>apply/commit</code> 之前都不会影响内存和磁盘里的数据</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> Editor <span class="hljs-title function_">putString</span><span class="hljs-params">(String key, <span class="hljs-meta">@Nullable</span> String value)</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mEditorLock) &#123;
+        mModified.put(key, value);
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">this</span>;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> Editor <span class="hljs-title function_">putInt</span><span class="hljs-params">(String key, <span class="hljs-type">int</span> value)</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mEditorLock) &#123;
+        mModified.put(key, value);
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">this</span>;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> Editor <span class="hljs-title function_">remove</span><span class="hljs-params">(String key)</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mEditorLock) &#123;
+        mModified.put(key, <span class="hljs-built_in">this</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">this</span>;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> Editor <span class="hljs-title function_">clear</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">synchronized</span> (mEditorLock) &#123;
+        mClear = <span class="hljs-literal">true</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">this</span>;
+    &#125;
+&#125;</code></pre></div>
+
+<p>注意 <code>Editor.clear()</code> 操作是清空 SharedPreferences 里的数据，具体来说是清空已提交的数据，在 Editor 里尚未提交的数据并不会被清空</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> MemoryCommitResult <span class="hljs-title function_">commitToMemory</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">synchronized</span> (mEditorLock) &#123;
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">changesMade</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+        <span class="hljs-keyword">if</span> (mClear) &#123;
+            <span class="hljs-keyword">if</span> (!mapToWriteToDisk.isEmpty()) &#123;
+                changesMade = <span class="hljs-literal">true</span>;
+                mapToWriteToDisk.clear();
+            &#125;
+            keysCleared = <span class="hljs-literal">true</span>;
+            mClear = <span class="hljs-literal">false</span>;
+        &#125;
+        
+        <span class="hljs-keyword">for</span> (Map.Entry&lt;String, Object&gt; e : mModified.entrySet()) &#123;
+            <span class="hljs-comment">// ...</span>
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-meta">@Test</span>
+<span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">useAppContext</span><span class="hljs-params">()</span></span> &#123;
+    <span class="hljs-keyword">val</span> appContext = InstrumentationRegistry.getInstrumentation().targetContext
+    <span class="hljs-keyword">val</span> sp = appContext.getSharedPreferences(<span class="hljs-string">&quot;test&quot;</span>, Context.MODE_PRIVATE)
+    sp.edit &#123; clear() &#125;
+
+    sp.edit &#123;
+        putBoolean(<span class="hljs-string">&quot;b&quot;</span>, <span class="hljs-literal">true</span>)
+        putFloat(<span class="hljs-string">&quot;f&quot;</span>, <span class="hljs-number">0.3f</span>)
+        putString(<span class="hljs-string">&quot;s&quot;</span>, <span class="hljs-string">&quot;apple&quot;</span>)
+    &#125;
+    sp.edit &#123;
+        putInt(<span class="hljs-string">&quot;i&quot;</span>, <span class="hljs-number">99</span>)
+        putLong(<span class="hljs-string">&quot;l&quot;</span>, <span class="hljs-number">999L</span>)
+        clear()
+    &#125;
+    Log.d(<span class="hljs-string">&quot;cyrus&quot;</span>, sp.all.map &#123; <span class="hljs-string">&quot;<span class="hljs-subst">$&#123;it.key&#125;</span> - <span class="hljs-subst">$&#123;it.value&#125;</span>&quot;</span> &#125;.joinToString())
+    <span class="hljs-comment">// l - 999, i - 99</span>
+    <span class="hljs-comment">// 虽然 clear 操作排在最后面但它并不会清空 i 和 l</span>
+&#125;</code></pre></div>
+
+<h1 id="二阶段提交"><a href="#二阶段提交" class="headerlink" title="二阶段提交"></a>二阶段提交</h1><p>上面说过 SharedPreferences 本质上是内存中的 <code>Map</code> 对象和磁盘上的 <code>XML 文件</code>，所以提交一个修改就会产生二阶段提交：提交到内存（<code>commitToMemory</code>）和提交到磁盘（<code>writeToFile</code>）</p>
+<h2 id="commitToMemory"><a href="#commitToMemory" class="headerlink" title="commitToMemory"></a>commitToMemory</h2><ul>
+<li>提交到内存也就是把修改操作应用到 <code>mMap</code>，由 <code>mLock</code> 上锁</li>
+<li>对应地内存的版本号（<code>mCurrentMemoryStateGeneration</code>）会自增</li>
+<li>在提交至内存后，尚未提交到磁盘前，<code>mDiskWritesInFlight</code> 会自增，也就说 mDiskWritesInFlight &gt; 0 表示有修改正在等待提交到磁盘</li>
+<li>提交至内存的过程中是直接修改 <code>mMap</code> 的，后续提交至磁盘的过程使用了 <code>MemoryCommitResult</code>，它也是直接引用 <code>mMap</code> 的，但是提交至磁盘的操作只对 <code>mWritingToDiskLock</code> 上锁，这就造成对象的多线程读写问题：一个线程拿到锁 <code>mLock</code> 读写 <code>mMap</code> 同时另一线程拿到 <code>mWritingToDiskLock</code> 读 <code>mMap</code>，所以当 mDiskWritesInFlight &gt; 0 时得将 <code>mMap</code> 复制一份使用，也就是写时复制的思想（<code>copy on write</code>）如 <code>CopyOnWriteArrayList</code></li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> MemoryCommitResult <span class="hljs-title function_">commitToMemory</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-type">long</span> memoryStateGeneration;
+    List&lt;String&gt; keysModified = <span class="hljs-literal">null</span>;
+    Set&lt;OnSharedPreferenceChangeListener&gt; listeners = <span class="hljs-literal">null</span>;
+    Map&lt;String, Object&gt; mapToWriteToDisk;
+    <span class="hljs-keyword">synchronized</span> (SharedPreferencesImpl.<span class="hljs-built_in">this</span>.mLock) &#123;
+
+        <span class="hljs-comment">// We optimistically don&#x27;t make a deep copy until</span>
+        <span class="hljs-comment">// a memory commit comes in when we&#x27;re already</span>
+        <span class="hljs-comment">// writing to disk.</span>
+        <span class="hljs-keyword">if</span> (mDiskWritesInFlight &gt; <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-comment">// We can&#x27;t modify our mMap as a currently</span>
+            <span class="hljs-comment">// in-flight write owns it.  Clone it before</span>
+            <span class="hljs-comment">// modifying it.</span>
+            <span class="hljs-comment">// noinspection unchecked</span>
+            mMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;String, Object&gt;(mMap);
+        &#125;
+        mapToWriteToDisk = mMap;
+        mDiskWritesInFlight++;
+
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">hasListeners</span> <span class="hljs-operator">=</span> mListeners.size() &gt; <span class="hljs-number">0</span>;
+        <span class="hljs-keyword">if</span> (hasListeners) &#123;
+            keysModified = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;String&gt;();
+            listeners = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashSet</span>&lt;OnSharedPreferenceChangeListener&gt;(mListeners.keySet());
+        &#125;
+
+        <span class="hljs-keyword">synchronized</span> (mEditorLock) &#123;
+            <span class="hljs-type">boolean</span> <span class="hljs-variable">changesMade</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+            <span class="hljs-keyword">if</span> (mClear) &#123;
+                <span class="hljs-keyword">if</span> (!mapToWriteToDisk.isEmpty()) &#123;
+                    changesMade = <span class="hljs-literal">true</span>;
+                    mapToWriteToDisk.clear();
+                &#125;
+                mClear = <span class="hljs-literal">false</span>;
+            &#125;
+
+            <span class="hljs-keyword">for</span> (Map.Entry&lt;String, Object&gt; e : mModified.entrySet()) &#123;
+                <span class="hljs-type">String</span> <span class="hljs-variable">k</span> <span class="hljs-operator">=</span> e.getKey();
+                <span class="hljs-type">Object</span> <span class="hljs-variable">v</span> <span class="hljs-operator">=</span> e.getValue();
+                <span class="hljs-comment">// &quot;this&quot; is the magic value for a removal mutation. In addition,</span>
+                <span class="hljs-comment">// setting a value to &quot;null&quot; for a given key is specified to be</span>
+                <span class="hljs-comment">// equivalent to calling remove on that key.</span>
+                <span class="hljs-keyword">if</span> (v == <span class="hljs-built_in">this</span> || v == <span class="hljs-literal">null</span>) &#123;
+                    <span class="hljs-keyword">if</span> (!mapToWriteToDisk.containsKey(k)) &#123;
+                        <span class="hljs-keyword">continue</span>;
+                    &#125;
+                    mapToWriteToDisk.remove(k);
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    <span class="hljs-keyword">if</span> (mapToWriteToDisk.containsKey(k)) &#123;
+                        <span class="hljs-type">Object</span> <span class="hljs-variable">existingValue</span> <span class="hljs-operator">=</span> mapToWriteToDisk.get(k);
+                        <span class="hljs-keyword">if</span> (existingValue != <span class="hljs-literal">null</span> &amp;&amp; existingValue.equals(v)) &#123;
+                            <span class="hljs-keyword">continue</span>;
+                        &#125;
+                    &#125;
+                    mapToWriteToDisk.put(k, v);
+                &#125;
+                changesMade = <span class="hljs-literal">true</span>;
+                <span class="hljs-keyword">if</span> (hasListeners) &#123;
+                    keysModified.add(k);
+                &#125;
+            &#125;
+            mModified.clear();
+            <span class="hljs-keyword">if</span> (changesMade) &#123;
+                mCurrentMemoryStateGeneration++;
+            &#125;
+            memoryStateGeneration = mCurrentMemoryStateGeneration;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">MemoryCommitResult</span>(memoryStateGeneration, keysModified, listeners,
+            mapToWriteToDisk);
+&#125;</code></pre></div>
+
+<h2 id="writeToFile"><a href="#writeToFile" class="headerlink" title="writeToFile"></a>writeToFile</h2><ul>
+<li><p><code>isFromSyncCommit</code>，true - 来自 <code>commit</code>，false - 来自 <code>apply</code></p>
+</li>
+<li><p>使用 backup file 策略确保文件写操作的完整性、原子性：</p>
+<ul>
+<li><p>文件写之前将 XML 文件 <code>mFile</code> 剪切到 <code>mBackupFile</code>，写完将 mBackupFile 删除</p>
+</li>
+<li><p>文件写之前发现有 mBackupFile 说明上一次的写操作没有正确结束，mFile 是不正确的，删掉 mFile 即可（当前提交至磁盘的内容是最新的，不用管之前的版本）</p>
+</li>
+<li><p>第一次打开文件 <code>loadFromDisk</code> 时发现 mBackupFile 存在，说明上一次的写操作是不正确的（比如在写的过程中 killed），那么 mFile 即是不正确的（删掉），要以 mBackupFile 为准（将其 rename to mFile）</p>
+</li>
+</ul>
+</li>
+<li><p>使用 <code>mDiskStateGeneration</code> 标识 XML 文件的版本，文件写操作完成后会将其置为 <code>MemoryCommitResult.memoryStateGeneration</code>，也即内存版本号和磁盘版本号最终会保持一致，那么：</p>
+<ul>
+<li><p>因为是先提交至内存再提交至磁盘，磁盘版本号 mDiskStateGeneration 肯定是小于等于内存版本号的 mcr.memoryStateGeneration，否则就是异常状态了</p>
+</li>
+<li><p>如果是 apply，两个阶段的提交逻辑上是异步的，只有当即将提交到磁盘的 snapshot 的版本是当前内存的最新的版本时（<code>mCurrentMemoryStateGeneration == mcr.memoryStateGeneration</code>）才写入到文件，否则等待后续的文件写任务将最新内存版本写入文件即可</p>
+</li>
+<li><p>如果是 commit，两个阶段的提交逻辑上是同步的，每个提交到内存的版本的 snapshot 都需要同步到磁盘</p>
+</li>
+</ul>
+</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> <span class="hljs-type">Runnable</span> <span class="hljs-variable">writeToDiskRunnable</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+            <span class="hljs-keyword">synchronized</span> (mWritingToDiskLock) &#123;
+                writeToFile(mcr, isFromSyncCommit);
+            &#125;
+            <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+                mDiskWritesInFlight--;
+            &#125;
+            <span class="hljs-keyword">if</span> (postWriteRunnable != <span class="hljs-literal">null</span>) &#123;
+                postWriteRunnable.run();
+            &#125;
+        &#125;
+    &#125;;
+
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">writeToFile</span><span class="hljs-params">(MemoryCommitResult mcr, <span class="hljs-type">boolean</span> isFromSyncCommit)</span> &#123;
+    <span class="hljs-type">long</span> <span class="hljs-variable">startTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">existsTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">backupExistsTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">outputStreamCreateTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">writeTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">fsyncTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">setPermTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">fstatTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">long</span> <span class="hljs-variable">deleteTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">if</span> (DEBUG) &#123;
+        startTime = System.currentTimeMillis();
+    &#125;
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">fileExists</span> <span class="hljs-operator">=</span> mFile.exists();
+    <span class="hljs-keyword">if</span> (DEBUG) &#123;
+        existsTime = System.currentTimeMillis();
+        <span class="hljs-comment">// Might not be set, hence init them to a default value</span>
+        backupExistsTime = existsTime;
+    &#125;
+    <span class="hljs-comment">// Rename the current file so it may be used as a backup during the next read</span>
+    <span class="hljs-keyword">if</span> (fileExists) &#123;
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">needsWrite</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+        <span class="hljs-comment">// Only need to write if the disk state is older than this commit</span>
+        <span class="hljs-keyword">if</span> (mDiskStateGeneration &lt; mcr.memoryStateGeneration) &#123;
+            <span class="hljs-keyword">if</span> (isFromSyncCommit) &#123;
+                needsWrite = <span class="hljs-literal">true</span>;
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+                    <span class="hljs-comment">// No need to persist intermediate states. Just wait for the latest state to</span>
+                    <span class="hljs-comment">// be persisted.</span>
+                    <span class="hljs-keyword">if</span> (mCurrentMemoryStateGeneration == mcr.memoryStateGeneration) &#123;
+                        needsWrite = <span class="hljs-literal">true</span>;
+                    &#125;
+                &#125;
+            &#125;
+        &#125;
+        <span class="hljs-keyword">if</span> (!needsWrite) &#123;
+            mcr.setDiskWriteResult(<span class="hljs-literal">false</span>, <span class="hljs-literal">true</span>);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">backupFileExists</span> <span class="hljs-operator">=</span> mBackupFile.exists();
+        <span class="hljs-keyword">if</span> (DEBUG) &#123;
+            backupExistsTime = System.currentTimeMillis();
+        &#125;
+        <span class="hljs-keyword">if</span> (!backupFileExists) &#123;
+            <span class="hljs-keyword">if</span> (!mFile.renameTo(mBackupFile)) &#123;
+                Log.e(TAG, <span class="hljs-string">&quot;Couldn&#x27;t rename file &quot;</span> + mFile
+                      + <span class="hljs-string">&quot; to backup file &quot;</span> + mBackupFile);
+                mcr.setDiskWriteResult(<span class="hljs-literal">false</span>, <span class="hljs-literal">false</span>);
+                <span class="hljs-keyword">return</span>;
+            &#125;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            mFile.delete();
+        &#125;
+    &#125;
+    <span class="hljs-comment">// Attempt to write the file, delete the backup and return true as atomically as</span>
+    <span class="hljs-comment">// possible.  If any exception occurs, delete the new file; next time we will restore</span>
+    <span class="hljs-comment">// from the backup.</span>
+    <span class="hljs-keyword">try</span> &#123;
+        <span class="hljs-type">FileOutputStream</span> <span class="hljs-variable">str</span> <span class="hljs-operator">=</span> createFileOutputStream(mFile);
+        <span class="hljs-keyword">if</span> (DEBUG) &#123;
+            outputStreamCreateTime = System.currentTimeMillis();
+        &#125;
+        <span class="hljs-keyword">if</span> (str == <span class="hljs-literal">null</span>) &#123;
+            mcr.setDiskWriteResult(<span class="hljs-literal">false</span>, <span class="hljs-literal">false</span>);
+            <span class="hljs-keyword">return</span>;
+        &#125;
+        XmlUtils.writeMapXml(mcr.mapToWriteToDisk, str);
+        writeTime = System.currentTimeMillis();
+        FileUtils.sync(str);
+        fsyncTime = System.currentTimeMillis();
+        str.close();
+        ContextImpl.setFilePermissionsFromMode(mFile.getPath(), mMode, <span class="hljs-number">0</span>);
+        <span class="hljs-keyword">if</span> (DEBUG) &#123;
+            setPermTime = System.currentTimeMillis();
+        &#125;
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-keyword">final</span> <span class="hljs-type">StructStat</span> <span class="hljs-variable">stat</span> <span class="hljs-operator">=</span> Os.stat(mFile.getPath());
+            <span class="hljs-keyword">synchronized</span> (mLock) &#123;
+                mStatTimestamp = stat.st_mtim;
+                mStatSize = stat.st_size;
+            &#125;
+        &#125; <span class="hljs-keyword">catch</span> (ErrnoException e) &#123;
+            <span class="hljs-comment">// Do nothing</span>
+        &#125;
+        <span class="hljs-keyword">if</span> (DEBUG) &#123;
+            fstatTime = System.currentTimeMillis();
+        &#125;
+        <span class="hljs-comment">// Writing was successful, delete the backup file if there is one.</span>
+        mBackupFile.delete();
+        <span class="hljs-keyword">if</span> (DEBUG) &#123;
+            deleteTime = System.currentTimeMillis();
+        &#125;
+        mDiskStateGeneration = mcr.memoryStateGeneration;
+        mcr.setDiskWriteResult(<span class="hljs-literal">true</span>, <span class="hljs-literal">true</span>);
+        <span class="hljs-keyword">if</span> (DEBUG) &#123;
+            Log.d(TAG, <span class="hljs-string">&quot;write: &quot;</span> + (existsTime - startTime) + <span class="hljs-string">&quot;/&quot;</span>
+                    + (backupExistsTime - startTime) + <span class="hljs-string">&quot;/&quot;</span>
+                    + (outputStreamCreateTime - startTime) + <span class="hljs-string">&quot;/&quot;</span>
+                    + (writeTime - startTime) + <span class="hljs-string">&quot;/&quot;</span>
+                    + (fsyncTime - startTime) + <span class="hljs-string">&quot;/&quot;</span>
+                    + (setPermTime - startTime) + <span class="hljs-string">&quot;/&quot;</span>
+                    + (fstatTime - startTime) + <span class="hljs-string">&quot;/&quot;</span>
+                    + (deleteTime - startTime));
+        &#125;
+        <span class="hljs-type">long</span> <span class="hljs-variable">fsyncDuration</span> <span class="hljs-operator">=</span> fsyncTime - writeTime;
+        mSyncTimes.add((<span class="hljs-type">int</span>) fsyncDuration);
+        mNumSync++;
+        <span class="hljs-keyword">if</span> (DEBUG || mNumSync % <span class="hljs-number">1024</span> == <span class="hljs-number">0</span> || fsyncDuration &gt; MAX_FSYNC_DURATION_MILLIS) &#123;
+            mSyncTimes.log(TAG, <span class="hljs-string">&quot;Time required to fsync &quot;</span> + mFile + <span class="hljs-string">&quot;: &quot;</span>);
+        &#125;
+        <span class="hljs-keyword">return</span>;
+    &#125; <span class="hljs-keyword">catch</span> (XmlPullParserException e) &#123;
+        Log.w(TAG, <span class="hljs-string">&quot;writeToFile: Got exception:&quot;</span>, e);
+    &#125; <span class="hljs-keyword">catch</span> (IOException e) &#123;
+        Log.w(TAG, <span class="hljs-string">&quot;writeToFile: Got exception:&quot;</span>, e);
+    &#125;
+    <span class="hljs-comment">// Clean up an unsuccessfully written file</span>
+    <span class="hljs-keyword">if</span> (mFile.exists()) &#123;
+        <span class="hljs-keyword">if</span> (!mFile.delete()) &#123;
+            Log.e(TAG, <span class="hljs-string">&quot;Couldn&#x27;t clean up partially-written file &quot;</span> + mFile);
+        &#125;
+    &#125;
+    mcr.setDiskWriteResult(<span class="hljs-literal">false</span>, <span class="hljs-literal">false</span>);
+&#125;</code></pre></div>
+
+<h1 id="apply-amp-commit"><a href="#apply-amp-commit" class="headerlink" title="apply &amp; commit"></a>apply &amp; commit</h1><p>了解了二阶段提交后，<code>apply</code> 和 <code>commit</code> 的逻辑与区别也清晰起来</p>
+<ul>
+<li><p>apply 立刻将修改提交至内存，然后将提交至磁盘的任务延迟个 100ms 交由工作队列 <code>QueuedWork</code> 执行，不阻塞当前线程；而且在工作队列里，多个 apply 产生的提交会被优化为只有最后那个（最新的修改，与内存版本一致的修改）才会真正执行文件写操作</p>
+</li>
+<li><p>commit 也是立刻将修改提交至内存，然后提交至磁盘时分两种情况：</p>
+<ul>
+<li>如果此时只有一个提交磁盘的任务（<code>mDiskWritesInFlight == 1</code>），那么由当前线程来执行文件写操作</li>
+<li>否则将提交至磁盘的任务交由工作队列 QueuedWork 执行（无延迟），但当前线程会阻塞直到文件写操作完成</li>
+</ul>
+</li>
+<li><p>但无论哪种情况，commit 都会导致当前线程直到提交至磁盘后才返回，也即 commit 会确保当前修改写入至文件</p>
+</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">apply</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">startTime</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    <span class="hljs-keyword">final</span> <span class="hljs-type">MemoryCommitResult</span> <span class="hljs-variable">mcr</span> <span class="hljs-operator">=</span> commitToMemory();
+    <span class="hljs-keyword">final</span> <span class="hljs-type">Runnable</span> <span class="hljs-variable">awaitCommit</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
+            <span class="hljs-meta">@Override</span>
+            <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+                <span class="hljs-keyword">try</span> &#123;
+                    mcr.writtenToDiskLatch.await();
+                &#125; <span class="hljs-keyword">catch</span> (InterruptedException ignored) &#123;&#125;
+                <span class="hljs-keyword">if</span> (DEBUG &amp;&amp; mcr.wasWritten) &#123;
+                    Log.d(TAG, mFile.getName() + <span class="hljs-string">&quot;:&quot;</span> + mcr.memoryStateGeneration
+                            + <span class="hljs-string">&quot; applied after &quot;</span> + (System.currentTimeMillis() - startTime)
+                            + <span class="hljs-string">&quot; ms&quot;</span>);
+                &#125;
+            &#125;
+        &#125;;
+    QueuedWork.addFinisher(awaitCommit);
+    <span class="hljs-type">Runnable</span> <span class="hljs-variable">postWriteRunnable</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
+            <span class="hljs-meta">@Override</span>
+            <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+                awaitCommit.run();
+                QueuedWork.removeFinisher(awaitCommit);
+            &#125;
+        &#125;;
+    SharedPreferencesImpl.<span class="hljs-built_in">this</span>.enqueueDiskWrite(mcr, postWriteRunnable);
+    <span class="hljs-comment">// Okay to notify the listeners before it&#x27;s hit disk</span>
+    <span class="hljs-comment">// because the listeners should always get the same</span>
+    <span class="hljs-comment">// SharedPreferences instance back, which has the</span>
+    <span class="hljs-comment">// changes reflected in memory.</span>
+    notifyListeners(mcr);
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">commit</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-type">long</span> <span class="hljs-variable">startTime</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">if</span> (DEBUG) &#123;
+        startTime = System.currentTimeMillis();
+    &#125;
+    <span class="hljs-type">MemoryCommitResult</span> <span class="hljs-variable">mcr</span> <span class="hljs-operator">=</span> commitToMemory();
+    SharedPreferencesImpl.<span class="hljs-built_in">this</span>.enqueueDiskWrite(
+        mcr, <span class="hljs-literal">null</span> <span class="hljs-comment">/* sync write on this thread okay */</span>);
+    <span class="hljs-keyword">try</span> &#123;
+        mcr.writtenToDiskLatch.await();
+    &#125; <span class="hljs-keyword">catch</span> (InterruptedException e) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125; <span class="hljs-keyword">finally</span> &#123;
+        <span class="hljs-keyword">if</span> (DEBUG) &#123;
+            Log.d(TAG, mFile.getName() + <span class="hljs-string">&quot;:&quot;</span> + mcr.memoryStateGeneration
+                    + <span class="hljs-string">&quot; committed after &quot;</span> + (System.currentTimeMillis() - startTime)
+                    + <span class="hljs-string">&quot; ms&quot;</span>);
+        &#125;
+    &#125;
+    notifyListeners(mcr);
+    <span class="hljs-keyword">return</span> mcr.writeToDiskResult;
+&#125;</code></pre></div>
+
+<h1 id="对于上面提问的回答"><a href="#对于上面提问的回答" class="headerlink" title="对于上面提问的回答"></a>对于上面提问的回答</h1><ol>
+<li><p><code>apply</code> 和 <code>commit</code> 有何区别？</p>
+<ul>
+<li>commit 会被阻塞 or 执行文件写操作直到修改提交至磁盘（确保完成二阶段提交），不适合在主线程执行</li>
+<li>apply 只提交至内存，将提交至磁盘的任务交由其他线程执行，适合在主线程执行</li>
+<li>apply 在频繁修改的情况下性能要比 commit 好，因为只有最新的 snapshot（具有最新的版本号）才会真正写入至文件，旧的 snapshot 会被忽略（即使写入文件后续还是会被更新的 snapshot 覆盖，不如省了一次文件写）</li>
+<li>commit 确保修改能同时被提交至内存和磁盘，频繁的修改就会产生频繁的文件 IO</li>
+<li>由于 apply 只写入最新的 snapshot 至文件，极端情况下可能因为没有及时提交磁盘被 killed 而导致修改丢失</li>
+</ul>
+</li>
+<li><p>SharedPreferences 是线程安全的吗？它是如何保证线程安全的？</p>
+<p> 是线程安全的，Editor 使用 <code>mLock</code> 确保内存层面的线程安全，使用 <code>mWritingToDiskLock</code> 确保磁盘文件的线程安全</p>
+</li>
+<li><p>SharedPreferences 是进程安全的吗？</p>
+<p> 不是：</p>
+<ol>
+<li>它没有使用文件锁等进程间同步工具来确保多进程对 XML 文件的安全读写</li>
+<li>它只在构造时从文件读取内容，后续都是写操作，其他进程对 XML 文件的修改当前进程并不知道</li>
+</ol>
+</li>
+<li><p>数据丢失时，其最终的屏障 —— 文件备份机制是如何实现的？</p>
+<p> 见上面对 <code>mFile</code> 和 <code>mBackupFile</code> 的说明</p>
+</li>
+<li><p>如何实现进程安全的 SharedPreferences</p>
+<ol>
+<li>对于 XML 文件的读写操作需要加上文件锁</li>
+<li>用 <code>epoll</code> 监控 XML 文件内容的改变 </li>
+</ol>
+</li>
+<li><p>SharedPreferences 导致 ANR 的原因</p>
+<ol>
+<li>构造 SharedPreferences 实例时会解析 XML 文件，在解析操作完成前主线程调用 get 方法会阻塞，从而阻塞主线程</li>
+<li>主线程执行 commit 发生文件 IO or 阻塞，从而导致主线程阻塞</li>
+</ol>
+</li>
+</ol>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/SharedPreferences/">#SharedPreferences</a>
+      
+        <a href="/tags/SP/">#SP</a>
+      
+        <a href="/tags/MMKV/">#MMKV</a>
+      
+        <a href="/tags/Jetpack-DataStore/">#Jetpack-DataStore</a>
+      
+    </div>
+  
+</div>
+
+
+              
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/04/09/flow-basic/" title="Kotlin Flow - 初识">
+                        <span class="hidden-mobile">Kotlin Flow - 初识</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

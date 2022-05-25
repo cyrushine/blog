@@ -26,7 +26,7 @@
 <meta property="og:description" content="上两篇文章 崩溃日志收集库 xCrash 浅析 和 xCrash ANR 兼容性测试 介绍了 xCrash 是如何处理 ANR 事件的：  注册 SIGQUIT 信号处理器捕获 ANR 查询是否处于 NOT_RESPONDING 状态以判别是否自己发生了 ANR 寻找符号 Runtime::DumpForSigQuit 并调用以打印 ANR 日志  过程中提出了几个问题：  NOT_RESPOND">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-12-03T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.982Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.011Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="崩溃">
@@ -35,30 +35,25 @@
 <meta name="twitter:card" content="summary_large_image">
   
   
+  
   <title>Matrix - ANR 原理解析 - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -67,7 +62,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -76,16 +75,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -155,6 +167,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -162,59 +175,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="Matrix - ANR 原理解析">
-              
-                Matrix - ANR 原理解析
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-12-03 04:00" pubdate>
-        2021年12月3日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      10k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      84 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">Matrix - ANR 原理解析</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-12-03 04:00" pubdate>
+          2021年12月3日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          10k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          84 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -223,15 +248,20 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">Matrix - ANR 原理解析</h1>
             
             <div class="markdown-body">
+              
               <p>上两篇文章 <a href="../../../../2021/06/22/xcrash/">崩溃日志收集库 xCrash 浅析</a> 和 <a href="../../../../2021/11/29/xcrash-anr-compatibility/">xCrash ANR 兼容性测试</a> 介绍了 <a target="_blank" rel="noopener" href="https://github.com/iqiyi/xCrash">xCrash</a> 是如何处理 ANR 事件的：</p>
 <ul>
 <li>注册 <code>SIGQUIT</code> 信号处理器捕获 ANR</li>
@@ -245,7 +275,7 @@
 </ol>
 <p>本文主要是分析 <a target="_blank" rel="noopener" href="https://github.com/Tencent/matrix">Matrix</a> 处理 ANR 的流程，顺带看看对于上述问题 Matrix 有没提出更好的解决方案</p>
 <h1 id="SIGQUIT-Signal-Handler"><a href="#SIGQUIT-Signal-Handler" class="headerlink" title="SIGQUIT Signal Handler"></a>SIGQUIT Signal Handler</h1><p>Matrix 也是通过注册 SIGQUIT 信号处理器来捕获 ANR 事件的，看来这种方法是比较稳定且被大家认可的，调用栈如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp">TracePlugin.start
+<div class="code-wrapper"><pre><code class="hljs cpp">TracePlugin.start
 SignalAnrTracer.onStartTrace
 SignalAnrTracer.onAlive
 SignalAnrTracer.nativeInitSignalAnrDetective
@@ -328,7 +358,7 @@ SignalAnrTracer.nativeInitSignalAnrDetective
 &#125;</code></pre></div>
 
 <h2 id="fromPid1-和-fromPid2"><a href="#fromPid1-和-fromPid2" class="headerlink" title="fromPid1 和 fromPid2"></a>fromPid1 和 fromPid2</h2><p>经测试，如果自己发生 ANR 则 <code>fromPid1:0 fromPid2:1719 myPid:7414</code>，自己给自己发送 SIGQUIT 的话是 <code>fromPid1:0 fromPid2:7414 myPid:7414</code>，也就是说 <code>fromPid2</code> 表示发送信号的进程，正常情况下是走 <code>anrCallback</code>，下面先分析这种情况</p>
-<div class="hljs code-wrapper"><pre><code class="hljs text">system         1719    703 9940960 199048 0                   0 S system_server
+<div class="code-wrapper"><pre><code class="hljs text">system         1719    703 9940960 199048 0                   0 S system_server
 u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent.matrix</code></pre></div>
 
 <h1 id="判别是否自己发生了-ANR"><a href="#判别是否自己发生了-ANR" class="headerlink" title="判别是否自己发生了 ANR"></a>判别是否自己发生了 ANR</h1><p>Matrix 在判别是否发生 ANR 事件时，在 <code>NOT_RESPONDING</code> 的基础上，增加了【主线程是否阻塞】这一条件，增大了 ANR 捕获率：</p>
@@ -343,7 +373,7 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
 </ol>
 <p>如果主线程阻塞了，那么表头一定是超时的（<code>when - SystemClock.uptimeMillis()</code> 为负），当超时时间大于阈值时（前台 2s，后台 10s，这个阈值是怎么来的呢？）就可以认定是发生阻塞了</p>
 <p>增加了这一条件，后台 ANR 也不会成为漏网之鱼了；而且判断过程发生在 dump anr 之前，不会因为 dump anr 耗时过长、主线程从阻塞及时恢复而导致的漏判</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title">anrCallback</span><span class="hljs-params">(<span class="hljs-type">void</span>* arg)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title">anrCallback</span><span class="hljs-params">(<span class="hljs-type">void</span>* arg)</span> </span>&#123;
     <span class="hljs-built_in">anrDumpCallback</span>();
 
     <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strlen</span>(mAnrTraceFile) &gt; <span class="hljs-number">0</span>) &#123;
@@ -361,7 +391,7 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
     <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SignalAnrTracer</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Tracer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SignalAnrTracer</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Tracer</span> &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">CHECK_ANR_STATE_THREAD_NAME</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Check-ANR-State-Thread&quot;</span>;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">CHECK_ERROR_STATE_INTERVAL</span> <span class="hljs-operator">=</span> <span class="hljs-number">500</span>;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">ANR_DUMP_MAX_TIME</span> <span class="hljs-operator">=</span> <span class="hljs-number">20000</span>;
@@ -470,7 +500,7 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
 <h1 id="hook-Signal-Catcher"><a href="#hook-Signal-Catcher" class="headerlink" title="hook Signal Catcher"></a>hook Signal Catcher</h1><p>如何 dump anr 日志，Matrix 也与 xCrash 有着不同的实现方式，Matrix 并没有自己去 dump anr 日志，而是通过 hook 系统调用后重新发送 SIGQUIT 给 Signal Catcher 线程，让它去执行系统的 ANR 处理流程，从而自己也能拿到一份 ANR 日志，避免了重复 dump anr</p>
 <p>hook 用的是 <a target="_blank" rel="noopener" href="https://github.com/iqiyi/xHook">xHook</a></p>
 <p><code>Signal Catcher</code> 线程 ID 则是遍历 <code>/proc/[pid]/task/[tid]/comm</code> 对比线程名，以及对比 <code>/proc/[tid]/status</code> 里的 <code>magic code</code> 来确定的</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title">anrCallback</span><span class="hljs-params">(<span class="hljs-type">void</span>* arg)</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title">anrCallback</span><span class="hljs-params">(<span class="hljs-type">void</span>* arg)</span> </span>&#123;
     <span class="hljs-built_in">anrDumpCallback</span>();
 
     <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strlen</span>(mAnrTraceFile) &gt; <span class="hljs-number">0</span>) &#123;
@@ -599,33 +629,37 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
 <li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=2649288031&idx=1&sn=91c94e16460a4685a9c0c8e1b9c362a6">微信Android客户端的ANR监控方案</a></li>
 </ul>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/ANR/">ANR</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
-                    
-                      <a class="hover-with-bg" href="/tags/xCrash/">xCrash</a>
-                    
-                      <a class="hover-with-bg" href="/tags/matrix/">matrix</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/ANR/">#ANR</a>
+      
+        <a href="/tags/%E5%B4%A9%E6%BA%83/">#崩溃</a>
+      
+        <a href="/tags/xCrash/">#xCrash</a>
+      
+        <a href="/tags/matrix/">#matrix</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/12/16/http-range/">
+                      <a href="/2021/12/16/http-range/" title="HTTP Range - 分段下载">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">HTTP Range - 分段下载</span>
                         <span class="visible-mobile">上一篇</span>
@@ -635,7 +669,7 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/11/29/xcrash-anr-compatibility/">
+                      <a href="/2021/11/29/xcrash-anr-compatibility/" title="xCrash ANR 兼容性测试">
                         <span class="hidden-mobile">xCrash ANR 兼容性测试</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -651,19 +685,49 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -688,32 +752,34 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -732,10 +798,9 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -745,45 +810,153 @@ u10_a369       7414    703 5513524 135784 0                   0 S sample.tencent
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

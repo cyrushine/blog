@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-05-28-dalvik-art-heap-gc/mark_sweep.jpg">
 <meta property="article:published_time" content="2021-05-28T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.982Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.007Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="Dalvik">
 <meta property="article:tag" content="ART">
@@ -37,30 +37,25 @@
 <meta name="twitter:image" content="https://www.dalvik.work/image/2021-05-28-dalvik-art-heap-gc/mark_sweep.jpg">
   
   
+  
   <title>老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇） - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -69,7 +64,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -78,16 +77,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -157,6 +169,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -164,59 +177,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）">
-              
-                老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-05-28 04:00" pubdate>
-        2021年5月28日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      20k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      165 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-05-28 04:00" pubdate>
+          2021年5月28日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          20k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          165 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -225,15 +250,20 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）</h1>
             
             <div class="markdown-body">
+              
               <h2 id="Dalvik"><a href="#Dalvik" class="headerlink" title="Dalvik"></a>Dalvik</h2><h3 id="Dalvik-Heap"><a href="#Dalvik-Heap" class="headerlink" title="Dalvik Heap"></a>Dalvik Heap</h3><p>Dalvik 的堆空间分为 <code>Zygote Heap</code> 和 <code>Active Heap</code></p>
 <p>Android 系统的第一个 Dalvik 虚拟机是由 Zygote 进程创建的。应用程序进程是由 Zygote 进程 <code>fork</code> 出来的。也就是说应用程序进程使用了一种 <strong>写时拷贝技术</strong>（<code>COW</code>）来复制了 Zygote 进程的地址空间。这意味着一开始的时候，应用程序进程和 Zygote 进程共享了同一个用来分配对象的堆。然而，当 Zygote 进程或者应用程序进程对该堆进行写操作时，内核就会执行真正的拷贝操作，使得 Zygote 进程和应用程序进程分别拥有自己的一份拷贝。</p>
 <p>拷贝是一件费时费力的事情。因此，为了尽量地避免拷贝，Dalvik 虚拟机将自己的堆划分为两部分。事实上，Dalvik 虚拟机的堆最初是只有一个的。也就是 Zygote 进程在启动过程中创建 Dalvik 虚拟机的时候，只有一个堆。但是当 Zygote 进程在 <code>fork</code> 第一个应用程序进程之前，会将已经使用了的那部分堆内存划分为一部分，还没有使用的堆内存划分为另外一部分。前者就称为 <strong>Zygote 堆</strong>，后者就称为 <strong>Active 堆</strong>。以后无论是 Zygote 进程，还是应用程序进程，当它们需要分配对象的时候，都在 <code>Active 堆</code> 上进行。这样就可以使得 <code>Zygote 堆</code> 尽可能少地被执行写操作，因而就可以减少执行写时拷贝的操作。在 <code>Zygote 堆</code> 里面分配的对象其实主要就是 Zygote 进程在启动过程中预加载的类、资源和对象了。这意味着这些预加载的类、资源和对象可以在 Zygote 进程和应用程序进程中做到长期共享。这样既能减少拷贝操作，还能减少对内存的需求。</p>
@@ -282,7 +312,7 @@
 <p>但是 Dalvik 虚拟机又希望能够动态地调整堆的可用最大值，于是就出现了一个称为 <strong>增长上限</strong> 的值，我们可以认为它是堆大小的 <strong>软限制</strong>，而前面所描述的最大值是堆大小的 <strong>硬限制</strong>。它主要是用来限制 <code>Active Heap</code> 无节制地增长到最大值的，而是要根据预先设定的 <code>堆目标利用率</code> 来控制 <code>Active Heap</code> 有节奏地增长到最大值。这样可以更有效地使用堆内存。想象一下，如果我们一开始 <code>Active Heap</code> 的大小设置为最大值，那么就很有可能造成已分配的内存分布在一个很大的范围。这样随着 Dalvik 虚拟机不断地运行，<code>Active Heap</code> 的内存碎片就会越来越来重。相反，如果我们施加一个 <code>Soft Limit</code>，那可以尽量地控制已分配的内存都位于较紧凑的范围内，可以有效地减少碎片</p>
 <p>后三个用来确保每次 GC 之后，堆已用内存和空闲内存有一个合适的比例，这样可以尽量地减少 GC 的次数。举个例子说，堆的利用率为 <code>U</code>，最小空闲值为 <code>MinFree</code> 字节，最大空闲值为 <code>MaxFree</code> 字节。假设在某一次 GC 之后，存活对象占用内存的大小为 <code>LiveSize</code>。那么这时候堆的理想大小应该为 <code>(LiveSize / U)</code>，且 <code>(LiveSize + MinFree)</code> &lt;= <code>(LiveSize / U)</code> &lt;= <code>(LiveSize + MaxFree)</code></p>
 <h3 id="4-Type-Of-GC"><a href="#4-Type-Of-GC" class="headerlink" title="4 Type Of GC"></a>4 Type Of GC</h3><p>Davlik 虚拟机定义了四种类型的 GC</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/* Not enough space for an &quot;ordinary&quot; Object to be allocated. */</span>  
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/* Not enough space for an &quot;ordinary&quot; Object to be allocated. */</span>  
 <span class="hljs-comment">/* 在堆上分配对象时内存不足 */</span>
 <span class="hljs-keyword">extern</span> <span class="hljs-type">const</span> GcSpec *GC_FOR_MALLOC;  
   
@@ -299,7 +329,7 @@
 <span class="hljs-keyword">extern</span> <span class="hljs-type">const</span> GcSpec *GC_BEFORE_OOM;</code></pre></div>
 
 <p>每种 GC 通过成员属性控制 GC 细节</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">GcSpec</span> &#123;  
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">GcSpec</span> &#123;  
   <span class="hljs-comment">/* If true, only the application heap is threatened. */</span>  
   <span class="hljs-comment">/* true - 仅仅回收 Active Heap，false - 同时回收 Active Heap 和 Zygote Heap */</span>
   <span class="hljs-type">bool</span> isPartial;  
@@ -440,7 +470,7 @@
 </tr>
 </tbody></table>
 <p>Space 有以下三种回收策略</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// See Space::GetGcRetentionPolicy.  </span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// See Space::GetGcRetentionPolicy.  </span>
 <span class="hljs-keyword">enum</span> <span class="hljs-title class_">GcRetentionPolicy</span> &#123;  
   <span class="hljs-comment">// Objects are retained forever with this policy for a space.  </span>
   <span class="hljs-comment">// 永远不会进行垃圾回收的 Space，例如 Image Space</span>
@@ -464,7 +494,7 @@
 <li>成功地在堆上分配到一个对象之后，就会检查 <code>Active Heap</code> 当前已经分配的内存，如果大于阀值（<code>Heap-&gt;concurrent_start_bytes_</code>）就会唤醒 GC 线程进行 <code>GC_CONCURRENT</code>。这个阀值是一个比指定的 <strong>堆最小空闲内存</strong> 小 128K 的数值，也就是说当堆的 <strong>空闲内不足</strong> 时就会触发 <code>GC_CONCURRENT</code></li>
 </ol>
 <h3 id="ART-GC"><a href="#ART-GC" class="headerlink" title="ART GC"></a>ART GC</h3><p>ART 有以下三种 GC Collector </p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// The type of collection to be performed. The ordering of the enum matters, it is used to  </span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// The type of collection to be performed. The ordering of the enum matters, it is used to  </span>
 <span class="hljs-comment">// determine which GCs are run first.  </span>
 <span class="hljs-keyword">enum</span> <span class="hljs-title class_">GcType</span> &#123;  
   <span class="hljs-comment">// Placeholder for when no GC has been performed.  </span>
@@ -484,7 +514,7 @@
 
 <p>ART 比 Dalvik 多了一个称 <code>Mod Union Table</code> 的概念。<code>Mod Union Table</code> 是与 <code>Card Table</code> 配合使用的，用来记录在一次 GC 过程中，不会被回收的 Space 对象对会被回收的 Space 对象引用。例如，<code>Image Space</code> 对象对 <code>Zygote Space</code> 和 <code>Allocation Space</code> 对象的引用，以及 <code>Zygote Space</code> 对象对 <code>Allocation Space</code> 对象的引用。</p>
 <h3 id="五个守护线程"><a href="#五个守护线程" class="headerlink" title="五个守护线程"></a>五个守护线程</h3><p><code>java.lang.Daemons</code> 类在加载的时候，会启动五个与堆或者 GC 相关的守护线程</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Daemons</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Daemons</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">start</span><span class="hljs-params">()</span> &#123;  
         ReferenceQueueDaemon.INSTANCE.start();  
         FinalizerDaemon.INSTANCE.start();  
@@ -574,7 +604,7 @@
 <h3 id="Foreground-GC-和-Background-GC"><a href="#Foreground-GC-和-Background-GC" class="headerlink" title="Foreground GC 和 Background GC"></a>Foreground GC 和 Background GC</h3><p>ART 既支持 <code>Mark-Sweep GC</code> 又支持 <code>Compacting GC</code>。其中 <code>Mark-Sweep GC</code> 执行效率更高但是存在内存碎片问题，而 <code>Compacting GC</code> 执行效率较低但是不存在内存碎片问题。ART 通过引入 <code>Foreground GC</code> 和 <code>Background GC</code> 的概念来对这两种 GC 进行扬长避短，分别用 <code>-Xgc</code> 和 <code>-XX:BackgroundGC</code> 指定</p>
 <p>顾名思义，<code>Foreground GC</code> 就是应用程序在前台运行时执行的 GC，<code>Background GC</code> 就是应用程序在后台运行时执行的 GC。应用程序在前台运行时，响应性是最重要的，因此也要求执行的GC是高效的。相反，应用程序在后台运行时，响应性不是最重要的，这时候就适合用来解决堆的内存碎片问题。因此，<code>Mark-Sweep GC</code> 适合作为 <code>Foreground GC</code> 而 <code>Compacting GC</code> 适合作为 <code>Background GC</code></p>
 <p><code>AMS</code> 清楚地知道应用程序当前是在前台运行还是后台运行，所以由它负责触发切换前后台 GC 的操作</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ApplicationThread.scheduleLaunchActivity
+<div class="code-wrapper"><pre><code class="hljs java">ApplicationThread.scheduleLaunchActivity
 
 ApplicationThread.updateProcessState(<span class="hljs-type">int</span> processState, <span class="hljs-type">boolean</span> fromIpc) &#123;  
     <span class="hljs-keyword">synchronized</span> (<span class="hljs-built_in">this</span>) &#123;  
@@ -661,7 +691,7 @@ Heap::SignalHeapTrimDaemon(Thread* self)
 Daemons.requestHeapTrim()</code></pre></div>
 
 <p>上面说过 ART 启动后加载 <code>java.lang.Daemons</code> 时，会启动五个守护线程，其中有一个是 <code>HeapTrimmerDaemon</code> 负责压缩堆内存，其实它也负责切换 GC，并且在过程中根据情况有可能在切换 GC 前执行一次 <code>compacting</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Daemons</span> &#123;  
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Daemons</span> &#123;  
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">requestHeapTrim</span><span class="hljs-params">()</span> &#123;  
         <span class="hljs-keyword">synchronized</span> (HeapTrimmerDaemon.INSTANCE) &#123;  
             HeapTrimmerDaemon.INSTANCE.notify();  
@@ -693,33 +723,37 @@ Daemons.requestHeapTrim()</code></pre></div>
 <li><a target="_blank" rel="noopener" href="https://www.kancloud.cn/alex_wsc/androids/472173">Dalvik虚拟机和ART虚拟机</a></li>
 </ul>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/Dalvik/">Dalvik</a>
-                    
-                      <a class="hover-with-bg" href="/tags/ART/">ART</a>
-                    
-                      <a class="hover-with-bg" href="/tags/JVM/">JVM</a>
-                    
-                      <a class="hover-with-bg" href="/tags/VM/">VM</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Dalvik/">#Dalvik</a>
+      
+        <a href="/tags/ART/">#ART</a>
+      
+        <a href="/tags/JVM/">#JVM</a>
+      
+        <a href="/tags/VM/">#VM</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/06/05/io-and-nio/">
+                      <a href="/2021/06/05/io-and-nio/" title="深入探索 java.io 和 nio">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">深入探索 java.io 和 nio</span>
                         <span class="visible-mobile">上一篇</span>
@@ -729,7 +763,7 @@ Daemons.requestHeapTrim()</code></pre></div>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/05/21/mmap/">
+                      <a href="/2021/05/21/mmap/" title="【转】mmap 和零拷贝">
                         <span class="hidden-mobile">【转】mmap 和零拷贝</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -745,19 +779,49 @@ Daemons.requestHeapTrim()</code></pre></div>
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -782,32 +846,34 @@ Daemons.requestHeapTrim()</code></pre></div>
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -826,10 +892,9 @@ Daemons.requestHeapTrim()</code></pre></div>
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -839,45 +904,153 @@ Daemons.requestHeapTrim()</code></pre></div>
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

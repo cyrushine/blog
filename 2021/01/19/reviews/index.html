@@ -26,7 +26,7 @@
 <meta property="og:description" content="设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-01-19T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.978Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.007Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="面试">
 <meta property="article:tag" content="备忘录">
@@ -35,30 +35,25 @@
 <meta name="twitter:card" content="summary_large_image">
   
   
+  
   <title>常见面试题备忘 - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -67,7 +62,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -76,16 +75,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -155,6 +167,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -162,59 +175,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="常见面试题备忘">
-              
-                常见面试题备忘
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-01-19 04:00" pubdate>
-        2021年1月19日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      12k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      99 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">常见面试题备忘</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-01-19 04:00" pubdate>
+          2021年1月19日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          99 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -223,15 +248,20 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">常见面试题备忘</h1>
             
             <div class="markdown-body">
+              
               <h1 id="设计模式"><a href="#设计模式" class="headerlink" title="设计模式"></a>设计模式</h1><ul>
 <li>观察者（Observer），<code>LiveData</code></li>
 <li>单例（Singleton），double check</li>
@@ -310,7 +340,7 @@
 <h1 id="IdleHandler-是怎么实现的？"><a href="#IdleHandler-是怎么实现的？" class="headerlink" title="IdleHandler 是怎么实现的？"></a><code>IdleHandler</code> 是怎么实现的？</h1><p>在 <code>MessageQueue.next</code> 里，当队列为空，或者还不到第一个消息的执行时间时（<code>Message</code> 是按照执行时间排序的），在 <code>MessageQueue.mIdleHandlers</code> 里的 <code>IdleHandler</code> 会被执行</p>
 <h1 id="Retrofit-是怎么接口的？"><a href="#Retrofit-是怎么接口的？" class="headerlink" title="Retrofit 是怎么接口的？"></a>Retrofit 是怎么接口的？</h1><p>使用动态代理 <code>Proxy.newProxyInstance</code>，其核心是方法拦截</p>
 <p>在运行时创建一个实现了所选接口的类，这个类的构造函数需要一个 <code>InvocationHandler</code>，接口所有的方法调用都会代理至 <code>InvocationHandler</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> &lt;T&gt; T Retrofit.create(<span class="hljs-keyword">final</span> Class&lt;T&gt; service) &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> &lt;T&gt; T Retrofit.create(<span class="hljs-keyword">final</span> Class&lt;T&gt; service) &#123;
   Utils.validateServiceInterface(service);
   <span class="hljs-keyword">if</span> (validateEagerly) &#123;
     eagerlyValidateMethods(service);
@@ -334,7 +364,7 @@
 &#125;</code></pre></div>
 
 <h1 id="Activity-重建的过程"><a href="#Activity-重建的过程" class="headerlink" title="Activity 重建的过程"></a><code>Activity</code> 重建的过程</h1><p>旧的 <code>Activity</code> 走向死亡（<code>onPause</code> -&gt; <code>onStop</code> -&gt; <code>onDestroy</code>），新的 <code>Activity</code> 进入（<code>onCreate</code> -&gt; <code>onStart</code> -&gt; <code>onResume</code>）</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java">ActivityThread.handleRelaunchActivity(...)
+<div class="code-wrapper"><pre><code class="hljs java">ActivityThread.handleRelaunchActivity(...)
 
 <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">handleRelaunchActivityInner</span><span class="hljs-params">(ActivityClientRecord r, <span class="hljs-type">int</span> configChanges,</span>
 <span class="hljs-params">        List&lt;ResultInfo&gt; pendingResults, List&lt;ReferrerIntent&gt; pendingIntents,</span>
@@ -378,7 +408,7 @@
 &#125;</code></pre></div>
 
 <h2 id="ViewModel-和-Fragment-会随之重建吗"><a href="#ViewModel-和-Fragment-会随之重建吗" class="headerlink" title="ViewModel 和 Fragment 会随之重建吗?"></a><code>ViewModel</code> 和 <code>Fragment</code> 会随之重建吗?</h2><p>不会，在 <code>Activity.onStop</code> 之后 <code>Activity.onDestory</code> 之前，<code>FragmentActivity</code> 将 <code>Fragment</code> 和 <code>ViewModelStore</code> 借由方法 <code>onRetainNonConfigurationInstance</code> 传递给 <code>ActivityClientRecord</code> 保存<br>并在 <code>Activity.attach</code> 被重新赋值给新的 <code>Activity</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object FragmentActivity.onRetainNonConfigurationInstance() &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> Object FragmentActivity.onRetainNonConfigurationInstance() &#123;
     <span class="hljs-type">Object</span> <span class="hljs-variable">custom</span> <span class="hljs-operator">=</span> onRetainCustomNonConfigurationInstance()
     <span class="hljs-type">FragmentManagerNonConfig</span> <span class="hljs-variable">fragments</span> <span class="hljs-operator">=</span> mFragments.retainNestedNonConfig()
     <span class="hljs-keyword">if</span> (fragments == <span class="hljs-literal">null</span> &amp;&amp; mViewModelStore == <span class="hljs-literal">null</span> &amp;&amp; custom == <span class="hljs-literal">null</span>) &#123;
@@ -461,7 +491,7 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
 
 <h1 id="CountDownLatch-和-CyclicBarrier-的区别"><a href="#CountDownLatch-和-CyclicBarrier-的区别" class="headerlink" title="CountDownLatch 和 CyclicBarrier 的区别"></a><code>CountDownLatch</code> 和 <code>CyclicBarrier</code> 的区别</h1><p>开始多个线程通过 <code>CountDownLatch.await()</code> 被它阻塞，然后其他线程执行完一个任务就通过 <code>countDown()</code> 把里面的计算器 <code>count</code> 减一，直到计数器归零阻塞的线程才被唤醒；它是 oneshot 不能重复使用，内部通过 <code>AQS</code> 实现</p>
 <p>N 个并行线程执行任务，执行完就阻塞在 <code>CyclicBarrier.await()</code> 上面，直到 N 个线程都执行完任务，最后一个调用 <code>await()</code> 的线程执行完 <code>barrierCommand</code> 后，其他线程被唤醒，而 <code>CyclicBarrier</code> 被重置为初始状态；不同于 <code>CountDownLatch</code> 的一次性，<code>CyclicBarrier</code> 可以重复使用</p>
-<h1 id="如何让-N-个线程串行执行？"><a href="#如何让-N-个线程串行执行？" class="headerlink" title="如何让 N 个线程串行执行？"></a>如何让 N 个线程串行执行？</h1><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">JoinThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Thread</span> &#123;
+<h1 id="如何让-N-个线程串行执行？"><a href="#如何让-N-个线程串行执行？" class="headerlink" title="如何让 N 个线程串行执行？"></a>如何让 N 个线程串行执行？</h1><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">JoinThread</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Thread</span> &#123;
     <span class="hljs-keyword">private</span> Runnable task;
     <span class="hljs-keyword">private</span> Thread prev;
 
@@ -482,7 +512,7 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
 
 <h1 id="5-个线程，前-4-个执行完后才执行第-5-个"><a href="#5-个线程，前-4-个执行完后才执行第-5-个" class="headerlink" title="5 个线程，前 4 个执行完后才执行第 5 个"></a>5 个线程，前 4 个执行完后才执行第 5 个</h1><p>用 <code>CountDownLatch</code>，计算器设为 4，第 5 个线程通过 <code>await()</code> 阻塞在计数器上面，前 4 个执行到最后一步时使计数器减一，当计数器为零时第 5 个线程被唤醒</p>
 <h1 id="两个线程交替输出-1-100"><a href="#两个线程交替输出-1-100" class="headerlink" title="两个线程交替输出 1 - 100"></a>两个线程交替输出 1 - 100</h1><h2 id="自旋-volatile"><a href="#自旋-volatile" class="headerlink" title="自旋 + volatile"></a>自旋 + <code>volatile</code></h2><p>既然是交替输出，那必然一个输出奇数一个输出偶数，输出日志这一操作是很快的，所以可以考虑乐观锁：自旋</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">App</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">App</span> &#123;
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-type">int</span> count;
 
@@ -530,7 +560,7 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="基于条件变量-Condition"><a href="#基于条件变量-Condition" class="headerlink" title="基于条件变量 Condition"></a>基于条件变量 <code>Condition</code></h2><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">App</span> &#123;
+<h2 id="基于条件变量-Condition"><a href="#基于条件变量-Condition" class="headerlink" title="基于条件变量 Condition"></a>基于条件变量 <code>Condition</code></h2><div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">App</span> &#123;
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">volatile</span> <span class="hljs-type">int</span> count;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ReentrantLock</span>();
@@ -578,7 +608,7 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
 <li>还增加了标识 <code>accessOrder</code>，<code>true</code>：entry list 按访问时间排序（最近访问的是尾结点），<code>false</code>：entry list 按插入次序排序（最近插入的是尾结点）</li>
 <li>迭代器（Iterator）从 <code>head</code> 开始遍历</li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LinkedHashMapEntry</span>&lt;K,V&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">HashMap</span>.Node&lt;K,V&gt; &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LinkedHashMapEntry</span>&lt;K,V&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">HashMap</span>.Node&lt;K,V&gt; &#123;
     LinkedHashMapEntry&lt;K,V&gt; before, after;
     LinkedHashMapEntry(<span class="hljs-type">int</span> hash, K key, V value, Node&lt;K,V&gt; next) &#123;
         <span class="hljs-built_in">super</span>(hash, key, value, next);
@@ -609,7 +639,7 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
 <li>新插入的节点作为新的尾结点 <code>tail</code>，相当于 <code>append</code> 到 LinkedList 上，新插入的节点也可以认为是最近访问的节点</li>
 <li>当按访问时间排序时（<code>accessOrder == true</code>），<code>get(key)</code> 会导致 Entry 成为新的 <code>tail</code></li>
 </ul>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LinkedHashMap</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LinkedHashMap</span> &#123;
     Node&lt;K,V&gt; <span class="hljs-title function_">newNode</span><span class="hljs-params">(<span class="hljs-type">int</span> hash, K key, V value, Node&lt;K,V&gt; e)</span> &#123;
         LinkedHashMapEntry&lt;K,V&gt; p =
             <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedHashMapEntry</span>&lt;K,V&gt;(hash, key, value, e);
@@ -669,33 +699,37 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
         &#125;
     &#125;                    
 &#125;</code></pre></div>
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E5%A4%87%E5%BF%98%E5%BD%95/">备忘录</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E7%AC%94%E8%AE%B0/">笔记</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E7%9F%A5%E8%AF%86%E7%82%B9/">知识点</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>
+      
+        <a href="/tags/%E5%A4%87%E5%BF%98%E5%BD%95/">#备忘录</a>
+      
+        <a href="/tags/%E7%AC%94%E8%AE%B0/">#笔记</a>
+      
+        <a href="/tags/%E7%9F%A5%E8%AF%86%E7%82%B9/">#知识点</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/01/24/condition-by-lock/">
+                      <a href="/2021/01/24/condition-by-lock/" title="Lock（三）利用 Lock 实现 Condition">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">Lock（三）利用 Lock 实现 Condition</span>
                         <span class="visible-mobile">上一篇</span>
@@ -705,7 +739,7 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/01/13/aqs-lock-implementation/">
+                      <a href="/2021/01/13/aqs-lock-implementation/" title="Lock（二）AQS 源码分析以及 Lock 的实现">
                         <span class="hidden-mobile">Lock（二）AQS 源码分析以及 Lock 的实现</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -721,19 +755,49 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -758,32 +822,34 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -802,10 +868,9 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -815,45 +880,153 @@ ActivityClientRecord <span class="hljs-title function_">performDestroyActivity</
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

@@ -27,15 +27,19 @@
 <meta name="twitter:card" content="summary_large_image">
   
   
+  
   <title>Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
 
-<!-- 主题依赖的图标库，不要自行修改 -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -44,7 +48,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -53,16 +61,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -132,6 +153,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -139,31 +161,35 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/default.png') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="">
-              
-                
-              
-            </span>
+  
 
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle"></span>
           
         </div>
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
     
       <div class="container nopadding-x-md">
-        <div class="py-5" id="board"
+        <div id="board"
           >
           
           <div class="container">
@@ -178,17 +204,59 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2020/11/11/starting-window/" target="_self">
+          starting window 和 windowDisablePreview
+        </a>
+      </h1>
+
+      <a class="index-excerpt" href="/2020/11/11/starting-window/" target="_self">
+        <div>
+          
+          问题中午和同事聊天时，提到一个问题：设计把爱范儿 app 的启动页改成暗黑样式，本来很简单的一个改动，测试却发现启动会有闪屏；下午我看了下效果，发现确实有问题：  把启动页的图片换成暗黑主体的图片后，冷&#x2F;热启动都会有从白色到黑色的闪动 同事给的 bug fixed 是 windowDisablePreview &#x3D; true，这导致 app 热启动时，会有很长的一段延迟  starting wind
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-11-11 04:00" pubdate>
+              2020-11-11
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/windowDisablePreview/">#windowDisablePreview</a>
+            
+              <a href="/tags/starting-window/">#starting window</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2020/11/03/launch-activity-sequence/" target="_self">
           Activity 启动流程时序图
         </a>
       </h1>
 
-      <p class="index-excerpt">
-        <a href="/2020/11/03/launch-activity-sequence/" target="_self">
+      <a class="index-excerpt" href="/2020/11/03/launch-activity-sequence/" target="_self">
+        <div>
           
           记录下启动 Activity 的时序图，方便后面查找
-        </a>
-      </p>
+        </div>
+      </a>
 
       <div class="index-btm post-metas">
         
@@ -204,7 +272,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/Activity/">Activity</a>
+              <a href="/tags/Activity/">#Activity</a>
             
           </div>
         
@@ -223,12 +291,12 @@
         </a>
       </h1>
 
-      <p class="index-excerpt">
-        <a href="/2020/10/31/how-glide-work/" target="_self">
+      <a class="index-excerpt" href="/2020/10/31/how-glide-work/" target="_self">
+        <div>
           
           网上讲解 Glide 的文章一搜一大把，但几乎都是以文字的形式来讲解；我自己也写过不少 Glide 的笔记，也是文字为主；但是时间长了经常忘了其中的细节，加上 Glide 的源码不太易懂，所以决定用时序图来分析和记录研究 Glide 的过程 时序图下面两张图是一次图片加载的大体流程，有读过源码的同学基本上通过这两种图就能回忆起其中的细节；没读过源码的同学也可以先了解下 Glide 里各个类的作用
-        </a>
-      </p>
+        </div>
+      </a>
 
       <div class="index-btm post-metas">
         
@@ -244,13 +312,13 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/glide/">glide</a>
+              <a href="/tags/glide/">#glide</a>
             
-              <a href="/tags/fresco/">fresco</a>
+              <a href="/tags/fresco/">#fresco</a>
             
-              <a href="/tags/imageloader/">imageloader</a>
+              <a href="/tags/imageloader/">#imageloader</a>
             
-              <a href="/tags/%E5%9B%BE%E7%89%87%E5%8A%A0%E8%BD%BD/">图片加载</a>
+              <a href="/tags/%E5%9B%BE%E7%89%87%E5%8A%A0%E8%BD%BD/">#图片加载</a>
             
           </div>
         
@@ -269,12 +337,12 @@
         </a>
       </h1>
 
-      <p class="index-excerpt">
-        <a href="/2020/10/20/anr/" target="_self">
+      <a class="index-excerpt" href="/2020/10/20/anr/" target="_self">
+        <div>
           
           根据日常的经验我们大概知道，如果 app 没有及时消费 MotionEvent，超过 5s 就会弹出 ANR 对话框；那么 ANR 的逻辑肯定是在事件分发过程中产生的，我们从事件的源头找起，看看 input 事件是怎么产生的 input 的分发 事件分发是从线程 InputReaderThread 开始的，它的主要工作是：  从目录 &#x2F;dev&#x2F;input 获取 input event 看来 and
-        </a>
-      </p>
+        </div>
+      </a>
 
       <div class="index-btm post-metas">
         
@@ -290,7 +358,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/ANR/">ANR</a>
+              <a href="/tags/ANR/">#ANR</a>
             
           </div>
         
@@ -309,12 +377,12 @@
         </a>
       </h1>
 
-      <p class="index-excerpt">
-        <a href="/2020/10/04/dispatchtouchevent/" target="_self">
+      <a class="index-excerpt" href="/2020/10/04/dispatchtouchevent/" target="_self">
+        <div>
           
           手势冲突是 android 开发中经常遇到的一类问题了，网上讲解此问题的文章也很多，但是大都浅显地过一遍事件分发的调用栈，然后给出一个调用栈流程图；要不就是使用日志大法，用日志来验证自己的想法，完全没有参考价值；这里根据事件分发相关源码，记录下我的理解。 MotionEvent 里定义的 ACTION_XXX 还不少有 10 多个，看起来情况很复杂的样子，实际上只需要关注三个：ACTION_DOW
-        </a>
-      </p>
+        </div>
+      </a>
 
       <div class="index-btm post-metas">
         
@@ -330,11 +398,11 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/TouchEvent/">TouchEvent</a>
+              <a href="/tags/TouchEvent/">#TouchEvent</a>
             
-              <a href="/tags/Motion/">Motion</a>
+              <a href="/tags/Motion/">#Motion</a>
             
-              <a href="/tags/NestedScrolling/">NestedScrolling</a>
+              <a href="/tags/NestedScrolling/">#NestedScrolling</a>
             
           </div>
         
@@ -353,12 +421,12 @@
         </a>
       </h1>
 
-      <p class="index-excerpt">
-        <a href="/2020/09/27/handler-messagequeue-looper/" target="_self">
+      <a class="index-excerpt" href="/2020/09/27/handler-messagequeue-looper/" target="_self">
+        <div>
           
           MessageQueue 是个单向链表，按 Message.when 自然序排 它有类似于「生产者 - 消费者」模型的阻塞队列：没有 Message 时，阻塞直到新 Message 入队；否则阻塞到下一个 Message.when &#x2F;&#x2F; 这里会阻塞 nativePollOnce(ptr, nextPollTimeoutMillis);  synchronized (this) &amp;#123;
-        </a>
-      </p>
+        </div>
+      </a>
 
       <div class="index-btm post-metas">
         
@@ -374,9 +442,9 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/Looper/">Looper</a>
+              <a href="/tags/Looper/">#Looper</a>
             
-              <a href="/tags/Handler/">Handler</a>
+              <a href="/tags/Handler/">#Handler</a>
             
           </div>
         
@@ -395,12 +463,12 @@
         </a>
       </h1>
 
-      <p class="index-excerpt">
-        <a href="/2020/09/15/git-log/" target="_self">
+      <a class="index-excerpt" href="/2020/09/15/git-log/" target="_self">
+        <div>
           
           git log 命令非常强大而好用，在复杂系统的版本管理中扮演着重要的角色，但默认的 git log 命令显示出的东西实在太丑，不好好打扮一下根本没法见人，打扮好了用 alias 命令拍个照片，就正式出道了！ 下面先详细而系统地介绍 git log 的所有配置知识（用我一向简洁清晰的表述方式），熟悉了这些东西，你就可以自由配置自己美丽的 git log 了～最后上个干货，直接给一个我打扮好的 al
-        </a>
-      </p>
+        </div>
+      </a>
 
       <div class="index-btm post-metas">
         
@@ -416,7 +484,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/git/">git</a>
+              <a href="/tags/git/">#git</a>
             
           </div>
         
@@ -435,12 +503,12 @@
         </a>
       </h1>
 
-      <p class="index-excerpt">
-        <a href="/2020/09/05/merge-rebase-squash/" target="_self">
+      <a class="index-excerpt" href="/2020/09/05/merge-rebase-squash/" target="_self">
+        <div>
           
           在团队合作中，毫无疑问，我们需要一个版本管理工具，相对于 SVN 这种在我们看来是老古董的工具，Git 在年轻化的团队中更受欢迎。并不仅仅是跟着大神们（Linux系）的路子在走，所以感觉很牛逼，而是 Git 真的很牛逼，当然，牛逼的同时你需要的学习曲线也是很陡的。这几天我就遇到了一个问题，其实也不是遇到问题，而是遇到了疑惑，那就是我在 github 系统中 merge 同时的 PR 的时候发现有好
-        </a>
-      </p>
+        </div>
+      </a>
 
       <div class="index-btm post-metas">
         
@@ -456,7 +524,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/git/">git</a>
+              <a href="/tags/git/">#git</a>
             
           </div>
         
@@ -501,32 +569,34 @@
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -545,10 +615,9 @@
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -558,32 +627,22 @@
 
 
 
-  
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

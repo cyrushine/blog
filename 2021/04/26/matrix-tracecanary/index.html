@@ -30,7 +30,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-26-matrix-tracecanary/run_store.jpg">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-26-matrix-tracecanary/stack.jpg">
 <meta property="article:published_time" content="2021-04-26T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.978Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.007Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="APM">
 <meta property="article:tag" content="性能优化">
@@ -38,30 +38,25 @@
 <meta name="twitter:image" content="https://www.dalvik.work/image/2021-04-26-matrix-tracecanary/fps_board.jpg">
   
   
+  
   <title>Matrix - TraceCanary 浅析 - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -70,7 +65,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -79,16 +78,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -158,6 +170,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -165,59 +178,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="Matrix - TraceCanary 浅析">
-              
-                Matrix - TraceCanary 浅析
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-04-26 04:00" pubdate>
-        2021年4月26日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      46k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      382 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">Matrix - TraceCanary 浅析</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-04-26 04:00" pubdate>
+          2021年4月26日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          46k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          382 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -226,15 +251,20 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">Matrix - TraceCanary 浅析</h1>
             
             <div class="markdown-body">
+              
               <h2 id="捕获掉帧-卡顿"><a href="#捕获掉帧-卡顿" class="headerlink" title="捕获掉帧/卡顿"></a>捕获掉帧/卡顿</h2><h3 id="什么是掉帧-卡顿"><a href="#什么是掉帧-卡顿" class="headerlink" title="什么是掉帧/卡顿"></a>什么是掉帧/卡顿</h3><blockquote>
 <p>什么是卡顿，很多人能马上联系到的是帧率 FPS (每秒显示帧数)。那么多低的 FPS 才是卡顿呢？又或者低 FPS 真的就是卡顿吗？（以下 FPS 默认指平均帧率）</p>
 <p>其实并非如此，举个例子，游戏玩家通常追求更流畅的游戏画面体验一般要达到 60FPS 以上，但我们平时看到的大部分电影或视频 FPS 其实不高，一般只有 25FPS ~ 30FPS，而实际上我们也没有觉得卡顿。 在人眼结构上看，当一组动作在 1 秒内有 12 次变化（即 12FPS），我们会认为这组动作是连贯的；而当大于 60FPS 时，人眼很难区分出来明显的变化，所以 60FPS 也一直作为业界衡量一个界面流畅程度的重要指标。一个稳定在 30FPS 的动画，我们不会认为是卡顿的，但一旦 FPS 很不稳定，人眼往往容易感知到。</p>
@@ -244,7 +274,7 @@
 <p>造成 <strong>掉帧</strong> 的直接原因通常是 <code>doFrame</code> 过于繁重执行超时，或者其他任务挤压了 <code>doFrame</code> 的执行时间，这些都会造成主线程不能在 <strong>帧间隔时间</strong> 内完成 ui 绘制</p>
 <h3 id="计算-Message-耗时"><a href="#计算-Message-耗时" class="headerlink" title="计算 Message 耗时"></a>计算 <code>Message</code> 耗时</h3><p>我们知道主线程是「生产者 - 消费者」模型，任务（<code>Message</code>）都在消息队列（<code>MessageQueue</code>）里排队等待执行，如果能够度量出每个 <code>Message</code> 的耗时，然后与某个阈值进行比较，我们就能找出耗时任务做进一步的优化</p>
 <p>从下面的代码可以看到，<code>Message</code> 执行前后都会有特定格式的日志输出，只要捕获这些日志，就能计算出每个 <code>Message</code> 的耗时</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> Looper.loop() &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> Looper.loop() &#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">for</span> (;;) &#123;
         <span class="hljs-comment">// ...</span>
@@ -264,7 +294,7 @@
 &#125;</code></pre></div>
 
 <p><code>LooperMonitor</code> 通过替换 <code>Looper.mLogging</code>，从而捕获到 <code>&gt;&gt;&gt;&gt;&gt; Dispatching to</code> 和 <code>&lt;&lt;&lt;&lt;&lt; Finished to</code> 的日志输出进而算出 <code>Message</code> 耗时，并提供 <code>dispatchStart</code> 和 <code>dispatchEnd</code> 两个钩子</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LooperMonitor</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LooperMonitor</span> &#123;
     <span class="hljs-comment">// 通过反射替换 Looper.mLogging</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">resetPrinter</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-type">Printer</span> <span class="hljs-variable">originPrinter</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
@@ -332,7 +362,7 @@
 &#125;</code></pre></div>
 
 <p>为了防止其他代码也替换 <code>Looper.mLogging</code>，<code>LooperMonitor</code> 还在主线程空闲的时候进行检查</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> LooperMonitor.queueIdle() &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> LooperMonitor.queueIdle() &#123;
     <span class="hljs-keyword">if</span> (SystemClock.uptimeMillis() - lastCheckPrinterTime &gt;= CHECK_TIME) &#123;
         resetPrinter();
         lastCheckPrinterTime = SystemClock.uptimeMillis();
@@ -344,7 +374,7 @@
 <p>参考 <a href="../../../../2020/12/02/vsync/">Android 图形栈（一）vsync</a> 我们知道，当 <code>APP_VSYNC</code> 到达时会走 <code>FrameDisplayEventReceiver.onVsync</code> -&gt; <code>Choreographer.doFrame</code> -&gt; <code>Choreographer.doCallbacks</code>，最后按 INPUT - ANIMATION - TRAVERSAL 的顺序执行 <code>Choreographer.mCallbackQueues</code> 里的 <code>Runnable</code></p>
 <p>动态地往这三个队列的头部插入钩子，从而计算出每个阶段开始时间和结束时间，加上捕获 <code>Message</code> 的方法（<code>Choreographer.doFrame</code> 是由 <code>FrameDisplayEventReceiver.onVsync</code> 放入主线程任务队列的 <code>Message</code>），最终形成完整的闭环：</p>
 <p><code>dispatchBegin</code> -&gt; <code>doFrameBegin</code> -&gt; <code>doQueueBegin(INPUT)</code> -&gt; <code>doQueueEnd(INPUT)</code> -&gt; <code>doQueueBegin(ANIMATION)</code> -&gt; <code>doQueueEnd(ANIMATION)</code> -&gt; <code>doQueueBegin(TRAVERSAL)</code> -&gt; <code>doQueueEnd(TRAVERSAL)</code> -&gt; <code>doFrameEnd</code> -&gt; <code>dispatchEnd</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UIThreadMonitor</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UIThreadMonitor</span> &#123;
     <span class="hljs-comment">// 最开始先在 INPUT 头部插入钩子</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> UIThreadMonitor.onStart() &#123;
         <span class="hljs-comment">// ...</span>
@@ -400,7 +430,7 @@
 &#125;</code></pre></div>
 
 <h3 id="LooperObserver"><a href="#LooperObserver" class="headerlink" title="LooperObserver"></a><code>LooperObserver</code></h3><p>结合上面捕获到的信息，提供一个「观察者」</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LooperObserver</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LooperObserver</span> &#123;
 
     <span class="hljs-keyword">private</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">isDispatchBegin</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
 
@@ -476,7 +506,7 @@
 <p>灰色的 <code>sum: 3.0</code> 是 <strong>总掉帧次数</strong>，下面的彩虹从左到右分别代表 <code>Normal/Middle/High/Frozen</code> 这四个级别的掉帧占总掉帧的比例，往下是当前页面的掉帧数和掉帧比例</p>
 <p>最底下的图表是过去 10s 内平均帧率（200ms 时间段）的横向柱状图，每 5s 就会有 25 条记录，50 FPS 差不多是 <code>Normal</code> 的帧率下限，30 FPS 差不多是 <code>Middle</code> 的帧率下限</p>
 <p><img src="../../../../image/2021-04-26-matrix-tracecanary/fps_board.jpg" srcset="/image/loading.gif" lazyload alt="fps_board"></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 每帧的时间间隔，默认取 16ms（60 FPS）</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 每帧的时间间隔，默认取 16ms（60 FPS）</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UIThreadMonitor</span> &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-type">long</span> <span class="hljs-variable">frameIntervalNanos</span> <span class="hljs-operator">=</span> <span class="hljs-number">16666666</span>;
 
@@ -543,7 +573,7 @@
 &#125;</code></pre></div>
 
 <h3 id="统计耗时-Message"><a href="#统计耗时-Message" class="headerlink" title="统计耗时 Message"></a>统计耗时 <code>Message</code></h3><p><code>TraceCanary</code> 把耗时超过 700ms 的 <code>Message</code> 作为 <code>Evil Method</code> 上报</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EvilMethodTracer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EvilMethodTracer</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchEnd</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> endNs, <span class="hljs-type">long</span> cpuEndMs, <span class="hljs-type">long</span> token, <span class="hljs-type">boolean</span> isVsyncFrame)</span> &#123;
         <span class="hljs-type">long</span> <span class="hljs-variable">dispatchCost</span> <span class="hljs-operator">=</span> (endNs - beginNs) / Constants.TIME_MILLIS_TO_NANO;
         <span class="hljs-keyword">try</span> &#123;
@@ -568,7 +598,7 @@
 <p><img src="../../../../image/2021-04-26-matrix-tracecanary/build.png" srcset="/image/loading.gif" lazyload alt="transform class"></p>
 </blockquote>
 <h3 id="Gradle-Transform"><a href="#Gradle-Transform" class="headerlink" title="Gradle Transform"></a>Gradle Transform</h3><p><code>ignoreMethodMapFilePath</code> 上面说过为了减少插桩量及性能损耗会忽略一些函数，这些被忽略的函数记录在此文件里（默认放在 <code>/app/build/outputs/mapping/&#123;var&#125;/ignoreMethodMapping.txt</code>），大概长这样：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin">ignore methods:
+<div class="code-wrapper"><pre><code class="hljs kotlin">ignore methods:
 android.arch.core.executor.ArchTaskExecutor &lt;clinit&gt; ()V
 android.arch.core.executor.ArchTaskExecutor &lt;<span class="hljs-keyword">init</span>&gt; ()V
 android.arch.core.executor.ArchTaskExecutor$<span class="hljs-number">1</span> execute (Ljava.lang.Runnable;)V
@@ -582,7 +612,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$AscendingIterator &lt;<span class="hljs-keyword">init</span>&gt; (Landroid.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Entry;Landroid.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Entry;)V</code></pre></div>
 
 <p><code>methodMapFilePath</code> 函数签名和函数 ID 的映射（默认放在 <code>/app/build/outputs/mapping/&#123;var&#125;/methodMapping.txt</code>），大概长这样：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-number">1</span>,<span class="hljs-number">1</span>,sample.tencent.matrix.MainActivity$<span class="hljs-number">6</span> run ()V
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-number">1</span>,<span class="hljs-number">1</span>,sample.tencent.matrix.MainActivity$<span class="hljs-number">6</span> run ()V
 <span class="hljs-number">2</span>,<span class="hljs-number">10</span>,sample.tencent.matrix.MatrixApplication initSQLiteLintConfig ()Lcom.tencent.sqlitelint.config.SQLiteLintConfig;
 <span class="hljs-number">3</span>,<span class="hljs-number">1</span>,sample.tencent.matrix.MainActivity$<span class="hljs-number">5</span> onClick (Landroid.view.View;)V
 <span class="hljs-number">4</span>,<span class="hljs-number">1</span>,sample.tencent.matrix.MainActivity$<span class="hljs-number">4</span> onClick (Landroid.view.View;)V
@@ -594,7 +624,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <span class="hljs-number">10</span>,<span class="hljs-number">1</span>,org.apache.commons.io.comparator.DirectoryFileComparator compare (Ljava.io.File;Ljava.io.File;)I</code></pre></div>
 
 <p><code>TraceCanary</code> 用 <code>Transform API</code> 处理并输出插桩后的 <code>class</code> </p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MatrixTraceTransform</span>: <span class="hljs-type">Transform</span></span>() &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MatrixTraceTransform</span>: <span class="hljs-type">Transform</span></span>() &#123;
 
     <span class="hljs-comment">// Transform 的名称</span>
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getName</span><span class="hljs-params">()</span></span>: String &#123;
@@ -715,7 +745,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
     &#125;
 &#125;</code></pre></div>
 
-<h3 id="解析配置文件"><a href="#解析配置文件" class="headerlink" title="解析配置文件"></a>解析配置文件</h3><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> MatrixTrace.<span class="hljs-title">doTransform</span><span class="hljs-params">(...)</span></span> &#123;
+<h3 id="解析配置文件"><a href="#解析配置文件" class="headerlink" title="解析配置文件"></a>解析配置文件</h3><div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> MatrixTrace.<span class="hljs-title">doTransform</span><span class="hljs-params">(...)</span></span> &#123;
     <span class="hljs-keyword">val</span> executor: ExecutorService = Executors.newFixedThreadPool(<span class="hljs-number">16</span>)
     <span class="hljs-keyword">val</span> config = Configuration.Builder()
             .setIgnoreMethodMapFilePath(ignoreMethodMapFilePath)
@@ -792,7 +822,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
     &#125;
 &#125;</code></pre></div>
 
-<h3 id="收集匹配的函数"><a href="#收集匹配的函数" class="headerlink" title="收集匹配的函数"></a>收集匹配的函数</h3><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> MatrixTrace.<span class="hljs-title">doTransform</span><span class="hljs-params">(...)</span></span> &#123;
+<h3 id="收集匹配的函数"><a href="#收集匹配的函数" class="headerlink" title="收集匹配的函数"></a>收集匹配的函数</h3><div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> MatrixTrace.<span class="hljs-title">doTransform</span><span class="hljs-params">(...)</span></span> &#123;
     <span class="hljs-comment">// ... step 2 在线程池里用 ASM 解析 class 并收集匹配的函数</span>
     start = System.currentTimeMillis()
     <span class="hljs-keyword">val</span> methodCollector = MethodCollector(executor, mappingCollector, methodId, config, collectedMethodMap)
@@ -801,7 +831,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
     <span class="hljs-comment">// ...</span>
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 搜集匹配的函数</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 搜集匹配的函数</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> MethodCollector.collect(Set&lt;File&gt; srcFolderList, Set&lt;File&gt; dependencyJarList) <span class="hljs-keyword">throws</span> ExecutionException, InterruptedException &#123;
     List&lt;Future&gt; futures = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedList</span>&lt;&gt;();
     <span class="hljs-keyword">for</span> (File srcFile : srcFolderList) &#123;                    <span class="hljs-comment">// 在 class 里收集匹配的函数</span>
@@ -891,7 +921,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
     &#125;
 &#125;</code></pre></div>
 
-<h3 id="执行插桩操作"><a href="#执行插桩操作" class="headerlink" title="执行插桩操作"></a>执行插桩操作</h3><div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> MatrixTrace.<span class="hljs-title">doTransform</span><span class="hljs-params">(...)</span></span> &#123;
+<h3 id="执行插桩操作"><a href="#执行插桩操作" class="headerlink" title="执行插桩操作"></a>执行插桩操作</h3><div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> MatrixTrace.<span class="hljs-title">doTransform</span><span class="hljs-params">(...)</span></span> &#123;
     <span class="hljs-comment">// ... step 3 执行插桩操作</span>
     start = System.currentTimeMillis()
     <span class="hljs-keyword">val</span> methodTracer = MethodTracer(executor, mappingCollector, config, methodCollector.collectedMethodMap, methodCollector.collectedClassExtendMap)
@@ -899,7 +929,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
     Log.i(TAG, <span class="hljs-string">&quot;[doTransform] Step(3)[Trace]... cost:%sms&quot;</span>, System.currentTimeMillis() - start)
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> MethodTracer.trace(Map&lt;File, File&gt; srcFolderList, Map&lt;File, File&gt; dependencyJarList) <span class="hljs-keyword">throws</span> ExecutionException, InterruptedException &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> MethodTracer.trace(Map&lt;File, File&gt; srcFolderList, Map&lt;File, File&gt; dependencyJarList) <span class="hljs-keyword">throws</span> ExecutionException, InterruptedException &#123;
     List&lt;Future&gt; futures = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedList</span>&lt;&gt;();
     traceMethodFromSrc(srcFolderList, futures);     <span class="hljs-comment">// 处理 class</span>
     traceMethodFromJar(dependencyJarList, futures); <span class="hljs-comment">// 处理 jar</span>
@@ -1009,7 +1039,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <p><img src="../../../../image/2021-04-26-matrix-tracecanary/run_store.jpg" srcset="/image/loading.gif" lazyload alt="long buffer"></p>
 <p><img src="../../../../image/2021-04-26-matrix-tracecanary/stack.jpg" srcset="/image/loading.gif" lazyload alt="summary func cast"></p>
 </blockquote>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 记录函数的开始时间</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 记录函数的开始时间</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.i(<span class="hljs-type">int</span> methodId) &#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">if</span> (threadId == sMainThreadId) &#123;                <span class="hljs-comment">// 只关心主线程的慢函数，其他线程不记录</span>
@@ -1062,7 +1092,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <blockquote>
 <p>另外，考虑到每个方法执行前后都获取系统时间（System.nanoTime）会对性能影响比较大，而实际上，单个函数执行耗时小于 5ms 的情况，对卡顿来说不是主要原因，可以忽略不计，如果是多次调用的情况，则在它的父级方法中可以反映出来，所以为了减少对性能的影响，通过另一条更新时间的线程每 5ms 去更新一个时间变量，而每个方法执行前后只读取该变量来减少性能损耗。</p>
 </blockquote>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Runnable</span> <span class="hljs-variable">sUpdateDiffTimeRunnable</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Runnable</span> <span class="hljs-variable">sUpdateDiffTimeRunnable</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
     <span class="hljs-meta">@Override</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
         <span class="hljs-keyword">try</span> &#123;
@@ -1084,7 +1114,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <h2 id="上报耗时-Message"><a href="#上报耗时-Message" class="headerlink" title="上报耗时 Message"></a>上报耗时 <code>Message</code></h2><p>上面说过可以用一个 <code>long</code> 表示函数开始/结束的相对时间戳，然后存储在一个 100M 大小的数组里，插入索引会从 0 不断增长，到达 100M 后重置为 0</p>
 <p>遇到耗时 <code>Message</code> 时，需要裁剪出有效的函数执行时间记录，所以在处理 <code>Message</code> 开始前先把索引记下来 <code>start</code>，处理完后从 <code>start</code> 到当前索引 <code>end</code> 之间就是这个 <code>Message</code> 的调用栈耗时记录</p>
 <p>要注意的是索引到尾部后会重置为 0，所以要区分 <code>start</code> 和 <code>end</code> 大小关系；当 <code>start &lt; end</code> 取 <code>[start, end]</code>，当 <code>start &gt; end</code> 取 <code>[start,] + [0, end]</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EvilMethodTracer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EvilMethodTracer</span> &#123;
     <span class="hljs-meta">@Override</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchBegin</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> token)</span> &#123;
         <span class="hljs-built_in">super</span>.dispatchBegin(beginNs, cpuBeginMs, token);
@@ -1133,7 +1163,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <h2 id="上报-ANR"><a href="#上报-ANR" class="headerlink" title="上报 ANR"></a>上报 ANR</h2><p>在 <a href="../../../../2020/10/20/anr/">阅读源码系列：ANR 是怎么产生的</a> 说过，ANR 是因为没有及时消费 <code>MotionEvent</code>，超过 5s 后由 AMS 弹出的对话框</p>
 <p>弹出 ANR 对话框的 <code>Runnable</code> 是在分发 <code>MotionEvent</code> 时放下的一个延时炸弹（<code>Handler.postDelayed</code>），如果 <code>MotionEvent</code> 在 5s 内被消费则炸弹被移除（<code>Handler.removeCallbacks</code>）</p>
 <p>我们在 <code>Message</code> 执行前有钩子函数 <code>dispatchBegin</code>，那也可以学习 ANR 放入报告函数（注意是放在子线程的消息队列里，不然在主线程里还没执行就被 ANR 对话框杀掉了），延时 5s，然后在 <code>dispatchEnd</code> 里移除，如果主线程的 <code>Message</code> 超过 5s 未执行完，那极有可能触发 ANR，于是收集调用堆栈及耗时信息上报给服务器</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AnrTracer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AnrTracer</span> &#123;
     <span class="hljs-meta">@Override</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">dispatchBegin</span><span class="hljs-params">(<span class="hljs-type">long</span> beginNs, <span class="hljs-type">long</span> cpuBeginMs, <span class="hljs-type">long</span> token)</span> &#123;
         <span class="hljs-built_in">super</span>.dispatchBegin(beginNs, cpuBeginMs, token);
@@ -1217,7 +1247,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 &#125;</code></pre></div>
 
 <h2 id="统计-APP-amp-页面启动耗时"><a href="#统计-APP-amp-页面启动耗时" class="headerlink" title="统计 APP &amp; 页面启动耗时"></a>统计 APP &amp; 页面启动耗时</h2><p>包括 <code>Application</code> 执行耗时、首屏启动耗时、冷/热启动耗时、页面启动耗时，它们之间的关系如下：</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
 <span class="hljs-comment"> * </span>
 <span class="hljs-comment"> * firstMethod.i       LAUNCH_ACTIVITY   onWindowFocusChange   LAUNCH_ACTIVITY    onWindowFocusChange</span>
 <span class="hljs-comment"> * ^                         ^                   ^                     ^                  ^</span>
@@ -1232,7 +1262,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <h3 id="Application-执行耗时"><a href="#Application-执行耗时" class="headerlink" title="Application 执行耗时"></a><code>Application</code> 执行耗时</h3><p>有了上面的插桩，通过给 <code>Application.attachBaseContext</code> 插桩，也就是第一次执行 <code>AppMethodBeat.i</code> 的时候，可以拿到 <code>eggBrokenTime</code> 作为 APP 启动时间</p>
 <p>这里解释下为什么不在 <code>Application</code> 构造函数里插桩并作为 APP 启动时间，那是因为 APP 有冷启动/热启动的概念，冷启动下 fork app process 并构造 <code>Application</code> 实例，此时算出的启动时间是正确的；但如果是热启动，<code>Application</code> 实例并没有销毁也不会执行构造函数，而是直接走 <code>onCreate</code> 函数，此时在构造函数里插桩就无法捕获到正确的启动时间了</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AppMethodBeat</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AppMethodBeat</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">i</span><span class="hljs-params">(<span class="hljs-type">int</span> methodId)</span> &#123;
         <span class="hljs-comment">// ... 第一次执行 AppMethodBeat.i 时</span>
         <span class="hljs-keyword">if</span> (status == STATUS_DEFAULT) &#123;
@@ -1268,7 +1298,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <p>初始化 <code>Application</code> 后启动第一个 <code>Activity</code>/<code>Service</code>/<code>BroadcastReceiver</code> 的时刻作为 <code>Application</code> 初始化的完结时间（为啥没有 <code>ContentProvider</code> 呢？因为它是在 <code>onCreate</code> 之前启动的，see <a href="../../../../2021/04/12/leakcanary/">LeakCanary 浅析</a>）</p>
 <p>上述三大组件的启动会通过主线程的消息队列在 <code>ActivityThread.mH</code> 里执行</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">H</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Handler</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">H</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Handler</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">CREATE_SERVICE</span>          <span class="hljs-operator">=</span> <span class="hljs-number">114</span>;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">RECEIVER</span>                <span class="hljs-operator">=</span> <span class="hljs-number">113</span>;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">RELAUNCH_ACTIVITY</span>       <span class="hljs-operator">=</span> <span class="hljs-number">160</span>;
@@ -1315,7 +1345,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 <span class="hljs-comment">// Activity 生命周期是通过 LaunchActivityItem/StartActivityItem/ResumeActivityItem/... 执行</span></code></pre></div>
 
 <p>所以 <code>TraceCanary</code> 选择在第一次执行 <code>AppMethodBeat.i</code> 时，替换 <code>ActivityThread.sCurrentActivityThread.mH.mCallback</code>，在 <code>Handler.Callback.handleMessage(msg)</code> 里监听第一次启动 <code>Activity</code>/<code>Service</code>/<code>BroadcastReceiver</code> 的时刻作为 <code>Application</code> 初始化的结束点</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 第一次执行时</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 第一次执行时</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> AppMethodBeat.i(<span class="hljs-type">int</span> methodId) &#123;
     <span class="hljs-keyword">if</span> (status &lt;= STATUS_STOPPED) &#123;
         <span class="hljs-keyword">return</span>;
@@ -1393,7 +1423,7 @@ android.arch.core.<span class="hljs-keyword">internal</span>.SafeIterableMap$Asc
 
 <h3 id="页面打开耗时"><a href="#页面打开耗时" class="headerlink" title="页面打开耗时"></a>页面打开耗时</h3><p>注册 <code>ActivityLifecycleCallbacks</code>，在 <code>onActivityCreated</code> 记录 <code>Activity</code> 的创建时间</p>
 <p>在上面的插桩阶段，<code>AppMethodBeat.at(activity, isFocus)</code> 被添加到 <code>Activity.onWindowFocusChanged(hasFocus)</code> 的第一行代码，此时认为 <code>Activity</code> 获得焦点启动完毕（用户可见可交互），与 <code>Activity</code> 创建时间的差即为页面启动耗时</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;
 
     <span class="hljs-comment">// &quot;&#123;Activity全限定类名&#125;@&#123;activity.hashCode()&#125;&quot; -&gt; uptimeMillis</span>
     <span class="hljs-keyword">private</span> HashMap&lt;String, Long&gt; createdTimeMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
@@ -1470,7 +1500,7 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
 &#125;</code></pre></div>
 
 <h3 id="首屏打开耗时"><a href="#首屏打开耗时" class="headerlink" title="首屏打开耗时"></a>首屏打开耗时</h3><p>首屏启动耗时（<code>firstScreenCost</code>） = 第一个页面（splash activity）接收到焦点的时间 - <code>eggBrokenTime</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;    
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;    
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onActivityFocused</span><span class="hljs-params">(Activity activity)</span> &#123;
         <span class="hljs-comment">// ... 记录首屏启动耗时</span>
         <span class="hljs-keyword">if</span> (firstScreenCost == <span class="hljs-number">0</span>) &#123;
@@ -1484,7 +1514,7 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
 <p>怎么判断是冷启动还是热启动呢？既然 JVM 没有销毁，那么类的静态成员变量作为 <code>GC ROOT</code> 就会一直存在于内存中，判断它有没初始化即可知道是冷启动还是热启动，实际上 <code>Matrix</code> 就是这么做的，它的 <code>GC ROOT PATH</code> 是：</p>
 <p><code>Matrix.sInstance</code> -&gt; <code>HashSet&lt;Plugin&gt; plugins</code> -&gt; <code>TracePlugin</code> -&gt; <code>StartupTracer</code> -&gt; <code>coldCost</code></p>
 <p><code>StartupTracer.coldCost</code> 会在 <code>StartupTracer.onActivityFocused</code> 被初始化（&gt; 0），初始化时如果遇到 <code>StartupTracer.coldCost</code> == 0 则是冷启动；跟我想的不太一样的是，我认为冷启动耗时是从 <code>eggBrokenTime</code> 到第一个页面（splash activity）打开的时间，而 <code>TraceCanary</code> 计算的是到第二个页面（splash activity 之后的第一个页面）打开的时间</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> StartupTracer.onActivityFocused(Activity activity) &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> StartupTracer.onActivityFocused(Activity activity) &#123;
     <span class="hljs-comment">// ... coldCost == 0 冷启动</span>
     <span class="hljs-keyword">if</span> (isColdStartup()) &#123;                                             
         <span class="hljs-comment">// ...</span>
@@ -1512,7 +1542,7 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
 &#125;</code></pre></div>
 
 <p>上面说过冷启动耗时是到第二个页面打开的时间，那如果在第一个页面打开时 <code>coldCost</code> &gt; 0 说明 JVM 没有销毁，是热启动（<code>isWarmStartUp</code>），热启动耗时相当于第一个页面的打开耗时</p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StartupTracer</span> &#123;
 
     <span class="hljs-keyword">private</span> <span class="hljs-type">long</span> <span class="hljs-variable">lastCreateActivity</span> <span class="hljs-operator">=</span> <span class="hljs-number">0L</span>;   <span class="hljs-comment">// 当前/上一个 Activity.onCreate 的时间</span>
 
@@ -1553,29 +1583,33 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
 <li><a target="_blank" rel="noopener" href="https://github.com/Tencent/matrix/wiki/Matrix-Android-TraceCanary">Matrix Android TraceCanary</a></li>
 </ol>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/APM/">APM</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">性能优化</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/APM/">#APM</a>
+      
+        <a href="/tags/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">#性能优化</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/05/07/koom/">
+                      <a href="/2021/05/07/koom/" title="KOOM - 利用子进程 dump hprof">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">KOOM - 利用子进程 dump hprof</span>
                         <span class="visible-mobile">上一篇</span>
@@ -1585,7 +1619,7 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/04/23/matrix-resourcescanary/">
+                      <a href="/2021/04/23/matrix-resourcescanary/" title="Matrix - ResourcesCanary 浅析">
                         <span class="hidden-mobile">Matrix - ResourcesCanary 浅析</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -1601,19 +1635,49 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -1638,32 +1702,34 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -1682,10 +1748,9 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -1695,45 +1760,153 @@ AppMethodBeat.at(Activity activity, <span class="hljs-type">boolean</span> isFoc
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

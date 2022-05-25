@@ -26,7 +26,7 @@
 <meta property="og:description" content="Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher V2.1.2   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-11-29T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-05-10T02:26:59.982Z">
+<meta property="article:modified_time" content="2022-05-25T08:44:33.011Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="崩溃">
@@ -34,30 +34,25 @@
 <meta name="twitter:card" content="summary_large_image">
   
   
+  
   <title>xCrash ANR 兼容性测试 - Cyrus Blog</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
+
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
   <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
 
-  
-    
-    
-      
-      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/tomorrow-night-blue.min.css" />
-    
-  
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
-  
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
-  
 
 
 <!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
 
 
 
@@ -66,7 +61,11 @@
 
 <link  rel="stylesheet" href="/css/main.css" />
 
-<!-- 自定义样式保持在最底部 -->
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
 
   
 <link rel="stylesheet" href="/css/custom.css">
@@ -75,16 +74,29 @@
 
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.8.14","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+
+  
 <meta name="generator" content="Hexo 5.4.2"></head>
 
 
 <body>
-  <header style="height: 30vh;">
-    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <strong>Cyrus Land</strong>
@@ -154,6 +166,7 @@
               &nbsp;<i class="iconfont icon-search"></i>&nbsp;
             </a>
           </li>
+          
         
         
       </ul>
@@ -161,59 +174,71 @@
   </div>
 </nav>
 
-    <div class="banner" id="banner" parallax=true
-         style="background: url('/image/sunset_sea.jpg') no-repeat center center;
-           background-size: cover;">
-      <div class="full-bg-img">
-        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
-          <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="xCrash ANR 兼容性测试">
-              
-                xCrash ANR 兼容性测试
-              
-            </span>
-
-            
-              <div class="mt-3">
-  
-  
-    <span class="post-meta">
-      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2021-11-29 04:00" pubdate>
-        2021年11月29日
-      </time>
-    </span>
-  
-</div>
-
-<div class="mt-1">
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-chart"></i>
-      54k 字
-    </span>
   
 
-  
-    <span class="post-meta mr-2">
-      <i class="iconfont icon-clock-fill"></i>
-      
-      
-      450 分钟
-    </span>
-  
-
-  
-  
-</div>
-
-            
-          </div>
-
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">xCrash ANR 兼容性测试</span>
           
         </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-11-29 04:00" pubdate>
+          2021年11月29日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          54k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          450 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
       </div>
+
+      
     </div>
+  </div>
+</div>
+
+</div>
+
   </header>
 
   <main>
@@ -222,15 +247,20 @@
 
 <div class="container-fluid nopadding-x">
   <div class="row nomargin-x">
-    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
     <div class="col-lg-8 nopadding-x-md">
       <div class="container nopadding-x-md" id="board-ctn">
-        <div class="py-5" id="board">
+        <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">xCrash ANR 兼容性测试</h1>
             
             <div class="markdown-body">
+              
               <table>
 <thead>
 <tr>
@@ -268,7 +298,7 @@
 </tr>
 </tbody></table>
 <h1 id="详细的日志埋点"><a href="#详细的日志埋点" class="headerlink" title="详细的日志埋点"></a>详细的日志埋点</h1><p>tag 为 <code>xcrash_dumper</code> 为插入的日志埋点</p>
-<div class="hljs code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">initXCrash</span><span class="hljs-params">()</span></span> &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">initXCrash</span><span class="hljs-params">()</span></span> &#123;
     mainHandler.postDelayed(&#123;
         XCrash.<span class="hljs-keyword">init</span>(app, XCrash.InitParameters().apply &#123;
             setAnrCallback &#123; logPath, emergency -&gt;
@@ -314,7 +344,7 @@
     &#125;    
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">XCrash</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">XCrash</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-type">int</span> <span class="hljs-title function_">init</span><span class="hljs-params">(Context ctx, InitParameters params)</span> &#123;
         <span class="hljs-keyword">if</span> (XCrash.initialized) &#123;
             <span class="hljs-keyword">return</span> Errno.OK;
@@ -443,7 +473,7 @@
     &#125;    
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">xc_jni_init</span><span class="hljs-params">(...)</span></span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">static</span> jint <span class="hljs-title">xc_jni_init</span><span class="hljs-params">(...)</span></span>
 <span class="hljs-function"></span>&#123;
     <span class="hljs-comment">//...</span>
     <span class="hljs-keyword">if</span>(trace_enable)
@@ -655,7 +685,7 @@
     <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">NativeHandler</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">NativeHandler</span> &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">traceCallback</span><span class="hljs-params">(String logPath, String emergency)</span> &#123;
         <span class="hljs-type">String</span> <span class="hljs-variable">tag</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;xcrash_dumper&quot;</span>;
         Log.d(tag, String.format(<span class="hljs-string">&quot;traceCallback %s %s&quot;</span>, emergency, logPath));    <span class="hljs-comment">// 记录 callback 调用</span>
@@ -742,7 +772,7 @@
 &#125;</code></pre></div>
 
 <h1 id="PIXEL-4-Android-12"><a href="#PIXEL-4-Android-12" class="headerlink" title="PIXEL 4 - Android 12"></a>PIXEL 4 - Android 12</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，4s 后 APP 进入 NOT_RESPONDING 状态</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:27:26.760  3215  3215 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-25 11:27:26.760  3215  3215 D xcrash_dumper: xcrash start
 11-25 11:27:26.770  3215  3215 D xcrash_dumper: xcrash native start
 11-25 11:27:26.771  3215  3215 D xcrash_dumper: ANR native start
 11-25 11:27:26.771  3215  3215 D xcrash_dumper: ANR native register SIGQUIT
@@ -798,7 +828,7 @@
 11-25 11:27:59.784  3215  3215 D xcrash_dumper: AnrService, now 1637810879, found anr logs, tombstone_00001637810870178747_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
 
 <h1 id="PIXEL-5-Android-11"><a href="#PIXEL-5-Android-11" class="headerlink" title="PIXEL 5 - Android 11"></a>PIXEL 5 - Android 11</h1><p>主线程阻塞 12s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，6s 后 APP 进入 NOT_RESPONDING 状态</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 15:43:01.820  2668  2668 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-25 15:43:01.820  2668  2668 D xcrash_dumper: xcrash start
 11-25 15:43:01.844  2668  2668 D xcrash_dumper: xcrash native start
 11-25 15:43:01.845  2668  2668 D xcrash_dumper: ANR native start
 11-25 15:43:01.845  2668  2668 D xcrash_dumper: ANR native register SIGQUIT
@@ -854,7 +884,7 @@
 11-25 15:43:34.860  2668  2668 D xcrash_dumper: AnrService, now 1637826214, found anr logs, tombstone_00001637826196061961_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
 
 <h1 id="MI-10-Android-10"><a href="#MI-10-Android-10" class="headerlink" title="MI 10 - Android 10"></a>MI 10 - Android 10</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，5s 后 APP 进入 NOT_RESPONDING 状态</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:30:52.898  8554  8554 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-25 11:30:52.898  8554  8554 D xcrash_dumper: xcrash start
 11-25 11:30:52.906  8554  8554 D xcrash_dumper: xcrash native start
 11-25 11:30:52.907  8554  8554 D xcrash_dumper: ANR native start
 11-25 11:30:52.907  8554  8554 D xcrash_dumper: ANR native register SIGQUIT
@@ -910,7 +940,7 @@
 11-25 11:31:25.920  8554  8554 D xcrash_dumper: AnrService, now 1637811085, found anr logs, tombstone_00001637811076430808_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
 
 <h1 id="HUAWEI-Mate-30-Android-10"><a href="#HUAWEI-Mate-30-Android-10" class="headerlink" title="HUAWEI Mate 30 - Android 10"></a>HUAWEI Mate 30 - Android 10</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.7s 后完成 ANR 日志重启抛出 SIGQUIT，0.8s 后 APP 进入 NOT_RESPONDING 状态</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-29 16:01:45.634 22368 22368 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-29 16:01:45.634 22368 22368 D xcrash_dumper: xcrash start
 11-29 16:01:45.657 22368 22368 D xcrash_dumper: xcrash native start
 11-29 16:01:45.658 22368 22368 D xcrash_dumper: ANR native start
 11-29 16:01:45.658 22368 22368 D xcrash_dumper: ANR native register SIGQUIT
@@ -966,7 +996,7 @@
 11-29 16:02:18.678 22368 22368 D xcrash_dumper: AnrService, now 1638172938, found anr logs, tombstone_00001638172929330558_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
 
 <h1 id="Redmi-K20-Android-9"><a href="#Redmi-K20-Android-9" class="headerlink" title="Redmi K20 - Android 9"></a>Redmi K20 - Android 9</h1><p>主线程阻塞 20s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，4s 后 APP 进入 NOT_RESPONDING 状态</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:30:24.925 10449 10449 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-25 11:30:24.925 10449 10449 D xcrash_dumper: xcrash start
 11-25 11:30:24.936 10449 10449 D xcrash_dumper: xcrash native start
 11-25 11:30:24.938 10449 10449 D xcrash_dumper: ANR native start
 11-25 11:30:24.939 10449 10449 D xcrash_dumper: ANR native register SIGQUIT
@@ -1022,7 +1052,7 @@
 11-25 11:30:57.953 10449 10449 D xcrash_dumper: AnrService, now 1637811057, found anr logs, tombstone_00001637811048467666_2.1.2.11.17__com.viomi.fridge.vertical.anr.xcrash</code></pre></div>
 
 <h1 id="HUAWEI-P20-Pro-Android-8-1-0"><a href="#HUAWEI-P20-Pro-Android-8-1-0" class="headerlink" title="HUAWEI P20 Pro - Android 8.1.0"></a>HUAWEI P20 Pro - Android 8.1.0</h1><p>主线程阻塞 10s 后进入 ANR 处理流程，收到 SIGQUIT，0.5s 后完成 ANR 日志重启抛出 SIGQUIT，2s 后 APP 进入 NOT_RESPONDING 状态</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:32:17.213 23690 23690 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-25 11:32:17.213 23690 23690 D xcrash_dumper: xcrash start
 11-25 11:32:17.222 23690 23690 D xcrash_dumper: xcrash native start
 11-25 11:32:17.223 23690 23690 D xcrash_dumper: ANR native start
 11-25 11:32:17.223 23690 23690 D xcrash_dumper: ANR native register SIGQUIT
@@ -1079,7 +1109,7 @@
 <h1 id="vivo-X9-Plus-Android-7-1-2"><a href="#vivo-X9-Plus-Android-7-1-2" class="headerlink" title="vivo X9 Plus - Android 7.1.2"></a>vivo X9 Plus - Android 7.1.2</h1><p>AnrService 运行 30s 未返回并没有触发 ANR，而后通过手动点击阻塞主线程 60s 才触发 ANR</p>
 <p>没有继续深入测试触发 ANR 的阈值，总之 SIGQUIT 处理器还是能捕获到 ANR 的，从收到 SIGQUIT 到写入调用栈重新抛出 SIGQUIT 用时 0.8s，0.3s 后进入 ANR 状态</p>
 <p>系统的 ANR 处理流程还会将日志写入到 /data/anr/traces.txt</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 16:38:01.561 12462 12462 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-25 16:38:01.561 12462 12462 D xcrash_dumper: xcrash start
 11-25 16:38:01.574 12462 12462 D xcrash_dumper: xcrash native start
 11-25 16:38:01.576 12462 12462 D xcrash_dumper: ANR native start
 11-25 16:38:01.576 12462 12462 D xcrash_dumper: ANR native register SIGQUIT
@@ -1144,7 +1174,7 @@
 <h1 id="Galaxy-S7-edge-Android-6-0-1"><a href="#Galaxy-S7-edge-Android-6-0-1" class="headerlink" title="Galaxy S7 edge - Android 6.0.1"></a>Galaxy S7 edge - Android 6.0.1</h1><p>从下面的日志可以看到 AnrService 运行 30s 未返回的确触发了 ANR 并收到了 SIGQUIT（具体是用时 22s 触发 ANR），但是输出日志文件用时 14s 太长了（Runtime::DumpForSigQuit 用了 14s），当重新抛出 SIGQUIT 时 AnrService 已返回，主线程随即恢复运行，我猜测此时 APP 就不再处于 NOT_RESPONDING 状态，也就无法判别 APP 发生了 ANR</p>
 <p>HUAWEI Mate 30 时也出现过不能判别 ANR 的情况，当时是弹出通知权限的设置页，导致 APP 进入到后台（后台 ANR）</p>
 <p>系统 ANR 流程会输出 /data/anr/traces.txt，从 Signal Catcher 线程收到 SIGQUIT 到输出日志文件耗时 6s</p>
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">11-25 11:31:44.883 17149 17149 D xcrash_dumper: xcrash start
+<div class="code-wrapper"><pre><code class="hljs logcat">11-25 11:31:44.883 17149 17149 D xcrash_dumper: xcrash start
 11-25 11:31:44.913 17149 17149 D xcrash_dumper: xcrash native start
 11-25 11:31:44.913 17149 17149 D xcrash_dumper: ANR native start
 11-25 11:31:44.913 17149 17149 D xcrash_dumper: ANR native register SIGQUIT
@@ -1198,7 +1228,7 @@
 11-25 11:32:30.233 17149 17153 I art     : Wrote stack traces to &#x27;/data/anr/traces.txt&#x27;</code></pre></div>
 
 <h1 id="绿联-6810-Android-5-1"><a href="#绿联-6810-Android-5-1" class="headerlink" title="绿联 6810 - Android 5.1"></a>绿联 6810 - Android 5.1</h1><p>捕获到 <code>SIGQUIT</code> 后，会卡在 <code>Runtime::DumpForSigQuit</code> 然后不断收到 <code>SIGQUIT</code>，APP 会一直卡顿一直弹出 ANR 对话框（即使一直点击等待），APP 重启后可以发现上一次的 ANR dump 被输出到日志文件里了，但文件名还没改过来 <code>tombstone_00001637663901079557_2.1.2.11.17__com.viomi.fridge.vertical.trace.xcrash</code>，从日志来看应该是后续代码没有执行，卡在 <code>Runtime::DumpForSigQuit</code> 里了</p>
-<div class="hljs code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// is Android Lollipop (5.x)?</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// is Android Lollipop (5.x)?</span>
 xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_level || <span class="hljs-number">22</span> == xc_common_api_level) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>);
 <span class="hljs-comment">// ...</span>
 <span class="hljs-keyword">if</span>(<span class="hljs-built_in">sigsetjmp</span>(jmpenv, <span class="hljs-number">1</span>) == <span class="hljs-number">0</span>) 
@@ -1212,7 +1242,7 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
         <span class="hljs-built_in">xc_trace_libart_dbg_resume</span>();
 &#125;</code></pre></div>
 
-<div class="hljs code-wrapper"><pre><code class="hljs logcat">2021-11-23 18:20:10.580 4176-4477/com.viomi.fridge.vertical D/xcrash_dumper: before dump
+<div class="code-wrapper"><pre><code class="hljs logcat">2021-11-23 18:20:10.580 4176-4477/com.viomi.fridge.vertical D/xcrash_dumper: before dump
 2021-11-23 18:20:36.784 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
 2021-11-23 18:21:10.108 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
 2021-11-23 18:21:26.920 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255
@@ -1221,7 +1251,7 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
 2021-11-23 18:23:10.109 4176-4176/com.viomi.fridge.vertical D/xcrash_dumper: SIGQUIT handler get 3, 255</code></pre></div>
 
 <h1 id="NOT-RESPONDING-轮询时长的缺陷"><a href="#NOT-RESPONDING-轮询时长的缺陷" class="headerlink" title="NOT_RESPONDING 轮询时长的缺陷"></a>NOT_RESPONDING 轮询时长的缺陷</h1><p>在 <code>NativeHandler.traceCallback</code> 里会检查当前进程的状态是否为 ANR，默认是在 15s 内轮询检查进程是否处于 <code>ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING</code></p>
-<div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">NativeHandler</span> &#123;
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">NativeHandler</span> &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">traceCallback</span><span class="hljs-params">(String logPath, String emergency)</span> &#123;
         <span class="hljs-keyword">if</span> (TextUtils.isEmpty(logPath)) &#123;
             <span class="hljs-keyword">return</span>;
@@ -1321,31 +1351,35 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
 <p>利用 <code>SIGQUIT</code> 来捕获 ANR 的发生这一机制是稳定有效的</p>
 <p>轮询 APP 是否处于 <code>NOT_RESPONDING</code> 来判别是不是当前 APP 发生了 ANR，这一手段不太可靠</p>
 
+              
             </div>
-            <hr>
+            <hr/>
             <div>
-              <div class="post-metas mb-3">
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/tags/ANR/">ANR</a>
-                    
-                      <a class="hover-with-bg" href="/tags/%E5%B4%A9%E6%BA%83/">崩溃</a>
-                    
-                      <a class="hover-with-bg" href="/tags/xCrash/">xCrash</a>
-                    
-                  </div>
-                
-              </div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/ANR/">#ANR</a>
+      
+        <a href="/tags/%E5%B4%A9%E6%BA%83/">#崩溃</a>
+      
+        <a href="/tags/xCrash/">#xCrash</a>
+      
+    </div>
+  
+</div>
+
+
               
+
               
-                <div class="post-prevnext">
+                <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2021/12/03/matrix-anr/">
+                      <a href="/2021/12/03/matrix-anr/" title="Matrix - ANR 原理解析">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">Matrix - ANR 原理解析</span>
                         <span class="visible-mobile">上一篇</span>
@@ -1355,7 +1389,7 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2021/07/20/kotlin-coroutine-2/">
+                      <a href="/2021/07/20/kotlin-coroutine-2/" title="深入分析 Kotlin Coroutines 是如何实现的（二）">
                         <span class="hidden-mobile">深入分析 Kotlin Coroutines 是如何实现的（二）</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
@@ -1371,19 +1405,49 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
         </div>
       </div>
     </div>
-    
-      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
-        <div id="toc">
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
   <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
   <div class="toc-body" id="toc-body"></div>
 </div>
 
-      </div>
-    
+
+
+  </aside>
+
+
+    </div>
   </div>
 </div>
 
-<!-- Custom -->
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
 
 
     
@@ -1408,32 +1472,34 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
       <div class="modal-body mx-3">
         <div class="md-form mb-5">
           <input type="text" id="local-search-input" class="form-control validate">
-          <label data-error="x" data-success="v"
-                 for="local-search-input">关键词</label>
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
         <div class="list-group" id="local-search-result"></div>
       </div>
     </div>
   </div>
 </div>
+
     
 
     
   </main>
 
-  <footer class="text-center mt-5 py-3">
-  <div class="footer-content">
-     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
-  </div>
+  <footer>
+    <div class="footer-inner">
   
-
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
   
-
   
-</footer>
+  
+  
+</div>
 
+  </footer>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   
   <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
@@ -1452,10 +1518,9 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
 <script  src="/js/events.js" ></script>
 <script  src="/js/plugins.js" ></script>
 
-<!-- Plugins -->
 
 
-  <script  src="/js/local-search.js" ></script>
+
 
 
 
@@ -1465,45 +1530,153 @@ xc_trace_is_lollipop = ((<span class="hljs-number">21</span> == xc_common_api_le
 
 
 
-  
-
-
 
   
-    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
   
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
   
-    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
-  
-  
-    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
-  
-  
-    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
-  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- 主题的启动项 保持在最底部 -->
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
 <script  src="/js/boot.js" ></script>
 
 
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>
