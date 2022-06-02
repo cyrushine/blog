@@ -62,7 +62,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -209,9 +209,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/02/11/wait-notify/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/02/11/wait-notify/" target="_self">
         <div>
-          
           在 Lock（三）利用 Lock 实现 Condition 我们介绍了如何用 Lock 来实现 Condition，而 Condition 对标的是 Object.wait 和 Object.notify 我们来看看 ART 是怎么实现 wait&#x2F;notify 的（最好先了解下 synchronized 的基础知识） ConditionVariable对 futex&#x2F;mutex 的封装，宏 ART
         </div>
       </a>
@@ -251,9 +251,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/02/08/synchronized-implementation/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/02/08/synchronized-implementation/" target="_self">
         <div>
-          
           monitor 指令在 Lock（二）AQS 源码分析以及 Lock 的实现 这篇文章里介绍了基于 AQS 的 Lock，它是双向链表的排队队列和系统调用 futex 实现的 其实 java 语言规范里自带了 Lock 的实现：synchronized 关键字，下面看看 ART 是怎么实现它的 先写一个使用了 synchronized 的测试方法 package com.example.myapp
         </div>
       </a>
@@ -291,9 +291,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/01/24/condition-by-lock/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/01/24/condition-by-lock/" target="_self">
         <div>
-          
           Condition 简介Condition 主要有两类方法：  await，释放锁并阻塞线程直到 signal 被调用，恢复后会重新获得锁 signal，唤醒阻塞在这个 Condition 上的一个或全部线程  利用条件变量前需要先获得锁 所以 Condition 的所有方法都需要加锁 lock.lock(); &#x2F;&#x2F; ... condition.await(); &#x2F;&#x2F; ... lock.unloc
         </div>
       </a>
@@ -333,9 +333,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/01/19/reviews/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/01/19/reviews/" target="_self">
         <div>
-          
           设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B
         </div>
       </a>
@@ -379,9 +379,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/01/13/aqs-lock-implementation/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/01/13/aqs-lock-implementation/" target="_self">
         <div>
-          
           AQS 是 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 的基础，它们紧密地结合在一块，分析 AQS 除了要明晰排队队列的操作，还要结合 Semaphore、ReentrantLock 和 ReentrantReadWriteLock 看看是怎么利用排队队列实现锁和信号量的 AQS 是基于 CLH 锁修改而来的，它的排队队列也是双向链表publi
         </div>
       </a>
@@ -421,9 +421,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/01/10/aqs-basic/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/01/10/aqs-basic/" target="_self">
         <div>
-          
           自旋锁（Spin Lock）获得锁的时候，不阻塞线程，而是跟平常一样继续获得 CPU 时间，继续执行代码&#x2F;逻辑，那就是自旋锁；比如下面的 lock() &#x2F;&#x2F; 一个简单的自旋锁的实现 class SpinLock &amp;#123;      private val cas &#x3D; AtomicReference&lt;Thread&gt;()      fun lock() &amp;#123;         w
         </div>
       </a>
@@ -463,9 +463,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2020/12/27/render-thread/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2020/12/27/render-thread/" target="_self">
         <div>
-          
           接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法 syncFrameState重要的方法有三个：makeCurrent，
         </div>
       </a>
@@ -505,9 +505,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2020/12/13/ui-thread-in-vsync/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2020/12/13/ui-thread-in-vsync/" target="_self">
         <div>
-          
           从一段 systrace 开始 这是一段 systrace 记录，看得出来页面是比较流畅的，ui thread 全都在一个 VSYNC_app 内完成绘制，surfaceflinger 也在一个 VSYNC_sf 内完成各个层的合成；但有没发现在 ui thread 完成 doFrame 后，总是会有一个 ReaderThread 跟在后面，看名字像是跟渲染相关的线程，它跟 ui 绘制有关系吗？平
         </div>
       </a>
@@ -547,9 +547,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2020/12/02/vsync/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2020/12/02/vsync/" target="_self">
         <div>
-          
           android 的垂直同步模型（vsync）是隐藏在 view 系统后面的很重要的一块，它控制着 view 渲染的节奏；而且 vsync 还是比较复杂的，我们从下到上，先从最熟悉的 View.invalidate 讲起，看看简单的一个 invalidate 后面隐藏着多么复杂的工作 从 View.invalidate() 说起 看上图，View.invalidate() 主要做了两件事：  将 V
         </div>
       </a>
@@ -589,9 +589,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2020/11/19/scoped-storage/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2020/11/19/scoped-storage/" target="_self">
         <div>
-          
           以前的存储访问权限先看看以前（ &lt; 10&#x2F;Q ）的存储访问权限是怎样的 从 APP 目录（app-specific directories）的角度看，可以分为：  内部存储（app-specific directories in internal storage） 对于 app 自己，无需申请任何读&#x2F;写权限 对于其他 app，没有访问权限   外部存储（app-specific direct
         </div>
       </a>

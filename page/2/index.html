@@ -62,7 +62,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -209,9 +209,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/12/22/fresco/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/12/22/fresco/" target="_self">
         <div>
-          
           第一行代码Fresco 最简单和入门级的 API 是 SimpleDraweeView.setImageURI(uri)，那就先从这个方法走下去看看会遇到哪些概念 SimpleDraweeView.setImageURI(uri) SimpleDraweeView.setImageURI(uri, null) DraweeView.setController DraweeHolder.setCon
         </div>
       </a>
@@ -255,9 +255,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/12/16/http-range/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/12/16/http-range/" target="_self">
         <div>
-          
           request headerRange: &lt;unit&gt;&#x3D;&lt;range-start&gt;- Range: &lt;unit&gt;&#x3D;&lt;range-start&gt;-&lt;range-end&gt; Range: &lt;unit&gt;&#x3D;&lt;range-start&gt;-&lt;range-end&gt;, &lt;range-start&gt;-&lt;rang
         </div>
       </a>
@@ -299,9 +299,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/12/03/matrix-anr/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/12/03/matrix-anr/" target="_self">
         <div>
-          
           上两篇文章 崩溃日志收集库 xCrash 浅析 和 xCrash ANR 兼容性测试 介绍了 xCrash 是如何处理 ANR 事件的：  注册 SIGQUIT 信号处理器捕获 ANR 查询是否处于 NOT_RESPONDING 状态以判别是否自己发生了 ANR 寻找符号 Runtime::DumpForSigQuit 并调用以打印 ANR 日志  过程中提出了几个问题：  NOT_RESPOND
         </div>
       </a>
@@ -345,9 +345,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/11/29/xcrash-anr-compatibility/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/11/29/xcrash-anr-compatibility/" target="_self">
         <div>
-          
           Target Steps    目的 测试 xCrash 捕获 ANR 的能力在各个 Android 版本上的兼容性   平台 WeTest - 兼容性测试 - 选取 Android 5.1 至 Android 12 共 8 个机型   Apk Viomi Fridge Launcher V2.1.2   xCrash Version 3.0.0   ANR 捕获机制 注册 SIGQUIT
         </div>
       </a>
@@ -389,9 +389,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/07/20/kotlin-coroutine-2/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/07/20/kotlin-coroutine-2/" target="_self">
         <div>
-          
           async &#x2F; awaitasync 和 await 是一对较为现代的 API 用以实现 **结构化并发编程 (Structured Concurrency)**，如下面代码所示，虽然 runBlocking 底层是单个线程，但是 delay 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO job1、job2 和 job3 三个任务并发执行，不需要编写任何线程同步代码如 Condi
         </div>
       </a>
@@ -433,9 +433,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/07/15/kotlin-coroutine/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/07/15/kotlin-coroutine/" target="_self">
         <div>
-          
           launch - 启动协程从 kotlin coroutines 的 Hello World! 看起 &#x2F;&#x2F; https:&#x2F;&#x2F;github.com&#x2F;Kotlin&#x2F;kotlinx.coroutines&#x2F;blob&#x2F;master&#x2F;kotlinx-coroutines-core&#x2F;jvm&#x2F;test&#x2F;guide&#x2F;example-basic-01.kt fun main() &#x3D; runBlocking &amp;#123
         </div>
       </a>
@@ -477,9 +477,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/07/10/deep-drive-into-anr/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/07/10/deep-drive-into-anr/" target="_self">
         <div>
-          
           overview在 阅读源码系列：ANR 是怎么产生的 聊过不及时消费 input event 会产生 ANR：  InputReaderThread 不断地从 &#x2F;dev&#x2F;input 读取 input event 并放入 InputDispatcher.mInboundQueue 等待分发 InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送队列里
         </div>
       </a>
@@ -517,9 +517,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/07/05/mp4-structure/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/07/05/mp4-structure/" target="_self">
         <div>
-          
           概述mp4 文件由一个个连续的 box 组成 mp4 &#x3D; box + box + box + ...  box 的类型繁多，没必要去死记它们的类型，记住两个关键 box 即可：  moov - 保存了 SPS、PPS、track-chunk-sample 映射等关键信息 mdat - 保存了 H264 NALU  本文的目的是通过解析各种 box 从而了解 mp4 文件结构的核心概念 chunk一
         </div>
       </a>
@@ -563,9 +563,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/06/28/logan/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/28/logan/" target="_self">
         <div>
-          
           简介Logan 是 美团点评技术团队 开源的包含前端 SDK 和后端 Server 的一整套日志系统，也是公司日志库 VLog 的基础 Logan Android SDK 提供了这么几个 API：    API Description    Logan#w(log, type) 写日志（严谨地说应该是发送日志请求，因为日志是放在消息队列里等待被处理的）   Logan#init 初始化   Log
         </div>
       </a>
@@ -605,9 +605,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/06/22/xcrash/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/22/xcrash/" target="_self">
         <div>
-          
           xCrash 是爱奇艺团队开源的一款崩溃日志收集库，可以收集 java crash、native crash 和 ANR 日志 日志格式为专用格式，内容还算丰富：机器信息、崩溃线程和其他线程的方法栈、logcat、打开的 fd 等等 … 默认配置为：  java crash、native crash 和 ANR 都会被捕获 日志目录在 &#x2F;data&#x2F;data&#x2F;[pkg]&#x2F;files&#x2F;tombston
         </div>
       </a>

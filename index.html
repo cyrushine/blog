@@ -62,7 +62,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -209,9 +209,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/05/16/sharedpreferences/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/05/16/sharedpreferences/" target="_self">
         <div>
-          
           提问 apply 和 commit 有何区别？ SharedPreferences 是线程安全的吗？它是如何保证线程安全的？ SharedPreferences 是进程安全的吗？ 数据丢失时，其最终的屏障 —— 文件备份机制是如何实现的？ 如何实现进程安全的 SharedPreferences SharedPreferences 导致 ANR 的原因  从磁盘加载 以下代码基于 Android 3
         </div>
       </a>
@@ -255,9 +255,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/04/09/flow-basic/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/04/09/flow-basic/" target="_self">
         <div>
-          
           for 操作符具有以下特征的对象可以被 for 操作符遍历：  具有 operator 函数 iterator() 其返回 Iterator 具有 operator 函数 hasNext() 和 next()  public interface Sequence&lt;out T&gt; &amp;#123;     public operator fun iterator(): Iterator&lt;
         </div>
       </a>
@@ -307,9 +307,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/04/07/asm/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/04/07/asm/" target="_self">
         <div>
-          
           ASM 是一款广为使用的字节码操作库，很多 Gradle Transform 会用它对编译后的代码进行插桩和修改操作，源码仓库在 GitLab 访问者模式（Visitor pattern） Visitor pattern represent an operation to be performed on the elements of an object structure. Visitor le
         </div>
       </a>
@@ -351,9 +351,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/03/14/case-testonly/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/03/14/case-testonly/" target="_self">
         <div>
-          
           Launcher 里的 AppStore 模块会根据服务端的配置安装&#x2F;卸载 APP，当然用户也可以手动安装 AppStore 里的 APP 某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的  静默安装是指 AppStore 自动在后台安装，无须用户手动点击安装 静默安装是通过广播 android.intent.action.SILENCE_INSTALL 实现的，由
         </div>
       </a>
@@ -395,9 +395,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
         <div>
-          
           简述前面系列文章（详见文末）中介绍了安卓系统 ANR 设计原理以及我们在实际工作中对 ANR 进行监控得到的方案，基于常规的监控治理方案，ANR 问题得到了有效的抑制，但是有些系统组件的设计初衷与开发人员在实际使用过程中实际使用的背离，导致的冲突问题亟待解决，当前文章针对实际开发过程中滥用 sp 导致的 ANR 问题，如何从系统层面跳过 Google 设计缺陷，规避 ANR 问题。 Google
         </div>
       </a>
@@ -443,9 +443,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/02/16/toutiao-anr-barrier/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-barrier/" target="_self">
         <div>
-          
           简述：前文，我们通过线上案例对影响 ANR 问题的六大场景进行剖析，这几类场景基本覆盖了线上大部分问题，详见 ANR 案例分析集锦。同时我们选取了较多 NativePollOnce 场景的案例，便于大家更好理解，ANR 时看到的 NativePollOnce 场景的问题，并不是导致 ANR 的根本问题。 下面要介绍的这类问题，Trace 现场依然是 NativePollOnce 信息，但与前几类问
         </div>
       </a>
@@ -491,9 +491,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/02/16/toutiao-anr-samples/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-samples/" target="_self">
         <div>
-          
           简述：在前文，我们用了较多的篇幅介绍了 ANR 设计原理及影响因素，并根据不同场景进行了分类，如：当前消息严重耗时，历史消息耗时严重，业务异常密集执行，进程内资源抢占，进程间资源抢占等场景。为了应对系统监控能力不足以及应用侧获取信息受限的情况，我们在应用侧实现了一套 消息调度监控工具，重点监控主线程的“过去，现在和将来”，同时结合相关日志对 ANR 问题的分析思路进行了总结。 为了便于大家更好的理
         </div>
       </a>
@@ -539,9 +539,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/02/16/toutiao-anr-tools/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-tools/" target="_self">
         <div>
-          
           前言：在前文，我们对 ANR 设计原理及影响因素 进行了介绍，并对影响 ANR 的不同场景进行归类。但是依靠现有的系统日志，不足以完成复杂场景的问题归因，而且有些信息从应用侧无法获取，这就导致很多线上问题更加棘手；因此我们在应用侧探索了新的监控能力，以弥补信息获取不足的短板。同时对日常分析过程中用到日志信息和分析思路进行总结，以帮忙大家更好的掌握分析技巧，下面我们就来看看相关实现。 Raster
         </div>
       </a>
@@ -587,9 +587,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/02/16/toutiao-anr-principle/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-principle/" target="_self">
         <div>
-          
           写在前面ANR 问题，对于从事 Android 开发的同学来说并不陌生，日常开发中，经常会遇到应用乃至系统层面引起的各种问题，很多时候因为不了解其运行原理，在面对该类问题时可能会一头雾水。与此同时，因为现有监控能力不足或获取信息有限，使得这类问题如同镜中花水中月，让我们在追求真理的道路上举步维艰。如下图：  工作中在帮助大家分析问题时，发现有不少同学问到，在哪里可以更加系统的学习？于是本人抱着“授
         </div>
       </a>
@@ -635,9 +635,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2022/02/14/anr-bigpicture/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/14/anr-bigpicture/" target="_self">
         <div>
-          
           埋雷 和 除雷 是 Android 设计 ANR 时的一个重要思路，ANR 的实质是超时，那么只需要在执行前埋下延迟爆炸的雷，如果在规定时间内执行完毕则把雷移除，否则到点雷爆炸抛出 ANR 下面以 startService 为例：  startService 时记录下当前时间，并埋下延时任务 sendMessageDelayed bindService 表示启动完毕，移除上面埋下的雷 SERVIC
         </div>
       </a>

@@ -62,7 +62,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -209,9 +209,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/04/16/looking-into-oom/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/16/looking-into-oom/" target="_self">
         <div>
-          
           堆内存分配失败导致的 OOM度量采用下述 API 来度量 APP 或系统的内存使用情况    类别 API 说明    APP Runtime.maxMemory() JVM 可以从系统那申请到的内存的最大值，ActivityManager.getMemoryClass() 和 ActivityManager.getLargeMemoryClass() 其中之一，超过此阈值会发生 OOM    R
         </div>
       </a>
@@ -249,9 +249,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/04/15/tailrec/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/15/tailrec/" target="_self">
         <div>
-          
           什么是尾递归 这里有一篇文章讲得很好，转载自 浅谈Java中的递归与尾递归  首先我们讲讲递归递归的本质是，某个方法中调用了自身。本质还是调用一个方法，只是这个方法正好是自身而已，递归因为是在自身中调用自身，所以会带来以下三个显著特点：  调用的是同一个方法 因为 1，所以只需要写一个方法，就可以让你轻松调用无数次（不用一个个写，你定个 n 就能有 n 个方法），所以调用的方法数可能非常巨大 在自
         </div>
       </a>
@@ -293,9 +293,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/04/12/leakcanary/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/12/leakcanary/" target="_self">
         <div>
-          
           检测内存泄漏四种引用类型   引用类型 GC 时机    强引用 平时写代码最常用的引用类型，对象只要被强引用就不会被 GC   软引用 SoftReference 只有当内存不足时才会被 GC   弱引用 WeakReference 会被正常 GC   虚引用 PhantomReference 会被正常 GC，因为 get() 总是返回 null，一般用来跟踪对象的生命周期   所有的引用类型都
         </div>
       </a>
@@ -335,9 +335,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/04/05/hashmap/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/05/hashmap/" target="_self">
         <div>
-          
           HashMap 的桶由链表变为红黑树（树化）的过程红黑树的特性 节点为红色或者黑色 根节点必须是黑的 红色节点的左右子节点必须为黑色 一个节点到叶子节点的每条路径必须包含相同数目的黑色节点  颜色变换和两种选择添加新节点后，因为新节点总是红色的，那么会有几种情况出现：  新节点是根节点，也就是说树是空的，根据规则二，把新节点设为黑色即可 新节点的父节点是黑色，或者父节点是根，满足规则 父节点是红色
         </div>
       </a>
@@ -377,9 +377,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/03/31/juc-collection/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/03/31/juc-collection/" target="_self">
         <div>
-          
           写时复制（Copy On Write）CopyOnWriteArrayList使用 写时复制 实现的线程安全版 ArrayList，当发生修改操作时（add、set、remove）才加锁，将原数组复制一份并在上面修改成为新数组，最后用新数组替换原数组 public boolean add(E e) &amp;#123;     synchronized (lock) &amp;#123;         Obje
         </div>
       </a>
@@ -419,9 +419,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/03/30/https/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/03/30/https/" target="_self">
         <div>
-          
           https &#x3D; http + tls tcp 三次握手建立连接后，再进行 tls 握手&#x2F;协商得到一个秘钥，然后双方使用这个秘钥加密（对称加密）明文的 http 为密文后再发送，同样双方收到密文后也用这个秘钥解密得到明文 对称加密 使用同一秘钥加密和解密，性能高，http 明文就是通过对称加密后才进行传输的，对称加密算法有：DES、3DES、AES 等；但秘钥交换是个问题，所以需要非对称加密的帮助
         </div>
       </a>
@@ -459,9 +459,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/03/13/tcp-handshake-goodbye/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/03/13/tcp-handshake-goodbye/" target="_self">
         <div>
-          
           序号和确认号 从 TCP 连接建立的开始，到 TCP 连接的断开，你要传输的所有数据的每一个字节都要编号，这个序号称为 字节序号 如果一个 TCP 报文的 报文序号 为 301，它携带了 100 字节的数据，就表示这 100 个字节的数据的字节序号范围是 [301, 400]，该报文携带的第一个字节序号是 301，最后一个字节序号是 400 每传送一个 TCP 报文都要等待对方回复一个确认，但这
         </div>
       </a>
@@ -499,9 +499,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/03/12/how-tinker-work/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/03/12/how-tinker-work/" target="_self">
         <div>
-          
           简介Tinker 是微信团队开源的一款 android 热修复框架，它的使用流程大体是：  client 安装 V1.apk 提交了一些 hotfix，打包出 V2.apk 利用 Tinker 提供的差分工具，在 server 计算出补丁包 patch1.apk，并下发给 client client 收到补丁包后，在后台给 V1.apk 打上 patch1.apk 得到 V2.apk（V1.apk
         </div>
       </a>
@@ -539,9 +539,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/03/02/how-application-being-created-and-init/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/03/02/how-application-being-created-and-init/" target="_self">
         <div>
-          
           时序图从 startActivity 开始，比如打开一个 app 的首页，当 app 未启动时就会走创建 Application 这条路  AMS 承担的工作其中的转折点在 resumeTopActivityInnerLocked，发现 app process 不存在，走启动 app process 的流程 private boolean ActivityStack.resumeTopActivi
         </div>
       </a>
@@ -583,9 +583,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/02/19/threadpool/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/02/19/threadpool/" target="_self">
         <div>
-          
           基础知识线程池有几个重要的参数：  maximumPoolSize 最大线程数量，如果新提交的任务因为 workQueue 的容量限制而无法入队，则会尝试新开一个线程执行任务，而如果此时总线程数超过 maximumPoolSize 的限制，那么不再新开一个线程而是提交失败 corePoolSize 核心线程数量，当任务执行完毕，线程也将结束它的生命周期，但最少不会低于 corePoolSize k
         </div>
       </a>

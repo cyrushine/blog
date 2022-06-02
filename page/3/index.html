@@ -62,7 +62,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.0","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -209,9 +209,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/06/20/kill-exit/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/20/kill-exit/" target="_self">
         <div>
-          
           Process.killProcess(pid)最终执行系统调用 kill class Process &amp;#123;     public static final int SIGNAL_KILL &#x3D; 9;      public static final void killProcess(int pid) &amp;#123;         sendSignal(pid, SIGNAL_KILL);
         </div>
       </a>
@@ -251,9 +251,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/06/18/uncaught-exception-handler/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/18/uncaught-exception-handler/" target="_self">
         <div>
-          
           测试根据 Thread.setDefaultUncaughtExceptionHandler 的方法文档  Uncaught exception handling is controlled first by the thread, then by the thread’s ThreadGroup object and finally by the default uncaught excepti
         </div>
       </a>
@@ -299,9 +299,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/06/12/okio/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/12/okio/" target="_self">
         <div>
-          
           基本概念   Okio java.io    ByteString String   Buffer ByteArray   Source InputStream   Sink OutputStream   Segment    SegmentPool    ByteString虽然 okio.ByteString 对标的是 java.lang.String，但是它操作的对象却是 String 内部
         </div>
       </a>
@@ -343,9 +343,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/06/05/io-and-nio/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/05/io-and-nio/" target="_self">
         <div>
-          
           FileInputStream&#x2F;FileOutputStreamFileInputStream 和 FileOutputStream 都属于“流式” API，就像流水（Stream）一样只能朝着一个方向读写，不能后退 FileInputStream 相当于以只读模式读文件：open(O_RDONLY) -&gt; read -&gt; close(fd) FileOutputStream 相当于以
         </div>
       </a>
@@ -385,9 +385,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
         <div>
-          
           DalvikDalvik HeapDalvik 的堆空间分为 Zygote Heap 和 Active Heap Android 系统的第一个 Dalvik 虚拟机是由 Zygote 进程创建的。应用程序进程是由 Zygote 进程 fork 出来的。也就是说应用程序进程使用了一种 写时拷贝技术（COW）来复制了 Zygote 进程的地址空间。这意味着一开始的时候，应用程序进程和 Zygote 进
         </div>
       </a>
@@ -431,9 +431,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/05/21/mmap/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/05/21/mmap/" target="_self">
         <div>
-          
           平时在面试中你肯定会经常碰见的问题就是：RocketMQ 为什么快？Kafka 为什么快？什么是 mmap？ 这一类的问题都逃不过的一个点就是 零拷贝，虽然还有一些其他的原因，但是今天我们的话题主要就是零拷贝。 传统 IO在开始谈零拷贝之前，首先要对传统的 IO 方式有一个概念。基于传统的 IO 方式，底层实际上通过调用 read() 和 write() 来实现。 通过 read() 把数据从硬盘
         </div>
       </a>
@@ -473,9 +473,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/05/11/nonblocking-io/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/05/11/nonblocking-io/" target="_self">
         <div>
-          
           在互联网中提起网络，我们都会避免不了讨论高并发、百万连接。而此处的百万连接的实现，脱离不了网络 IO 的选择，因此本文作为一篇个人学习的笔记，特此进行记录一下整个网络 IO 的发展演变过程。以及目前广泛使用的网络模型。 网络 IO 的发展在本节内容中，我们将一步一步介绍网络 IO 的演变发展过程。介绍完发展过程后，再对网络 IO 中几组容易混淆的概念进行对比、分析。 ​ 网络 IO 的各个发展阶段
         </div>
       </a>
@@ -517,9 +517,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/05/07/koom/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/05/07/koom/" target="_self">
         <div>
-          
           不冻结 APP 的 dump hprof在 LeakCanary 浅析 和 Matrix - ResourcesCanary 浅析 这两篇文章里，介绍了检测内存泄漏的两种相似的思路：  WeakReference + ReferenceQueue + 延迟 5s 检查是否被 GC WeakReference + ConcurrentLinkedQueue，子线程轮询的方式每隔 1m 检查队列里的对
         </div>
       </a>
@@ -559,9 +559,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/04/26/matrix-tracecanary/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/26/matrix-tracecanary/" target="_self">
         <div>
-          
           捕获掉帧&#x2F;卡顿什么是掉帧&#x2F;卡顿 什么是卡顿，很多人能马上联系到的是帧率 FPS (每秒显示帧数)。那么多低的 FPS 才是卡顿呢？又或者低 FPS 真的就是卡顿吗？（以下 FPS 默认指平均帧率） 其实并非如此，举个例子，游戏玩家通常追求更流畅的游戏画面体验一般要达到 60FPS 以上，但我们平时看到的大部分电影或视频 FPS 其实不高，一般只有 25FPS ~ 30FPS，而实际上我们也没有觉得
         </div>
       </a>
@@ -601,9 +601,9 @@
         </a>
       </h1>
 
-      <a class="index-excerpt" href="/2021/04/23/matrix-resourcescanary/" target="_self">
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/23/matrix-resourcescanary/" target="_self">
         <div>
-          
           Activity 的泄漏检测跟 LeakCanary 一样，使用 ActivityLifecycleCallbacks 监听 Activity.onDestroy() 事件，从而收集到已销毁的 Activity 对象 public class ResourcePlugin extends Plugin &amp;#123;     @Override     public void start() &amp;#1
         </div>
       </a>
