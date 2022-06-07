@@ -204,6 +204,46 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2022/02/14/anr-bigpicture/" target="_self">
+          ANR 设计思路：埋雷和除雷
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/14/anr-bigpicture/" target="_self">
+        <div>
+          埋雷 和 除雷 是 Android 设计 ANR 时的一个重要思路，ANR 的实质是超时，那么只需要在执行前埋下延迟爆炸的雷，如果在规定时间内执行完毕则把雷移除，否则到点雷爆炸抛出 ANR 下面以 startService 为例：  startService 时记录下当前时间，并埋下延时任务 sendMessageDelayed bindService 表示启动完毕，移除上面埋下的雷 SERVIC
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-14 04:00" pubdate>
+              2022-02-14
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">#ANR</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/12/22/fresco/" target="_self">
           初识 Fresco
         </a>
@@ -587,56 +627,6 @@
               <a href="/tags/log/">#log</a>
             
               <a href="/tags/logcat/">#logcat</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/06/22/xcrash/" target="_self">
-          崩溃日志收集库 xCrash 浅析
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/22/xcrash/" target="_self">
-        <div>
-          xCrash 是爱奇艺团队开源的一款崩溃日志收集库，可以收集 java crash、native crash 和 ANR 日志 日志格式为专用格式，内容还算丰富：机器信息、崩溃线程和其他线程的方法栈、logcat、打开的 fd 等等 … 默认配置为：  java crash、native crash 和 ANR 都会被捕获 日志目录在 &#x2F;data&#x2F;data&#x2F;[pkg]&#x2F;files&#x2F;tombston
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-06-22 04:00" pubdate>
-              2021-06-22
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/uncaught-exception/">#uncaught exception</a>
-            
-              <a href="/tags/exception/">#exception</a>
-            
-              <a href="/tags/%E5%B4%A9%E6%BA%83/">#崩溃</a>
-            
-              <a href="/tags/%E5%B4%A9%E6%BA%83%E6%97%A5%E5%BF%97/">#崩溃日志</a>
-            
-              <a href="/tags/crash/">#crash</a>
-            
-              <a href="/tags/xcrash/">#xcrash</a>
             
           </div>
         

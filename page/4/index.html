@@ -204,6 +204,48 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/04/23/matrix-resourcescanary/" target="_self">
+          Matrix - ResourcesCanary 浅析
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/23/matrix-resourcescanary/" target="_self">
+        <div>
+          Activity 的泄漏检测跟 LeakCanary 一样，使用 ActivityLifecycleCallbacks 监听 Activity.onDestroy() 事件，从而收集到已销毁的 Activity 对象 public class ResourcePlugin extends Plugin &amp;#123;     @Override     public void start() &amp;#1
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-04-23 04:00" pubdate>
+              2021-04-23
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">#内存优化，OOM</a>
+            
+              <a href="/tags/APM/">#APM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/04/16/looking-into-oom/" target="_self">
           深入 OOM
         </a>
@@ -565,46 +607,6 @@
               <a href="/tags/AMS/">#AMS</a>
             
               <a href="/tags/Zygote/">#Zygote</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/02/19/threadpool/" target="_self">
-          线程池 ThreadPool 的实现
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2021/02/19/threadpool/" target="_self">
-        <div>
-          基础知识线程池有几个重要的参数：  maximumPoolSize 最大线程数量，如果新提交的任务因为 workQueue 的容量限制而无法入队，则会尝试新开一个线程执行任务，而如果此时总线程数超过 maximumPoolSize 的限制，那么不再新开一个线程而是提交失败 corePoolSize 核心线程数量，当任务执行完毕，线程也将结束它的生命周期，但最少不会低于 corePoolSize k
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-02-19 04:00" pubdate>
-              2021-02-19
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/threadpool/">#threadpool</a>
             
           </div>
         

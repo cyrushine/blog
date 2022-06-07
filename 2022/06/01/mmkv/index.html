@@ -1,0 +1,1942 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="mmapmmap 在进程的虚拟地址空间开辟一块区域，这块区域映射文件在磁盘上的物理地址，是将内存地址空间映射到磁盘地址空间的一种方法 读&#x2F;写操作访问虚拟地址空间这一段映射地址，通过查询页表发现这一段地址并不在物理页面上（因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中），因此引发缺页异常，内核发起请求调页过程。调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MMKV - 高效的本地 Key-Value 存储">
+<meta property="og:url" content="https://www.dalvik.work/2022/06/01/mmkv/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="mmapmmap 在进程的虚拟地址空间开辟一块区域，这块区域映射文件在磁盘上的物理地址，是将内存地址空间映射到磁盘地址空间的一种方法 读&#x2F;写操作访问虚拟地址空间这一段映射地址，通过查询页表发现这一段地址并不在物理页面上（因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中），因此引发缺页异常，内核发起请求调页过程。调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-06-01T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-06-07T09:48:57.929Z">
+<meta property="article:author" content="Cyrus">
+<meta property="article:tag" content="mmap">
+<meta property="article:tag" content="SharedPreferences">
+<meta property="article:tag" content="SP">
+<meta property="article:tag" content="MMKV">
+<meta property="article:tag" content="Jetpack-DataStore">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>MMKV - 高效的本地 Key-Value 存储 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">MMKV - 高效的本地 Key-Value 存储</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-06-01 04:00" pubdate>
+          2022年6月1日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          42k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          346 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">MMKV - 高效的本地 Key-Value 存储</h1>
+            
+            <div class="markdown-body">
+              
+              <h1 id="mmap"><a href="#mmap" class="headerlink" title="mmap"></a>mmap</h1><p><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap</a> 在进程的虚拟地址空间开辟一块区域，这块区域映射文件在磁盘上的物理地址，是将内存地址空间映射到磁盘地址空间的一种方法</p>
+<p>读/写操作访问虚拟地址空间这一段映射地址，通过查询页表发现这一段地址并不在物理页面上（因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中），因此引发缺页异常，内核发起请求调页过程。调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没有则调用 nopage 函数把所缺的页从磁盘装入到主存中。</p>
+<p>之后如果写操作改变了其内容，一定时间后系统会自动回写脏页面到对应磁盘地址，也即完成了写入到文件的过程；修改过的脏页面并不会立即更新回文件中，而是有一段时间的延迟，可以调用 <code>msync()</code> 来强制同步, 这样所写的内容就能立即保存到文件里了</p>
+<p>它的优点有：</p>
+<ol>
+<li><p>常规文件操作需要从磁盘到页缓存再到用户主存的 <strong>两次数据拷贝</strong>，而 mmap 操控文件只需要从磁盘到用户主存的 <strong>一次数据拷贝</strong> 过程</p>
+</li>
+<li><p>实现了用户空间和内核空间的高效交互方式。两空间的各自修改操作可以直接反映在映射的区域内，从而被对方空间及时捕捉。</p>
+</li>
+<li><p>提供进程间共享内存及相互通信的方式。不管是父子进程还是无亲缘关系的进程，都可以将自身用户空间映射到同一个文件或匿名映射到同一片区域。从而通过各自对映射区域的改动，达到进程间通信和进程间共享的目的。如果进程 A 和进程 B 都映射了区域 C，当 A 第一次读取 C 时通过缺页从磁盘复制文件页到内存中；但当 B 再读 C 的相同页面时，虽然也会产生缺页异常，但是不再需要从磁盘中复制文件过来，而可直接使用已经保存在内存中的文件数据。</p>
+</li>
+<li><p>可用于实现高效的大规模数据传输。内存空间不足，是制约大数据操作的一个方面，解决方案往往是借助硬盘空间协助操作，补充内存的不足。但是进一步会造成大量的文件 I/O 操作，极大影响效率。这个问题可以通过 mmap 映射很好的解决。换句话说，但凡是需要用磁盘空间代替内存的时候，mmap 都可以发挥其功效。</p>
+</li>
+</ol>
+<h1 id="MemoryFile"><a href="#MemoryFile" class="headerlink" title="MemoryFile"></a>MemoryFile</h1><p><a target="_blank" rel="noopener" href="https://github.com/Tencent/MMKV">MMKV</a> 使用 <code>MemoryFile</code> 包装 mmap 相关逻辑</p>
+<blockquote>
+<p>使用 mmap 需要注意的一个关键点是，mmap 映射区域大小必须是物理页大小(page_size)的整倍数（32位系统中通常是4k字节）。原因是内存的最小粒度是页，而进程虚拟地址空间和内存的映射也是以页为单位。为了匹配内存的操作，mmap 从磁盘到虚拟地址空间的映射也必须是页。</p>
+</blockquote>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">class</span> <span class="hljs-title class_">MemoryFile</span> &#123;
+    File m_diskFile;    <span class="hljs-comment">// 磁盘上的文件</span>
+    <span class="hljs-type">void</span> *m_ptr;        <span class="hljs-comment">// 映射到文件物理地址的区域（在内存地址空间里），它的起始地址</span>
+    <span class="hljs-type">size_t</span> m_size;      <span class="hljs-comment">// 内存空间区域的大小</span>
+&#125;
+
+<span class="hljs-keyword">using</span> MMKVFileHandle_t = HANDLE;
+<span class="hljs-keyword">using</span> MMKVPath_t = std::wstring;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">File</span> &#123;
+    MMKVPath_t m_path;        <span class="hljs-comment">// 文件路径</span>
+    MMKVFileHandle_t m_fd;    <span class="hljs-comment">// 打开的文件描述符</span>
+&#125;
+
+<span class="hljs-comment">// 通过系统调用 open 打开文件拿到文件描述符 fd，并用系统调用 fstat 拿到文件大小，然后 mmap 这整个文件获得映射区域的内存地址</span>
+
+<span class="hljs-keyword">using</span> MMKVPath_t = std::wstring;
+
+MemoryFile::<span class="hljs-built_in">MemoryFile</span>(MMKVPath_t path) : <span class="hljs-built_in">m_diskFile</span>(std::<span class="hljs-built_in">move</span>(path), OpenFlag::ReadWrite | OpenFlag::Create), <span class="hljs-built_in">m_ptr</span>(<span class="hljs-literal">nullptr</span>), <span class="hljs-built_in">m_size</span>(<span class="hljs-number">0</span>) &#123;
+    <span class="hljs-built_in">reloadFromFile</span>();
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">MemoryFile::reloadFromFile</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (!m_diskFile.<span class="hljs-built_in">open</span>()) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to open:%s, %s&quot;</span>, m_diskFile.m_path.<span class="hljs-built_in">c_str</span>(), <span class="hljs-built_in">strerror</span>(errno));
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        FileLock <span class="hljs-built_in">fileLock</span>(m_diskFile.m_fd);
+        <span class="hljs-function">InterProcessLock <span class="hljs-title">lock</span><span class="hljs-params">(&amp;fileLock, ExclusiveLockType)</span></span>;
+        <span class="hljs-built_in">SCOPED_LOCK</span>(&amp;lock);
+
+        mmkv::<span class="hljs-built_in">getFileSize</span>(m_diskFile.m_fd, m_size);
+        <span class="hljs-keyword">if</span> (m_size &lt; DEFAULT_MMAP_SIZE || (m_size % DEFAULT_MMAP_SIZE != <span class="hljs-number">0</span>)) &#123;    <span class="hljs-comment">// 确保文件大小是内存页大小的整数倍</span>
+            <span class="hljs-type">size_t</span> roundSize = ((m_size / DEFAULT_MMAP_SIZE) + <span class="hljs-number">1</span>) * DEFAULT_MMAP_SIZE;
+            <span class="hljs-built_in">truncate</span>(roundSize);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">mmap</span>();
+            <span class="hljs-keyword">if</span> (!ret) &#123;
+                <span class="hljs-built_in">doCleanMemoryCache</span>(<span class="hljs-literal">true</span>);
+            &#125;
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">File::open</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    &#125;
+    m_fd = ::<span class="hljs-built_in">open</span>(m_path.<span class="hljs-built_in">c_str</span>(), <span class="hljs-built_in">OpenFlag2NativeFlag</span>(m_flag), S_IRWXU);
+    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to open [%s], %d(%s)&quot;</span>, m_path.<span class="hljs-built_in">c_str</span>(), errno, <span class="hljs-built_in">strerror</span>(errno));
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-built_in">MMKVInfo</span>(<span class="hljs-string">&quot;open fd[%p], %s&quot;</span>, m_fd, m_path.<span class="hljs-built_in">c_str</span>());
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">getFileSize</span><span class="hljs-params">(<span class="hljs-type">int</span> fd, <span class="hljs-type">size_t</span> &amp;size)</span> </span>&#123;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">stat</span> st = &#123;&#125;;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">fstat</span>(fd, &amp;st) != <span class="hljs-number">-1</span>) &#123;
+        size = (<span class="hljs-type">size_t</span>) st.st_size;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MemoryFile::mmap</span><span class="hljs-params">()</span> </span>&#123;
+    m_ptr = (<span class="hljs-type">char</span> *) ::<span class="hljs-built_in">mmap</span>(m_ptr, m_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_diskFile.m_fd, <span class="hljs-number">0</span>);
+    <span class="hljs-keyword">if</span> (m_ptr == MAP_FAILED) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to mmap [%s], %s&quot;</span>, m_diskFile.m_path.<span class="hljs-built_in">c_str</span>(), <span class="hljs-built_in">strerror</span>(errno));
+        m_ptr = <span class="hljs-literal">nullptr</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;</code></pre></div>
+
+<h1 id="Encoding-数据格式"><a href="#Encoding-数据格式" class="headerlink" title="Encoding - 数据格式"></a>Encoding - 数据格式</h1><p>在 <a href="../../../../2022/05/16/sharedpreferences/">深入 SharedPreferences：架构、缺点和优化</a> 研究过 <code>SharedPreferences</code> 本质上是内存中的 <code>HashMap</code> 和磁盘上的 XML 文件，Java HashMap 提供了 CURD Api，持久化时序列化为 XML 格式，本质上是以字符串存储</p>
+<p>但在 MMKV 里面对的是一整块内存区域，怎么对这块区域进行 CURD 操作呢？怎么实现 Key-Value Mapping 呢？</p>
+<p>在内存空间里，MMKV 使用 <code>std::unordered_map</code> 这一数据结构实现 Key-Value Mapping，而 Key-Value 对的内容则是以一种很紧凑的格式存储在 mmap 开辟的内存区域</p>
+<div class="code-wrapper"><pre><code class="hljs fortran">[(key-<span class="hljs-built_in">size</span>)(key-<span class="hljs-keyword">data</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-built_in">size</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-keyword">data</span>)][(key-<span class="hljs-built_in">size</span>)(key-<span class="hljs-keyword">data</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-built_in">size</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-keyword">data</span>)]...</code></pre></div>
+
+<p>因为 mmap 内存区域是对文件物理地址的映射，所以持久化在磁盘上的格式也是上面这种紧凑格式</p>
+<h1 id="Varints-变长的-size"><a href="#Varints-变长的-size" class="headerlink" title="Varints - 变长的 size"></a>Varints - 变长的 size</h1><p>上面的 <code>key-size</code> 和 <code>value-size</code> 分别表示 key 和 value 的长度，这两个字段所占大小是可变的，具体规则如下：</p>
+<ol>
+<li><p>先读取一个字节（8 bits），如果 &gt; 0（第一个 bit 是 0）则余下 7 bits 就表示其值，返回</p>
+</li>
+<li><p>否则说明余下 7 bits 不能完整地表示值，把这 7 bits 作为低 7 位存储在 <code>result</code>，继续找值的高位</p>
+</li>
+<li><p>读取一个字节，如果 &gt; 0 则余下 7 bits 作为 <code>result</code> 的高 7 位，与上面获得的低 7 位共 14 bits 就是值，返回</p>
+</li>
+<li><p>否则又继续找下 7 bits…</p>
+</li>
+<li><p>也就是每次读取一个字节，第一个 bit 表示需不需要读取下一个字节（0 - 不需要，1 - 需要），剩下 7 bits 构成了值的一部分</p>
+</li>
+</ol>
+<p>下面的 <code>pbRawVarint32Size</code> 和 <code>readRawVarint32</code> 就是在计算变长的 size 字段到底有几个字节的长度，上面这个算法是参考 <a target="_blank" rel="noopener" href="https://developers.google.com/protocol-buffers/docs/encoding#varints">Protocol Buffers - Base 128 Varints</a></p>
+<h1 id="Put-写操作"><a href="#Put-写操作" class="headerlink" title="Put - 写操作"></a>Put - 写操作</h1><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MMKV</span> implements SharedPreferences, SharedPreferences.Editor &#123;
+
+    @<span class="hljs-function">Override</span>
+<span class="hljs-function">    <span class="hljs-keyword">public</span> Editor <span class="hljs-title">putString</span><span class="hljs-params">(String key, @Nullable String value)</span> </span>&#123;
+        <span class="hljs-built_in">encodeString</span>(nativeHandle, key, value);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">private</span> native boolean <span class="hljs-title">encodeString</span><span class="hljs-params">(<span class="hljs-type">long</span> handle, String key, @Nullable String value)</span></span>;    
+&#125;
+
+<span class="hljs-function">MMKV_JNI jboolean <span class="hljs-title">encodeString</span><span class="hljs-params">(JNIEnv *env, jobject, jlong handle, jstring oKey, jstring oValue)</span> </span>&#123;
+    MMKV *kv = <span class="hljs-built_in">reinterpret_cast</span>&lt;MMKV *&gt;(handle);
+    <span class="hljs-keyword">if</span> (kv &amp;&amp; oKey) &#123;
+        string key = <span class="hljs-built_in">jstring2string</span>(env, oKey);
+        <span class="hljs-keyword">if</span> (oValue) &#123;
+            string value = <span class="hljs-built_in">jstring2string</span>(env, oValue);
+            <span class="hljs-keyword">return</span> (jboolean) kv-&gt;<span class="hljs-built_in">set</span>(value, key);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            kv-&gt;<span class="hljs-built_in">removeValueForKey</span>(key);
+            <span class="hljs-keyword">return</span> (jboolean) <span class="hljs-literal">true</span>;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> (jboolean) <span class="hljs-literal">false</span>;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MMKV::set</span><span class="hljs-params">(<span class="hljs-type">const</span> string &amp;value, MMKVKey_t key)</span> </span>&#123;    <span class="hljs-comment">// using MMKVKey_t = const std::string &amp;;</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">isKeyEmpty</span>(key)) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">setDataForKey</span>(<span class="hljs-built_in">MMBuffer</span>((<span class="hljs-type">void</span> *) value.<span class="hljs-built_in">data</span>(), value.<span class="hljs-built_in">length</span>(), MMBufferNoCopy), key, <span class="hljs-literal">true</span>);
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MMKV::setDataForKey</span><span class="hljs-params">(MMBuffer &amp;&amp;data, MMKVKey_t key, <span class="hljs-type">bool</span> isDataHolder)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> ((!isDataHolder &amp;&amp; data.<span class="hljs-built_in">length</span>() == <span class="hljs-number">0</span>) || <span class="hljs-built_in">isKeyEmpty</span>(key)) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_lock);
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+    <span class="hljs-built_in">checkLoadData</span>();
+    &#123;
+        <span class="hljs-keyword">auto</span> itr = m_dic-&gt;<span class="hljs-built_in">find</span>(key);    <span class="hljs-comment">// using MMKVMap = std::unordered_map&lt;std::string, mmkv::KeyValueHolder&gt;;</span>
+        <span class="hljs-keyword">if</span> (itr != m_dic-&gt;<span class="hljs-built_in">end</span>()) &#123;      <span class="hljs-comment">// mmkv::MMKVMap *m_dic;</span>
+            <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">appendDataWithKey</span>(data, itr-&gt;second, isDataHolder);
+            <span class="hljs-keyword">if</span> (!ret.first) &#123;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+            &#125;
+            itr-&gt;second = std::<span class="hljs-built_in">move</span>(ret.second);
+        &#125; <span class="hljs-keyword">else</span> &#123;                        <span class="hljs-comment">// key 不存在的情况</span>
+            <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">appendDataWithKey</span>(data, key, isDataHolder);
+            <span class="hljs-keyword">if</span> (!ret.first) &#123;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+            &#125;
+            m_dic-&gt;<span class="hljs-built_in">emplace</span>(key, std::<span class="hljs-built_in">move</span>(ret.second));
+        &#125;
+    &#125;
+    m_hasFullWriteback = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;
+
+<span class="hljs-function">KVHolderRet_t <span class="hljs-title">MMKV::appendDataWithKey</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data, MMKVKey_t key, <span class="hljs-type">bool</span> isDataHolder)</span> </span>&#123;    <span class="hljs-comment">// key 不存在的情况</span>
+    <span class="hljs-keyword">auto</span> keyData = <span class="hljs-built_in">MMBuffer</span>((<span class="hljs-type">void</span> *) key.<span class="hljs-built_in">data</span>(), key.<span class="hljs-built_in">size</span>(), MMBufferNoCopy);
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">doAppendDataWithKey</span>(data, keyData, isDataHolder, <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(keyData.<span class="hljs-built_in">length</span>()));
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">MMBuffer</span> &#123;    <span class="hljs-comment">// MMBuffer 代表一块内存区域</span>
+    <span class="hljs-type">size_t</span> size;    <span class="hljs-comment">// 内存区域的大小</span>
+    <span class="hljs-type">void</span> *ptr;      <span class="hljs-comment">// 内存区域的起始地址</span>
+&#125;
+
+<span class="hljs-comment">// 写操作 isDataHolder 总是 true，isDataHolder 为 false 表示删除 key，后面会讲到</span>
+<span class="hljs-function">KVHolderRet_t</span>
+<span class="hljs-function"><span class="hljs-title">MMKV::doAppendDataWithKey</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data, <span class="hljs-type">const</span> MMBuffer &amp;keyData, <span class="hljs-type">bool</span> isDataHolder, <span class="hljs-type">uint32_t</span> originKeyLength)</span> </span>&#123;
+    <span class="hljs-keyword">auto</span> isKeyEncoded = (originKeyLength &lt; keyData.<span class="hljs-built_in">length</span>());    <span class="hljs-comment">// 对于 key 不存在的情况，isKeyEncoded == false</span>
+    <span class="hljs-keyword">auto</span> keyLength = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(keyData.<span class="hljs-built_in">length</span>());
+    <span class="hljs-keyword">auto</span> valueLength = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(data.<span class="hljs-built_in">length</span>());
+    <span class="hljs-keyword">if</span> (isDataHolder) &#123;
+        valueLength += <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+    &#125;
+    <span class="hljs-comment">// size needed to encode the key</span>
+    <span class="hljs-type">size_t</span> size = isKeyEncoded ? keyLength : (keyLength + <span class="hljs-built_in">pbRawVarint32Size</span>(keyLength));
+    <span class="hljs-comment">// size needed to encode the value</span>
+    size += valueLength + <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+
+    <span class="hljs-type">bool</span> hasEnoughSize = <span class="hljs-built_in">ensureMemorySize</span>(size);
+    <span class="hljs-keyword">if</span> (!hasEnoughSize || !<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">false</span>, <span class="hljs-built_in">KeyValueHolder</span>());
+    &#125;
+
+    <span class="hljs-comment">// writeRawData 写入数据内容，writeData 先写入数据长度再写入数据内容</span>
+    <span class="hljs-comment">// 对于 key 不存在的情况，isKeyEncoded == false，isDataHolder == true</span>
+    <span class="hljs-comment">// 那么写入的顺序是：写入 key 长度，写入 key 内容，写入 value 长度，写入 value 内容</span>
+    <span class="hljs-comment">// 正如上面数据格式里描述的一样</span>
+    <span class="hljs-keyword">try</span> &#123;
+        <span class="hljs-keyword">if</span> (isKeyEncoded) &#123;
+            m_output-&gt;<span class="hljs-built_in">writeRawData</span>(keyData);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            m_output-&gt;<span class="hljs-built_in">writeData</span>(keyData);
+        &#125;
+        <span class="hljs-keyword">if</span> (isDataHolder) &#123;
+            m_output-&gt;<span class="hljs-built_in">writeRawVarint32</span>((<span class="hljs-type">int32_t</span>) valueLength);
+        &#125;
+        m_output-&gt;<span class="hljs-built_in">writeData</span>(data); <span class="hljs-comment">// note: write size of data</span>
+    &#125; <span class="hljs-built_in">catch</span> (std::exception &amp;e) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;%s&quot;</span>, e.<span class="hljs-built_in">what</span>());
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">false</span>, <span class="hljs-built_in">KeyValueHolder</span>());
+    &#125;
+
+    <span class="hljs-comment">// 返回一个 pair，first 表示操作成功 or 失败</span>
+    <span class="hljs-comment">// second 记录了这个 Key-Value 对在内存和文件的偏移量，以及 key 和 value 的大小</span>
+    <span class="hljs-comment">// 这样就能够通过 key 找到 KeyValueHolder 并快速地定位出 value 所在内存地址</span>
+    <span class="hljs-keyword">auto</span> offset = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(m_actualSize);
+    <span class="hljs-keyword">auto</span> ptr = (<span class="hljs-type">uint8_t</span> *) m_file-&gt;<span class="hljs-built_in">getMemory</span>() + Fixed32Size + m_actualSize;
+    m_actualSize += size;
+    <span class="hljs-built_in">updateCRCDigest</span>(ptr, size);
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">true</span>, <span class="hljs-built_in">KeyValueHolder</span>(originKeyLength, valueLength, offset));
+&#125;
+
+<span class="hljs-keyword">struct</span> <span class="hljs-title class_">KeyValueHolder</span> &#123;
+    <span class="hljs-type">uint16_t</span> keySize;      <span class="hljs-comment">// key 的大小</span>
+    <span class="hljs-type">uint32_t</span> valueSize;    <span class="hljs-comment">// value 的大小</span>
+    <span class="hljs-type">uint32_t</span> offset;       <span class="hljs-comment">// 相对于 mmap 内存区域的偏移量，也是这个 Key-Value 对在文件内的偏移量（这样才能从文件恢复）</span>
+&#125;;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CodedOutputData::writeData</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;value)</span> </span>&#123;
+    <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">writeRawVarint32</span>((<span class="hljs-type">int32_t</span>) value.<span class="hljs-built_in">length</span>());
+    <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">writeRawData</span>(value);
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">CodedOutputData::writeRawData</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data)</span> </span>&#123;
+    <span class="hljs-type">size_t</span> numberOfBytes = data.<span class="hljs-built_in">length</span>();
+    <span class="hljs-keyword">if</span> (m_position + numberOfBytes &gt; m_size) &#123;
+        <span class="hljs-keyword">auto</span> msg = <span class="hljs-string">&quot;m_position: &quot;</span> + <span class="hljs-built_in">to_string</span>(m_position) + <span class="hljs-string">&quot;, numberOfBytes: &quot;</span> + <span class="hljs-built_in">to_string</span>(numberOfBytes) +
+                   <span class="hljs-string">&quot;, m_size: &quot;</span> + <span class="hljs-built_in">to_string</span>(m_size);
+        <span class="hljs-keyword">throw</span> <span class="hljs-built_in">out_of_range</span>(msg);
+    &#125;
+    <span class="hljs-built_in">memcpy</span>(m_ptr + m_position, data.<span class="hljs-built_in">getPtr</span>(), numberOfBytes);
+    m_position += numberOfBytes;
+&#125;</code></pre></div>
+
+<h1 id="Update-修改的情况"><a href="#Update-修改的情况" class="headerlink" title="Update - 修改的情况"></a>Update - 修改的情况</h1><p>在上面的基本流程里，如果 key 存在则进行修改操作，但此时存在一个问题，Key-Value 对是紧凑地排列在一块连续的内存区域上的，如果改变某个 value 的长度那后面的内容对应地需要整体前移或后移，这样修改的代价就会变得很大</p>
+<p>所以 MMKV 采取一个用空间换时间的策略：不修改原有的 Key-Value 对，而是将新的 Key-Value 对附加（append）到末尾（当然此时 key 是一样的）</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 修改/更新的情况下，从词典里找到已存在的键值对 KeyValueHolder</span>
+<span class="hljs-comment">// 新增的情况，第二个参数是 MMKVKey_t key</span>
+<span class="hljs-function">KVHolderRet_t <span class="hljs-title">MMKV::appendDataWithKey</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data, <span class="hljs-type">const</span> KeyValueHolder &amp;kvHolder, <span class="hljs-type">bool</span> isDataHolder)</span> </span>&#123;
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+
+    <span class="hljs-type">uint32_t</span> keyLength = kvHolder.keySize;
+    <span class="hljs-comment">// size needed to encode the key</span>
+    <span class="hljs-type">size_t</span> rawKeySize = keyLength + <span class="hljs-built_in">pbRawVarint32Size</span>(keyLength);
+
+    <span class="hljs-comment">// ensureMemorySize() might change kvHolder.offset, so have to do it early</span>
+    &#123;
+        <span class="hljs-keyword">auto</span> valueLength = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(data.<span class="hljs-built_in">length</span>());
+        <span class="hljs-keyword">if</span> (isDataHolder) &#123;
+            valueLength += <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+        &#125;
+        <span class="hljs-keyword">auto</span> size = rawKeySize + valueLength + <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+        <span class="hljs-type">bool</span> hasEnoughSize = <span class="hljs-built_in">ensureMemorySize</span>(size);
+        <span class="hljs-keyword">if</span> (!hasEnoughSize) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">false</span>, <span class="hljs-built_in">KeyValueHolder</span>());
+        &#125;
+    &#125;
+
+    <span class="hljs-comment">// 跟新增的情况一样进入 doAppendDataWithKey，但有所不同</span>
+    <span class="hljs-comment">// keyLength 指的是 key data size，跟新增时一样</span>
+    <span class="hljs-comment">// 第二个参数 MMBuffer keyData 它指向 key 在 mmap 内存区域的起始地址，size 是整个 key entry 的长度（包含 key data size 部分）</span>
+    <span class="hljs-keyword">auto</span> basePtr = (<span class="hljs-type">uint8_t</span> *) m_file-&gt;<span class="hljs-built_in">getMemory</span>() + Fixed32Size;
+    <span class="hljs-function">MMBuffer <span class="hljs-title">keyData</span><span class="hljs-params">(basePtr + kvHolder.offset, rawKeySize, MMBufferNoCopy)</span></span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">doAppendDataWithKey</span>(data, keyData, isDataHolder, keyLength);
+&#125;
+
+<span class="hljs-comment">// 修改时 isDataHolder 也是 true</span>
+<span class="hljs-function">KVHolderRet_t <span class="hljs-title">MMKV::doAppendDataWithKey</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data, <span class="hljs-type">const</span> MMBuffer &amp;keyData, <span class="hljs-type">bool</span> isDataHolder, <span class="hljs-type">uint32_t</span> originKeyLength)</span> </span>&#123;
+    <span class="hljs-keyword">auto</span> isKeyEncoded = (originKeyLength &lt; keyData.<span class="hljs-built_in">length</span>());    <span class="hljs-comment">// 修改时 isKeyEncoded == true，原因是 keyData 包含了 key data size 部分</span>
+    <span class="hljs-keyword">auto</span> keyLength = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(keyData.<span class="hljs-built_in">length</span>());
+    <span class="hljs-keyword">auto</span> valueLength = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(data.<span class="hljs-built_in">length</span>());
+    <span class="hljs-keyword">if</span> (isDataHolder) &#123;
+        valueLength += <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+    &#125;
+    <span class="hljs-comment">// size needed to encode the key</span>
+    <span class="hljs-type">size_t</span> size = isKeyEncoded ? keyLength : (keyLength + <span class="hljs-built_in">pbRawVarint32Size</span>(keyLength));
+    <span class="hljs-comment">// size needed to encode the value</span>
+    size += valueLength + <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+
+    <span class="hljs-type">bool</span> hasEnoughSize = <span class="hljs-built_in">ensureMemorySize</span>(size);
+    <span class="hljs-keyword">if</span> (!hasEnoughSize || !<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">false</span>, <span class="hljs-built_in">KeyValueHolder</span>());
+    &#125;
+
+    <span class="hljs-comment">// 这里可以看到修改已有的 Key-Value 并不会真正地去 mmap 内存区域里做修改操作，</span>
+    <span class="hljs-comment">// 而是将修改后的 Key-Value append 至 mmap 内存区域尾部，也即是 append 到磁盘文件尾部</span>
+    <span class="hljs-comment">// isKeyEncoded == true，用 writeRawData 将 keyData 对应的整块内存写入，keyData 是从 dic 里查找出来的，包含完整的 key data size 和 key data</span>
+    <span class="hljs-comment">// 然后写 value data size 和 value data</span>
+    <span class="hljs-keyword">try</span> &#123;
+        <span class="hljs-keyword">if</span> (isKeyEncoded) &#123;
+            m_output-&gt;<span class="hljs-built_in">writeRawData</span>(keyData);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            m_output-&gt;<span class="hljs-built_in">writeData</span>(keyData);
+        &#125;
+        <span class="hljs-keyword">if</span> (isDataHolder) &#123;
+            m_output-&gt;<span class="hljs-built_in">writeRawVarint32</span>((<span class="hljs-type">int32_t</span>) valueLength);
+        &#125;
+        m_output-&gt;<span class="hljs-built_in">writeData</span>(data); <span class="hljs-comment">// note: write size of data</span>
+    &#125; <span class="hljs-built_in">catch</span> (std::exception &amp;e) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;%s&quot;</span>, e.<span class="hljs-built_in">what</span>());
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">false</span>, <span class="hljs-built_in">KeyValueHolder</span>());
+    &#125;
+    <span class="hljs-keyword">auto</span> offset = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(m_actualSize);
+    <span class="hljs-keyword">auto</span> ptr = (<span class="hljs-type">uint8_t</span> *) m_file-&gt;<span class="hljs-built_in">getMemory</span>() + Fixed32Size + m_actualSize;
+    m_actualSize += size;
+    <span class="hljs-built_in">updateCRCDigest</span>(ptr, size);
+
+    <span class="hljs-comment">// 返回一个新的 KeyValueHolder 实例，指向刚刚 append 的 Key-Value 对在 mmap 内存区域的地址，但 key 部分跟旧的是一样的</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">true</span>, <span class="hljs-built_in">KeyValueHolder</span>(originKeyLength, valueLength, offset));
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MMKV::setDataForKey</span><span class="hljs-params">(MMBuffer &amp;&amp;data, MMKVKey_t key, <span class="hljs-type">bool</span> isDataHolder)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> ((!isDataHolder &amp;&amp; data.<span class="hljs-built_in">length</span>() == <span class="hljs-number">0</span>) || <span class="hljs-built_in">isKeyEmpty</span>(key)) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_lock);
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+    <span class="hljs-built_in">checkLoadData</span>();
+    &#123;
+        <span class="hljs-keyword">auto</span> itr = m_dic-&gt;<span class="hljs-built_in">find</span>(key);    <span class="hljs-comment">// using MMKVMap = std::unordered_map&lt;std::string, mmkv::KeyValueHolder&gt;;</span>
+        <span class="hljs-keyword">if</span> (itr != m_dic-&gt;<span class="hljs-built_in">end</span>()) &#123;      <span class="hljs-comment">// mmkv::MMKVMap *m_dic;</span>
+            <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">appendDataWithKey</span>(data, itr-&gt;second, isDataHolder);
+            <span class="hljs-keyword">if</span> (!ret.first) &#123;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+            &#125;
+            itr-&gt;second = std::<span class="hljs-built_in">move</span>(ret.second);
+        &#125; <span class="hljs-keyword">else</span> &#123;                        <span class="hljs-comment">// key 不存在的情况</span>
+            <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">appendDataWithKey</span>(data, key, isDataHolder);
+            <span class="hljs-keyword">if</span> (!ret.first) &#123;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+            &#125;
+            <span class="hljs-comment">// 更新词典，后续通过这个 key 找到的就是 append 至内存区域末尾的最新的 value 值</span>
+            m_dic-&gt;<span class="hljs-built_in">emplace</span>(key, std::<span class="hljs-built_in">move</span>(ret.second));
+        &#125;
+    &#125;
+    m_hasFullWriteback = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;</code></pre></div>
+
+<h1 id="Remove-删除操作"><a href="#Remove-删除操作" class="headerlink" title="Remove - 删除操作"></a>Remove - 删除操作</h1><p>上面聊过由于 Key-Value 对是以下面这种紧凑的格式一个个排列在一起的，如果修改操作改变了已有的某个 Value 的长度，那么后面的数据就要整块前移或者后移</p>
+<p>删除操作也是一样的，将某个 Key-Value 对删除后，那么后面的 Key-Value 对也要整体前移，这样删除操作的效率就会很低，所以 MMKV 把删除操作改为 append 一个相同 key 但 value data size 为 0 的新项，并从词典里移除此 key 对应的项</p>
+<div class="code-wrapper"><pre><code class="hljs fortran">[(key-<span class="hljs-built_in">size</span>)(key-<span class="hljs-keyword">data</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-built_in">size</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-keyword">data</span>)][(key-<span class="hljs-built_in">size</span>)(key-<span class="hljs-keyword">data</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-built_in">size</span>)(<span class="hljs-keyword">value</span>-<span class="hljs-keyword">data</span>)]...</code></pre></div>
+
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MMKV</span> implements SharedPreferences, SharedPreferences.Editor &#123;
+
+    @<span class="hljs-function">Override</span>
+<span class="hljs-function">    <span class="hljs-keyword">public</span> Editor <span class="hljs-title">remove</span><span class="hljs-params">(String key)</span> </span>&#123;
+        <span class="hljs-built_in">removeValueForKey</span>(key);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title">removeValueForKey</span><span class="hljs-params">(String key)</span> </span>&#123;
+        <span class="hljs-built_in">removeValueForKey</span>(nativeHandle, key);
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">private</span> native <span class="hljs-type">void</span> <span class="hljs-title">removeValueForKey</span><span class="hljs-params">(<span class="hljs-type">long</span> handle, String key)</span></span>;  
+&#125;
+
+<span class="hljs-function">MMKV_EXPORT <span class="hljs-type">void</span> <span class="hljs-title">removeValueForKey</span><span class="hljs-params">(<span class="hljs-type">void</span> *handle, <span class="hljs-type">char</span> *oKey)</span> </span>&#123;
+    MMKV *kv = <span class="hljs-built_in">static_cast</span>&lt;MMKV *&gt;(handle);
+    <span class="hljs-keyword">if</span> (kv &amp;&amp; oKey) &#123;
+        <span class="hljs-function">string <span class="hljs-title">key</span><span class="hljs-params">(oKey)</span></span>;
+        kv-&gt;<span class="hljs-built_in">removeValueForKey</span>(key);
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">MMKV::removeValueForKey</span><span class="hljs-params">(MMKVKey_t key)</span> </span>&#123;    <span class="hljs-comment">// using MMKVKey_t = const std::string &amp;;</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">isKeyEmpty</span>(key)) &#123;
+        <span class="hljs-keyword">return</span>;
+    &#125;
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_lock);
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+    <span class="hljs-built_in">checkLoadData</span>();
+
+    <span class="hljs-built_in">removeDataForKey</span>(key);
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MMKV::removeDataForKey</span><span class="hljs-params">(MMKVKey_t key)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">isKeyEmpty</span>(key)) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    &#123;
+        <span class="hljs-keyword">auto</span> itr = m_dic-&gt;<span class="hljs-built_in">find</span>(key);
+        <span class="hljs-keyword">if</span> (itr != m_dic-&gt;<span class="hljs-built_in">end</span>()) &#123;
+            m_hasFullWriteback = <span class="hljs-literal">false</span>;
+            <span class="hljs-type">static</span> MMBuffer nan;      <span class="hljs-comment">// size == 0，ptr == null</span>
+            <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">appendDataWithKey</span>(nan, itr-&gt;second);
+            <span class="hljs-keyword">if</span> (ret.first) &#123;
+                m_dic-&gt;<span class="hljs-built_in">erase</span>(itr);    <span class="hljs-comment">// 对于 mmap 内存区域是 append 一个 empty value 的项，对于用以 mapping 的词典是移除此项</span>
+            &#125;
+            <span class="hljs-keyword">return</span> ret.first;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+&#125;
+
+<span class="hljs-comment">// 删除操作下 isDataHolder == false，data.size == 0，data.ptr == null</span>
+<span class="hljs-function">KVHolderRet_t <span class="hljs-title">MMKV::appendDataWithKey</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data, MMKVKey_t key, <span class="hljs-type">bool</span> isDataHolder)</span> </span>&#123;
+    <span class="hljs-keyword">auto</span> keyData = <span class="hljs-built_in">MMBuffer</span>((<span class="hljs-type">void</span> *) key.<span class="hljs-built_in">data</span>(), key.<span class="hljs-built_in">size</span>(), MMBufferNoCopy);
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">doAppendDataWithKey</span>(data, keyData, isDataHolder, <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(keyData.<span class="hljs-built_in">length</span>()));
+&#125;
+
+<span class="hljs-function">KVHolderRet_t</span>
+<span class="hljs-function"><span class="hljs-title">MMKV::doAppendDataWithKey</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data, <span class="hljs-type">const</span> MMBuffer &amp;keyData, <span class="hljs-type">bool</span> isDataHolder, <span class="hljs-type">uint32_t</span> originKeyLength)</span> </span>&#123;
+    <span class="hljs-keyword">auto</span> isKeyEncoded = (originKeyLength &lt; keyData.<span class="hljs-built_in">length</span>());    <span class="hljs-comment">// 删除的情况下，isKeyEncoded == true</span>
+    <span class="hljs-keyword">auto</span> keyLength = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(keyData.<span class="hljs-built_in">length</span>());
+    <span class="hljs-keyword">auto</span> valueLength = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(data.<span class="hljs-built_in">length</span>());
+    <span class="hljs-keyword">if</span> (isDataHolder) &#123;
+        valueLength += <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+    &#125;
+    <span class="hljs-comment">// size needed to encode the key</span>
+    <span class="hljs-type">size_t</span> size = isKeyEncoded ? keyLength : (keyLength + <span class="hljs-built_in">pbRawVarint32Size</span>(keyLength));
+    <span class="hljs-comment">// size needed to encode the value</span>
+    size += valueLength + <span class="hljs-built_in">pbRawVarint32Size</span>(valueLength);
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+
+    <span class="hljs-type">bool</span> hasEnoughSize = <span class="hljs-built_in">ensureMemorySize</span>(size);
+    <span class="hljs-keyword">if</span> (!hasEnoughSize || !<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">false</span>, <span class="hljs-built_in">KeyValueHolder</span>());
+    &#125;
+
+    <span class="hljs-comment">// writeRawData 写入数据内容，writeData 先写入数据长度再写入数据内容</span>
+    <span class="hljs-comment">// 在删除操作里，isKeyEncoded == true，isDataHolder == false</span>
+    <span class="hljs-comment">// key 包含 size 和 data，原封不动写入</span>
+    <span class="hljs-comment">// value 写入 size 0，没有 data</span>
+    <span class="hljs-keyword">try</span> &#123;
+        <span class="hljs-keyword">if</span> (isKeyEncoded) &#123;
+            m_output-&gt;<span class="hljs-built_in">writeRawData</span>(keyData);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            m_output-&gt;<span class="hljs-built_in">writeData</span>(keyData);
+        &#125;
+        <span class="hljs-keyword">if</span> (isDataHolder) &#123;
+            m_output-&gt;<span class="hljs-built_in">writeRawVarint32</span>((<span class="hljs-type">int32_t</span>) valueLength);
+        &#125;
+        m_output-&gt;<span class="hljs-built_in">writeData</span>(data); <span class="hljs-comment">// note: write size of data</span>
+    &#125; <span class="hljs-built_in">catch</span> (std::exception &amp;e) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;%s&quot;</span>, e.<span class="hljs-built_in">what</span>());
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">false</span>, <span class="hljs-built_in">KeyValueHolder</span>());
+    &#125;
+    <span class="hljs-keyword">auto</span> offset = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(m_actualSize);
+    <span class="hljs-keyword">auto</span> ptr = (<span class="hljs-type">uint8_t</span> *) m_file-&gt;<span class="hljs-built_in">getMemory</span>() + Fixed32Size + m_actualSize;
+    m_actualSize += size;
+    <span class="hljs-built_in">updateCRCDigest</span>(ptr, size);
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">true</span>, <span class="hljs-built_in">KeyValueHolder</span>(originKeyLength, valueLength, offset));
+&#125;</code></pre></div>
+
+<h1 id="Get-查找操作"><a href="#Get-查找操作" class="headerlink" title="Get - 查找操作"></a>Get - 查找操作</h1><p>查询操作比较简单：</p>
+<ol>
+<li><p>根据 string key 从词典里查找出 KeyValueHolder</p>
+</li>
+<li><p>KeyValueHolder.offset 是键值对在 mmap 内存区域的偏移量，加上内存区域的起始地址即可定位出键值对在虚拟内存中的起始地址</p>
+</li>
+<li><p>加上 key size 和 key data 的偏移量就是 value 的内存地址</p>
+</li>
+<li><p>再加上 value size 的偏移量就是 value data 的内存地址</p>
+</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MMKV</span> implements SharedPreferences, SharedPreferences.Editor &#123;
+
+    @Nullable
+    @<span class="hljs-function">Override</span>
+<span class="hljs-function">    <span class="hljs-keyword">public</span> String <span class="hljs-title">getString</span><span class="hljs-params">(String key, @Nullable String defValue)</span> </span>&#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">decodeString</span>(nativeHandle, key, defValue);
+    &#125;
+
+    @<span class="hljs-function">Nullable</span>
+<span class="hljs-function">    <span class="hljs-keyword">private</span> native String <span class="hljs-title">decodeString</span><span class="hljs-params">(<span class="hljs-type">long</span> handle, String key, @Nullable String defaultValue)</span></span>;
+&#125;
+
+<span class="hljs-function">MMKV_JNI jstring <span class="hljs-title">decodeString</span><span class="hljs-params">(JNIEnv *env, jobject obj, jlong handle, jstring oKey, jstring oDefaultValue)</span> </span>&#123;
+    MMKV *kv = <span class="hljs-built_in">reinterpret_cast</span>&lt;MMKV *&gt;(handle);
+    <span class="hljs-keyword">if</span> (kv &amp;&amp; oKey) &#123;
+        string key = <span class="hljs-built_in">jstring2string</span>(env, oKey);
+        string value;
+        <span class="hljs-type">bool</span> hasValue = kv-&gt;<span class="hljs-built_in">getString</span>(key, value);
+        <span class="hljs-keyword">if</span> (hasValue) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-built_in">string2jstring</span>(env, value);
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> oDefaultValue;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MMKV::getString</span><span class="hljs-params">(MMKVKey_t key, string &amp;result)</span> </span>&#123;           <span class="hljs-comment">// using MMKVKey_t = const std::string &amp;;</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">isKeyEmpty</span>(key)) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_lock);
+    <span class="hljs-keyword">auto</span> data = <span class="hljs-built_in">getDataForKey</span>(key);
+    <span class="hljs-keyword">if</span> (data.<span class="hljs-built_in">length</span>() &gt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-function">CodedInputData <span class="hljs-title">input</span><span class="hljs-params">(data.getPtr(), data.length())</span></span>;  <span class="hljs-comment">// 包含了 value size 和 value data</span>
+            result = input.<span class="hljs-built_in">readString</span>();
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        &#125; <span class="hljs-built_in">catch</span> (std::exception &amp;exception) &#123;
+            <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;%s&quot;</span>, exception.<span class="hljs-built_in">what</span>());
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+&#125;
+
+<span class="hljs-function">MMBuffer <span class="hljs-title">MMKV::getDataForKey</span><span class="hljs-params">(MMKVKey_t key)</span> </span>&#123;
+    <span class="hljs-built_in">checkLoadData</span>();
+    &#123;
+        <span class="hljs-keyword">auto</span> itr = m_dic-&gt;<span class="hljs-built_in">find</span>(key);
+        <span class="hljs-keyword">if</span> (itr != m_dic-&gt;<span class="hljs-built_in">end</span>()) &#123;
+            <span class="hljs-keyword">auto</span> basePtr = (<span class="hljs-type">uint8_t</span> *) (m_file-&gt;<span class="hljs-built_in">getMemory</span>()) + Fixed32Size;  <span class="hljs-comment">// mmap 内存区域的起始地址</span>
+            <span class="hljs-keyword">return</span> itr-&gt;second.<span class="hljs-built_in">toMMBuffer</span>(basePtr);  <span class="hljs-comment">// 加上 offset 就是键值对的内存地址，加上 key size 和 key value 偏移量则是 value 的内存地址                          </span>
+        &#125;
+    &#125;
+    MMBuffer nan;
+    <span class="hljs-keyword">return</span> nan;
+&#125;
+
+<span class="hljs-function">string <span class="hljs-title">CodedInputData::readString</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-type">int32_t</span> size = <span class="hljs-built_in">readRawVarint32</span>();                         <span class="hljs-comment">// 计算变长的 size 值，在上面的章节中有讲过计算过程</span>
+    <span class="hljs-keyword">if</span> (size &lt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">throw</span> <span class="hljs-built_in">length_error</span>(<span class="hljs-string">&quot;InvalidProtocolBuffer negativeSize&quot;</span>);
+    &#125;
+
+    <span class="hljs-keyword">auto</span> s_size = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">size_t</span>&gt;(size);
+    <span class="hljs-keyword">if</span> (s_size &lt;= m_size - m_position) &#123;
+        <span class="hljs-function">string <span class="hljs-title">result</span><span class="hljs-params">((<span class="hljs-type">char</span> *) (m_ptr + m_position), s_size)</span></span>;  <span class="hljs-comment">// 加上 value size 的偏移量就是 value data，作为 string 返回</span>
+        m_position += s_size;
+        <span class="hljs-keyword">return</span> result;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">throw</span> <span class="hljs-built_in">out_of_range</span>(<span class="hljs-string">&quot;InvalidProtocolBuffer truncatedMessage&quot;</span>);
+    &#125;
+&#125;
+
+<span class="hljs-comment">// 在章节 [Varints - 变长的 size] 里讲过，一个字节里，高 1 位表示是否需要读取下一个字节来解析，低 7 位存储数值</span>
+<span class="hljs-function"><span class="hljs-type">int32_t</span> <span class="hljs-title">CodedInputData::readRawVarint32</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-type">int8_t</span> tmp = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">readRawByte</span>();
+    <span class="hljs-keyword">if</span> (tmp &gt;= <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">return</span> tmp;
+    &#125;
+    <span class="hljs-type">int32_t</span> result = tmp &amp; <span class="hljs-number">0x7f</span>;
+    <span class="hljs-keyword">if</span> ((tmp = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">readRawByte</span>()) &gt;= <span class="hljs-number">0</span>) &#123;
+        result |= tmp &lt;&lt; <span class="hljs-number">7</span>;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        result |= (tmp &amp; <span class="hljs-number">0x7f</span>) &lt;&lt; <span class="hljs-number">7</span>;
+        <span class="hljs-keyword">if</span> ((tmp = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">readRawByte</span>()) &gt;= <span class="hljs-number">0</span>) &#123;
+            result |= tmp &lt;&lt; <span class="hljs-number">14</span>;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            result |= (tmp &amp; <span class="hljs-number">0x7f</span>) &lt;&lt; <span class="hljs-number">14</span>;
+            <span class="hljs-keyword">if</span> ((tmp = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">readRawByte</span>()) &gt;= <span class="hljs-number">0</span>) &#123;
+                result |= tmp &lt;&lt; <span class="hljs-number">21</span>;
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                result |= (tmp &amp; <span class="hljs-number">0x7f</span>) &lt;&lt; <span class="hljs-number">21</span>;
+                result |= (tmp = <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">readRawByte</span>()) &lt;&lt; <span class="hljs-number">28</span>;
+                <span class="hljs-keyword">if</span> (tmp &lt; <span class="hljs-number">0</span>) &#123;
+                    <span class="hljs-comment">// discard upper 32 bits</span>
+                    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">5</span>; i++) &#123;
+                        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">readRawByte</span>() &gt;= <span class="hljs-number">0</span>) &#123;
+                            <span class="hljs-keyword">return</span> result;
+                        &#125;
+                    &#125;
+                    <span class="hljs-keyword">throw</span> <span class="hljs-built_in">invalid_argument</span>(<span class="hljs-string">&quot;InvalidProtocolBuffer malformed varint32&quot;</span>);
+                &#125;
+            &#125;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> result;
+&#125;</code></pre></div>
+
+<h1 id="loadFromFile-构建索引词典"><a href="#loadFromFile-构建索引词典" class="headerlink" title="loadFromFile - 构建索引词典"></a>loadFromFile - 构建索引词典</h1><p>MMKV 依靠 <code>std::unordered_map</code> 词典数据结构提供 Key-Value 映射和查找服务，但这个词典结构只存在于内存里并没有实现持久化，所以当第一次打开某个 MMKV 数据文件时，需要将文件从头到尾扫描解析一遍，以构建和还原整个词典数据结构</p>
+<p>从下面的结构可以看出，<code>reloadFromFile</code> 的过程并不需要将 mmap 映射内存区域的所有页都加载进内存，只需要根据 key size 和 value size 跳跃式地访问内存页即可，所需信息包括：</p>
+<ol>
+<li>offset - 键值对在 mmap 映射文件里的偏移量</li>
+<li>keySize - key 大小，它是一个变长的数值</li>
+<li>keyData - 作为 string 用以查找</li>
+<li>valueSize - value 的大小</li>
+<li>valueData 在被访问前是不需要加载进内存的，所以会有大量的虚拟页无需分配</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">KeyValueHolder</span> &#123;
+    <span class="hljs-type">uint16_t</span> computedKVSize; <span class="hljs-comment">// internal use only</span>
+    <span class="hljs-type">uint16_t</span> keySize;
+    <span class="hljs-type">uint32_t</span> valueSize;
+    <span class="hljs-type">uint32_t</span> offset;
+&#125;;
+
+<span class="hljs-keyword">using</span> MMKVMap = std::unordered_map&lt;std::string, mmkv::KeyValueHolder&gt;;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">MMKV</span> &#123;
+    mmkv::MMKVMap *m_dic;
+&#125;</code></pre></div>
+
+<p>与 SharedPreferences 的区别：</p>
+<ol>
+<li><p>SharedPreferences 在构造函数里起个工作线程执行文件解析工作，在解析工作完成前，任何的读写操作都会被阻塞；而 MMKV 则是在构造函数里（当前线程）立即执行文件解析任务，任务完成（无论成功 or 失败）退出构造函数才能执行读写操作</p>
+</li>
+<li><p>MMKV 的解析速度要快很多，因为 SharedPreferences 是将 XML 文件全量加载和解析至内存，MMKV 就如上一章节描述的那样并不会立即加载 value data，只加载了 key size、key data 和 value size 三个部分，这三个部分一般情况下要比 value data 小很多</p>
+</li>
+</ol>
+<p>上面介绍过所有的 CURD 操作都是 append 一个键值对到文件末尾，而从文件构建 mapping 词典时，是从文件头扫描到文件尾的，所以旧的键值对会被新 append 的键值对替换/删除，看下具体流程：</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-type">static</span> MMKV <span class="hljs-title">mmkvWithID</span><span class="hljs-params">(String mmapID)</span> throws RuntimeException </span>&#123;
+    <span class="hljs-keyword">if</span> (rootDir == null) &#123;
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">IllegalStateException</span>(<span class="hljs-string">&quot;You should Call MMKV.initialize() first.&quot;</span>);
+    &#125;
+    <span class="hljs-type">long</span> handle = <span class="hljs-built_in">getMMKVWithID</span>(mmapID, SINGLE_PROCESS_MODE, null, null);
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">checkProcessMode</span>(handle, mmapID, SINGLE_PROCESS_MODE);
+&#125;
+
+<span class="hljs-function"><span class="hljs-keyword">private</span> native <span class="hljs-type">static</span> <span class="hljs-type">long</span> <span class="hljs-title">getMMKVWithID</span><span class="hljs-params">(String mmapID, <span class="hljs-type">int</span> mode, @Nullable String cryptKey, @Nullable String rootPath)</span></span>;
+
+<span class="hljs-function">MMKV_EXPORT <span class="hljs-type">void</span> *<span class="hljs-title">getMMKVWithID</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span> *mmapID, <span class="hljs-type">int32_t</span> mode, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *cryptKey, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *rootPath)</span> </span>&#123;
+    MMKV *kv = <span class="hljs-literal">nullptr</span>;
+    <span class="hljs-keyword">if</span> (!mmapID) &#123;
+        <span class="hljs-keyword">return</span> kv;
+    &#125;
+    string str = mmapID;
+
+    <span class="hljs-type">bool</span> done = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">if</span> (cryptKey) &#123;
+        string crypt = cryptKey;
+        <span class="hljs-keyword">if</span> (crypt.<span class="hljs-built_in">length</span>() &gt; <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">if</span> (rootPath) &#123;
+                string path = rootPath;
+                kv = MMKV::<span class="hljs-built_in">mmkvWithID</span>(str, DEFAULT_MMAP_SIZE, (MMKVMode) mode, &amp;crypt, &amp;path);
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                kv = MMKV::<span class="hljs-built_in">mmkvWithID</span>(str, DEFAULT_MMAP_SIZE, (MMKVMode) mode, &amp;crypt, <span class="hljs-literal">nullptr</span>);
+            &#125;
+            done = <span class="hljs-literal">true</span>;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">if</span> (!done) &#123;
+        <span class="hljs-keyword">if</span> (rootPath) &#123;
+            string path = rootPath;
+            kv = MMKV::<span class="hljs-built_in">mmkvWithID</span>(str, DEFAULT_MMAP_SIZE, (MMKVMode) mode, <span class="hljs-literal">nullptr</span>, &amp;path);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            kv = MMKV::<span class="hljs-built_in">mmkvWithID</span>(str, DEFAULT_MMAP_SIZE, (MMKVMode) mode, <span class="hljs-literal">nullptr</span>, <span class="hljs-literal">nullptr</span>);  <span class="hljs-comment">// 走这条路</span>
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">return</span> kv;
+&#125;
+
+<span class="hljs-function">MMKV *<span class="hljs-title">MMKV::mmkvWithID</span><span class="hljs-params">(<span class="hljs-type">const</span> string &amp;mmapID, <span class="hljs-type">int</span> size, MMKVMode mode, string *cryptKey, string *rootPath)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (mmapID.<span class="hljs-built_in">empty</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;
+    &#125;
+    <span class="hljs-built_in">SCOPED_LOCK</span>(g_instanceLock);
+
+    <span class="hljs-keyword">auto</span> mmapKey = <span class="hljs-built_in">mmapedKVKey</span>(mmapID, rootPath);  <span class="hljs-comment">// id 对应的 MMKV 实例如果已创建则直接返回</span>
+    <span class="hljs-keyword">auto</span> itr = g_instanceDic-&gt;<span class="hljs-built_in">find</span>(mmapKey);
+    <span class="hljs-keyword">if</span> (itr != g_instanceDic-&gt;<span class="hljs-built_in">end</span>()) &#123;
+        MMKV *kv = itr-&gt;second;
+        <span class="hljs-keyword">return</span> kv;
+    &#125;
+    <span class="hljs-keyword">if</span> (rootPath) &#123;                                <span class="hljs-comment">// 准备所需的目录</span>
+        <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isFileExist</span>(*rootPath)) &#123;
+            <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">mkPath</span>(*rootPath)) &#123;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">nullptr</span>;
+            &#125;
+        &#125;
+        <span class="hljs-built_in">MMKVInfo</span>(<span class="hljs-string">&quot;prepare to load %s (id %s) from rootPath %s&quot;</span>, mmapID.<span class="hljs-built_in">c_str</span>(), mmapKey.<span class="hljs-built_in">c_str</span>(), rootPath-&gt;<span class="hljs-built_in">c_str</span>());
+    &#125;
+    <span class="hljs-keyword">auto</span> kv = <span class="hljs-keyword">new</span> <span class="hljs-built_in">MMKV</span>(mmapID, size, mode, cryptKey, rootPath);  <span class="hljs-comment">// 看这里如何创建 MMKV 实例</span>
+    (*g_instanceDic)[mmapKey] = kv;
+    <span class="hljs-keyword">return</span> kv;
+&#125;
+
+<span class="hljs-comment">// mmapID 是文件名，size 取默认值则为一个内存页的大小 4K，其余参数为 null</span>
+MMKV::<span class="hljs-built_in">MMKV</span>(<span class="hljs-type">const</span> string &amp;mmapID, <span class="hljs-type">int</span> size, MMKVMode mode, string *cryptKey, string *rootPath)
+    : <span class="hljs-built_in">m_mmapID</span>((mode &amp; MMKV_BACKUP) ? mmapID : <span class="hljs-built_in">mmapedKVKey</span>(mmapID, rootPath)) <span class="hljs-comment">// historically Android mistakenly use mmapKey as mmapID</span>
+    , <span class="hljs-built_in">m_path</span>(<span class="hljs-built_in">mappedKVPathWithID</span>(m_mmapID, mode, rootPath))    <span class="hljs-comment">// mmap 文件路径</span>
+    , <span class="hljs-built_in">m_crcPath</span>(<span class="hljs-built_in">crcPathWithID</span>(m_mmapID, mode, rootPath))
+    , <span class="hljs-built_in">m_dic</span>(<span class="hljs-literal">nullptr</span>)                                          <span class="hljs-comment">// 用以实现 Key-Value 映射的词典，后续会初始化</span>
+    , <span class="hljs-built_in">m_dicCrypt</span>(<span class="hljs-literal">nullptr</span>)
+    , <span class="hljs-built_in">m_file</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">MemoryFile</span>(m_path, size, (mode &amp; MMKV_ASHMEM) ? MMFILE_TYPE_ASHMEM : MMFILE_TYPE_FILE))  <span class="hljs-comment">// mmap 内存区域（MemoryFile 上面介绍过，就是一块内存区域）</span>
+    , <span class="hljs-built_in">m_metaFile</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">MemoryFile</span>(m_crcPath, DEFAULT_MMAP_SIZE, m_file-&gt;m_fileType))
+    , <span class="hljs-built_in">m_metaInfo</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">MMKVMetaInfo</span>())
+    , <span class="hljs-built_in">m_crypter</span>(<span class="hljs-literal">nullptr</span>)
+    , <span class="hljs-built_in">m_lock</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">ThreadLock</span>())
+    , <span class="hljs-built_in">m_fileLock</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">FileLock</span>(m_metaFile-&gt;<span class="hljs-built_in">getFd</span>(), (mode &amp; MMKV_ASHMEM)))
+    , <span class="hljs-built_in">m_sharedProcessLock</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">InterProcessLock</span>(m_fileLock, SharedLockType))
+    , <span class="hljs-built_in">m_exclusiveProcessLock</span>(<span class="hljs-keyword">new</span> <span class="hljs-built_in">InterProcessLock</span>(m_fileLock, ExclusiveLockType))
+    , <span class="hljs-built_in">m_isInterProcess</span>((mode &amp; MMKV_MULTI_PROCESS) != <span class="hljs-number">0</span> || (mode &amp; CONTEXT_MODE_MULTI_PROCESS) != <span class="hljs-number">0</span>) &#123;
+    m_actualSize = <span class="hljs-number">0</span>;
+    m_output = <span class="hljs-literal">nullptr</span>;
+
+    <span class="hljs-comment">// force use fcntl(), otherwise will conflict with MemoryFile::reloadFromFile()</span>
+    m_fileModeLock = <span class="hljs-keyword">new</span> <span class="hljs-built_in">FileLock</span>(m_file-&gt;<span class="hljs-built_in">getFd</span>(), <span class="hljs-literal">true</span>);
+    m_sharedProcessModeLock = <span class="hljs-keyword">new</span> <span class="hljs-built_in">InterProcessLock</span>(m_fileModeLock, SharedLockType);
+    m_exclusiveProcessModeLock = <span class="hljs-literal">nullptr</span>;
+
+    &#123;
+        m_dic = <span class="hljs-keyword">new</span> <span class="hljs-built_in">MMKVMap</span>();
+    &#125;
+
+    m_needLoadFromFile = <span class="hljs-literal">true</span>;
+    m_hasFullWriteback = <span class="hljs-literal">false</span>;
+
+    m_crcDigest = <span class="hljs-number">0</span>;
+
+    m_sharedProcessLock-&gt;m_enable = m_isInterProcess;
+    m_exclusiveProcessLock-&gt;m_enable = m_isInterProcess;
+
+    <span class="hljs-comment">// sensitive zone</span>
+    &#123;
+        <span class="hljs-built_in">SCOPED_LOCK</span>(m_sharedProcessLock);
+        <span class="hljs-built_in">loadFromFile</span>();
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">MMKV::loadFromFile</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (!m_file-&gt;<span class="hljs-built_in">isFileValid</span>()) &#123;  
+        m_file-&gt;<span class="hljs-built_in">reloadFromFile</span>();  <span class="hljs-comment">// m_file 是 MemoryFile，上面介绍过，这里主要是进行 open file 和 mmap 映射内存区域</span>
+    &#125;
+
+    <span class="hljs-keyword">if</span> (!m_file-&gt;<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;file [%s] not valid&quot;</span>, m_path.<span class="hljs-built_in">c_str</span>());
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-type">bool</span> loadFromFile = <span class="hljs-literal">false</span>, needFullWriteback = <span class="hljs-literal">false</span>;
+        <span class="hljs-built_in">checkDataValid</span>(loadFromFile, needFullWriteback);
+
+        <span class="hljs-keyword">auto</span> ptr = (<span class="hljs-type">uint8_t</span> *) m_file-&gt;<span class="hljs-built_in">getMemory</span>();  <span class="hljs-comment">// mmap 映射内存区域地址</span>
+        <span class="hljs-keyword">if</span> (loadFromFile &amp;&amp; m_actualSize &gt; <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-function">MMBuffer <span class="hljs-title">inputBuffer</span><span class="hljs-params">(ptr + Fixed32Size, m_actualSize, MMBufferNoCopy)</span></span>;
+            <span class="hljs-keyword">if</span> (m_crypter) &#123;
+                <span class="hljs-built_in">clearDictionary</span>(m_dicCrypt);
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-built_in">clearDictionary</span>(m_dic);
+            &#125;
+            <span class="hljs-keyword">if</span> (needFullWriteback) &#123;
+                MiniPBCoder::<span class="hljs-built_in">greedyDecodeMap</span>(*m_dic, inputBuffer);
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                MiniPBCoder::<span class="hljs-built_in">decodeMap</span>(*m_dic, inputBuffer);    <span class="hljs-comment">// 解析 mmap 文件，构建出词典结构以供后续查找使用</span>
+            &#125;
+            m_output = <span class="hljs-keyword">new</span> <span class="hljs-built_in">CodedOutputData</span>(ptr + Fixed32Size, m_file-&gt;<span class="hljs-built_in">getFileSize</span>() - Fixed32Size);
+            m_output-&gt;<span class="hljs-built_in">seek</span>(m_actualSize);    <span class="hljs-comment">// m_output 指向文件末尾，用以 append 键值对</span>
+            <span class="hljs-keyword">if</span> (needFullWriteback) &#123;
+                <span class="hljs-built_in">fullWriteback</span>();
+            &#125;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-comment">// file not valid or empty, discard everything</span>
+            <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);
+
+            m_output = <span class="hljs-keyword">new</span> <span class="hljs-built_in">CodedOutputData</span>(ptr + Fixed32Size, m_file-&gt;<span class="hljs-built_in">getFileSize</span>() - Fixed32Size);
+            <span class="hljs-keyword">if</span> (m_actualSize &gt; <span class="hljs-number">0</span>) &#123;
+                <span class="hljs-built_in">writeActualSize</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-literal">nullptr</span>, IncreaseSequence);
+                <span class="hljs-built_in">sync</span>(MMKV_SYNC);
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-built_in">writeActualSize</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-literal">nullptr</span>, KeepSequence);
+            &#125;
+        &#125;
+        <span class="hljs-keyword">auto</span> count = m_crypter ? m_dicCrypt-&gt;<span class="hljs-built_in">size</span>() : m_dic-&gt;<span class="hljs-built_in">size</span>();
+        <span class="hljs-built_in">MMKVInfo</span>(<span class="hljs-string">&quot;loaded [%s] with %zu key-values&quot;</span>, m_mmapID.<span class="hljs-built_in">c_str</span>(), count);
+    &#125;
+
+    m_needLoadFromFile = <span class="hljs-literal">false</span>;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">MiniPBCoder::decodeMap</span><span class="hljs-params">(MMKVMap &amp;dic, <span class="hljs-type">const</span> MMBuffer &amp;oData, <span class="hljs-type">size_t</span> position)</span> </span>&#123;  <span class="hljs-comment">// position 默认为 0</span>
+    <span class="hljs-function">MiniPBCoder <span class="hljs-title">oCoder</span><span class="hljs-params">(&amp;oData)</span></span>;
+    oCoder.<span class="hljs-built_in">decodeOneMap</span>(dic, position, <span class="hljs-literal">false</span>);
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">MiniPBCoder::decodeOneMap</span><span class="hljs-params">(MMKVMap &amp;dic, <span class="hljs-type">size_t</span> position, <span class="hljs-type">bool</span> greedy)</span> </span>&#123;  <span class="hljs-comment">// position == 0，greedy == false</span>
+    <span class="hljs-keyword">auto</span> block = [position, <span class="hljs-keyword">this</span>](MMKVMap &amp;dictionary) &#123;
+        <span class="hljs-keyword">if</span> (position) &#123;
+            m_inputData-&gt;<span class="hljs-built_in">seek</span>(position);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            m_inputData-&gt;<span class="hljs-built_in">readInt32</span>();    <span class="hljs-comment">// 文件头 32 bits ?</span>
+        &#125;
+        <span class="hljs-keyword">while</span> (!m_inputData-&gt;<span class="hljs-built_in">isAtEnd</span>()) &#123;                         <span class="hljs-comment">// 因为是从文件头扫描到文件尾，旧的键值对就会被新 append 的键值对替换 or 删除</span>
+            KeyValueHolder kvHolder;
+            <span class="hljs-type">const</span> <span class="hljs-keyword">auto</span> &amp;key = m_inputData-&gt;<span class="hljs-built_in">readString</span>(kvHolder);  <span class="hljs-comment">// 读取 key 的内容为 string</span>
+            <span class="hljs-keyword">if</span> (key.<span class="hljs-built_in">length</span>() &gt; <span class="hljs-number">0</span>) &#123;
+                m_inputData-&gt;<span class="hljs-built_in">readData</span>(kvHolder);                  <span class="hljs-comment">// 读取 value size（没有读取 value data 哦）</span>
+                <span class="hljs-keyword">if</span> (kvHolder.valueSize &gt; <span class="hljs-number">0</span>) &#123;                     <span class="hljs-comment">// value size &gt; 0 说明是正常的键值对，添加到词典里</span>
+                    dictionary[key] = <span class="hljs-built_in">move</span>(kvHolder);
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    <span class="hljs-keyword">auto</span> itr = dictionary.<span class="hljs-built_in">find</span>(key);              <span class="hljs-comment">// [Remove - 删除操作] 里介绍过删除就是 append 一个 data size 为 0 的键值对</span>
+                    <span class="hljs-keyword">if</span> (itr != dictionary.<span class="hljs-built_in">end</span>()) &#123;                <span class="hljs-comment">// 所以这里遇到 data size == 0 就表示要从词典里移除这个 key</span>
+                        dictionary.<span class="hljs-built_in">erase</span>(itr);
+                    &#125;
+                &#125;
+            &#125;
+        &#125;
+    &#125;;
+
+    <span class="hljs-keyword">if</span> (greedy) &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-built_in">block</span>(dic);
+        &#125; <span class="hljs-built_in">catch</span> (std::exception &amp;exception) &#123;
+            <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;%s&quot;</span>, exception.<span class="hljs-built_in">what</span>());
+        &#125;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            MMKVMap tmpDic;
+            <span class="hljs-built_in">block</span>(tmpDic);
+            dic.<span class="hljs-built_in">swap</span>(tmpDic);
+        &#125; <span class="hljs-built_in">catch</span> (std::exception &amp;exception) &#123;
+            <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;%s&quot;</span>, exception.<span class="hljs-built_in">what</span>());
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="内存区域与文件的大小关系"><a href="#内存区域与文件的大小关系" class="headerlink" title="内存区域与文件的大小关系"></a>内存区域与文件的大小关系</h1><p>情形一：一个文件的大小是 5000 字节，mmap 函数从一个文件的起始位置开始映射 5000 字节到虚拟内存中</p>
+<p>分析：因为单位物理页面的大小是 4096 字节，虽然被映射的文件只有 5000 字节，但是对应到进程虚拟地址区域的大小需要满足整页大小，因此 mmap 函数执行后实际映射到虚拟内存区域 8192 字节，5000~8191 的字节部分用零填充</p>
+<ol>
+<li>读/写前 5000 字节（0~4999）会返回操作文件内容</li>
+<li>读字节 5000<del>8191 时结果全为 0，写 5000</del>8191 时进程不会报错，但是所写的内容不会写入原文件中</li>
+<li>读/写 8192 以外的磁盘部分会返回一个 SIGSECV 错误</li>
+</ol>
+<p>情形二：一个文件的大小是 5000 字节，mmap 函数从一个文件的起始位置开始映射 15000 字节到虚拟内存中，即映射大小超过了原始文件的大小</p>
+<p>分析：由于文件的大小是 5000 字节，和情形一一样其对应的两个物理页。那么这两个物理页都是合法可以读写的，只是超出 5000 的部分不会体现在原文件中。由于程序要求映射 15000 字节而文件只占两个物理页，因此 8192~15000 都不能读写，操作时会返回异常</p>
+<ol>
+<li>进程可以正常读/写被映射的前 5000 字节，写操作的改动会在一定时间后反映在原文件中</li>
+<li>对于 5000~8191 字节，进程可以进行读写过程不会报错。但是内容在写入前均为 0，另外写入后不会反映在文件中</li>
+<li>对于 8192~14999 字节进程不能对其进行读写，会报 SIGBUS 错误</li>
+<li>对于 15000 以外的字节进程不能对其读写，会引发 SIGSEGV 错误</li>
+</ol>
+<p>情形三：一个文件初始大小为 0，使用 mmap 操作映射了 1000*4K 的大小，即 1000 个物理页大约 4M 字节空间，mmap 返回指针 ptr</p>
+<p>分析：如果在映射建立之初，就对文件进行读写操作，由于文件大小为 0，并没有合法的物理页对应，如同情形二一样会返回 SIGBUS 错误。但是如果每次操作 ptr 读写前先增加文件的大小，那么 ptr 在文件大小内部的操作就是合法的。</p>
+<p>例如文件扩充 4096 字节，ptr 就能操作 <code>ptr ~ [ (char)ptr + 4095]</code> 的空间，只要文件扩充的范围在 1000 个物理页（映射范围）内 ptr 都可以对应操作相同的大小，这样方便随时扩充文件空间，随时写入文件，不造成空间浪费</p>
+<p>总结：</p>
+<ol>
+<li>mmap 映射的内存地址空间肯定是内存页大小的整数倍</li>
+<li>读写 mmap 映射的区域不能超过映射的大小和磁盘文件的大小</li>
+<li>特殊情况：mmap 映射大小不为页大小的整数倍，系统会开辟一块页大小整数倍且满足映射大小的虚存空间，在这块空间内读写文件大小外的地址会返回 0 且不会同步到文件中</li>
+</ol>
+<h1 id="mmap-扩容"><a href="#mmap-扩容" class="headerlink" title="mmap 扩容"></a>mmap 扩容</h1><ol>
+<li>计算扩容后的大小 newSize：每次将文件大小 double 一倍，直到能够放下新增的内容</li>
+<li>上面说过 mmap 映射的最小单位是页，所以调整 newSize 以满足页大小的整数倍</li>
+<li><code>ftruncate</code> 设置文件大小为 newSize 并将新增的扇区填充为 0（键值对是紧凑地一个个排列在一起，通过头部的 size 判断是否是有效的键值对）</li>
+<li><code>munmap</code> 取消映射后进行重新映射，此时 <code>m_ptr</code> 指向上一次系统开辟的地址空间，mmap 时告诉（建议）系统从 <code>m_ptr</code> 指向的地址开始进行映射</li>
+</ol>
+<blockquote>
+<p>If addr is NULL, then the kernel chooses the (page-aligned) address at which to create the mapping; this is the most portable method of creating a new mapping.<br>If addr is not NULL, then the kernel takes it as a hint about where to place the mapping.<br>on Linux, the kernel will pick a nearby page boundary (but always above or equal to the value specified by /proc/sys/vm/mmap_min_addr) and attempt to create the mapping there.<br>If another mapping already exists there, the kernel picks a new address that may or may not depend on the hint.  The address of the new mapping is returned as the result of the call.</p>
+</blockquote>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// since we use append mode, when -[setData: forKey:] many times, space may not be enough</span>
+<span class="hljs-comment">// try a full rewrite to make space</span>
+<span class="hljs-comment">// size 表示 mmap 内存区域需要有至少 size 大小的剩余空间，不是说整个内存区域要调整为 size 大小</span>
+<span class="hljs-comment">// size 一般是新 append 的键值对的大小</span>
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MMKV::ensureMemorySize</span><span class="hljs-params">(<span class="hljs-type">size_t</span> newSize)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-built_in">MMKVWarning</span>(<span class="hljs-string">&quot;[%s] file not valid&quot;</span>, m_mmapID.<span class="hljs-built_in">c_str</span>());
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (newSize &gt;= m_output-&gt;<span class="hljs-built_in">spaceLeft</span>() || (m_crypter ? m_dicCrypt-&gt;<span class="hljs-built_in">empty</span>() : m_dic-&gt;<span class="hljs-built_in">empty</span>())) &#123;
+
+        <span class="hljs-comment">// try a full rewrite to make space</span>
+        <span class="hljs-keyword">auto</span> fileSize = m_file-&gt;<span class="hljs-built_in">getFileSize</span>();
+        <span class="hljs-keyword">auto</span> preparedData = m_crypter ? <span class="hljs-built_in">prepareEncode</span>(*m_dicCrypt) : <span class="hljs-built_in">prepareEncode</span>(*m_dic);
+        <span class="hljs-keyword">auto</span> sizeOfDic = preparedData.second;
+        <span class="hljs-type">size_t</span> lenNeeded = sizeOfDic + Fixed32Size + newSize;
+        <span class="hljs-type">size_t</span> dicCount = m_crypter ? m_dicCrypt-&gt;<span class="hljs-built_in">size</span>() : m_dic-&gt;<span class="hljs-built_in">size</span>();
+        <span class="hljs-type">size_t</span> avgItemSize = lenNeeded / std::<span class="hljs-built_in">max</span>&lt;<span class="hljs-type">size_t</span>&gt;(<span class="hljs-number">1</span>, dicCount);
+        <span class="hljs-type">size_t</span> futureUsage = avgItemSize * std::<span class="hljs-built_in">max</span>&lt;<span class="hljs-type">size_t</span>&gt;(<span class="hljs-number">8</span>, (dicCount + <span class="hljs-number">1</span>) / <span class="hljs-number">2</span>);
+        <span class="hljs-comment">// 1. no space for a full rewrite, double it</span>
+        <span class="hljs-comment">// 2. or space is not large enough for future usage, double it to avoid frequently full rewrite</span>
+        <span class="hljs-keyword">if</span> (lenNeeded &gt;= fileSize || (lenNeeded + futureUsage) &gt;= fileSize) &#123;
+            <span class="hljs-type">size_t</span> oldSize = fileSize;
+            <span class="hljs-keyword">do</span> &#123;
+                fileSize *= <span class="hljs-number">2</span>;
+            &#125; <span class="hljs-keyword">while</span> (lenNeeded + futureUsage &gt;= fileSize);    <span class="hljs-comment">// 计算出新的文件大小，每次 double 文件大小直到放得下新 append 的键值对</span>
+
+            <span class="hljs-comment">// if we can&#x27;t extend size, rollback to old state</span>
+            <span class="hljs-keyword">if</span> (!m_file-&gt;<span class="hljs-built_in">truncate</span>(fileSize)) &#123;                <span class="hljs-comment">// 真正的 mmap 扩容操作</span>
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+            &#125;
+
+            <span class="hljs-comment">// check if we fail to make more space</span>
+            <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isFileValid</span>()) &#123;
+                <span class="hljs-built_in">MMKVWarning</span>(<span class="hljs-string">&quot;[%s] file not valid&quot;</span>, m_mmapID.<span class="hljs-built_in">c_str</span>());
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+            &#125;
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">doFullWriteBack</span>(<span class="hljs-built_in">move</span>(preparedData), <span class="hljs-literal">nullptr</span>);
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MemoryFile::truncate</span><span class="hljs-params">(<span class="hljs-type">size_t</span> size)</span> </span>&#123;    <span class="hljs-comment">// 将 mmap 扩容至 size 大小</span>
+    <span class="hljs-keyword">if</span> (!m_diskFile.<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (size == m_size) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    &#125;
+
+    <span class="hljs-keyword">auto</span> oldSize = m_size;
+    m_size = size;
+    <span class="hljs-comment">// round up to (n * pagesize)</span>
+    <span class="hljs-keyword">if</span> (m_size &lt; DEFAULT_MMAP_SIZE || (m_size % DEFAULT_MMAP_SIZE != <span class="hljs-number">0</span>)) &#123;  <span class="hljs-comment">// 使文件大小刚好是内存页大小的整数倍，这是 mmap 的规定</span>
+        m_size = ((m_size / DEFAULT_MMAP_SIZE) + <span class="hljs-number">1</span>) * DEFAULT_MMAP_SIZE;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (::<span class="hljs-built_in">ftruncate</span>(m_diskFile.m_fd, <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">off_t</span>&gt;(m_size)) != <span class="hljs-number">0</span>) &#123;    <span class="hljs-comment">// 重新设置文件为扩容后的大小</span>
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to truncate [%s] to size %zu, %s&quot;</span>, m_diskFile.m_path.<span class="hljs-built_in">c_str</span>(), m_size, <span class="hljs-built_in">strerror</span>(errno));
+        m_size = oldSize;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (m_size &gt; oldSize) &#123;                                                 <span class="hljs-comment">// 扩容后的空白区域要填充 0，否则 reloadFromFile 时会加载到错误的键值对</span>
+        <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">zeroFillFile</span>(m_diskFile.m_fd, oldSize, m_size - oldSize)) &#123;
+            <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to zeroFile [%s] to size %zu, %s&quot;</span>, m_diskFile.m_path.<span class="hljs-built_in">c_str</span>(), m_size, <span class="hljs-built_in">strerror</span>(errno));
+            m_size = oldSize;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (m_ptr) &#123;                                                             <span class="hljs-comment">// 如果已经 mmap 过了则通过系统调用 munmap 取消映射</span>
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">munmap</span>(m_ptr, oldSize) != <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to munmap [%s], %s&quot;</span>, m_diskFile.m_path.<span class="hljs-built_in">c_str</span>(), <span class="hljs-built_in">strerror</span>(errno));
+        &#125;
+    &#125;
+    <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">mmap</span>();                                                       <span class="hljs-comment">// 重新执行 mmap 映射</span>
+    <span class="hljs-keyword">if</span> (!ret) &#123;
+        <span class="hljs-built_in">doCleanMemoryCache</span>(<span class="hljs-literal">true</span>);
+    &#125;
+    <span class="hljs-keyword">return</span> ret;
+&#125;</code></pre></div>
+
+<h1 id="多进程"><a href="#多进程" class="headerlink" title="多进程"></a>多进程</h1><h2 id="进程锁"><a href="#进程锁" class="headerlink" title="进程锁"></a>进程锁</h2><p>文件锁 <code>int flock(int fd, int operation);</code> 有以下操作：</p>
+<ol>
+<li><code>LOCK_SH</code> 获取共享锁，也叫读锁，同一文件描述符同一时间可以有多个进程持有此锁；Android 平台为 <code>F_RDLCK</code></li>
+<li><code>LOCK_EX</code> 获取排它锁，也叫写锁，同一文件描述符同一时间只能有一个进程持有此锁；Android 平台为 <code>F_WRLCK</code></li>
+<li>一个进程同一时间只能持有一种类型的锁：共享锁 or 排它锁，后续的 flock 调用会将已持有的锁转换为当前请求的锁类型</li>
+<li><code>LOCK_UN</code> 归还当前进程已获得的锁</li>
+<li><code>LOCK_NB</code> 一般情况下 flock 是阻塞的，此参数设置为非阻塞请求</li>
+</ol>
+<p>MMKV 实现的进程锁底层是基于文件锁 <code>flock</code> 的，并用两个计数器 <code>m_sharedLockCount</code> 和 <code>m_exclusiveLockCount</code> 实现重入和读写锁逻辑：</p>
+<ol>
+<li>如果 m_sharedLockCount == m_exclusiveLockCount == 0 说明进程没有获得锁，通过 <code>flock</code> 请求获得锁</li>
+<li>从 <code>flock</code> 取得锁后将对应的 m_sharedLockCount 或 m_exclusiveLockCount 自增</li>
+<li>由于进程已获得锁，后续的加锁操作只需将计数器自增，解锁操作只需将计数器自减直到归零时通过 LOCK_UN 归还底层的文件锁</li>
+<li><code>flock</code> 实现的读写锁的含义跟我们通常理解的读写锁含义不太一样，所以需要用上面两个计数器来实现所需的读写锁逻辑（比如排它锁/写锁实际上可以包含读锁/读操作）</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">class</span> <span class="hljs-title class_">InterProcessLock</span> &#123;    <span class="hljs-comment">// MMKV 使用的进程锁，底层是文件锁</span>
+    FileLock *m_fileLock;
+    LockType m_lockType;
+
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-built_in">InterProcessLock</span>(FileLock *fileLock, LockType lockType)
+        : <span class="hljs-built_in">m_fileLock</span>(fileLock), <span class="hljs-built_in">m_lockType</span>(lockType), <span class="hljs-built_in">m_enable</span>(<span class="hljs-literal">true</span>) &#123;
+        <span class="hljs-built_in">MMKV_ASSERT</span>(m_fileLock);
+    &#125;
+
+    <span class="hljs-type">bool</span> m_enable;
+
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">lock</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">if</span> (m_enable) &#123;
+            m_fileLock-&gt;<span class="hljs-built_in">lock</span>(m_lockType);
+        &#125;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">try_lock</span><span class="hljs-params">(<span class="hljs-type">bool</span> *tryAgain = <span class="hljs-literal">nullptr</span>)</span> </span>&#123;
+        <span class="hljs-keyword">if</span> (m_enable) &#123;
+            <span class="hljs-keyword">return</span> m_fileLock-&gt;<span class="hljs-built_in">try_lock</span>(m_lockType, tryAgain);
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">unlock</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">if</span> (m_enable) &#123;
+            m_fileLock-&gt;<span class="hljs-built_in">unlock</span>(m_lockType);
+        &#125;
+    &#125;
+&#125;;
+
+<span class="hljs-comment">// FileLock 是对文件锁的包装</span>
+FileLock::<span class="hljs-built_in">FileLock</span>(MMKVFileHandle_t fd, <span class="hljs-type">bool</span> isAshmem)    <span class="hljs-comment">// using MMKVFileHandle_t = int;</span>
+    : <span class="hljs-built_in">m_fd</span>(fd), <span class="hljs-built_in">m_sharedLockCount</span>(<span class="hljs-number">0</span>), <span class="hljs-built_in">m_exclusiveLockCount</span>(<span class="hljs-number">0</span>), <span class="hljs-built_in">m_isAshmem</span>(isAshmem) &#123;
+    m_lockInfo.l_type = F_WRLCK;
+    m_lockInfo.l_start = <span class="hljs-number">0</span>;
+    m_lockInfo.l_whence = SEEK_SET;
+    m_lockInfo.l_len = <span class="hljs-number">0</span>;
+    m_lockInfo.l_pid = <span class="hljs-number">0</span>;
+&#125;
+
+<span class="hljs-comment">// 上锁逻辑 = flock + 计数器</span>
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">FileLock::lock</span><span class="hljs-params">(LockType lockType)</span> </span>&#123;
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">doLock</span>(lockType, <span class="hljs-literal">true</span>);
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">FileLock::doLock</span><span class="hljs-params">(LockType lockType, <span class="hljs-type">bool</span> wait, <span class="hljs-type">bool</span> *tryAgain)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isFileLockValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-type">bool</span> unLockFirstIfNeeded = <span class="hljs-literal">false</span>;
+
+    <span class="hljs-keyword">if</span> (lockType == SharedLockType) &#123;
+        <span class="hljs-comment">// don&#x27;t want shared-lock to break any existing locks</span>
+        <span class="hljs-keyword">if</span> (m_sharedLockCount &gt; <span class="hljs-number">0</span> || m_exclusiveLockCount &gt; <span class="hljs-number">0</span>) &#123;
+            m_sharedLockCount++;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        &#125;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-comment">// don&#x27;t want exclusive-lock to break existing exclusive-locks</span>
+        <span class="hljs-keyword">if</span> (m_exclusiveLockCount &gt; <span class="hljs-number">0</span>) &#123;
+            m_exclusiveLockCount++;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        &#125;
+        <span class="hljs-comment">// prevent deadlock</span>
+        <span class="hljs-keyword">if</span> (m_sharedLockCount &gt; <span class="hljs-number">0</span>) &#123;
+            unLockFirstIfNeeded = <span class="hljs-literal">true</span>;
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">platformLock</span>(lockType, wait, unLockFirstIfNeeded, tryAgain);
+    <span class="hljs-keyword">if</span> (ret) &#123;
+        <span class="hljs-keyword">if</span> (lockType == SharedLockType) &#123;
+            m_sharedLockCount++;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            m_exclusiveLockCount++;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> ret;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">FileLock::platformLock</span><span class="hljs-params">(LockType lockType, <span class="hljs-type">bool</span> wait, <span class="hljs-type">bool</span> unLockFirstIfNeeded, <span class="hljs-type">bool</span> *tryAgain)</span> </span>&#123;
+<span class="hljs-meta">#    <span class="hljs-keyword">ifdef</span> MMKV_ANDROID</span>
+    <span class="hljs-keyword">if</span> (m_isAshmem) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">ashmemLock</span>(lockType, wait, unLockFirstIfNeeded, tryAgain);
+    &#125;
+<span class="hljs-meta">#    <span class="hljs-keyword">endif</span></span>
+    <span class="hljs-keyword">auto</span> realLockType = <span class="hljs-built_in">LockType2FlockType</span>(lockType);
+    <span class="hljs-keyword">auto</span> cmd = wait ? realLockType : (realLockType | LOCK_NB);
+    <span class="hljs-keyword">if</span> (unLockFirstIfNeeded) &#123;
+        <span class="hljs-comment">// try lock</span>
+        <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">flock</span>(m_fd, realLockType | LOCK_NB);
+        <span class="hljs-keyword">if</span> (ret == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        &#125;
+        <span class="hljs-comment">// let&#x27;s be gentleman: unlock my shared-lock to prevent deadlock</span>
+        ret = <span class="hljs-built_in">flock</span>(m_fd, LOCK_UN);
+        <span class="hljs-keyword">if</span> (ret != <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to try unlock first fd=%d, ret=%d, error:%s&quot;</span>, m_fd, ret, <span class="hljs-built_in">strerror</span>(errno));
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">flock</span>(m_fd, cmd);
+    <span class="hljs-keyword">if</span> (ret != <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">if</span> (tryAgain) &#123;
+            *tryAgain = (errno == EWOULDBLOCK);
+        &#125;
+        <span class="hljs-keyword">if</span> (wait) &#123;
+            <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to lock fd=%d, ret=%d, error:%s&quot;</span>, m_fd, ret, <span class="hljs-built_in">strerror</span>(errno));
+        &#125;
+        <span class="hljs-comment">// try recover my shared-lock</span>
+        <span class="hljs-keyword">if</span> (unLockFirstIfNeeded) &#123;
+            ret = <span class="hljs-built_in">flock</span>(m_fd, <span class="hljs-built_in">LockType2FlockType</span>(SharedLockType));
+            <span class="hljs-keyword">if</span> (ret != <span class="hljs-number">0</span>) &#123;
+                <span class="hljs-comment">// let&#x27;s hope this never happen</span>
+                <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to recover shared-lock fd=%d, ret=%d, error:%s&quot;</span>, m_fd, ret, <span class="hljs-built_in">strerror</span>(errno));
+            &#125;
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">short</span> <span class="hljs-title">LockType2FlockType</span><span class="hljs-params">(LockType lockType)</span> </span>&#123;
+    <span class="hljs-keyword">switch</span> (lockType) &#123;
+        <span class="hljs-keyword">case</span> SharedLockType:
+            <span class="hljs-keyword">return</span> F_RDLCK;
+        <span class="hljs-keyword">case</span> ExclusiveLockType:
+            <span class="hljs-keyword">return</span> F_WRLCK;
+    &#125;
+&#125;
+
+<span class="hljs-comment">// 解锁逻辑 = flock + 计数器</span>
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">FileLock::unlock</span><span class="hljs-params">(LockType lockType)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isFileLockValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+    <span class="hljs-type">bool</span> unlockToSharedLock = <span class="hljs-literal">false</span>;
+
+    <span class="hljs-keyword">if</span> (lockType == SharedLockType) &#123;
+        <span class="hljs-keyword">if</span> (m_sharedLockCount == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        &#125;
+        <span class="hljs-comment">// don&#x27;t want shared-lock to break any existing locks</span>
+        <span class="hljs-keyword">if</span> (m_sharedLockCount &gt; <span class="hljs-number">1</span> || m_exclusiveLockCount &gt; <span class="hljs-number">0</span>) &#123;
+            m_sharedLockCount--;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        &#125;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">if</span> (m_exclusiveLockCount == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        &#125;
+        <span class="hljs-keyword">if</span> (m_exclusiveLockCount &gt; <span class="hljs-number">1</span>) &#123;
+            m_exclusiveLockCount--;
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        &#125;
+        <span class="hljs-comment">// restore shared-lock when all exclusive-locks are done</span>
+        <span class="hljs-keyword">if</span> (m_sharedLockCount &gt; <span class="hljs-number">0</span>) &#123;
+            unlockToSharedLock = <span class="hljs-literal">true</span>;
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">platformUnLock</span>(unlockToSharedLock);
+    <span class="hljs-keyword">if</span> (ret) &#123;
+        <span class="hljs-keyword">if</span> (lockType == SharedLockType) &#123;
+            m_sharedLockCount--;
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            m_exclusiveLockCount--;
+        &#125;
+    &#125;
+    <span class="hljs-keyword">return</span> ret;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">FileLock::platformUnLock</span><span class="hljs-params">(<span class="hljs-type">bool</span> unlockToSharedLock)</span> </span>&#123;
+<span class="hljs-meta">#    <span class="hljs-keyword">ifdef</span> MMKV_ANDROID</span>
+    <span class="hljs-keyword">if</span> (m_isAshmem) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">ashmemUnLock</span>(unlockToSharedLock);
+    &#125;
+<span class="hljs-meta">#    <span class="hljs-keyword">endif</span></span>
+    <span class="hljs-type">int</span> cmd = unlockToSharedLock ? LOCK_SH : LOCK_UN;
+    <span class="hljs-keyword">auto</span> ret = <span class="hljs-built_in">flock</span>(m_fd, cmd);
+    <span class="hljs-keyword">if</span> (ret != <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-built_in">MMKVError</span>(<span class="hljs-string">&quot;fail to unlock fd=%d, ret=%d, error:%s&quot;</span>, m_fd, ret, <span class="hljs-built_in">strerror</span>(errno));
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    &#125;
+&#125;</code></pre></div>
+
+<h2 id="meta-元信息"><a href="#meta-元信息" class="headerlink" title="meta - 元信息"></a>meta - 元信息</h2><p>除了保存键值对的数据文件（二进制的磁盘文件，mmap 映射进内存）和用以索引的词典（存在于进程内存空间内的数据结构 <code>std::unordered_map</code>），还有一些信息需要存储和进程间共享，这些信息以 <code>MMKVMetaInfo</code> 的内存结构排列如下</p>
+<p>MMKVMetaInfo 是一个磁盘文件，与键值对数据文件处于同一目录且同名，但是以 <code>.crc</code> 结尾；元信息文件被 mmap 进内存后进行读写，<a href="#%E5%AE%9E%E7%8E%B0%E5%A4%9A%E8%BF%9B%E7%A8%8B">下个章节</a> 会讲到 mmap 本身支持多进程，所以每个进程对元信息文件的修改都会被其他进程感知到</p>
+<p><code>m_crcDigest</code> 是一个很重要的字段，它代表所有键值对数据的循环校验码，每当有修改操作发生时就会更新 size 和 crc 并将这两个字段的更新写入 mmap 映射区域，这样其他进程就知道数据发生了改变（进程间通讯的一个例子）</p>
+<p>如果修改删除操作是在原来的位置操作，那么每次操作后都需要全量计算 crc，使得修改操作效率低下，好在章节 <a href="#update---%E4%BF%AE%E6%94%B9%E7%9A%84%E6%83%85%E5%86%B5">Update - 修改的情况</a> 说过实际上所有的修改删除操作都是以 append 一个相同 key 的键值对来实现的，这样计算 crc 时就只需做增量计算而不用全量计算</p>
+<p>多个进程同时读写一个 mmap 映射区域，需要用锁进行同步，这里用到了 <a href="#%E8%BF%9B%E7%A8%8B%E9%94%81">进程锁</a> 里介绍的基于文件锁（meta file fd）的进程锁实现，<a href="#%E5%AE%9E%E7%8E%B0%E5%A4%9A%E8%BF%9B%E7%A8%8B">下一章节</a> 有更详细地介绍这个锁的使用</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">MMKVMetaInfo</span> &#123;
+    <span class="hljs-type">uint32_t</span> m_crcDigest = <span class="hljs-number">0</span>;    <span class="hljs-comment">// 所有键值对的循环校验码，如果不一致说明有修改操作</span>
+    <span class="hljs-type">uint32_t</span> m_version = MMKVVersionSequence;
+    <span class="hljs-type">uint32_t</span> m_sequence = <span class="hljs-number">0</span>;
+    <span class="hljs-type">uint8_t</span> m_vector[AES_KEY_LEN] = &#123;&#125;;
+    <span class="hljs-type">uint32_t</span> m_actualSize = <span class="hljs-number">0</span>;
+
+    <span class="hljs-comment">// confirmed info: it&#x27;s been synced to file</span>
+    <span class="hljs-keyword">struct</span> &#123;
+        <span class="hljs-type">uint32_t</span> lastActualSize = <span class="hljs-number">0</span>;
+        <span class="hljs-type">uint32_t</span> lastCRCDigest = <span class="hljs-number">0</span>;
+        <span class="hljs-type">uint32_t</span> _reserved[<span class="hljs-number">16</span>] = &#123;&#125;;
+    &#125; m_lastConfirmedMetaInfo;
+
+    <span class="hljs-comment">// meta file 被 mmap 进物理内存以供多进程读写</span>
+    <span class="hljs-comment">// 下面是读写 mmap 映射区域的方法</span>
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">write</span><span class="hljs-params">(<span class="hljs-type">void</span> *ptr)</span> <span class="hljs-type">const</span> </span>&#123;
+        <span class="hljs-built_in">MMKV_ASSERT</span>(ptr);
+        <span class="hljs-built_in">memcpy</span>(ptr, <span class="hljs-keyword">this</span>, <span class="hljs-built_in">sizeof</span>(MMKVMetaInfo));
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">writeCRCAndActualSizeOnly</span><span class="hljs-params">(<span class="hljs-type">void</span> *ptr)</span> <span class="hljs-type">const</span> </span>&#123;
+        <span class="hljs-built_in">MMKV_ASSERT</span>(ptr);
+        <span class="hljs-keyword">auto</span> other = (MMKVMetaInfo *) ptr;
+        other-&gt;m_crcDigest = m_crcDigest;
+        other-&gt;m_actualSize = m_actualSize;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">read</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">void</span> *ptr)</span> </span>&#123;
+        <span class="hljs-built_in">MMKV_ASSERT</span>(ptr);
+        <span class="hljs-built_in">memcpy</span>(<span class="hljs-keyword">this</span>, ptr, <span class="hljs-built_in">sizeof</span>(MMKVMetaInfo));
+    &#125;
+&#125;;
+
+<span class="hljs-comment">// 每当有修改操作时（CURD 都是新增键值对），就会更新循环校验码</span>
+<span class="hljs-function">KVHolderRet_t</span>
+<span class="hljs-function"><span class="hljs-title">MMKV::doAppendDataWithKey</span><span class="hljs-params">(<span class="hljs-type">const</span> MMBuffer &amp;data, <span class="hljs-type">const</span> MMBuffer &amp;keyData, <span class="hljs-type">bool</span> isDataHolder, <span class="hljs-type">uint32_t</span> originKeyLength)</span> </span>&#123;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_exclusiveProcessLock);    <span class="hljs-comment">// 进程间的排它锁/写锁</span>
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">auto</span> ptr = (<span class="hljs-type">uint8_t</span> *) m_file-&gt;<span class="hljs-built_in">getMemory</span>() + Fixed32Size + m_actualSize;
+    m_actualSize += size;
+    <span class="hljs-built_in">updateCRCDigest</span>(ptr, size);    <span class="hljs-comment">// [ptr, ptr + size] 是新增键值对所在的内存地址区间</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">make_pair</span>(<span class="hljs-literal">true</span>, <span class="hljs-built_in">KeyValueHolder</span>(originKeyLength, valueLength, offset));
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">MMKV::updateCRCDigest</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">uint8_t</span> *ptr, <span class="hljs-type">size_t</span> length)</span> </span>&#123;
+    <span class="hljs-keyword">if</span> (ptr == <span class="hljs-literal">nullptr</span>) &#123;
+        <span class="hljs-keyword">return</span>;
+    &#125;
+    m_crcDigest = (<span class="hljs-type">uint32_t</span>) <span class="hljs-built_in">CRC32</span>(m_crcDigest, ptr, (<span class="hljs-type">uint32_t</span>) length);    <span class="hljs-comment">// 利用 ZLIB 计算 CRC</span>
+    <span class="hljs-built_in">writeActualSize</span>(m_actualSize, m_crcDigest, <span class="hljs-literal">nullptr</span>, KeepSequence);      <span class="hljs-comment">// 更新 size 和 crc（m_actualSize 是所有键值对的总大小）</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">MMKV::writeActualSize</span><span class="hljs-params">(<span class="hljs-type">size_t</span> size, <span class="hljs-type">uint32_t</span> crcDigest, <span class="hljs-type">const</span> <span class="hljs-type">void</span> *iv, <span class="hljs-type">bool</span> increaseSequence)</span> </span>&#123;
+    <span class="hljs-comment">// backward compatibility</span>
+    <span class="hljs-built_in">oldStyleWriteActualSize</span>(size);
+
+    <span class="hljs-keyword">if</span> (!m_metaFile-&gt;<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+
+    <span class="hljs-type">bool</span> needsFullWrite = <span class="hljs-literal">false</span>;
+    m_actualSize = size;
+    m_metaInfo-&gt;m_actualSize = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(size);  <span class="hljs-comment">// 更新 size 和 crc</span>
+    m_crcDigest = crcDigest;
+    m_metaInfo-&gt;m_crcDigest = crcDigest;
+    <span class="hljs-keyword">if</span> (m_metaInfo-&gt;m_version &lt; MMKVVersionSequence) &#123;
+        m_metaInfo-&gt;m_version = MMKVVersionSequence;
+        needsFullWrite = <span class="hljs-literal">true</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">unlikely</span>(increaseSequence)) &#123;
+        m_metaInfo-&gt;m_sequence++;
+        m_metaInfo-&gt;m_lastConfirmedMetaInfo.lastActualSize = <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">uint32_t</span>&gt;(size);
+        m_metaInfo-&gt;m_lastConfirmedMetaInfo.lastCRCDigest = crcDigest;
+        <span class="hljs-keyword">if</span> (m_metaInfo-&gt;m_version &lt; MMKVVersionActualSize) &#123;
+            m_metaInfo-&gt;m_version = MMKVVersionActualSize;
+        &#125;
+        needsFullWrite = <span class="hljs-literal">true</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">unlikely</span>(needsFullWrite)) &#123;
+        m_metaInfo-&gt;<span class="hljs-built_in">write</span>(m_metaFile-&gt;<span class="hljs-built_in">getMemory</span>());
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-comment">// 将 size 和 crc 更新至 meta file mmap 映射区域</span>
+        <span class="hljs-comment">// mmap 本身是支持多进程的，那么其他进程就能感知到 crc 变了</span>
+        m_metaInfo-&gt;<span class="hljs-built_in">writeCRCAndActualSizeOnly</span>(m_metaFile-&gt;<span class="hljs-built_in">getMemory</span>());
+    &#125;
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+&#125;</code></pre></div>
+
+<h2 id="实现多进程"><a href="#实现多进程" class="headerlink" title="实现多进程"></a>实现多进程</h2><p>mmap 自身是支持多进程的，<code>void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);</code> 里 <code>flags</code> 有个标志位 <code>MAP_SHARED</code>：</p>
+<ol>
+<li><p>正如 <a href="#mmap">mmap 章节</a> 所说，读写进程虚存里的映射区域 -&gt; 发生缺页，分配并关联一片物理页，从对应的磁盘地址里读取内容至这篇物理页 -&gt; 返回 or 修改物理页的内容</p>
+</li>
+<li><p>所有读写相同映射区间的进程，实际上都关联了相同的物理页，也即它们都在读写相同的物理内存地址，故一个进程对映射区域的修改能够被其他进程的读操作感知到</p>
+</li>
+<li><p>对于以文件作为 backed 的 mmap，所有修改还会同步至文件</p>
+</li>
+</ol>
+<blockquote>
+<p>MAP_SHARED<br>Share this mapping.  Updates to the mapping are visible to other processes mapping the same region, and (in the case of file-backed mappings) are carried through to the underlying file. (To precisely control when updates are carried through to the underlying file requires the use of msync(2).)</p>
+</blockquote>
+<p>也就说如果有进程修改了键值对 mmap 映射区域，的确所有进程都能读到最新的数据，但 MMKV 是通过进程内的数据结构 <code>std::unordered_map</code> 作为索引来搜索键值对的，这个 map 并不会在进程间同步，导致搜索出来的总是旧值</p>
+<p>于是需要 <a href="#meta---%E5%85%83%E4%BF%A1%E6%81%AF">meta - 元信息</a>，它是与键值对数据文件同目录的、以 <code>.crc</code> 结尾的文件，并 mmap 映射进内存；每当 CURD 操作完成时更新它的 crc 字段，每当 CURD 操作前通过 <code>checkLoadData</code> 检查此文件的 crc 是否与进程内的 crc 一致，不一致说明有修改操作发生，需要重新构建索引</p>
+<p>与此同时，在多进程模式下启用读锁 <code>m_sharedProcessLock</code> 和写锁 <code>m_exclusiveProcessLock</code>，所有的 CURD 操作都用 <a href="#%E8%BF%9B%E7%A8%8B%E9%94%81">进程锁</a> 上锁保证读写操作的同步（也可以认为是一种进程间通讯的方式）</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-type">static</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> SINGLE_PROCESS_MODE = <span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">0</span>;  <span class="hljs-comment">// 单进程模式</span>
+
+<span class="hljs-type">static</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> MULTI_PROCESS_MODE = <span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">1</span>;   <span class="hljs-comment">// 多进程模式</span>
+
+<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-type">static</span> MMKV <span class="hljs-title">mmkvWithID</span><span class="hljs-params">(String mmapID, <span class="hljs-type">int</span> mode, @Nullable String cryptKey, String rootPath)</span></span>
+<span class="hljs-function"></span>
+<span class="hljs-function"><span class="hljs-keyword">private</span> native <span class="hljs-type">static</span> <span class="hljs-type">long</span> <span class="hljs-title">getMMKVWithID</span><span class="hljs-params">(String mmapID, <span class="hljs-type">int</span> mode, @Nullable String cryptKey, @Nullable String rootPath)</span></span>;
+
+<span class="hljs-function">MMKV_JNI jlong <span class="hljs-title">getMMKVWithID</span><span class="hljs-params">(JNIEnv *env, jobject, jstring mmapID, jint mode, jstring cryptKey, jstring rootPath)</span></span>
+<span class="hljs-function"></span>
+<span class="hljs-function">MMKV *<span class="hljs-title">MMKV::mmkvWithID</span><span class="hljs-params">(<span class="hljs-type">const</span> string &amp;mmapID, <span class="hljs-type">int</span> size, MMKVMode mode, string *cryptKey, string *rootPath)</span></span>
+<span class="hljs-function"></span>
+<span class="hljs-function"><span class="hljs-title">MMKV::MMKV</span><span class="hljs-params">(<span class="hljs-type">const</span> string &amp;mmapID, <span class="hljs-type">int</span> size, MMKVMode mode, string *cryptKey, string *rootPath)</span></span>
+<span class="hljs-function">    <span class="hljs-comment">// ...</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_metaFile</span><span class="hljs-params">(<span class="hljs-keyword">new</span> MemoryFile(m_crcPath, DEFAULT_MMAP_SIZE, m_file-&gt;m_fileType))</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_metaInfo</span><span class="hljs-params">(<span class="hljs-keyword">new</span> MMKVMetaInfo())</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_crypter</span><span class="hljs-params">(<span class="hljs-literal">nullptr</span>)</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_lock</span><span class="hljs-params">(<span class="hljs-keyword">new</span> ThreadLock())</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_fileLock</span><span class="hljs-params">(<span class="hljs-keyword">new</span> FileLock(m_metaFile-&gt;getFd(), (mode &amp; MMKV_ASHMEM)))</span>                               <span class="hljs-comment">// 对 meta file 上文件锁</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_sharedProcessLock</span><span class="hljs-params">(<span class="hljs-keyword">new</span> InterProcessLock(m_fileLock, SharedLockType))</span>                             <span class="hljs-comment">// 上面介绍过这是基于文件锁的进程锁</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_exclusiveProcessLock</span><span class="hljs-params">(<span class="hljs-keyword">new</span> InterProcessLock(m_fileLock, ExclusiveLockType))</span>                       <span class="hljs-comment">// 用以在多进程模式下同步 meta file 的读写操作</span></span>
+<span class="hljs-function">    , <span class="hljs-title">m_isInterProcess</span><span class="hljs-params">((mode &amp; MMKV_MULTI_PROCESS) != <span class="hljs-number">0</span> || (mode &amp; CONTEXT_MODE_MULTI_PROCESS) != <span class="hljs-number">0</span>)</span> </span>&#123;  <span class="hljs-comment">// 多进程模式下置真</span>
+    m_actualSize = <span class="hljs-number">0</span>;
+    m_output = <span class="hljs-literal">nullptr</span>;
+
+    <span class="hljs-comment">// force use fcntl(), otherwise will conflict with MemoryFile::reloadFromFile()</span>
+    m_fileModeLock = <span class="hljs-keyword">new</span> <span class="hljs-built_in">FileLock</span>(m_file-&gt;<span class="hljs-built_in">getFd</span>(), <span class="hljs-literal">true</span>);
+    m_sharedProcessModeLock = <span class="hljs-keyword">new</span> <span class="hljs-built_in">InterProcessLock</span>(m_fileModeLock, SharedLockType);
+    m_exclusiveProcessModeLock = <span class="hljs-literal">nullptr</span>;
+    m_dic = <span class="hljs-keyword">new</span> <span class="hljs-built_in">MMKVMap</span>();
+
+    m_needLoadFromFile = <span class="hljs-literal">true</span>;
+    m_hasFullWriteback = <span class="hljs-literal">false</span>;
+
+    m_crcDigest = <span class="hljs-number">0</span>;
+
+    m_sharedProcessLock-&gt;m_enable = m_isInterProcess;    <span class="hljs-comment">// 多进程模式下才启用读锁和写锁（meta file）</span>
+    m_exclusiveProcessLock-&gt;m_enable = m_isInterProcess;
+
+    <span class="hljs-comment">// sensitive zone</span>
+    &#123;
+        <span class="hljs-built_in">SCOPED_LOCK</span>(m_sharedProcessLock);
+        <span class="hljs-built_in">loadFromFile</span>();
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">MMKV::checkLoadData</span><span class="hljs-params">()</span> </span>&#123;     <span class="hljs-comment">// 所有 CURD 操作前都会检查 crc 是否有改变（CURD 操作后也会更新 crc）</span>
+    <span class="hljs-keyword">if</span> (m_needLoadFromFile) &#123;    <span class="hljs-comment">// 一般情况下为 false，特殊情况比如 clearMemoryCache 时才置真</span>
+        <span class="hljs-built_in">SCOPED_LOCK</span>(m_sharedProcessLock);
+
+        m_needLoadFromFile = <span class="hljs-literal">false</span>;
+        <span class="hljs-built_in">loadFromFile</span>();
+        <span class="hljs-keyword">return</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (!m_isInterProcess) &#123;    <span class="hljs-comment">// 多进程模式下置真</span>
+        <span class="hljs-keyword">return</span>;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (!m_metaFile-&gt;<span class="hljs-built_in">isFileValid</span>()) &#123;
+        <span class="hljs-keyword">return</span>;
+    &#125;
+
+    <span class="hljs-built_in">SCOPED_LOCK</span>(m_sharedProcessLock);    <span class="hljs-comment">// 获得读锁，读取 meta file</span>
+    MMKVMetaInfo metaInfo;
+    metaInfo.<span class="hljs-built_in">read</span>(m_metaFile-&gt;<span class="hljs-built_in">getMemory</span>());
+
+    <span class="hljs-keyword">if</span> (m_metaInfo-&gt;m_sequence != metaInfo.m_sequence) &#123;
+        <span class="hljs-built_in">MMKVInfo</span>(<span class="hljs-string">&quot;[%s] oldSeq %u, newSeq %u&quot;</span>, m_mmapID.<span class="hljs-built_in">c_str</span>(), m_metaInfo-&gt;m_sequence, metaInfo.m_sequence);
+        <span class="hljs-built_in">SCOPED_LOCK</span>(m_sharedProcessLock);
+        <span class="hljs-built_in">clearMemoryCache</span>();
+        <span class="hljs-built_in">loadFromFile</span>();
+        <span class="hljs-built_in">notifyContentChanged</span>();
+
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (m_metaInfo-&gt;m_crcDigest != metaInfo.m_crcDigest) &#123;  <span class="hljs-comment">// CURD 操作导致 crc 不一致</span>
+        <span class="hljs-built_in">MMKVDebug</span>(<span class="hljs-string">&quot;[%s] oldCrc %u, newCrc %u, new actualSize %u&quot;</span>, m_mmapID.<span class="hljs-built_in">c_str</span>(), m_metaInfo-&gt;m_crcDigest,
+                  metaInfo.m_crcDigest, metaInfo.m_actualSize);
+        <span class="hljs-built_in">SCOPED_LOCK</span>(m_sharedProcessLock);
+
+        <span class="hljs-type">size_t</span> fileSize = m_file-&gt;<span class="hljs-built_in">getActualFileSize</span>();  <span class="hljs-comment">// 如果文件大小不一致说明有扩容（或者 crc 校验不通过导致文件被清空）</span>
+        <span class="hljs-keyword">if</span> (m_file-&gt;<span class="hljs-built_in">getFileSize</span>() != fileSize) &#123;        <span class="hljs-comment">// 此时需要重新 mmap 并重新构建索引</span>
+            <span class="hljs-built_in">MMKVInfo</span>(<span class="hljs-string">&quot;file size has changed [%s] from %zu to %zu&quot;</span>, m_mmapID.<span class="hljs-built_in">c_str</span>(), m_file-&gt;<span class="hljs-built_in">getFileSize</span>(), fileSize);
+            <span class="hljs-built_in">clearMemoryCache</span>();
+            <span class="hljs-built_in">loadFromFile</span>();
+
+        &#125; <span class="hljs-keyword">else</span> &#123;                                        <span class="hljs-comment">// 大小不变，因为所有修改操作都是通过 append 相同 key 值的键值对实现的</span>
+            <span class="hljs-built_in">partialLoadFromFile</span>();                      <span class="hljs-comment">// 这里只需要解析新加的键值对即可</span>
+        &#125;
+        <span class="hljs-built_in">notifyContentChanged</span>();
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/huxiao-tee/p/4660352.html">认真分析 mmap：是什么 为什么 怎么用 - Alan Hu - 博客园</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://developers.google.com/protocol-buffers/docs/encoding#varints">Protocol Buffers - Base 128 Varints</a></p>
+</li>
+</ol>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/mmap/">#mmap</a>
+      
+        <a href="/tags/SharedPreferences/">#SharedPreferences</a>
+      
+        <a href="/tags/SP/">#SP</a>
+      
+        <a href="/tags/MMKV/">#MMKV</a>
+      
+        <a href="/tags/Jetpack-DataStore/">#Jetpack-DataStore</a>
+      
+    </div>
+  
+</div>
+
+
+              
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/05/16/sharedpreferences/" title="深入 SharedPreferences：架构、缺点和优化">
+                        <span class="hidden-mobile">深入 SharedPreferences：架构、缺点和优化</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

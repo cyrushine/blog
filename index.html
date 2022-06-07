@@ -204,6 +204,54 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2022/06/01/mmkv/" target="_self">
+          MMKV - 高效的本地 Key-Value 存储
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/06/01/mmkv/" target="_self">
+        <div>
+          mmapmmap 在进程的虚拟地址空间开辟一块区域，这块区域映射文件在磁盘上的物理地址，是将内存地址空间映射到磁盘地址空间的一种方法 读&#x2F;写操作访问虚拟地址空间这一段映射地址，通过查询页表发现这一段地址并不在物理页面上（因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中），因此引发缺页异常，内核发起请求调页过程。调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-06-01 04:00" pubdate>
+              2022-06-01
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mmap/">#mmap</a>
+            
+              <a href="/tags/SharedPreferences/">#SharedPreferences</a>
+            
+              <a href="/tags/SP/">#SP</a>
+            
+              <a href="/tags/MMKV/">#MMKV</a>
+            
+              <a href="/tags/Jetpack-DataStore/">#Jetpack-DataStore</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2022/05/16/sharedpreferences/" target="_self">
           深入 SharedPreferences：架构、缺点和优化
         </a>
@@ -617,46 +665,6 @@
               <a href="/tags/%E5%AD%97%E8%8A%82/">#字节</a>
             
               <a href="/tags/%E5%A4%B4%E6%9D%A1/">#头条</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/02/14/anr-bigpicture/" target="_self">
-          ANR 设计思路：埋雷和除雷
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/14/anr-bigpicture/" target="_self">
-        <div>
-          埋雷 和 除雷 是 Android 设计 ANR 时的一个重要思路，ANR 的实质是超时，那么只需要在执行前埋下延迟爆炸的雷，如果在规定时间内执行完毕则把雷移除，否则到点雷爆炸抛出 ANR 下面以 startService 为例：  startService 时记录下当前时间，并埋下延时任务 sendMessageDelayed bindService 表示启动完毕，移除上面埋下的雷 SERVIC
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-02-14 04:00" pubdate>
-              2022-02-14
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/ANR/">#ANR</a>
             
           </div>
         
