@@ -1,13 +1,11 @@
 ---
-title: 
+title: 深入 Binder 之 AIDL
 date: 2022-06-08 12:00:00 +0800
 ---
 
-# 从 AIDL 说起
+应用层从 [AIDL](https://developer.android.com/guide/components/aidl) 说起，AIDL 全称 `Android Interface Definition Language`，是一个用以描述/定义 `接口` 的文本文件，有着与 java 类似的简单语法
 
-[AIDL](https://developer.android.com/guide/components/aidl) 全称 `Android Interface Definition Language`，是一个用以描述/定义 `接口` 的文本文件，有着与 java 类似的简单语法
-
-下面是一个非常简单的 AIDL 文件，位于 `{projectPath}/app/src/main/aidl/work/dalvik/binder/example/IAidlExampleInterface.aidl`，定义了一个返回所在进程 ID 的方法：`getPid()`
+下面是一个非常简单的 AIDL 文件，位于 `{projectPath}/app/src/main/aidl/work/dalvik/binder/example/IAidlExampleInterface.aidl`，一般不与 java/kotlin 代码同目录，它定义了一个返回所在进程 ID 的方法：`getPid()`
 
 ```java
 // IAidlExampleInterface.aidl
@@ -100,8 +98,6 @@ bindService(Intent(this, ChildService::class.java), conn, Context.BIND_AUTO_CREA
 // my pid: 13070, service pid: 13122, class work.dalvik.binder.example.IAidlExampleInterface$Stub$Proxy, class android.os.BinderProxy
 ```
 
-## asInterface()
-
 服务端的接口实现是继承自 Stub 的，`queryLocalInterface()` 和 `asInterface()` 返回的都是自己，所以同进程的情况下客户端拿到的 IBinder 和 asInterface() 返回的都是服务端对象
 
 不同进程的情况下客户端拿到的 IBinder 是 BinderProxy，`BinderProxy.queryLocalInterface` 直接返回 null 导致 asInterface 返回 Proxy 实例，Proxy 实例把接口调用代理给 BinderProxy 实例，最终接口调用在 BinderProxy.transactNative() 进入 native 层
@@ -118,6 +114,21 @@ public static work.dalvik.binder.example.IAidlExampleInterface asInterface(andro
   return new work.dalvik.binder.example.IAidlExampleInterface.Stub.Proxy(obj);             // 不同进程
 }
 
+public class Binder implements IBinder {
+    public @Nullable IInterface queryLocalInterface(@NonNull String descriptor) {
+        if (mDescriptor != null && mDescriptor.equals(descriptor)) {
+            return mOwner;
+        }
+        return null;
+    }
+
+    public void attachInterface(@Nullable IInterface owner, @Nullable String descriptor) {
+        mOwner = owner;
+        mDescriptor = descriptor;
+    }            
+}
+
+// 服务端继承自 Stub 并将 mOwner 指向自己，将 mDescriptor 指向常量 DESCRIPTOR（接口的全限定名称）
 public static abstract class Stub extends android.os.Binder implements work.dalvik.binder.example.IAidlExampleInterface {
   private static final java.lang.String DESCRIPTOR = "work.dalvik.binder.example.IAidlExampleInterface";
 
@@ -127,20 +138,7 @@ public static abstract class Stub extends android.os.Binder implements work.dalv
   }
 }
 
-public class Binder implements IBinder {
-    public void attachInterface(@Nullable IInterface owner, @Nullable String descriptor) {
-        mOwner = owner;
-        mDescriptor = descriptor;
-    }
-
-    public @Nullable IInterface queryLocalInterface(@NonNull String descriptor) {
-        if (mDescriptor != null && mDescriptor.equals(descriptor)) {
-            return mOwner;
-        }
-        return null;
-    }        
-}
-
+// BinderProxy 主要是将方法调用转换为 transact 调用，类似于 RPC 的概念
 public final class BinderProxy implements IBinder {
     public IInterface queryLocalInterface(String descriptor) {
         return null;
@@ -157,6 +155,7 @@ public final class BinderProxy implements IBinder {
     public native boolean transactNative(int code, Parcel data, Parcel reply, int flags) throws RemoteException;     
 }
 
+// Proxy 如它的名称一样就是个代理模式，将所有方法调用代理至 remote
 private static class Proxy implements work.dalvik.binder.example.IAidlExampleInterface
 {
   private android.os.IBinder mRemote;
