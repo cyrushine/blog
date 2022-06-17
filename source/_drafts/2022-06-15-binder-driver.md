@@ -163,7 +163,14 @@ const struct file_operations binder_fops = {
 
 # binder_open
 
+创建 binder_proc 对象，并把当前进程等信息保存到 binder_proc，该对象管理 IPC 所需要的各种信息并拥有其他结构体的根结构体
+
+把 binder_proc 对象保存到文件指针中（`filp->private_data`）
+
+把 binder_proc 加入到全局链表 binder_procs
+
 ```cpp
+// https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/drivers/android/binder.c
 static int binder_open(struct inode *nodp, struct file *filp)
 {
 	struct binder_proc *proc, *itr;
@@ -191,7 +198,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 		proc->default_priority.prio = NICE_TO_PRIO(0);
 	}
 	/* binderfs stashes devices in i_private */
-	if (is_binderfs_device(nodp)) {
+	if (is_binderfs_device(nodp)) {           // binderfs 一般为 false
 		binder_dev = nodp->i_private;
 		info = nodp->i_sb->s_fs_info;
 		binder_binderfs_dir_entry_proc = info->proc_log_dir;
@@ -206,7 +213,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	proc->pid = current->group_leader->pid;
 	INIT_LIST_HEAD(&proc->delivered_death);
 	INIT_LIST_HEAD(&proc->waiting_threads);
-	filp->private_data = proc;
+	filp->private_data = proc;                // 把 binder_proc 对象保存到文件指针中
 	mutex_lock(&binder_procs_lock);
 	hlist_for_each_entry(itr, &binder_procs, proc_node) {
 		if (itr->pid == proc->pid) {
@@ -254,3 +261,101 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	return 0;
 }
 ```
+
+# binder_mmap
+
+> Name  
+> kcalloc — allocate memory for an array. The memory is set to zero.
+> 
+> Synopsis  
+> void* kcalloc (size_t n, size_t size, gfp_t flags);
+>  
+> Arguments  
+> size_t n - number of elements.  
+> size_t size - element size.  
+> gfp_t flags - the type of memory to allocate (see kmalloc).  
+
+`struct vm_area_struct` 描述的是一段连续的、具有相同访问属性的虚存空间，该虚存空间的大小为物理内存页面的整数倍；成员 `vm_start` 和 `vm_end` 表示该虚存空间的首地址和末地址后第一个字节的地址，以字节为单位，所以虚存空间范围可以用 `[vm_start, vm_end)` 表示
+
+```cpp
+// https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/drivers/android/binder.c
+static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	struct binder_proc *proc = filp->private_data;  // 用户进程信息是在 binder_open 里获取的
+	//...
+	return binder_alloc_mmap_handler(&proc->alloc, vma);
+}
+
+// https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/drivers/android/binder_alloc.c
+
+/**
+ * binder_alloc_mmap_handler() - map virtual address space for proc
+ * @alloc:	alloc structure for this proc
+ * @vma:	vma passed to mmap()
+ *
+ * Called by binder_mmap() to initialize the space specified in
+ * vma for allocating binder buffers
+ *
+ * Return:
+ *      0 = success
+ *      -EBUSY = address space already mapped
+ *      -ENOMEM = failed to map memory to given address space
+ */
+int binder_alloc_mmap_handler(struct binder_alloc *alloc, struct vm_area_struct *vma)
+{
+	int ret;
+	const char *failure_string;
+	struct binder_buffer *buffer;
+	mutex_lock(&binder_alloc_mmap_lock);
+	if (alloc->buffer_size) {
+		ret = -EBUSY;
+		failure_string = "already mapped";
+		goto err_already_mapped;
+	}
+	
+	alloc->buffer_size = min_t(unsigned long, vma->vm_end - vma->vm_start, SZ_4M);
+	mutex_unlock(&binder_alloc_mmap_lock);
+	alloc->buffer = (void __user *)vma->vm_start;
+	alloc->pages = kcalloc(alloc->buffer_size / PAGE_SIZE,
+			       sizeof(alloc->pages[0]),
+			       GFP_KERNEL);
+	if (alloc->pages == NULL) {
+		ret = -ENOMEM;
+		failure_string = "alloc page array";
+		goto err_alloc_pages_failed;
+	}
+	buffer = kzalloc(sizeof(*buffer), GFP_KERNEL);
+	if (!buffer) {
+		ret = -ENOMEM;
+		failure_string = "alloc buffer struct";
+		goto err_alloc_buf_struct_failed;
+	}
+	buffer->user_data = alloc->buffer;
+	list_add(&buffer->entry, &alloc->buffers);
+	buffer->free = 1;
+	binder_insert_free_buffer(alloc, buffer);
+	alloc->free_async_space = alloc->buffer_size / 2;
+	binder_alloc_set_vma(alloc, vma);
+	mmgrab(alloc->vma_vm_mm);
+	return 0;
+
+err_alloc_buf_struct_failed:
+	kfree(alloc->pages);
+	alloc->pages = NULL;
+err_alloc_pages_failed:
+	alloc->buffer = NULL;
+	mutex_lock(&binder_alloc_mmap_lock);
+	alloc->buffer_size = 0;
+err_already_mapped:
+	mutex_unlock(&binder_alloc_mmap_lock);
+	binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
+			   "%s: %d %lx-%lx %s failed %d\n", __func__,
+			   alloc->pid, vma->vm_start, vma->vm_end,
+			   failure_string, ret);
+	return ret;
+}
+```
+
+# 参考
+
+1. [深入理解 Binder 机制 5 - binder 驱动分析](https://skytoby.github.io/2020/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Binder%E6%9C%BA%E5%88%B65-binder%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/)
