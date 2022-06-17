@@ -103,4 +103,154 @@ Client 进程通过 RPC(Remote Procedure Call Protocol) 与 Server 通信的过�
 
 ![binderdriver_frame.png](../../../../2022-06-13-binder-driver/binderdriver_frame.png)
 
+# 注册 Binder Driver
 
+> Name  
+> misc_register — register a miscellaneous device  
+> 
+> Synopsis  
+> int misc_register (struct miscdevice *misc);
+>  
+> Arguments  
+> struct miscdevice *misc  
+> device structure
+> 
+> Description  
+> Register a miscellaneous device with the kernel. If the minor number is set to MISC_DYNAMIC_MINOR a minor number is assigned and placed in the minor field of the structure. For other > cases the minor number requested is used.  
+> 
+> The structure passed is linked into the kernel and may not be destroyed until it has been unregistered. By default, an open syscall to the device sets file->private_data to point to > the structure. Drivers don't need open in fops for this.  
+> 
+> A zero is returned on success and a negative errno code for failure.
+
+```cpp
+// https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/drivers/android/binder.c
+static int __init binder_init(void) {...}
+
+static int __init init_binder_device(const char *name)
+{
+	int ret;
+	struct binder_device *binder_device;
+	binder_device = kzalloc(sizeof(*binder_device), GFP_KERNEL);
+	if (!binder_device)
+		return -ENOMEM;
+	binder_device->miscdev.fops = &binder_fops;         // 系统调用与驱动内方法的映射
+	binder_device->miscdev.minor = MISC_DYNAMIC_MINOR;  // 让系统分配次设备号
+	binder_device->miscdev.name = name;                 
+	refcount_set(&binder_device->ref, 1);
+	binder_device->context.binder_context_mgr_uid = INVALID_UID;
+	binder_device->context.name = name;
+	mutex_init(&binder_device->context.context_mgr_node_lock);
+	ret = misc_register(&binder_device->miscdev);       // 将 Binder 注册为杂项设备
+	if (ret < 0) {
+		kfree(binder_device);
+		return ret;
+	}
+	hlist_add_head(&binder_device->hlist, &binder_devices);
+	return ret;
+}
+
+const struct file_operations binder_fops = {
+	.owner = THIS_MODULE,
+	.poll = binder_poll,
+	.unlocked_ioctl = binder_ioctl,
+	.compat_ioctl = compat_ptr_ioctl,
+	.mmap = binder_mmap,
+	.open = binder_open,
+	.flush = binder_flush,
+	.release = binder_release,
+};
+```
+
+# binder_open
+
+```cpp
+static int binder_open(struct inode *nodp, struct file *filp)
+{
+	struct binder_proc *proc, *itr;
+	struct binder_device *binder_dev;
+	struct binderfs_info *info;
+	struct dentry *binder_binderfs_dir_entry_proc = NULL;
+	bool existing_pid = false;
+	binder_debug(BINDER_DEBUG_OPEN_CLOSE, "%s: %d:%d\n", __func__,
+		     current->group_leader->pid, current->pid);
+	proc = kzalloc(sizeof(*proc), GFP_KERNEL);
+	if (proc == NULL)
+		return -ENOMEM;
+	spin_lock_init(&proc->inner_lock);
+	spin_lock_init(&proc->outer_lock);
+	get_task_struct(current->group_leader);
+	proc->tsk = current->group_leader;
+	proc->cred = get_cred(filp->f_cred);
+	INIT_LIST_HEAD(&proc->todo);
+	init_waitqueue_head(&proc->freeze_wait);
+	if (binder_supported_policy(current->policy)) {
+		proc->default_priority.sched_policy = current->policy;
+		proc->default_priority.prio = current->normal_prio;
+	} else {
+		proc->default_priority.sched_policy = SCHED_NORMAL;
+		proc->default_priority.prio = NICE_TO_PRIO(0);
+	}
+	/* binderfs stashes devices in i_private */
+	if (is_binderfs_device(nodp)) {
+		binder_dev = nodp->i_private;
+		info = nodp->i_sb->s_fs_info;
+		binder_binderfs_dir_entry_proc = info->proc_log_dir;
+	} else {
+		binder_dev = container_of(filp->private_data,
+					  struct binder_device, miscdev);
+	}
+	refcount_inc(&binder_dev->ref);
+	proc->context = &binder_dev->context;
+	binder_alloc_init(&proc->alloc);
+	binder_stats_created(BINDER_STAT_PROC);
+	proc->pid = current->group_leader->pid;
+	INIT_LIST_HEAD(&proc->delivered_death);
+	INIT_LIST_HEAD(&proc->waiting_threads);
+	filp->private_data = proc;
+	mutex_lock(&binder_procs_lock);
+	hlist_for_each_entry(itr, &binder_procs, proc_node) {
+		if (itr->pid == proc->pid) {
+			existing_pid = true;
+			break;
+		}
+	}
+	hlist_add_head(&proc->proc_node, &binder_procs);
+	mutex_unlock(&binder_procs_lock);
+	if (binder_debugfs_dir_entry_proc && !existing_pid) {
+		char strbuf[11];
+		snprintf(strbuf, sizeof(strbuf), "%u", proc->pid);
+		/*
+		 * proc debug entries are shared between contexts.
+		 * Only create for the first PID to avoid debugfs log spamming
+		 * The printing code will anyway print all contexts for a given
+		 * PID so this is not a problem.
+		 */
+		proc->debugfs_entry = debugfs_create_file(strbuf, 0444,
+			binder_debugfs_dir_entry_proc,
+			(void *)(unsigned long)proc->pid,
+			&proc_fops);
+	}
+	if (binder_binderfs_dir_entry_proc && !existing_pid) {
+		char strbuf[11];
+		struct dentry *binderfs_entry;
+		snprintf(strbuf, sizeof(strbuf), "%u", proc->pid);
+		/*
+		 * Similar to debugfs, the process specific log file is shared
+		 * between contexts. Only create for the first PID.
+		 * This is ok since same as debugfs, the log file will contain
+		 * information on all contexts of a given PID.
+		 */
+		binderfs_entry = binderfs_create_file(binder_binderfs_dir_entry_proc,
+			strbuf, &proc_fops, (void *)(unsigned long)proc->pid);
+		if (!IS_ERR(binderfs_entry)) {
+			proc->binderfs_entry = binderfs_entry;
+		} else {
+			int error;
+			error = PTR_ERR(binderfs_entry);
+			pr_warn("Unable to create file %s in binderfs (error %d)\n",
+				strbuf, error);
+		}
+	}
+	return 0;
+}
+```
