@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/socket.jpg">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-07-10-deep-drive-into-anr/signal_catcher_thread.png">
 <meta property="article:published_time" content="2021-07-10T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-06-15T11:09:29.531Z">
+<meta property="article:modified_time" content="2022-06-17T00:59:41.662Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="anr">
 <meta name="twitter:card" content="summary_large_image">
@@ -79,7 +79,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.2","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -88,6 +88,8 @@
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+  
+
 
   
 <meta name="generator" content="Hexo 5.4.2"></head>
@@ -263,9 +265,10 @@
             <!-- SEO header -->
             <h1 style="display: none">深入 ANR：产生的根源、处理流程和日志文件</h1>
             
-            <div class="markdown-body">
-              
-              <h1 id="overview"><a href="#overview" class="headerlink" title="overview"></a>overview</h1><p>在 <a href="../../../../2020/10/20/anr/">阅读源码系列：ANR 是怎么产生的</a> 聊过不及时消费 input event 会产生 <code>ANR</code>：</p>
+            
+              <div class="markdown-body">
+                
+                <h1 id="overview"><a href="#overview" class="headerlink" title="overview"></a>overview</h1><p>在 <a href="../../../../2020/10/20/anr/">阅读源码系列：ANR 是怎么产生的</a> 聊过不及时消费 input event 会产生 <code>ANR</code>：</p>
 <ol>
 <li><code>InputReaderThread</code> 不断地从 <code>/dev/input</code> 读取 input event 并放入 <code>InputDispatcher.mInboundQueue</code> 等待分发</li>
 <li><code>InputDispatcher</code> 寻找 input event 对应的 window 并分发到它的待发送队列里（<code>outboundQueue</code>）</li>
@@ -584,7 +587,7 @@
 <p>The fourth field consists of two numbers separated by a slash (/).  The first of these is the number of currently  runnable  kernel  scheduling entities (processes, threads).  The value after the slash is the number of kernel scheduling entities that currently exist on the system.  </p>
 <p>The fifth field is the PID of the process that was most recently created on the system.</p>
 </blockquote>
-<p>在绿联 6812（4 x <a href="mailto:&#x41;&#53;&#51;&#x40;&#x31;&#46;&#x35;&#71;">&#x41;&#53;&#51;&#x40;&#x31;&#46;&#x35;&#71;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
+<p>在绿联 6812（4 x <a href="mailto:&#65;&#x35;&#x33;&#x40;&#x31;&#x2e;&#53;&#71;">&#65;&#x35;&#x33;&#x40;&#x31;&#x2e;&#53;&#71;</a>）上获取的值是 <code>13.31 13.74 13.81 2/1167 3888</code></p>
 <ul>
 <li>在过去的 1, 5, 15 分钟内 CPU 的平均负载是 13.31, 13.74, 13.81</li>
 <li>当前有 1167 个进程，其中有 2 个正在运行</li>
@@ -3429,8 +3432,9 @@ ProcessRecord.ErrorDialogController.forAllDialogs
 <li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/6058e5c6332a">每日一面 - 什么是 Safepoint？</a></li>
 </ol>
 
-              
-            </div>
+                
+              </div>
+            
             <hr/>
             <div>
               <div class="post-metas my-3">
@@ -3524,6 +3528,7 @@ ProcessRecord.ErrorDialogController.forAllDialogs
 
 
 
+
     
 
     
@@ -3596,8 +3601,6 @@ ProcessRecord.ErrorDialogController.forAllDialogs
 
 
 
-
-
   
     <script  src="/js/img-lazyload.js" ></script>
   
@@ -3633,74 +3636,9 @@ ProcessRecord.ErrorDialogController.forAllDialogs
 </script>
 
 
-  <script>
-  (function() {
-    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
-    var enableCopy = CONFIG.copy_btn;
-    if (!enableLang && !enableCopy) {
-      return;
-    }
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
 
-    function getBgClass(ele) {
-      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
-    }
-
-    var copyTmpl = '';
-    copyTmpl += '<div class="code-widget">';
-    copyTmpl += 'LANG';
-    copyTmpl += '</div>';
-    jQuery('.markdown-body pre').each(function() {
-      var $pre = jQuery(this);
-      if ($pre.find('code.mermaid').length > 0) {
-        return;
-      }
-      if ($pre.find('span.line').length > 0) {
-        return;
-      }
-
-      var lang = '';
-
-      if (enableLang) {
-        lang = CONFIG.code_language.default;
-        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
-          lang = $pre[0].children[0].classList[1];
-        } else if ($pre[0].getAttribute('data-language')) {
-          lang = $pre[0].getAttribute('data-language');
-        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
-          lang = $pre[0].children[0].classList[1];
-          $pre.parent().addClass('code-wrapper');
-        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
-          $pre.wrap('<div class="code-wrapper"></div>');
-        }
-        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
-      }
-      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
-        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
-
-      if (enableCopy) {
-        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
-          var clipboard = new window.ClipboardJS('.copy-btn', {
-            target: function(trigger) {
-              var nodes = trigger.parentNode.childNodes;
-              for (var i = 0; i < nodes.length; i++) {
-                if (nodes[i].tagName === 'CODE') {
-                  return nodes[i];
-                }
-              }
-            }
-          });
-          clipboard.on('success', function(e) {
-            e.clearSelection();
-            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
-            setTimeout(function() {
-              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
-            }, 2000);
-          });
-        });
-      }
-    });
-  })();
-</script>
+  <script>Fluid.plugins.codeWidget();</script>
 
 
   

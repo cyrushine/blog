@@ -26,7 +26,7 @@
 <meta property="og:description" content="接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法 syncFrameState重要的方法有三个：makeCurrent，">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-12-27T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-06-15T11:09:29.527Z">
+<meta property="article:modified_time" content="2022-06-17T00:59:41.658Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="vsync">
 <meta property="article:tag" content="render thread">
@@ -74,7 +74,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.2","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -83,6 +83,8 @@
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+  
+
 
   
 <meta name="generator" content="Hexo 5.4.2"></head>
@@ -258,9 +260,10 @@
             <!-- SEO header -->
             <h1 style="display: none">Android 图形栈（三）render thread</h1>
             
-            <div class="markdown-body">
-              
-              <p>接着<a href="../../../../2020/12/13/ui-thread-in-vsync/">上一篇文章</a>，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 <code>DisplayList</code>，而 render thread 会根据 <code>DisplayList</code> 执行真正的渲染工作，主要是 <code>DrawFrameTask.syncFrameState</code> 和 <code>CanvasContext.draw</code> 这两个方法</p>
+            
+              <div class="markdown-body">
+                
+                <p>接着<a href="../../../../2020/12/13/ui-thread-in-vsync/">上一篇文章</a>，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 <code>DisplayList</code>，而 render thread 会根据 <code>DisplayList</code> 执行真正的渲染工作，主要是 <code>DrawFrameTask.syncFrameState</code> 和 <code>CanvasContext.draw</code> 这两个方法</p>
 <h2 id="syncFrameState"><a href="#syncFrameState" class="headerlink" title="syncFrameState"></a>syncFrameState</h2><p>重要的方法有三个：<code>makeCurrent</code>，<code>unpinImages</code> 和 <code>prepareTree</code></p>
 <p><code>TreeInfo</code> 用来在后续的一系列操作中收集信息，你会看到它在各个方法中作为参数传递</p>
 <div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">bool</span> <span class="hljs-title">DrawFrameTask::syncFrameState</span><span class="hljs-params">(TreeInfo&amp; info)</span> </span>&#123;
@@ -834,8 +837,9 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
         <span class="hljs-keyword">this</span>-&gt;<span class="hljs-built_in">tessellate</span>(vertexSpec, fPrePreparedVertices);
     &#125;
 &#125;</code></pre></div>
-              
-            </div>
+                
+              </div>
+            
             <hr/>
             <div>
               <div class="post-metas my-3">
@@ -931,6 +935,7 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 
 
+
     
 
     
@@ -1003,8 +1008,6 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 
 
 
-
-
   
     <script  src="/js/img-lazyload.js" ></script>
   
@@ -1040,74 +1043,9 @@ info.damageAccumulator-&gt;<span class="hljs-built_in">popTransform</span>();
 </script>
 
 
-  <script>
-  (function() {
-    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
-    var enableCopy = CONFIG.copy_btn;
-    if (!enableLang && !enableCopy) {
-      return;
-    }
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
 
-    function getBgClass(ele) {
-      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
-    }
-
-    var copyTmpl = '';
-    copyTmpl += '<div class="code-widget">';
-    copyTmpl += 'LANG';
-    copyTmpl += '</div>';
-    jQuery('.markdown-body pre').each(function() {
-      var $pre = jQuery(this);
-      if ($pre.find('code.mermaid').length > 0) {
-        return;
-      }
-      if ($pre.find('span.line').length > 0) {
-        return;
-      }
-
-      var lang = '';
-
-      if (enableLang) {
-        lang = CONFIG.code_language.default;
-        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
-          lang = $pre[0].children[0].classList[1];
-        } else if ($pre[0].getAttribute('data-language')) {
-          lang = $pre[0].getAttribute('data-language');
-        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
-          lang = $pre[0].children[0].classList[1];
-          $pre.parent().addClass('code-wrapper');
-        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
-          $pre.wrap('<div class="code-wrapper"></div>');
-        }
-        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
-      }
-      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
-        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
-
-      if (enableCopy) {
-        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
-          var clipboard = new window.ClipboardJS('.copy-btn', {
-            target: function(trigger) {
-              var nodes = trigger.parentNode.childNodes;
-              for (var i = 0; i < nodes.length; i++) {
-                if (nodes[i].tagName === 'CODE') {
-                  return nodes[i];
-                }
-              }
-            }
-          });
-          clipboard.on('success', function(e) {
-            e.clearSelection();
-            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
-            setTimeout(function() {
-              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
-            }, 2000);
-          });
-        });
-      }
-    });
-  })();
-</script>
+  <script>Fluid.plugins.codeWidget();</script>
 
 
   

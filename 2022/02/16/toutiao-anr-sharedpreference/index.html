@@ -39,7 +39,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-sharedpreference/12.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-02-16-toutiao-anr-sharedpreference/13.webp">
 <meta property="article:published_time" content="2022-02-16T08:00:00.000Z">
-<meta property="article:modified_time" content="2022-06-15T11:09:29.535Z">
+<meta property="article:modified_time" content="2022-06-17T00:59:41.666Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="ANR">
 <meta property="article:tag" content="bytedance">
@@ -91,7 +91,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.1","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.2","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -100,6 +100,8 @@
   </script>
   <script  src="/js/utils.js" ></script>
   <script  src="/js/color-schema.js" ></script>
+  
+
 
   
 <meta name="generator" content="Hexo 5.4.2"></head>
@@ -275,9 +277,10 @@
             <!-- SEO header -->
             <h1 style="display: none">【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待</h1>
             
-            <div class="markdown-body">
-              
-              <h1 id="简述"><a href="#简述" class="headerlink" title="简述"></a>简述</h1><p>前面系列文章（详见文末）中介绍了安卓系统 ANR 设计原理以及我们在实际工作中对 ANR 进行监控得到的方案，基于常规的监控治理方案，ANR 问题得到了有效的抑制，但是有些系统组件的设计初衷与开发人员在实际使用过程中实际使用的背离，导致的冲突问题亟待解决，当前文章针对实际开发过程中滥用 sp 导致的 ANR 问题，如何从系统层面跳过 Google 设计缺陷，规避 ANR 问题。</p>
+            
+              <div class="markdown-body">
+                
+                <h1 id="简述"><a href="#简述" class="headerlink" title="简述"></a>简述</h1><p>前面系列文章（详见文末）中介绍了安卓系统 ANR 设计原理以及我们在实际工作中对 ANR 进行监控得到的方案，基于常规的监控治理方案，ANR 问题得到了有效的抑制，但是有些系统组件的设计初衷与开发人员在实际使用过程中实际使用的背离，导致的冲突问题亟待解决，当前文章针对实际开发过程中滥用 sp 导致的 ANR 问题，如何从系统层面跳过 Google 设计缺陷，规避 ANR 问题。</p>
 <p>Google 在设计之初为了方便开发者，实现了一套轻量级的数据持久化方案——SharedPreference（以下简称 sp），因为其简便的 API，方便的使用方式，得到开发者的青睐，对其依赖越来越重。在应用版本不断迭代的过程中发现 Google 说的轻量级的数据存储是有原因的，越是重量级的应用出现的 ANR 问题越严重。本文从源码层面分析在加载和写入过程中，导致 ANR 问题的原因以及相关的优化解决方案。</p>
 <h1 id="SP-导致-ANR-原因分析"><a href="#SP-导致-ANR-原因分析" class="headerlink" title="SP 导致 ANR 原因分析"></a>SP 导致 ANR 原因分析</h1><p>经常会遇到两类关于 SharedPreference 问题，以下分别介绍导致这两类 ANR 问题的原因和优化方案。</p>
 <p>问题一：sp 文件创建以后，会单独的使用一个线程来加载解析对应的 sp 文件。但是当 UI 线程尝试访问 sp 中内容时，如果 sp 文件还未被完全加载解析到内存，此时 UI 线程会被 block，直到 SP 文件被完全加载到内存中为止。具体 ANR 线程堆栈如下：</p>
@@ -345,8 +348,9 @@
 <li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzI1MzYzMjE0MQ==&mid=2247488558&idx=1&sn=27dda3c3630116d37ab56a8c7bdf1382">今日头条 ANR 优化实践系列 - 告别 SharedPreference 等待</a></li>
 </ol>
 
-              
-            </div>
+                
+              </div>
+            
             <hr/>
             <div>
               <div class="post-metas my-3">
@@ -448,6 +452,7 @@
 
 
 
+
     
 
     
@@ -520,8 +525,6 @@
 
 
 
-
-
   
     <script  src="/js/img-lazyload.js" ></script>
   
@@ -557,74 +560,9 @@
 </script>
 
 
-  <script>
-  (function() {
-    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
-    var enableCopy = CONFIG.copy_btn;
-    if (!enableLang && !enableCopy) {
-      return;
-    }
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
 
-    function getBgClass(ele) {
-      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
-    }
-
-    var copyTmpl = '';
-    copyTmpl += '<div class="code-widget">';
-    copyTmpl += 'LANG';
-    copyTmpl += '</div>';
-    jQuery('.markdown-body pre').each(function() {
-      var $pre = jQuery(this);
-      if ($pre.find('code.mermaid').length > 0) {
-        return;
-      }
-      if ($pre.find('span.line').length > 0) {
-        return;
-      }
-
-      var lang = '';
-
-      if (enableLang) {
-        lang = CONFIG.code_language.default;
-        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
-          lang = $pre[0].children[0].classList[1];
-        } else if ($pre[0].getAttribute('data-language')) {
-          lang = $pre[0].getAttribute('data-language');
-        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
-          lang = $pre[0].children[0].classList[1];
-          $pre.parent().addClass('code-wrapper');
-        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
-          $pre.wrap('<div class="code-wrapper"></div>');
-        }
-        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
-      }
-      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
-        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
-
-      if (enableCopy) {
-        Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js', function() {
-          var clipboard = new window.ClipboardJS('.copy-btn', {
-            target: function(trigger) {
-              var nodes = trigger.parentNode.childNodes;
-              for (var i = 0; i < nodes.length; i++) {
-                if (nodes[i].tagName === 'CODE') {
-                  return nodes[i];
-                }
-              }
-            }
-          });
-          clipboard.on('success', function(e) {
-            e.clearSelection();
-            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
-            setTimeout(function() {
-              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
-            }, 2000);
-          });
-        });
-      }
-    });
-  })();
-</script>
+  <script>Fluid.plugins.codeWidget();</script>
 
 
   
