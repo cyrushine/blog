@@ -518,8 +518,35 @@ Binder 响应码，在 `binder_driver_return_protocol` 中定义，是 binder �
 > characteristics of character special files (e.g., terminals) may  
 > be controlled with ioctl() requests.  The argument `fd` must be an  
 > open file descriptor.  
+> 
 > The second argument is a `device-dependent request code`.  The  
 > third argument is `an untyped pointer to memory`.
+> 
+> Ioctl command values are 32-bit constants.  In principle these  
+> constants are completely arbitrary, but people have tried to  
+> build some structure into them.
+> 
+> Later (0.98p5) some more information was built into the number.  
+> One has 2 direction bits (00: none, 01: write, 10: read, 11:  
+> read/write) followed by 14 size bits (giving the size of the  
+> argument), followed by an 8-bit type (collecting the ioctls in  
+> groups for a common purpose or a common driver), and an 8-bit  
+> serial number.
+> 
+> The macros describing this structure live in <asm/ioctl.h> and  
+> are _IO(type,nr) and {_IOR,_IOW,_IOWR}(type,nr,size).  They use  
+> sizeof(size) so that size is a misnomer here: this third argument  
+> is a data type.
+
+ioctl cmd（也就是第二个参数 request）是 32 bits 的：
+1. 前 2 bits 表示方向：写入还是读出，可以用宏 `_IOC_DIR(cmd)` 解析出来：
+    1. _IOC_NONE - 没有数据传输
+	2. _IOC_READ - 从设备中读取数据，驱动程序必须向用户空间写入数据
+	3. _IOC_WRITE - 向设备写入数据，驱动程序必须从用户空间读入数据
+	4. _IOC_READ | _IOC_WRITE
+2. 接着 14 bits 表示第三个参数（指针）所指的内容的长度，可以用宏 `_IOC_SIZE(cmd)` 解析
+3. 接着 8 bits 表示一个幻数（magic number），可以用宏 `_IOC_TYPE(cmd)` 解析
+4. 最后 8 bits 表示命令（的序号），可以用宏 `_IOC_SIZE(cmd)` 解析
 
 > `unsigned long copy_from_user (void * to, const void __user * from, unsigned long n);`
 > 
@@ -534,14 +561,22 @@ Binder 响应码，在 `binder_driver_return_protocol` 中定义，是 binder �
 
 用户空间程序和 Binder 驱动程序交互基本都是通过 `ioctl(binder_fd, BINDER_WRITE_READ, p_bwr)`，通讯协议/内存布局为 `struct binder_write_read` 如下：
 
+1. write_buffer：用于发送IPC(或IPC reply)数据，即传递经由Binder Driver的数据时使用。
+
+2. read_buffer 变量：用于接收来自Binder Driver的数据，即Binder Driver在接收IPC(或IPC reply)数据后，保存到read_buffer，再传递到用户空间；
+write_buffer和read_buffer都是包含Binder协议命令和binder_transaction_data结构体。
+
+copy_from_user()将用户空间IPC数据拷贝到内核态binder_write_read结构体；
+copy_to_user()将用内核态binder_write_read结构体数据拷贝到用户空间；
+
 |        类型       |    成员变量    |         解释         |
 |------------------|----------------|---------------------|
-|  binder_size_t   |   write_size   |  write_buffer的总字节数  |
-|  binder_size_t   | write_consumed | write_buffer已消费的字节数 |
-| binder_uintptr_t |  write_buffer  |      写缓冲数据的指针       |
-|  binder_size_t   |   read_size    |  read_buffer的总字节数   |
-|  binder_size_t   | read_consumed  | read_buffer已消费的字节数  |
-| binder_uintptr_t |  read_buffer   |      读缓存数据的指针       |
+| binder_uintptr_t |  write_buffer  | 写缓冲数据的指针       |
+|  binder_size_t   |   write_size   | write_buffer的总字节数     |
+|  binder_size_t   | write_consumed | write_buffer已消费的字节数  |
+| binder_uintptr_t |  read_buffer   | 读缓存数据的指针       |
+|  binder_size_t   |   read_size    | read_buffer的总字节数      |
+|  binder_size_t   | read_consumed  | read_buffer已消费的字节数   |
 
 ```cpp
 // ioctl handler 的三个参数分别对应 syscall ioctl 的三个参数
@@ -552,16 +587,16 @@ static int binder_ioctl_write_read(struct file *filp,
 {
 	int ret = 0;
 	struct binder_proc *proc = filp->private_data;
-	unsigned int size = _IOC_SIZE(cmd);
+	unsigned int size = _IOC_SIZE(cmd);  // 上面说过 _IOC_SIZE 用来解析 cmd 里包含的，arg 指向内容的长度
 	void __user *ubuf = (void __user *)arg;
 	struct binder_write_read bwr;
 
     // 将 ioctl 参数 struct binder_write_read 从用户空间 ubuf 拷贝到内核空间 bwr
-	if (size != sizeof(struct binder_write_read)) {
+	if (size != sizeof(struct binder_write_read)) {  // arg 的长度必须是 struct binder_write_read 的长度
 		ret = -EINVAL;
 		goto out;
 	}
-	if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {
+	if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {  // 将用户空间的 ubuf 拷贝到内核空间 bwr
 		ret = -EFAULT;
 		goto out;
 	}
@@ -610,6 +645,359 @@ static int binder_ioctl_write_read(struct file *filp,
 	}
 out:
 	return ret;
+}
+
+static int binder_thread_write(struct binder_proc *proc,
+			struct binder_thread *thread,
+			binder_uintptr_t binder_buffer, size_t size,
+			binder_size_t *consumed)
+{
+	uint32_t cmd;
+	struct binder_context *context = proc->context;
+	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
+	void __user *ptr = buffer + *consumed;
+	void __user *end = buffer + size;
+	while (ptr < end && thread->return_error.cmd == BR_OK) {
+		int ret;
+		if (get_user(cmd, (uint32_t __user *)ptr))
+			return -EFAULT;
+		ptr += sizeof(uint32_t);
+		trace_binder_command(cmd);
+		if (_IOC_NR(cmd) < ARRAY_SIZE(binder_stats.bc)) {
+			atomic_inc(&binder_stats.bc[_IOC_NR(cmd)]);
+			atomic_inc(&proc->stats.bc[_IOC_NR(cmd)]);
+			atomic_inc(&thread->stats.bc[_IOC_NR(cmd)]);
+		}
+		switch (cmd) {
+		case BC_INCREFS:
+		case BC_ACQUIRE:
+		case BC_RELEASE:
+		case BC_DECREFS:
+		case BC_TRANSACTION:
+		case BC_REPLY:
+		case BC_REGISTER_LOOPER:
+		case BC_ENTER_LOOPER:
+		case BC_EXIT_LOOPER:
+		// ...
+		}
+		*consumed = ptr - buffer;
+	}
+	return 0;
+}
+
+static int binder_thread_read(struct binder_proc *proc,
+			      struct binder_thread *thread,
+			      binder_uintptr_t binder_buffer, size_t size,
+			      binder_size_t *consumed, int non_block)
+{
+	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
+	void __user *ptr = buffer + *consumed;
+	void __user *end = buffer + size;
+	int ret = 0;
+	int wait_for_proc_work;
+	if (*consumed == 0) {
+		if (put_user(BR_NOOP, (uint32_t __user *)ptr))
+			return -EFAULT;
+		ptr += sizeof(uint32_t);
+	}
+retry:
+	binder_inner_proc_lock(proc);
+	wait_for_proc_work = binder_available_for_proc_work_ilocked(thread);
+	binder_inner_proc_unlock(proc);
+	thread->looper |= BINDER_LOOPER_STATE_WAITING;
+	trace_binder_wait_for_work(wait_for_proc_work,
+				   !!thread->transaction_stack,
+				   !binder_worklist_empty(proc, &thread->todo));
+	if (wait_for_proc_work) {
+		if (!(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
+					BINDER_LOOPER_STATE_ENTERED))) {
+			binder_user_error("%d:%d ERROR: Thread waiting for process work before calling BC_REGISTER_LOOPER or BC_ENTER_LOOPER (state %x)\n",
+				proc->pid, thread->pid, thread->looper);
+			wait_event_interruptible(binder_user_error_wait,
+						 binder_stop_on_user_error < 2);
+		}
+		trace_android_vh_binder_restore_priority(NULL, current);
+		binder_restore_priority(thread, &proc->default_priority);
+	}
+	if (non_block) {
+		if (!binder_has_work(thread, wait_for_proc_work))
+			ret = -EAGAIN;
+	} else {
+		ret = binder_wait_for_work(thread, wait_for_proc_work);
+	}
+	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
+	if (ret)
+		return ret;
+	while (1) {
+		uint32_t cmd;
+		struct binder_transaction_data_secctx tr;
+		struct binder_transaction_data *trd = &tr.transaction_data;
+		struct binder_work *w = NULL;
+		struct list_head *list = NULL;
+		struct binder_transaction *t = NULL;
+		struct binder_thread *t_from;
+		size_t trsize = sizeof(*trd);
+		binder_inner_proc_lock(proc);
+		if (!binder_worklist_empty_ilocked(&thread->todo))
+			list = &thread->todo;
+		else if (!binder_worklist_empty_ilocked(&proc->todo) &&
+			   wait_for_proc_work)
+			list = &proc->todo;
+		else {
+			binder_inner_proc_unlock(proc);
+			/* no data added */
+			if (ptr - buffer == 4 && !thread->looper_need_return)
+				goto retry;
+			break;
+		}
+		if (end - ptr < sizeof(tr) + 4) {
+			binder_inner_proc_unlock(proc);
+			break;
+		}
+		w = binder_dequeue_work_head_ilocked(list);
+		if (binder_worklist_empty_ilocked(&thread->todo))
+			thread->process_todo = false;
+		switch (w->type) {
+		case BINDER_WORK_TRANSACTION:
+		case BINDER_WORK_RETURN_ERROR:
+		case BINDER_WORK_TRANSACTION_COMPLETE:
+		case BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT:
+		case BINDER_WORK_NODE:
+		case BINDER_WORK_DEAD_BINDER:
+		case BINDER_WORK_DEAD_BINDER_AND_CLEAR:
+		case BINDER_WORK_CLEAR_DEATH_NOTIFICATION:
+		// ...
+		}
+		if (!t)
+			continue;
+		BUG_ON(t->buffer == NULL);
+		if (t->buffer->target_node) {
+			struct binder_node *target_node = t->buffer->target_node;
+			trd->target.ptr = target_node->ptr;
+			trd->cookie =  target_node->cookie;
+			binder_transaction_priority(thread, t, target_node);
+			cmd = BR_TRANSACTION;
+		} else {
+			trd->target.ptr = 0;
+			trd->cookie = 0;
+			cmd = BR_REPLY;
+		}
+		trd->code = t->code;
+		trd->flags = t->flags;
+		trd->sender_euid = from_kuid(current_user_ns(), t->sender_euid);
+		t_from = binder_get_txn_from(t);
+		if (t_from) {
+			struct task_struct *sender = t_from->proc->tsk;
+			trd->sender_pid =
+				task_tgid_nr_ns(sender,
+						task_active_pid_ns(current));
+			trace_android_vh_sync_txn_recvd(thread->task, t_from->task);
+		} else {
+			trd->sender_pid = 0;
+		}
+		ret = binder_apply_fd_fixups(proc, t);
+		if (ret) {
+			struct binder_buffer *buffer = t->buffer;
+			bool oneway = !!(t->flags & TF_ONE_WAY);
+			int tid = t->debug_id;
+			if (t_from)
+				binder_thread_dec_tmpref(t_from);
+			buffer->transaction = NULL;
+			binder_cleanup_transaction(t, "fd fixups failed",
+						   BR_FAILED_REPLY);
+			binder_free_buf(proc, thread, buffer, true);
+			binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
+				     "%d:%d %stransaction %d fd fixups failed %d/%d, line %d\n",
+				     proc->pid, thread->pid,
+				     oneway ? "async " :
+					(cmd == BR_REPLY ? "reply " : ""),
+				     tid, BR_FAILED_REPLY, ret, __LINE__);
+			if (cmd == BR_REPLY) {
+				cmd = BR_FAILED_REPLY;
+				if (put_user(cmd, (uint32_t __user *)ptr))
+					return -EFAULT;
+				ptr += sizeof(uint32_t);
+				binder_stat_br(proc, thread, cmd);
+				break;
+			}
+			continue;
+		}
+		trd->data_size = t->buffer->data_size;
+		trd->offsets_size = t->buffer->offsets_size;
+		trd->data.ptr.buffer = (uintptr_t)t->buffer->user_data;
+		trd->data.ptr.offsets = trd->data.ptr.buffer +
+					ALIGN(t->buffer->data_size,
+					    sizeof(void *));
+		tr.secctx = t->security_ctx;
+		if (t->security_ctx) {
+			cmd = BR_TRANSACTION_SEC_CTX;
+			trsize = sizeof(tr);
+		}
+		if (put_user(cmd, (uint32_t __user *)ptr)) {
+			if (t_from)
+				binder_thread_dec_tmpref(t_from);
+			binder_cleanup_transaction(t, "put_user failed",
+						   BR_FAILED_REPLY);
+			return -EFAULT;
+		}
+		ptr += sizeof(uint32_t);
+		if (copy_to_user(ptr, &tr, trsize)) {
+			if (t_from)
+				binder_thread_dec_tmpref(t_from);
+			binder_cleanup_transaction(t, "copy_to_user failed",
+						   BR_FAILED_REPLY);
+			return -EFAULT;
+		}
+		ptr += trsize;
+		trace_binder_transaction_received(t);
+		binder_stat_br(proc, thread, cmd);
+		binder_debug(BINDER_DEBUG_TRANSACTION,
+			     "%d:%d %s %d %d:%d, cmd %d size %zd-%zd ptr %016llx-%016llx\n",
+			     proc->pid, thread->pid,
+			     (cmd == BR_TRANSACTION) ? "BR_TRANSACTION" :
+				(cmd == BR_TRANSACTION_SEC_CTX) ?
+				     "BR_TRANSACTION_SEC_CTX" : "BR_REPLY",
+			     t->debug_id, t_from ? t_from->proc->pid : 0,
+			     t_from ? t_from->pid : 0, cmd,
+			     t->buffer->data_size, t->buffer->offsets_size,
+			     (u64)trd->data.ptr.buffer,
+			     (u64)trd->data.ptr.offsets);
+		if (t_from)
+			binder_thread_dec_tmpref(t_from);
+		t->buffer->allow_user_free = 1;
+		if (cmd != BR_REPLY && !(t->flags & TF_ONE_WAY)) {
+			binder_inner_proc_lock(thread->proc);
+			t->to_parent = thread->transaction_stack;
+			t->to_thread = thread;
+			thread->transaction_stack = t;
+			binder_inner_proc_unlock(thread->proc);
+		} else {
+			binder_free_transaction(t);
+		}
+		break;
+	}
+done:
+	*consumed = ptr - buffer;
+	binder_inner_proc_lock(proc);
+	if (proc->requested_threads == 0 &&
+	    list_empty(&thread->proc->waiting_threads) &&
+	    proc->requested_threads_started < proc->max_threads &&
+	    (thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
+	     BINDER_LOOPER_STATE_ENTERED)) /* the user-space code fails to */
+	     /*spawn a new thread if we leave this out */) {
+		proc->requested_threads++;
+		binder_inner_proc_unlock(proc);
+		binder_debug(BINDER_DEBUG_THREADS,
+			     "%d:%d BR_SPAWN_LOOPER\n",
+			     proc->pid, thread->pid);
+		if (put_user(BR_SPAWN_LOOPER, (uint32_t __user *)buffer))
+			return -EFAULT;
+		binder_stat_br(proc, thread, BR_SPAWN_LOOPER);
+	} else
+		binder_inner_proc_unlock(proc);
+	return 0;
+}
+```
+
+# 
+
+```cpp
+static void binder_transaction(struct binder_proc *proc,
+			       struct binder_thread *thread,
+			       struct binder_transaction_data *tr, int reply,
+			       binder_size_t extra_buffers_size)
+{
+	for (buffer_offset = off_start_offset; buffer_offset < off_end_offset;
+	     buffer_offset += sizeof(binder_size_t)) {
+		struct binder_object_header *hdr;
+		size_t object_size;
+		struct binder_object object;
+		binder_size_t object_offset;
+		binder_size_t copy_size;
+
+        // 将 [buffer + buffer_offset, buffer + buffer_offset + bytes] 拷贝到 dest
+		// int binder_alloc_copy_from_buffer(struct binder_alloc *alloc,
+		// 		  void *dest,
+		// 		  struct binder_buffer *buffer,
+		// 		  binder_size_t buffer_offset,
+		// 		  size_t bytes)
+		if (binder_alloc_copy_from_buffer(&target_proc->alloc,
+						  &object_offset,        // dest
+						  t->buffer,             // buffer
+						  buffer_offset,         // buffer_offset
+						  sizeof(object_offset)  // bytes
+			)) {
+			return_error = BR_FAILED_REPLY;
+			return_error_param = -EINVAL;
+			return_error_line = __LINE__;
+			goto err_bad_offset;
+		}
+
+        // binder_get_object(struct binder_proc *proc,
+        //     const void __user *u,
+        //     struct binder_buffer *buffer,
+        //     unsigned long offset,
+        //     struct binder_object *object)
+		object_size = binder_get_object(target_proc, user_buffer,
+				t->buffer, object_offset, &object);
+
+		hdr = &object.hdr;
+		switch (hdr->type) {
+		case BINDER_TYPE_PTR: {
+			struct binder_buffer_object *bp =
+				to_binder_buffer_object(hdr);
+			size_t buf_left = sg_buf_end_offset - sg_buf_offset;
+			size_t num_valid;
+			if (bp->length > buf_left) {
+				binder_user_error("%d:%d got transaction with too large buffer\n",
+						  proc->pid, thread->pid);
+				return_error = BR_FAILED_REPLY;
+				return_error_param = -EINVAL;
+				return_error_line = __LINE__;
+				goto err_bad_offset;
+			}
+			ret = binder_defer_copy(&sgc_head, sg_buf_offset,
+				(const void __user *)(uintptr_t)bp->buffer,
+				bp->length);
+			if (ret) {
+				return_error = BR_FAILED_REPLY;
+				return_error_param = ret;
+				return_error_line = __LINE__;
+				goto err_translate_failed;
+			}
+			/* Fixup buffer pointer to target proc address space */
+			bp->buffer = (uintptr_t)
+				t->buffer->user_data + sg_buf_offset;
+			sg_buf_offset += ALIGN(bp->length, sizeof(u64));
+			num_valid = (buffer_offset - off_start_offset) /
+					sizeof(binder_size_t);
+			ret = binder_fixup_parent(&pf_head, t,
+						  thread, bp,
+						  off_start_offset,
+						  num_valid,
+						  last_fixup_obj_off,
+						  last_fixup_min_off);
+			if (ret < 0 ||
+			    binder_alloc_copy_to_buffer(&target_proc->alloc,
+							t->buffer,
+							object_offset,
+							bp, sizeof(*bp))) {
+				return_error = BR_FAILED_REPLY;
+				return_error_param = ret;
+				return_error_line = __LINE__;
+				goto err_translate_failed;
+			}
+			last_fixup_obj_off = object_offset;
+			last_fixup_min_off = 0;
+		} break;
+		case BINDER_TYPE_BINDER:
+		case BINDER_TYPE_WEAK_BINDER:
+		case BINDER_TYPE_HANDLE:
+		case BINDER_TYPE_WEAK_HANDLE:
+		case BINDER_TYPE_FD:
+		case BINDER_TYPE_FDA:
+		// ...
+	    }
 }
 ```
 
