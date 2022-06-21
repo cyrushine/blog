@@ -264,6 +264,94 @@ static int binder_open(struct inode *nodp, struct file *filp)
 
 # binder_mmap
 
+通过mmap映射内存，其中ServiceManager映射的空间大小为128K,其他Binder应用进程映射的内存大小为1M-8k；
+
+Binder驱动基于这种映射的内存采用最佳匹配来动态分配和释放，通过bind_buffer结构体中的free字段来表示相应的buffer是空闲还是已分配状态。对于已分配的buffers加入到binder_proc中的allocated_buffers红黑树，对于空闲的buffer加入到free_buffers红黑树；
+
+当应用程序需要内存时，根据所需内存大小从free_buffers中找到最合适的内存，并放入allocated_buffers树中，当应用程序处理完成后必须尽快使用BC_FREE_BUFFER命令来释放该buffer，从而添加回到free_buffers树。
+
+用户空间调用 `void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);`
+
+> mmap() creates a new mapping in the virtual address space of the
+> calling process.  The starting address for the new mapping is
+> specified in `addr`.  The `length` argument specifies the length of
+> the mapping (which must be greater than 0).
+> 
+> If addr is NULL, then the kernel chooses the (page-aligned)
+> address at which to create the mapping; this is the most portable
+> method of creating a new mapping.  If addr is not NULL, then the
+> kernel takes it as a hint about where to place the mapping; 
+> 
+> The contents of a file mapping (as opposed to an anonymous
+> mapping; see MAP_ANONYMOUS below), are initialized using length
+> bytes starting at `offset` offset in the file (or other object)
+> referred to by the file descriptor `fd`. 	   	   
+
+进入内核空间，分配虚存，并将相关信息保存至 `vm_area_struct`，从结构上看其成员属性能够与 `mmap()` 参数相匹配
+
+`struct vm_area_struct` 描述的是一段连续的、具有相同访问属性的虚存空间，该虚存空间的大小为物理内存页面的整数倍；成员 `vm_start` 和 `vm_end` 表示该虚存空间的首地址和末地址后第一个字节的地址，以字节为单位，所以虚存空间范围可以用 `[vm_start, vm_end)` 表示
+
+```cpp
+struct vm_area_struct {
+        struct mm_struct * vm_mm;       /* VM area parameters */
+        unsigned long vm_start;
+        unsigned long vm_end;
+        pgprot_t vm_page_prot;
+        unsigned short vm_flags;
+/* AVL tree of VM areas per task, sorted by address */
+        short vm_avl_height;
+        struct vm_area_struct * vm_avl_left;
+        struct vm_area_struct * vm_avl_right;
+/* linked list of VM areas per task, sorted by address */
+        struct vm_area_struct * vm_next;
+/* for areas with inode, the circular list inode->i_mmap */
+/* for shm areas, the circular list of attaches */
+/* otherwise unused */
+        struct vm_area_struct * vm_next_share;
+        struct vm_area_struct * vm_prev_share;
+/* more */
+        struct vm_operations_struct * vm_ops;
+        unsigned long vm_offset;
+        struct inode * vm_inode;
+        unsigned long vm_pte;                   /* shared mem */
+};
+```
+
+回调 binder driver 的 `binder_mmap` -> `binder_alloc_mmap_handler`
+
+```cpp
+// https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/drivers/android/binder_alloc.h
+
+struct binder_alloc {
+	struct mutex mutex;
+	struct vm_area_struct *vma;
+	struct mm_struct *vma_vm_mm;
+	void __user *buffer;  // base of per-proc address space mapped via mmap
+	struct list_head buffers;
+	struct rb_root free_buffers;
+	struct rb_root allocated_buffers;
+	size_t free_async_space;
+	struct binder_lru_page *pages;  // array of binder_lru_page
+	size_t buffer_size;  // size of address space specified via mmap
+	uint32_t buffer_free;
+	int pid;
+	size_t pages_high;
+	bool oneway_spam_detected;
+};
+
+/**
+ * struct binder_lru_page - page object used for binder shrinker
+ * @page_ptr: pointer to physical page in mmap'd space
+ * @lru:      entry in binder_alloc_lru
+ * @alloc:    binder_alloc for a proc
+ */
+struct binder_lru_page {
+	struct list_head lru;
+	struct page *page_ptr;
+	struct binder_alloc *alloc;
+};
+```
+
 > Name  
 > kcalloc — allocate memory for an array. The memory is set to zero.
 > 
@@ -274,8 +362,6 @@ static int binder_open(struct inode *nodp, struct file *filp)
 > size_t n - number of elements.  
 > size_t size - element size.  
 > gfp_t flags - the type of memory to allocate (see kmalloc).  
-
-`struct vm_area_struct` 描述的是一段连续的、具有相同访问属性的虚存空间，该虚存空间的大小为物理内存页面的整数倍；成员 `vm_start` 和 `vm_end` 表示该虚存空间的首地址和末地址后第一个字节的地址，以字节为单位，所以虚存空间范围可以用 `[vm_start, vm_end)` 表示
 
 ```cpp
 // https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/drivers/android/binder.c
@@ -312,7 +398,7 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc, struct vm_area_struct 
 		failure_string = "already mapped";
 		goto err_already_mapped;
 	}
-	
+
 	alloc->buffer_size = min_t(unsigned long, vma->vm_end - vma->vm_start, SZ_4M);
 	mutex_unlock(&binder_alloc_mmap_lock);
 	alloc->buffer = (void __user *)vma->vm_start;
@@ -352,6 +438,177 @@ err_already_mapped:
 			   "%s: %d %lx-%lx %s failed %d\n", __func__,
 			   alloc->pid, vma->vm_start, vma->vm_end,
 			   failure_string, ret);
+	return ret;
+}
+```
+
+# binder 通讯模型/协议
+
+一次完整的 Binder 通信过程如下（非 oneway）
+
+Binder 协议包含在 IPC 数据中，分为两类：
+1. BINDER_COMMAND_PROTOCOL：binder 请求码，以 BC_ 开头，简称 `BC` 码，用于从客户端/服务端传递到 Binder Driver
+2. BINDER_RETURN_PROTOCOL：binder 响应码，以 BR_ 开头，简称 `BR` 码，用于从 Binder Driver 传递到客户端/服务端
+
+Binder IPC 通信至少是两个进程的交互：
+1. client 进程执行 binder_thread_write，根据 BC_xx 命令，生成相应的 binder_work
+2. server 进程执行 binder_thread_read，根据 binder_work_type 类型，生成 BR_xx，发送到用户空间处理
+
+![bindermodel.png](../../../../2022-06-13-binder-driver/bindermodel.jpg)
+
+# BC 请求码（BC_PROTOCOL）
+
+Binder 的请求码是在 `binder_driver_command_protocol` 中定义的，用于应用程序向 binder 驱动设备发送请求消息，应用程序包含 Client 和 Server 端，以 BC_ 开头，总共 19 条
+
+| 请求码 | 参数类型 | 作用 |
+|-------|---------|------|
+| BC_TRANSACTION	              | binder_transaction_data     | Client 向 Binder 驱动发送的请求数据 |
+| BC_REPLY	                      | binder_transaction_data	    |  Server 向 Binder 驱动发送的回复数据 |
+| BC_ACQUIRE_RESULT	              | __s32	                    |  暂时不支持 |
+| BC_FREE_BUFFER	              | binder_uintptr_t	        |  释放内存 |
+| BC_INCREFS	                  | __u32	                    |  binder_ref 弱引用加1操作（这些请求码的作用是对 binder 的强/弱引用的计数操作，用于实现强/弱指针的功能） |
+| BC_ACQUIRE	                  | __u32	                    |  binder_ref 弱引用减1操作 |
+| BC_RELEASE	                  | __u32	                    |  binder_ref 强引用加1操作 |
+| BC_DECREFS	                  | __u32	                    |  binder_ref 强引用减1操作 |
+| BC_INCREFS_DONE	              | binder_ptr_cookie	        |  binder_node 强引用减1操作 |
+| BC_ACQUIRE_DONE	              | binder_ptr_cookie	        |  binder_node 弱引用减1操作 |
+| BC_ATTEMPT_ACQUIRE	          | binder_pri_desc	            |  暂时不支持 |
+| BC_REGISTER_LOOPER	          | 无参数	                    |  创建新的 Looper 线程 |
+| BC_ENTER_LOOPER	              | 无参数	                    |  应用线程进入 Looper |
+| BC_EXIT_LOOPER	              | 无参数	                    |  应用线程退出 Looper |
+| BC_REQUEST_DEATH_NOTIFICATION   | binder_handle_cookie	    | 注册死亡通知 |
+| BC_CLEAR_DEATH_NOTIFICATION	  | binder_handle_cookie	    | 取消注册的死亡通知 |
+| BC_DEAD_BINDER_DONE	          | binder_uintptr_t	        | 已经完成的死亡通知 |
+| BC_TRANSACTION_SG	              | binder_transaction_data_sg  | Client 向 Binder 驱动发送的 Command |
+| BC_REPLY_SG	                  | binder_transaction_data_sg  | Server 向 Binder 驱动发送的 Command |
+
+# BR 响应码（BR_PROTOCOL）
+
+Binder 响应码，在 `binder_driver_return_protocol` 中定义，是 binder 设备向应用程序回复的消息，应用程序包括 client 和 server 端，以 BR_ 开头，总共 18 条
+
+| 响应码 | 参数类型 | 作用 |
+|-------|----------|-----|
+| BR_ERROR                         | __s32                   | 操作发送错误 | 
+| BR_OK                            | 无参数                   | 操作完成 | 
+| BR_TRANSACTION                   | binder_transaction_data | Binder 驱动向 Server 发送的请求数据 | 
+| BR_REPLY                         | binder_transaction_data | Binder 驱动向 Client 发送的回复数据 | 
+| BR_ACQUIRE_RESULT                | __s32                   | 暂时不支持 | 
+| BR_DEAD_REPLY                    | 无参数                   | 回复失败，线程或节点为空 | 
+| BR_TRANSACTION_COMPLETE          | 无参数                   | 对请求发送的成功反馈 | 
+| BR_INCREFS                       | binder_ptr_cookie       | binder_ref 弱引用加1操作 | 
+| BR_ACQUIRE                       | binder_ptr_cookie       | binder_ref 弱引用减1操作 | 
+| BR_RELEASE                       | binder_ptr_cookie       | binder_ref 强引用加1操作 | 
+| BR_DECREFS                       | binder_ptr_cookie       | binder_ref 强引用减1操作 | 
+| BR_ATTEMPT_ACQUIRE               | binder_pri_ptr_cookie   | 暂时不支持 | 
+| BR_NOOP                          | 无参数                   | 不做任何事情 | 
+| BR_SPAWN_LOOPER                  | 无参数                   | 创建新的 Looper 线程 | 
+| BR_FINISHED                      | 无参数                   | 暂时不支持 | 
+| BR_DEAD_BINDER                   | binder_uintptr_t        | Binder 驱动向 client 发送死亡通知 | 
+| BR_CLEAR_DEATH_NOTIFICATION_DONE | binder_uintptr_t        | 清除死亡通知 | 
+| BR_FAILED_REPLY                  | 无参数                   | 回复失败，transaction 出错导致 | 
+
+# binder_ioctl_write_read
+
+> ioctl - control device
+> 
+> `int ioctl(int fd, unsigned long request, ...);`
+> 
+> The ioctl() system call manipulates the underlying device  
+> parameters of special files.  In particular, many operating  
+> characteristics of character special files (e.g., terminals) may  
+> be controlled with ioctl() requests.  The argument `fd` must be an  
+> open file descriptor.  
+> The second argument is a `device-dependent request code`.  The  
+> third argument is `an untyped pointer to memory`.
+
+> `unsigned long copy_from_user (void * to, const void __user * from, unsigned long n);`
+> 
+> to - Destination address, in kernel space.  
+> from - Source address, in user space.  
+> n- Number of bytes to copy.  
+> 
+> Description
+> Copy data from user space to kernel space.  
+> Returns number of bytes that could not be copied. On success, this will be zero.  
+> If some data could not be copied, this function will pad the copied data to the requested size using zero bytes.
+
+用户空间程序和 Binder 驱动程序交互基本都是通过 `ioctl(binder_fd, BINDER_WRITE_READ, p_bwr)`，通讯协议/内存布局为 `struct binder_write_read` 如下：
+
+|        类型       |    成员变量    |         解释         |
+|------------------|----------------|---------------------|
+|  binder_size_t   |   write_size   |  write_buffer的总字节数  |
+|  binder_size_t   | write_consumed | write_buffer已消费的字节数 |
+| binder_uintptr_t |  write_buffer  |      写缓冲数据的指针       |
+|  binder_size_t   |   read_size    |  read_buffer的总字节数   |
+|  binder_size_t   | read_consumed  | read_buffer已消费的字节数  |
+| binder_uintptr_t |  read_buffer   |      读缓存数据的指针       |
+
+```cpp
+// ioctl handler 的三个参数分别对应 syscall ioctl 的三个参数
+static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {...}
+static int binder_ioctl_write_read(struct file *filp,
+				unsigned int cmd, unsigned long arg,
+				struct binder_thread *thread)
+{
+	int ret = 0;
+	struct binder_proc *proc = filp->private_data;
+	unsigned int size = _IOC_SIZE(cmd);
+	void __user *ubuf = (void __user *)arg;
+	struct binder_write_read bwr;
+
+    // 将 ioctl 参数 struct binder_write_read 从用户空间 ubuf 拷贝到内核空间 bwr
+	if (size != sizeof(struct binder_write_read)) {
+		ret = -EINVAL;
+		goto out;
+	}
+	if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {
+		ret = -EFAULT;
+		goto out;
+	}
+	binder_debug(BINDER_DEBUG_READ_WRITE,
+		     "%d:%d write %lld at %016llx, read %lld at %016llx\n",
+		     proc->pid, thread->pid,
+		     (u64)bwr.write_size, (u64)bwr.write_buffer,
+		     (u64)bwr.read_size, (u64)bwr.read_buffer);
+	if (bwr.write_size > 0) {
+		ret = binder_thread_write(proc, thread,
+					  bwr.write_buffer,
+					  bwr.write_size,
+					  &bwr.write_consumed);
+		trace_binder_write_done(ret);
+		if (ret < 0) {
+			bwr.read_consumed = 0;
+			if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
+				ret = -EFAULT;
+			goto out;
+		}
+	}
+	if (bwr.read_size > 0) {
+		ret = binder_thread_read(proc, thread, bwr.read_buffer,
+					 bwr.read_size,
+					 &bwr.read_consumed,
+					 filp->f_flags & O_NONBLOCK);
+		trace_binder_read_done(ret);
+		binder_inner_proc_lock(proc);
+		if (!binder_worklist_empty_ilocked(&proc->todo))
+			binder_wakeup_proc_ilocked(proc);
+		binder_inner_proc_unlock(proc);
+		if (ret < 0) {
+			if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
+				ret = -EFAULT;
+			goto out;
+		}
+	}
+	binder_debug(BINDER_DEBUG_READ_WRITE,
+		     "%d:%d wrote %lld of %lld, read return %lld of %lld\n",
+		     proc->pid, thread->pid,
+		     (u64)bwr.write_consumed, (u64)bwr.write_size,
+		     (u64)bwr.read_consumed, (u64)bwr.read_size);
+	if (copy_to_user(ubuf, &bwr, sizeof(bwr))) {
+		ret = -EFAULT;
+		goto out;
+	}
+out:
 	return ret;
 }
 ```
