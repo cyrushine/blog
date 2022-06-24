@@ -137,10 +137,10 @@ java 层也有一套镜像功能的 binder C/S 架构，通过 JNI 和 native bi
 
 ## ioctl
 
-> ioctl - control device  
+> ioctl - control device
 > <br />
-> `int ioctl(int fd, unsigned long request, ...);`  
-> 
+> `int ioctl(int fd, unsigned long request, ...);`
+> <br />
 > The ioctl() system call manipulates the underlying device  
 > parameters of special files.  In particular, many operating  
 > characteristics of character special files (e.g., terminals) may  
