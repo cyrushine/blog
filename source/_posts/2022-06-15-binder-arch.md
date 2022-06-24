@@ -139,27 +139,27 @@ java 层也有一套镜像功能的 binder C/S 架构，通过 JNI 和 native bi
 
 > ioctl - control device <br><br>
 > 
-> `int ioctl(int fd, unsigned long request, ...);` <br><br>
+> `int ioctl(int fd, unsigned long request, ...);`<br><br>
 > 
 > The ioctl() system call manipulates the underlying device  
 > parameters of special files.  In particular, many operating  
 > characteristics of character special files (e.g., terminals) may  
 > be controlled with ioctl() requests.  The argument `fd` must be an  
-> open file descriptor.  
+> open file descriptor.<br><br>
 > 
 > The second argument is a `device-dependent request code`.  The  
-> third argument is `an untyped pointer to memory`.  
+> third argument is `an untyped pointer to memory`.<br><br>
 >   
 > Ioctl command values are 32-bit constants.  In principle these  
 > constants are completely arbitrary, but people have tried to  
-> build some structure into them.  
+> build some structure into them.<br><br>
 > 
 > Later (0.98p5) some more information was built into the number.  
 > One has 2 direction bits (00: none, 01: write, 10: read, 11:  
 > read/write) followed by 14 size bits (giving the size of the  
 > argument), followed by an 8-bit type (collecting the ioctls in  
 > groups for a common purpose or a common driver), and an 8-bit  
-> serial number.  
+> serial number.<br><br>
 > 
 > The macros describing this structure live in <asm/ioctl.h> and  
 > are _IO(type,nr) and {_IOR,_IOW,_IOWR}(type,nr,size).  They use  
