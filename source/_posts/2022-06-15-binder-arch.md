@@ -7,7 +7,7 @@ date: 2022-06-15 12:00:00 +0800
 
 # Linux 设备
 
-![devices.jpg](../../../../2022-06-15-binder-arch/devices.jpg)
+![devices.jpg](../../../../image/2022-06-15-binder-arch/devices.jpg)
 
 linux 系统将设备分为3类：字符设备、块设备和网络设备：
 
@@ -24,14 +24,14 @@ linux 系统将设备分为3类：字符设备、块设备和网络设备：
 * 通过其成员 dev_t 来定义设备号（分为主、次设备号）以确定字符设备的唯一性
 * 通过其成员 file_operations 来定义字符设备驱动提供给 VFS 的接口函数，如常见的 open()、read()、write() 等
 
-![device_driver.jpg](../../../../2022-06-15-binder-arch/device_driver.jpg)
+![device_driver.jpg](../../../../image/2022-06-15-binder-arch/device_driver.jpg)
 
 在 Linux 字符设备驱动中：
 * 模块加载函数通过 register_chrdev_region 或 alloc_chrdev_region 来静态或者动态获取设备号
 * 通过 cdev_init 建立 cdev 与 file_operations 之间的连接，通过 cdev_add 向系统添加一个 cdev 以完成注册
 * 模块卸载函数通过 cdev_del 来注销 cdev，通过 unregister_chrdev_region 来释放设备号
 
-![chrdev.jpg](../../../../2022-06-15-binder-arch/chrdev.jpg)
+![chrdev.jpg](../../../../image/2022-06-15-binder-arch/chrdev.jpg)
 
 ## 杂项设备
 
@@ -101,7 +101,7 @@ Binder Driver 是 Android 专用的，但底层的驱动架构与 Linux 设备�
 2. _open() 是系统调用中相应的处理方法
 3. 通过查找，对应调用到内核 Binder Driver 的 binder_open 方法
 
-![systemcall.png](../../../../2022-06-15-binder-arch/systemcall.png)
+![systemcall.png](../../../../image/2022-06-15-binder-arch/systemcall.png)
 
 ## Binder 在 IPC 中的位置
 
@@ -111,7 +111,7 @@ Client 进程通过 RPC(Remote Procedure Call Protocol) 与 Server 通信的过�
 * RPC 数据、code、handle 和协议这四项组成了 IPC 的层的数据，通过 IPC 层进行数据传输
 * 而真正在 Client 和 Server 两端建立通信的基础设施是 Binder Driver
 
-![binderdriver_frame.png](../../../../2022-06-15-binder-arch/binderdriver_frame.png)
+![binderdriver_frame.png](../../../../image/2022-06-15-binder-arch/binderdriver_frame.png)
 
 # 架构总览
 
@@ -125,21 +125,21 @@ Client 进程通过 RPC(Remote Procedure Call Protocol) 与 Server 通信的过�
 
 - 从 Android Driver 层面看，Binder 是一个虚拟的字符设备，它的设备驱动路径是 `/dev/binder`
 
-![java_binder_frame.png](../../../../2022-06-15-binder-arch/java_binder_frame.png)
+![java_binder_frame.png](../../../../image/2022-06-15-binder-arch/java_binder_frame.png)
 
 Binder 在整个 Android 系统中具有重要的作用，在 native 层有一套完整的 binder 通信的 C/S 架构：`BpBinder` 作为客户端，`BBinder` 作为服务端
 
 java 层也有一套镜像功能的 binder C/S 架构，通过 JNI 和 native binder 相对应，并且最终都是交给 native binder 来完成的
 
-![java_binder_framework_class.jpg](../../../../2022-06-15-binder-arch/java_binder_framework_class.jpg)
+![java_binder_framework_class.jpg](../../../../image/2022-06-15-binder-arch/java_binder_framework_class.jpg)
 
 # 通讯模型
 
 ## ioctl
 
-> ioctl - control device
+> ioctl - control device  
 > 
-> `int ioctl(int fd, unsigned long request, ...);`
+> `int ioctl(int fd, unsigned long request, ...);`  
 > 
 > The ioctl() system call manipulates the underlying device  
 > parameters of special files.  In particular, many operating  
@@ -148,18 +148,18 @@ java 层也有一套镜像功能的 binder C/S 架构，通过 JNI 和 native bi
 > open file descriptor.  
 > 
 > The second argument is a `device-dependent request code`.  The  
-> third argument is `an untyped pointer to memory`.
+> third argument is `an untyped pointer to memory`.  
 > 
 > Ioctl command values are 32-bit constants.  In principle these  
 > constants are completely arbitrary, but people have tried to  
-> build some structure into them.
+> build some structure into them.  
 > 
 > Later (0.98p5) some more information was built into the number.  
 > One has 2 direction bits (00: none, 01: write, 10: read, 11:  
 > read/write) followed by 14 size bits (giving the size of the  
 > argument), followed by an 8-bit type (collecting the ioctls in  
 > groups for a common purpose or a common driver), and an 8-bit  
-> serial number.
+> serial number.  
 > 
 > The macros describing this structure live in <asm/ioctl.h> and  
 > are _IO(type,nr) and {_IOR,_IOW,_IOWR}(type,nr,size).  They use  
@@ -316,7 +316,7 @@ Binder IPC 通信至少是两个进程的交互，一次完整的 Binder 通信�
 - client 进程执行 binder_thread_write，根据 BC 命令生成相应的 binder_work
 - server 进程执行 binder_thread_read，根据 binder_work_type 类型生成 BR，发送到用户空间处理
 
-![bindermodel.png](../../../../2022-06-15-binder-arch/bindermodel.png)
+![bindermodel.png](../../../../image/2022-06-15-binder-arch/bindermodel.png)
 
 请求码是在 `binder_driver_command_protocol` 中定义的，用于应用程序向 binder 驱动设备发送请求消息，应用程序包含 Client 和 Server 端，以 BC_ 开头，总共 19 条
 
@@ -437,7 +437,7 @@ static void binder_transaction(struct binder_proc *proc,
 
 binder_mmap 是 Binder 进程间通信的高效的核心机制所在，其模型如下：
 
-![memory_model.png](../../../../2022-06-15-binder-arch/memory_model.png)
+![memory_model.png](../../../../image/2022-06-15-binder-arch/memory_model.png)
 
 一般的 IPC 需要 client 进程空间拷贝到内核空间，再由内核空间拷贝到 server 进程空间，共发生两次内存拷贝；而 Binder IPC 整个过程只发生一次内存拷贝：
 
@@ -445,7 +445,7 @@ binder_mmap 是 Binder 进程间通信的高效的核心机制所在，其模型
 - 当 client 与 server 发送数据时，client 作为数据发送端，先从自己的进程空间把 IPC 通信数据 copy_from_user 拷贝到内核空间
 - 而 server 作为数据接收端与内核共享数据，不再需要拷贝数据，而是通过内存地址空间的偏移量获取内存地址
 
-![memory_mapping.png](../../../../2022-06-15-binder-arch/memory_mapping.png)
+![memory_mapping.png](../../../../image/2022-06-15-binder-arch/memory_mapping.png)
 
 对于进程和内核虚拟地址映射到同一个物理内存的操作（通过地址偏移量来实现）是发生在数据接收端，而数据发送端还是需要将用户态的数据复制到内核态。为什么不直接让发送端和接收端直接映射到同一块物理空间，那样连一次复制的操作都不需要，0 次复制那就和 Linux 标准内核的共享内存 IPC 没有区别了，对于共享内存虽然效率高，但是对于多进程同步的问题比较复杂，而管道/消息队列等 IPC 需要复制两次，效率较低。总之Android 选择 Binder 是基于速度和安全性的考虑。
 
