@@ -140,7 +140,7 @@ java 层也有一套镜像功能的 binder C/S 架构，通过 JNI 和 native bi
 > ioctl - control device
 > <br />
 > `int ioctl(int fd, unsigned long request, ...);`
-> <br />
+> 
 > The ioctl() system call manipulates the underlying device  
 > parameters of special files.  In particular, many operating  
 > characteristics of character special files (e.g., terminals) may  
@@ -149,7 +149,7 @@ java 层也有一套镜像功能的 binder C/S 架构，通过 JNI 和 native bi
 > 
 > The second argument is a `device-dependent request code`.  The  
 > third argument is `an untyped pointer to memory`.  
-> 
+>   
 > Ioctl command values are 32-bit constants.  In principle these  
 > constants are completely arbitrary, but people have tried to  
 > build some structure into them.  
