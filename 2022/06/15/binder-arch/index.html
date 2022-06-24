@@ -36,7 +36,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-06-15-binder-arch/memory_model.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-06-15-binder-arch/memory_mapping.png">
 <meta property="article:published_time" content="2022-06-15T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-06-24T10:19:12.326Z">
+<meta property="article:modified_time" content="2022-06-24T10:23:48.485Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2022-06-15-binder-arch/devices.jpg">
@@ -432,8 +432,7 @@
 <p>java 层也有一套镜像功能的 binder C/S 架构，通过 JNI 和 native binder 相对应，并且最终都是交给 native binder 来完成的</p>
 <p><img src="../../../../image/2022-06-15-binder-arch/java_binder_framework_class.jpg" srcset="/image/loading.gif" lazyload alt="java_binder_framework_class.jpg"></p>
 <h1 id="通讯模型"><a href="#通讯模型" class="headerlink" title="通讯模型"></a>通讯模型</h1><h2 id="ioctl"><a href="#ioctl" class="headerlink" title="ioctl"></a>ioctl</h2><blockquote>
-<p>ioctl - control device<br><br /><br><code>int ioctl(int fd, unsigned long request, ...);</code>  </p>
-<p>The ioctl() system call manipulates the underlying device<br>parameters of special files.  In particular, many operating<br>characteristics of character special files (e.g., terminals) may<br>be controlled with ioctl() requests.  The argument <code>fd</code> must be an<br>open file descriptor.  </p>
+<p>ioctl - control device<br><br /><br><code>int ioctl(int fd, unsigned long request, ...);</code><br><br /><br>The ioctl() system call manipulates the underlying device<br>parameters of special files.  In particular, many operating<br>characteristics of character special files (e.g., terminals) may<br>be controlled with ioctl() requests.  The argument <code>fd</code> must be an<br>open file descriptor.  </p>
 <p>The second argument is a <code>device-dependent request code</code>.  The<br>third argument is <code>an untyped pointer to memory</code>.  </p>
 <p>Ioctl command values are 32-bit constants.  In principle these<br>constants are completely arbitrary, but people have tried to<br>build some structure into them.  </p>
 <p>Later (0.98p5) some more information was built into the number.<br>One has 2 direction bits (00: none, 01: write, 10: read, 11:<br>read/write) followed by 14 size bits (giving the size of the<br>argument), followed by an 8-bit type (collecting the ioctls in<br>groups for a common purpose or a common driver), and an 8-bit<br>serial number.  </p>
