@@ -311,14 +311,126 @@ jobject javaObjectForIBinder(JNIEnv* env, const sp<IBinder>& val)
 }
 ```
 
+# Parcel
+
+```java
+// Item.java
+public class Item implements Parcelable {
+
+    private int id;
+    private String title;
+    private String category;
+    private String mp3url;
+    private String lrcurl;
+    private String txturl;
+
+    public Item() {}
+
+    public Item(Parcel in) {
+        id = in.readInt();
+        title = in.readString();
+        category = in.readString();
+        mp3url = in.readString();
+        lrcurl = in.readString();
+        txturl = in.readString();
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(id);
+        dest.writeString(title);
+        dest.writeString(category);
+        dest.writeString(mp3url);
+        dest.writeString(lrcurl);
+        dest.writeString(txturl);
+    }
+
+    public static final Creator<Item> CREATOR = new Creator<Item>() {
+        @Override
+        public Item createFromParcel(Parcel in) {
+            return new Item(in);
+        }
+
+        @Override
+        public Item[] newArray(int size) {
+            return new Item[size];
+        }
+    };
+
+    // getter and setter ...
+}
+
+// Item.aidl
+package work.dalvik.binder.example;
+parcelable Item;
+
+// IAidlExampleInterface.aidl
+package work.dalvik.binder.example;
+
+import work.dalvik.binder.example.Item;
+
+interface IAidlExampleInterface {
+    Item fetchFromDB(in Item query, int size, long from, boolean distint);
+}
+
+// IAidlExampleInterface.java
+public interface IAidlExampleInterface extends android.os.IInterface {
+    public static abstract class Stub extends android.os.Binder implements work.dalvik.binder.example.IAidlExampleInterface {
+        private static class Proxy implements work.dalvik.binder.example.IAidlExampleInterface {
+            @Override 
+            public work.dalvik.binder.example.Item fetchFromDB(work.dalvik.binder.example.Item query, int size, long from, boolean distint) throws android.os.RemoteException
+            {
+            android.os.Parcel _data = android.os.Parcel.obtain();
+            android.os.Parcel _reply = android.os.Parcel.obtain();
+            work.dalvik.binder.example.Item _result;
+            try {
+              _data.writeInterfaceToken(DESCRIPTOR);
+              if ((query!=null)) {
+                _data.writeInt(1);
+                query.writeToParcel(_data, 0);
+              }
+              else {
+                _data.writeInt(0);
+              }
+              _data.writeInt(size);
+              _data.writeLong(from);
+              _data.writeInt(((distint)?(1):(0)));
+              boolean _status = mRemote.transact(Stub.TRANSACTION_fetchFromDB, _data, _reply, 0);
+              if (!_status && getDefaultImpl() != null) {
+                return getDefaultImpl().fetchFromDB(query, size, from, distint);
+              }
+              _reply.readException();
+              if ((0!=_reply.readInt())) {
+                _result = work.dalvik.binder.example.Item.CREATOR.createFromParcel(_reply);
+              }
+              else {
+                _result = null;
+              }
+            }
+            finally {
+              _reply.recycle();
+              _data.recycle();
+            }
+            return _result;
+            }
+        }
+    }
+}
+```
+
 # BinderProxy
 
-> std::variant 是 C++ 17 所提供的变体类型，`variant<X, Y, Z>` 是可存放 X, Y, Z 这三种类型数据的变体类型
+> std::variant 是 C++ 17 所提供的变体类型，`variant<X, Y, Z>` 是可存放 X, Y, Z 这三种类型数据的变体类型<br>
 > 
-> 与C语言中传统的 union 类型相同的是，variant 也是联合(union)类型。即 variant 可以存放多种类型的数据，但任何时刻最多只能存放其中一种类型的数据  
-> 与C语言中传统的 union 类型所不同的是，variant 是可辨识的类型安全的联合(union)类型。即 variant 无须借助外力只需要通过查询自身就可辨别实际所存放数据的类型  
+> 与C语言中传统的 union 类型相同的是，variant 也是联合(union)类型。即 variant 可以存放多种类型的数据，但任何时刻最多只能存放其中一种类型的数据
+> 与C语言中传统的 union 类型所不同的是，variant 是可辨识的类型安全的联合(union)类型。即 variant 无须借助外力只需要通过查询自身就可辨别实际所存放数据的类型<br>
 > 
-> `v = variant<int, double, std::string>`，则 v 是一个可存放 int, double, std::string 这三种类型数据的变体类型的对象
+> `v = variant<int, double, std::string>`，则 v 是一个可存放 int, double, std::string 这三种类型数据的变体类型的对象<br>
 > 
 > `v.index()`                    返回变体类型 v 实际所存放数据的类型的下标，变体中第 1 种类型下标为 0，第 2 种类型下标为 1，以此类推  
 > `std::holds_alternative<T>(v)` 可查询变体类型 v 是否存放了 T 类型的数据  
@@ -334,8 +446,7 @@ public final class BinderProxy implements IBinder {
         return transactNative(code, data, reply, flags);
     }
 
-    public native boolean transactNative(int code, Parcel data, Parcel reply,
-            int flags) throws RemoteException;	
+    public native boolean transactNative(int code, Parcel data, Parcel reply, int flags) throws RemoteException;	
 }
 
 // frameworks/base/core/jni/android_util_Binder.cpp
@@ -381,7 +492,7 @@ static jboolean android_os_BinderProxy_transact(JNIEnv* env, jobject obj,
     }
 
     //printf("Transact from Java code to %p sending: ", target); data->print();
-    status_t err = target->transact(code, *data, reply, flags);
+    status_t err = target->transact(code, *data, reply, flags);  // BpBinder::transact
     //if (reply) printf("Transact from Java code to %p received: ", target); reply->print();
 
     if (kEnableBinderSample) {
@@ -538,15 +649,19 @@ status_t IPCThreadState::transact(int32_t handle,
     return err;
 }
 
-status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,
-    int32_t handle, uint32_t code, const Parcel& data, status_t* statusBuffer)
-{
-    binder_transaction_data tr;
+// [深入 Binder 之架构篇]介绍过，BC_TRANSACTION 表示 client 向 binder driver 传输数据，结构是 binder_transaction_data
 
-    tr.target.ptr = 0; /* Don't pass uninitialized stack data to a remote process */
-    tr.target.handle = handle;
-    tr.code = code;
-    tr.flags = binderFlags;
+status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,  // cmd == BC_TRANSACTION
+    int32_t handle, uint32_t code, const Parcel& data, status_t* statusBuffer)    // handle == 0
+{
+    binder_transaction_data tr;  // 填充数据结构 binder_transaction_data
+
+    tr.target.ptr = 0;
+    tr.target.handle = handle;   // 目标进程在 binder driver 的标识符，handle == 0 表示 service manager 进程
+                                 // binder driver 作为中间商负责查找进程，并将数据传递过去
+    tr.code = code;              // 指令码，目标进程根据协商好的约定执行相应的逻辑，定义在 AIDL 里的方法按顺序从上到下编码
+                                 // 第一个是 FIRST_CALL_TRANSACTION + 0，第二个是 FIRST_CALL_TRANSACTION + 1
+    tr.flags = binderFlags;      // TF_ONE_WAY (this is a one-way call: async, no return), TF_ROOT_OBJECT (contents are the component's root object) 等等
     tr.cookie = 0;
     tr.sender_pid = 0;
     tr.sender_euid = 0;
@@ -568,62 +683,32 @@ status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,
         return (mLastError = err);
     }
 
-    mOut.writeInt32(cmd);
-    mOut.write(&tr, sizeof(tr));
+    mOut.writeInt32(cmd);         // Parcel 实例，将 [BC_TRANSACTION][binder_transaction_data] 写入 mOut，mOut 是 client 进程内的一块内存空间
+    mOut.write(&tr, sizeof(tr));  // 后续与 binder driver 通讯时：ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr)，作为 binder_write_read.write_buffer 参数发送给目标进程
 
     return NO_ERROR;
 }
 
-status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)  // reply = null, acquireResult == null
+status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)  // reply == null, acquireResult == null
 {
     uint32_t cmd;
     int32_t err;
 
     while (1) {
-        if ((err=talkWithDriver()) < NO_ERROR) break;
-        err = mIn.errorCheck();
-        if (err < NO_ERROR) break;
+        if ((err=talkWithDriver()) < NO_ERROR) break;  // talkWithDriver() 通过 ioctl(BINDER_WRITE_READ) 与 binder driver 交互
+        err = mIn.errorCheck();                        // binder_write_read.write_buffer(mOut) 被 binder driver 读取（copy 至内核空间）
+        if (err < NO_ERROR) break;                     // binder_write_read.read_buffer(mIn) 是 server 的返回值，需要 client 读取
         if (mIn.dataAvail() == 0) continue;
 
-        cmd = (uint32_t)mIn.readInt32();
-
-        IF_LOG_COMMANDS() {
-            alog << "Processing waitForResponse Command: "
-                << getReturnString(cmd) << endl;
-        }
-
-        switch (cmd) {
+        cmd = (uint32_t)mIn.readInt32();               // [深入 Binder 之架构篇] 介绍过 BR_ 是 binder 给 client 的响应码
+        switch (cmd) {                                 
         case BR_ONEWAY_SPAM_SUSPECT:
-            ALOGE("Process seems to be sending too many oneway calls.");
-            CallStack::logStack("oneway spamming", CallStack::getCurrent().get(),
-                    ANDROID_LOG_ERROR);
-            [[fallthrough]];
         case BR_TRANSACTION_COMPLETE:
-            if (!reply && !acquireResult) goto finish;
-            break;
-
         case BR_DEAD_REPLY:
-            err = DEAD_OBJECT;
-            goto finish;
-
         case BR_FAILED_REPLY:
-            err = FAILED_TRANSACTION;
-            goto finish;
-
         case BR_FROZEN_REPLY:
-            err = FAILED_TRANSACTION;
-            goto finish;
-
         case BR_ACQUIRE_RESULT:
-            {
-                ALOG_ASSERT(acquireResult != NULL, "Unexpected brACQUIRE_RESULT");
-                const int32_t result = mIn.readInt32();
-                if (!acquireResult) continue;
-                *acquireResult = result ? NO_ERROR : INVALID_OPERATION;
-            }
-            goto finish;
-
-        case BR_REPLY:
+        case BR_REPLY:                                 // BR_REPLY 指示 client 接收 server 返回的响应数据，内存布局同 BC_TRANSACTION 一样是 binder_transaction_data
             {
                 binder_transaction_data tr;
                 err = mIn.read(&tr, sizeof(tr));
@@ -631,7 +716,7 @@ status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
                 if (err != NO_ERROR) goto finish;
 
                 if (reply) {
-                    if ((tr.flags & TF_STATUS_CODE) == 0) {
+                    if ((tr.flags & TF_STATUS_CODE) == 0) {  // 将 replay 指向 server 返回的响应
                         reply->ipcSetDataReference(
                             reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
                             tr.data_size,
@@ -676,7 +761,7 @@ finish:
 }
 
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/IPCThreadState.cpp
-status_t IPCThreadState::talkWithDriver(bool doReceive)
+status_t IPCThreadState::talkWithDriver(bool doReceive)    // doReceive 默认为 true
 {
     if (mProcess->mDriverFD < 0) {
         return -EBADF;
@@ -688,58 +773,33 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
     // from data left in the input buffer and the caller
     // has requested to read the next data.
     const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
-    bwr.write_size = outAvail;
-    bwr.write_buffer = (uintptr_t)mOut.data();
-    // This is what we'll read.
-    if (doReceive && needRead) {
-        bwr.read_size = mIn.dataCapacity();
-        bwr.read_buffer = (uintptr_t)mIn.data();
-    } else {
+    bwr.write_size = outAvail;                    // 就是上面 writeTransactionData() 里填充的数据：[BC_TRANSACTION][binder_transaction_data]
+    bwr.write_buffer = (uintptr_t)mOut.data();    // write_buffer 是将要发送给目标进程的数据
+
+    if (doReceive && needRead) {                  // read_buffer(mIn) 是一块用以接收 server 返回值的内存，它的容量是 mIn.dataCapacity()
+        bwr.read_size = mIn.dataCapacity();       // 如果 server 返回值太大装不下，就会执行多次 talkWithDriver 以接收返回值，此时优先 read 暂停 write
+        bwr.read_buffer = (uintptr_t)mIn.data();  // mIn data size 在 binder io 结束后被设置为返回值的长度（下面的代码会讲到）
+    } else {                                      // data position 指示读取偏移，如果 data position >= data size 说明返回值以全部读取完，mIn 空出来了，可以继续接收返回值
         bwr.read_size = 0;
         bwr.read_buffer = 0;
     }
-    IF_LOG_COMMANDS() {
-        TextOutput::Bundle _b(alog);
-        if (outAvail != 0) {
-            alog << "Sending commands to driver: " << indent;
-            const void* cmds = (const void*)bwr.write_buffer;
-            const void* end = ((const uint8_t*)cmds)+bwr.write_size;
-            alog << HexDump(cmds, bwr.write_size) << endl;
-            while (cmds < end) cmds = printCommand(alog, cmds);
-            alog << dedent;
-        }
-        alog << "Size of receive buffer: " << bwr.read_size
-            << ", needRead: " << needRead << ", doReceive: " << doReceive << endl;
-    }
-    // Return immediately if there is nothing to do.
-    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
-    bwr.write_consumed = 0;
-    bwr.read_consumed = 0;
+
+    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR; // Return immediately if there is nothing to do.
+    bwr.write_consumed = 0;    // write_buffer 是 client 发送给 server 的，中间商 binder driver 需要将其 copy 至内核空间以便 server 读取
+                               // write_consumed 表示 binder driver 读取了多少内容
+    bwr.read_consumed = 0;     // read_buffer 是 server 给 client 的返回值，client 需要读取并处理 read_buffer 里的内容
+                               // read_buffer 里的内容由 server 写入，并将其长度写在 read_consumed
+                               // 也就说当 ioctl(BINDER_WRITE_READ) 返回后，如果 read_consumed > 0 表示 server 有返回值
     status_t err;
     do {
-        IF_LOG_COMMANDS() {
-            alog << "About to read/write, write size = " << mOut.dataSize() << endl;
-        }
-#if defined(__ANDROID__)
-        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
-            err = NO_ERROR;
+        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)  // 通过 ioctl 与 binder driver 通讯
+            err = NO_ERROR;                                            // 在[深入 Binder 之架构篇]介绍过 BINDER_WRITE_READ 指示 binder 进行收发数据的操作
         else
             err = -errno;
-#else
-        err = INVALID_OPERATION;
-#endif
         if (mProcess->mDriverFD < 0) {
             err = -EBADF;
         }
-        IF_LOG_COMMANDS() {
-            alog << "Finished read/write, write size = " << mOut.dataSize() << endl;
-        }
     } while (err == -EINTR);
-    IF_LOG_COMMANDS() {
-        alog << "Our err: " << (void*)(intptr_t)err << ", write consumed: "
-            << bwr.write_consumed << " (of " << mOut.dataSize()
-                        << "), read consumed: " << bwr.read_consumed << endl;
-    }
     if (err >= NO_ERROR) {
         if (bwr.write_consumed > 0) {
             if (bwr.write_consumed < mOut.dataSize())
@@ -749,23 +809,13 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
                                  (size_t)bwr.write_consumed,
                                  mOut.dataSize());
             else {
-                mOut.setDataSize(0);
+                mOut.setDataSize(0);  // write_buffer 指向的内存由 Parcel mOut 管理，binder driver 拷贝到内核空间后就可以把 data size 置空以便后续使用
                 processPostWriteDerefs();
             }
         }
-        if (bwr.read_consumed > 0) {
-            mIn.setDataSize(bwr.read_consumed);
-            mIn.setDataPosition(0);
-        }
-        IF_LOG_COMMANDS() {
-            TextOutput::Bundle _b(alog);
-            alog << "Remaining data size: " << mOut.dataSize() << endl;
-            alog << "Received commands from driver: " << indent;
-            const void* cmds = mIn.data();
-            const void* end = mIn.data() + mIn.dataSize();
-            alog << HexDump(cmds, mIn.dataSize()) << endl;
-            while (cmds < end) cmds = printReturnCommand(alog, cmds);
-            alog << dedent;
+        if (bwr.read_consumed > 0) {             // binder io 结束后如果 read_consumed > 0 表示 server 有返回值，需要 client 读取
+            mIn.setDataSize(bwr.read_consumed);  // 此时 read_buffer (mIn) 虚拟内存地址已被 binder driver 映射到保存 server 返回值的物理地址
+            mIn.setDataPosition(0);              // 将 mIn 的 data size 设置为 read_consumed，data position（指示当前读取位移）置零以便后续在 waitForResponse 读取返回值
         }
         return NO_ERROR;
     }
