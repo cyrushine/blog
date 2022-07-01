@@ -313,65 +313,18 @@ jobject javaObjectForIBinder(JNIEnv* env, const sp<IBinder>& val)
 
 # Parcel
 
+`Parcel` 在 binder IPC 里被用作一个容器，用以承载输入/输出（参数/返回值）：`boolean transact(int code, Parcel data, Parcel reply, int flags)`，如下所示
+
+- 参数列表按顺序打包到 `_data` 里（Parcel.write），返回值则被 server 写入至 `_reply`，client 用 Parcel.read 按顺序读取出来
+- 这两个容器都是在 binder IPC 前临时申请的，作用域限定在方法 `fetchFromDB` 内
+
 ```java
-// Item.java
-public class Item implements Parcelable {
-
-    private int id;
-    private String title;
-    private String category;
-    private String mp3url;
-    private String lrcurl;
-    private String txturl;
-
-    public Item() {}
-
-    public Item(Parcel in) {
-        id = in.readInt();
-        title = in.readString();
-        category = in.readString();
-        mp3url = in.readString();
-        lrcurl = in.readString();
-        txturl = in.readString();
-    }
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeInt(id);
-        dest.writeString(title);
-        dest.writeString(category);
-        dest.writeString(mp3url);
-        dest.writeString(lrcurl);
-        dest.writeString(txturl);
-    }
-
-    public static final Creator<Item> CREATOR = new Creator<Item>() {
-        @Override
-        public Item createFromParcel(Parcel in) {
-            return new Item(in);
-        }
-
-        @Override
-        public Item[] newArray(int size) {
-            return new Item[size];
-        }
-    };
-
-    // getter and setter ...
-}
-
 // Item.aidl
 package work.dalvik.binder.example;
 parcelable Item;
 
 // IAidlExampleInterface.aidl
 package work.dalvik.binder.example;
-
 import work.dalvik.binder.example.Item;
 
 interface IAidlExampleInterface {
@@ -420,6 +373,349 @@ public interface IAidlExampleInterface extends android.os.IInterface {
             }
         }
     }
+}
+
+// Item.java
+public class Item implements Parcelable {
+    private int id;
+    private String title;
+    private String category;
+    private String mp3url;
+    private String lrcurl;
+    private String txturl;
+
+    public Item() {}
+    public Item(Parcel in) {
+        id = in.readInt();
+        title = in.readString();
+        category = in.readString();
+        mp3url = in.readString();
+        lrcurl = in.readString();
+        txturl = in.readString();
+    }
+
+    @Override
+    public int describeContents() { return 0; }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(id);
+        dest.writeString(title);
+        dest.writeString(category);
+        dest.writeString(mp3url);
+        dest.writeString(lrcurl);
+        dest.writeString(txturl);
+    }
+
+    public static final Creator<Item> CREATOR = new Creator<Item>() {
+        @Override
+        public Item createFromParcel(Parcel in) { return new Item(in); }
+
+        @Override
+        public Item[] newArray(int size) { return new Item[size]; }
+    };
+    // getter and setter ...
+}
+```
+
+从下面的代码可以看出，java 层的 Parcel 实例就是个壳（wrapper），所有的 read、write 等方法都在 `mNativePtr` 指针指向的 native 层对象实现
+
+```java
+public final class Parcel {
+    /**
+     * We're willing to pool up to 32 objects, which is sized to accommodate
+     * both a data and reply Parcel for the maximum of 16 Binder threads.
+     */
+    private static final int POOL_SIZE = 32;    
+
+    public static Parcel obtain() {
+        Parcel res = null;
+        synchronized (sPoolSync) {
+            if (sOwnedPool != null) {        // 有个全局缓存池
+                res = sOwnedPool;            // 是链表结构，表头是 sOwnedPool，长度是 sOwnedPoolSize，最大长度限制是 POOL_SIZE
+                sOwnedPool = res.mPoolNext;  // 通过 Parcel.recycle() 回收至缓冲池
+                res.mPoolNext = null;
+                sOwnedPoolSize--;
+            }
+        }
+
+        if (res == null) {
+            res = new Parcel(0);             // 看这里，构造一个全新的实例
+        } else {
+            if (DEBUG_RECYCLE) {
+                res.mStack = new RuntimeException();
+            }
+            res.mReadWriteHelper = ReadWriteHelper.DEFAULT;
+        }
+        return res;
+    }
+
+    // 可以看出，java 层的 Parcel 实例就是个壳
+    // 所有 write、read 等方法都在 mNativePtr 指针指向的 native 层对象实现
+
+    private Parcel(long nativePtr /* 0 */) { init(nativePtr); }   
+    private void init(long nativePtr) {
+        if (nativePtr != 0) {
+            mNativePtr = nativePtr;
+            mOwnsNativeParcelObject = false;
+        } else {
+            mNativePtr = nativeCreate();
+            mOwnsNativeParcelObject = true;
+        }
+    }
+    private static native long nativeCreate();
+
+    public final void writeInt(int val) {
+        int err = nativeWriteInt(mNativePtr, val);
+        if (err != OK) {
+            nativeSignalExceptionForError(err);
+        }
+    }
+
+    public final int readInt() { return nativeReadInt(mNativePtr); }   
+    public final int dataAvail() { return nativeDataAvail(mNativePtr); }
+    public final int dataSize() { return nativeDataSize(mNativePtr); }                   
+}
+
+// frameworks/base/core/jni/android_os_Parcel.cpp
+static jlong android_os_Parcel_create(JNIEnv* env, jclass clazz)  // 对应 java 方法 Parcel.nativeCreate()
+{
+    Parcel* parcel = new Parcel();
+    return reinterpret_cast<jlong>(parcel);
+}
+```
+
+```cpp
+// frameworks/native/libs/binder/Parcel.cpp
+status_t Parcel::writeInt32(int32_t val)
+{
+    return writeAligned(val);
+}
+
+template<class T>
+status_t Parcel::writeAligned(T val) {
+    static_assert(PAD_SIZE_UNSAFE(sizeof(T)) == sizeof(T));
+    static_assert(std::is_trivially_copyable_v<T>);
+
+    if ((mDataPos+sizeof(val)) <= mDataCapacity) {  // 
+restart_write:
+        memcpy(mData + mDataPos, &val, sizeof(val));
+        return finishWrite(sizeof(val));
+    }
+
+    status_t err = growData(sizeof(val));
+    if (err == NO_ERROR) goto restart_write;
+    return err;
+}
+
+status_t Parcel::finishWrite(size_t len /* write data 的长度 */)
+{
+    if (len > INT32_MAX) {
+        // don't accept size_t values which may have come from an
+        // inadvertent conversion from a negative int.
+        return BAD_VALUE;
+    }
+
+    mDataPos += len;
+    ALOGV("finishWrite Setting data pos of %p to %zu", this, mDataPos);
+    if (mDataPos > mDataSize) {
+        mDataSize = mDataPos;
+        ALOGV("finishWrite Setting data size of %p to %zu", this, mDataSize);
+    }
+    //printf("New pos=%d, size=%d\n", mDataPos, mDataSize);
+    return NO_ERROR;
+}
+
+status_t Parcel::growData(size_t len)  // 扩容，len 是触发扩容的 write data 长度
+{
+    if (len > INT32_MAX) {
+        // don't accept size_t values which may have come from an
+        // inadvertent conversion from a negative int.
+        return BAD_VALUE;
+    }
+
+    if (len > SIZE_MAX - mDataSize) return NO_MEMORY;     // overflow
+    if (mDataSize + len > SIZE_MAX / 3) return NO_MEMORY; // overflow
+    size_t newSize = ((mDataSize+len)*3)/2;               // 扩容后总是预留 1/3 空闲空间
+    return (newSize <= mDataSize)
+            ? (status_t) NO_MEMORY
+            : continueWrite(std::max(newSize, (size_t) 128));
+}
+
+status_t Parcel::continueWrite(size_t desired /* 扩容后的大小 */)
+{
+    if (desired > INT32_MAX) {
+        // don't accept size_t values which may have come from an
+        // inadvertent conversion from a negative int.
+        return BAD_VALUE;
+    }
+
+    auto* kernelFields = maybeKernelFields();
+
+    // If shrinking, first adjust for any objects that appear
+    // after the new data size.
+    size_t objectsSize = kernelFields ? kernelFields->mObjectsSize : 0;
+    if (kernelFields && desired < mDataSize) {
+        if (desired == 0) {
+            objectsSize = 0;
+        } else {
+            while (objectsSize > 0) {
+                if (kernelFields->mObjects[objectsSize - 1] < desired) break;
+                objectsSize--;
+            }
+        }
+    }
+
+    if (mOwner) {
+        // If the size is going to zero, just release the owner's data.
+        if (desired == 0) {
+            freeData();
+            return NO_ERROR;
+        }
+
+        // If there is a different owner, we need to take
+        // posession.
+        uint8_t* data = (uint8_t*)malloc(desired);
+        if (!data) {
+            mError = NO_MEMORY;
+            return NO_MEMORY;
+        }
+        binder_size_t* objects = nullptr;
+
+        if (objectsSize) {
+            objects = (binder_size_t*)calloc(objectsSize, sizeof(binder_size_t));
+            if (!objects) {
+                free(data);
+
+                mError = NO_MEMORY;
+                return NO_MEMORY;
+            }
+
+            // Little hack to only acquire references on objects
+            // we will be keeping.
+            size_t oldObjectsSize = kernelFields->mObjectsSize;
+            kernelFields->mObjectsSize = objectsSize;
+            acquireObjects();
+            kernelFields->mObjectsSize = oldObjectsSize;
+        }
+
+        if (mData) {
+            memcpy(data, mData, mDataSize < desired ? mDataSize : desired);
+        }
+        if (objects && kernelFields && kernelFields->mObjects) {
+            memcpy(objects, kernelFields->mObjects, objectsSize * sizeof(binder_size_t));
+        }
+        //ALOGI("Freeing data ref of %p (pid=%d)", this, getpid());
+        mOwner(this, mData, mDataSize, kernelFields ? kernelFields->mObjects : nullptr,
+               kernelFields ? kernelFields->mObjectsSize : 0);
+        mOwner = nullptr;
+
+        LOG_ALLOC("Parcel %p: taking ownership of %zu capacity", this, desired);
+        gParcelGlobalAllocSize += desired;
+        gParcelGlobalAllocCount++;
+
+        mData = data;
+        mDataSize = (mDataSize < desired) ? mDataSize : desired;
+        ALOGV("continueWrite Setting data size of %p to %zu", this, mDataSize);
+        mDataCapacity = desired;
+        if (kernelFields) {
+            kernelFields->mObjects = objects;
+            kernelFields->mObjectsSize = kernelFields->mObjectsCapacity = objectsSize;
+            kernelFields->mNextObjectHint = 0;
+            kernelFields->mObjectsSorted = false;
+        }
+
+    } else if (mData) {
+        if (kernelFields && objectsSize < kernelFields->mObjectsSize) {
+            // Need to release refs on any objects we are dropping.
+            const sp<ProcessState> proc(ProcessState::self());
+            for (size_t i = objectsSize; i < kernelFields->mObjectsSize; i++) {
+                const flat_binder_object* flat =
+                        reinterpret_cast<flat_binder_object*>(mData + kernelFields->mObjects[i]);
+                if (flat->hdr.type == BINDER_TYPE_FD) {
+                    // will need to rescan because we may have lopped off the only FDs
+                    kernelFields->mFdsKnown = false;
+                }
+                release_object(proc, *flat, this);
+            }
+
+            if (objectsSize == 0) {
+                free(kernelFields->mObjects);
+                kernelFields->mObjects = nullptr;
+                kernelFields->mObjectsCapacity = 0;
+            } else {
+                binder_size_t* objects =
+                        (binder_size_t*)realloc(kernelFields->mObjects,
+                                                objectsSize * sizeof(binder_size_t));
+                if (objects) {
+                    kernelFields->mObjects = objects;
+                    kernelFields->mObjectsCapacity = objectsSize;
+                }
+            }
+            kernelFields->mObjectsSize = objectsSize;
+            kernelFields->mNextObjectHint = 0;
+            kernelFields->mObjectsSorted = false;
+        }
+
+        // We own the data, so we can just do a realloc().
+        if (desired > mDataCapacity) {
+            // 
+            uint8_t* data = reallocZeroFree(mData, mDataCapacity, desired, mDeallocZero /* default false */);
+            if (data) {
+                LOG_ALLOC("Parcel %p: continue from %zu to %zu capacity", this, mDataCapacity,
+                        desired);
+                gParcelGlobalAllocSize += desired;
+                gParcelGlobalAllocSize -= mDataCapacity;
+                mData = data;
+                mDataCapacity = desired;
+            } else {
+                mError = NO_MEMORY;
+                return NO_MEMORY;
+            }
+        } else {
+            if (mDataSize > desired) {
+                mDataSize = desired;
+                ALOGV("continueWrite Setting data size of %p to %zu", this, mDataSize);
+            }
+            if (mDataPos > desired) {
+                mDataPos = desired;
+                ALOGV("continueWrite Setting data pos of %p to %zu", this, mDataPos);
+            }
+        }
+
+    } else {
+        uint8_t* data = (uint8_t*)malloc(desired);  // 第一次分配内存空间
+        if (!data) {
+            mError = NO_MEMORY;
+            return NO_MEMORY;
+        }
+        gParcelGlobalAllocSize += desired;
+        gParcelGlobalAllocCount++;
+
+        mData = data;             // 属于第一次分配内存空间，mData 指向这块内存地址空间
+        mDataSize = mDataPos = 0; // mDataSize 是写入的数据的长度；mDataPos 是一个偏移值，写模式下 mData + mDataPos 指向下一个可写入的位置
+        mDataCapacity = desired;  // mDataCapacity 是容量，也即是已分配内存空间的大小
+    }
+
+    return NO_ERROR;
+}
+
+static uint8_t* reallocZeroFree(uint8_t* data, size_t oldCapacity, size_t newCapacity, bool zero) {
+    // realloc 首先会尝试将 data 指向的内存区域扩大（缩小）至 newCapacity，data 原有的内容不会改变，新增空间的内容是 undefined
+    // 如果没有连续的内存空间用以扩张，则新开辟一块 newCapacity 大小的内存空间并将 data 的内容拷贝过去，释放 data 并返回新开辟的空间地址
+    // https://en.cppreference.com/w/c/memory/realloc
+    if (!zero) {
+        return (uint8_t*)realloc(data, newCapacity);
+    }
+
+    uint8_t* newData = (uint8_t*)malloc(newCapacity);          // 虽然 realloc 效率更高，但如果需要将旧的内存空间（data）置零（zero == true）
+    if (!newData) {                                            // 则需要用 malloc 分配新的内存空间
+        return nullptr;
+    }
+    memcpy(newData, data, std::min(oldCapacity, newCapacity)); // 将 data 内存拷贝至新分配的空间
+    zeroMemory(data, oldCapacity);                             // 在释放 data 前将其置零
+    free(data);                                                // 释放 data
+    return newData;
 }
 ```
 
