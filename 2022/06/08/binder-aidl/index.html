@@ -26,7 +26,7 @@
 <meta property="og:description" content="应用层从 AIDL 说起，AIDL 全称 Android Interface Definition Language，是一个用以描述&#x2F;定义 接口 的文本文件，有着与 java 类似的简单语法 下面是一个非常简单的 AIDL 文件，位于 &amp;#123;projectPath&amp;#125;&#x2F;app&#x2F;src&#x2F;main&#x2F;aidl&#x2F;work&#x2F;dalvik&#x2F;binder&#x2F;example&#x2F;IAidlExampleI">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-06-08T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-07-01T10:38:02.358Z">
+<meta property="article:modified_time" content="2022-08-19T10:39:31.280Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
   
@@ -315,17 +315,17 @@
 <li><p>不在同一进程的情况下，客户端 asInterface() 返回的是 Proxy 对象，这个 Proxy 对象其实并没有实现接口逻辑，而是把方法调用代理至客户端拿到的 BinderProxy 对象</p>
 </li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AidlExampleImpl</span>: <span class="hljs-type">IAidlExampleInterface.Stub</span></span>() &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">private</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AidlExampleImpl</span>: <span class="hljs-type">IAidlExampleInterface.Stub</span>() &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getPid</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Int</span>  = Process.myPid()
 &#125;
 
-<span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BaseService</span> : <span class="hljs-type">Service</span></span>() &#123;
+<span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">BaseService</span> : <span class="hljs-type">Service</span>() &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> mBinder = AidlExampleImpl()
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">onBind</span><span class="hljs-params">(intent: <span class="hljs-type">Intent</span>)</span></span>: IBinder = mBinder
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ExampleService</span>: <span class="hljs-type">BaseService</span></span>()
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ChildService</span>: <span class="hljs-type">BaseService</span></span>()
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ExampleService</span>: <span class="hljs-type">BaseService</span>()
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ChildService</span>: <span class="hljs-type">BaseService</span>()
 
 &lt;service android:name=<span class="hljs-string">&quot;.ChildService&quot;</span>
     android:enabled=<span class="hljs-string">&quot;true&quot;</span>

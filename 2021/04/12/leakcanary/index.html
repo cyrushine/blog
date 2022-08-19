@@ -30,7 +30,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-12-leakcanary/hprof_header.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2021-04-12-leakcanary/hprof_record.png">
 <meta property="article:published_time" content="2021-04-12T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-07-01T10:38:02.350Z">
+<meta property="article:modified_time" content="2022-08-19T10:39:31.272Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="LeakCanary">
 <meta property="article:tag" content="内存优化，OOM">
@@ -308,7 +308,7 @@
 
 <h3 id="如何检测泄漏对象"><a href="#如何检测泄漏对象" class="headerlink" title="如何检测泄漏对象"></a>如何检测泄漏对象</h3><p><code>ObjectWatcher</code> 实现了 <code>LeakCanary</code> 的泄漏检测机制：监控 - 等待 - 检查</p>
 <p>用 <code>WeakReference</code> + <code>ReferenceQueue</code> 监控对象的 GC 状态，并用 <code>watchedObjects</code> 持有它的弱引用，key 是 UUID</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ObjectWatcher</span> <span class="hljs-keyword">constructor</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">class</span> <span class="hljs-title class_">ObjectWatcher</span> <span class="hljs-keyword">constructor</span>(
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> clock: Clock,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> checkRetainedExecutor: Executor,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> isEnabled: () -&gt; <span class="hljs-built_in">Boolean</span> = &#123; <span class="hljs-literal">true</span> &#125;
@@ -376,7 +376,7 @@
 &#125;
 
 <span class="hljs-comment">// 而 checkRetainedExecutor 是通过构造函数传入的</span>
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ObjectWatcher</span> <span class="hljs-keyword">constructor</span></span>(
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ObjectWatcher</span> <span class="hljs-keyword">constructor</span>(
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> clock: Clock,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> checkRetainedExecutor: Executor,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> isEnabled: () -&gt; <span class="hljs-built_in">Boolean</span> = &#123; <span class="hljs-literal">true</span> &#125;
@@ -438,7 +438,7 @@
 
 <h3 id="检测-Activity-泄漏"><a href="#检测-Activity-泄漏" class="headerlink" title="检测 Activity 泄漏"></a>检测 <code>Activity</code> 泄漏</h3><p>通过 <code>ActivityLifecycleCallbacks.onActivityDestroyed</code> 可以收集到 destoryed <code>Activity</code>，这些 <code>Activity</code> 已走完它的生命周期，应该被后续的 GC 回收掉</p>
 <div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 收集 destroyed Activity</span>
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ActivityWatcher</span></span>(
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ActivityWatcher</span>(
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> application: Application,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> reachabilityWatcher: ReachabilityWatcher
 ) : InstallableWatcher &#123;
@@ -454,7 +454,7 @@
 &#125;</code></pre></div>
 
 <h3 id="检测-Fragment-和-View-的泄漏"><a href="#检测-Fragment-和-View-的泄漏" class="headerlink" title="检测 Fragment 和 View 的泄漏"></a>检测 <code>Fragment</code> 和 <code>View</code> 的泄漏</h3><p>利用 <code>FragmentLifecycleCallbacks</code> 发现被 destroyed <code>Fragment</code> 和 <code>View</code>，然后用 <code>ObjectWatcher</code> 监控是否发生泄漏</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AndroidXFragmentDestroyWatcher</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AndroidXFragmentDestroyWatcher</span>(
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> reachabilityWatcher: ReachabilityWatcher
 ) : (Activity) -&gt; <span class="hljs-built_in">Unit</span> &#123;
 
@@ -487,7 +487,7 @@
 &#125;</code></pre></div>
 
 <h3 id="检测-ViewModel-泄漏"><a href="#检测-ViewModel-泄漏" class="headerlink" title="检测 ViewModel 泄漏"></a>检测 <code>ViewModel</code> 泄漏</h3><p><code>Fragment</code> 里的 <code>ViewModel</code> 则是在 <code>FragmentLifecycleCallbacks.onFragmentCreated</code> 时，注入一个 <code>ViewModel</code>，通过反射拿到 <code>ViewModelStore.mMap</code>，这里有所有的 <code>ViewModel</code>，在 <code>ViewModel.onCleared</code> 时把它们加入 <code>ObjectWatcher</code> 进行泄漏检查</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ViewModelClearedWatcher</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ViewModelClearedWatcher</span>(
   storeOwner: ViewModelStoreOwner,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> reachabilityWatcher: ReachabilityWatcher
 ) : ViewModel() &#123;
@@ -533,7 +533,7 @@
 
 <h3 id="检测更多类型的泄漏"><a href="#检测更多类型的泄漏" class="headerlink" title="检测更多类型的泄漏"></a>检测更多类型的泄漏</h3><p>对 <code>Service</code> 的检查就比较 hack 了，通过反射替换 <code>ActivityThread.mH.mCallback</code>，通过 <code>Message.waht == H.STOP_SERVICE</code> 定位到 <code>ActivityThread.handleStopService</code> 的调用时机，然后把这个被 stop 的 <code>Service</code> 记录下来；用动态代理实现 <code>IActivityManager</code> 并替换掉 <code>ActivityManager.IActivityManagerSinglteon.mInstance</code>，从而拦截方法 <code>serviceDoneExecuting</code>，此方法的调用表示 <code>Service</code> 生命周期已完结，可以把它交由 <code>ObjectWatcher</code> 进行监控</p>
 <p>这给我启示，对于我们感兴趣的对象（需要警惕泄漏的对象，比如 <code>Bitmap</code>），都可以通过 <code>ObjectWatcher</code> 去检测泄漏问题</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MyService</span> : <span class="hljs-type">Service &#123;</span></span>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">class</span> <span class="hljs-title class_">MyService</span> : <span class="hljs-type">Service</span> &#123;
   <span class="hljs-comment">// ...</span>
   <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">onDestroy</span><span class="hljs-params">()</span></span> &#123;
     <span class="hljs-keyword">super</span>.onDestroy()
@@ -556,7 +556,7 @@
   &#125;  
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HeapDumpTrigger</span> </span>&#123;
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">HeapDumpTrigger</span> &#123;
   <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">scheduleRetainedObjectCheck</span><span class="hljs-params">(</span></span>
 <span class="hljs-params"><span class="hljs-function">    delayMillis: <span class="hljs-type">Long</span> = <span class="hljs-number">0</span>L</span></span>
 <span class="hljs-params"><span class="hljs-function">  )</span></span> &#123;
@@ -594,7 +594,7 @@
   &#125;    
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AndroidHeapDumper</span> </span>&#123;
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AndroidHeapDumper</span> &#123;
   <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">dumpHeap</span><span class="hljs-params">()</span></span>: DumpHeapResult &#123;
     <span class="hljs-comment">// ...</span>
     <span class="hljs-keyword">val</span> durationMillis = measureDurationMillis &#123;
@@ -719,7 +719,7 @@ HeapAnalyzer.analyze
 <li><code>classNames</code> 类名称池，class id -&gt; string id，对应 TAG <code>LOAD_CLASS</code>，通过类名 <code>leakcanary.KeyedWeakReference</code> 找到泄漏对象</li>
 <li><code>gcRoots</code> GC ROOT 对象 id 数组</li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HprofInMemoryIndex</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">HprofInMemoryIndex</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span>(
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> positionSize: <span class="hljs-built_in">Int</span>,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> hprofStringCache: LongObjectScatterMap&lt;String&gt;,
   <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> classNames: LongLongScatterMap,

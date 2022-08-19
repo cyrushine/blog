@@ -26,7 +26,7 @@
 <meta property="og:description" content="async &#x2F; awaitasync 和 await 是一对较为现代的 API 用以实现 **结构化并发编程 (Structured Concurrency)**，如下面代码所示，虽然 runBlocking 底层是单个线程，但是 delay 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO job1、job2 和 job3 三个任务并发执行，不需要编写任何线程同步代码如 Condi">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-07-20T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-07-01T10:38:02.354Z">
+<meta property="article:modified_time" content="2022-08-19T10:39:31.276Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="kotlin">
 <meta property="article:tag" content="coroutine">
@@ -322,14 +322,14 @@
     <span class="hljs-keyword">return</span> coroutine
 &#125;
 
-<span class="hljs-keyword">private</span> <span class="hljs-keyword">open</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DeferredCoroutine</span>&lt;<span class="hljs-type">T</span>&gt;</span>(
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">open</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DeferredCoroutine</span>&lt;<span class="hljs-type">T</span>&gt;(
     parentContext: CoroutineContext,
     active: <span class="hljs-built_in">Boolean</span>
 ) : AbstractCoroutine&lt;T&gt;(parentContext, <span class="hljs-literal">true</span>, active = active), Deferred&lt;T&gt;, SelectClause1&lt;T&gt; &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">await</span><span class="hljs-params">()</span></span>: T = awaitInternal() <span class="hljs-keyword">as</span> T
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">open</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JobSupport</span> <span class="hljs-keyword">constructor</span></span>(active: <span class="hljs-built_in">Boolean</span>) : Job, ChildJob, ParentJob, SelectClause0 &#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">open</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">JobSupport</span> <span class="hljs-keyword">constructor</span>(active: <span class="hljs-built_in">Boolean</span>) : Job, ChildJob, ParentJob, SelectClause0 &#123;
     <span class="hljs-keyword">internal</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">awaitInternal</span><span class="hljs-params">()</span></span>: Any? &#123;
         <span class="hljs-comment">// fast-path -- check state (avoid extra object creation)</span>
         <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) &#123; <span class="hljs-comment">// lock-free loop on state</span>
@@ -361,7 +361,7 @@
     &#125;    
 &#125;    
 
-<span class="hljs-keyword">internal</span> <span class="hljs-keyword">open</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CancellableContinuationImpl</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">open</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CancellableContinuationImpl</span>&lt;<span class="hljs-type">in T</span>&gt;(
     <span class="hljs-keyword">final</span> <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> delegate: Continuation&lt;T&gt;,
     resumeMode: <span class="hljs-built_in">Int</span>
 ) : DispatchedTask&lt;T&gt;(resumeMode), CancellableContinuation&lt;T&gt;, CoroutineStackFrame &#123;
@@ -597,7 +597,7 @@ lbl56:
     cont.getResult()
 &#125;
 
-<span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ResumeAwaitOnCompletion</span>&lt;<span class="hljs-type">T</span>&gt;</span>(
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ResumeAwaitOnCompletion</span>&lt;<span class="hljs-type">T</span>&gt;(
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> continuation: CancellableContinuationImpl&lt;T&gt;
 ) : JobNode() &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">invoke</span><span class="hljs-params">(cause: <span class="hljs-type">Throwable</span>?)</span></span> &#123;
@@ -614,7 +614,7 @@ lbl56:
     &#125;
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">enum</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CoroutineStart</span> </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">enum</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CoroutineStart</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;R, T&gt;</span> <span class="hljs-title">invoke</span><span class="hljs-params">(block: <span class="hljs-type">suspend</span> <span class="hljs-type">R</span>.() -&gt; <span class="hljs-type">T</span>, receiver: <span class="hljs-type">R</span>, completion: <span class="hljs-type">Continuation</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span>: <span class="hljs-built_in">Unit</span> =
         <span class="hljs-keyword">when</span> (<span class="hljs-keyword">this</span>) &#123;
             DEFAULT -&gt; block.startCoroutineCancellable(receiver, completion)
@@ -730,7 +730,7 @@ lbl13:
     &#125;
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedCoroutine</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DispatchedCoroutine</span>&lt;<span class="hljs-type">in T</span>&gt;(
     context: CoroutineContext,
     uCont: Continuation&lt;T&gt;
 ) : ScopeCoroutine&lt;T&gt;(context, uCont) &#123;
@@ -744,7 +744,7 @@ lbl13:
     &#125;
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedCoroutine</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DispatchedCoroutine</span>&lt;<span class="hljs-type">in T</span>&gt;(
     context: CoroutineContext,
     uCont: Continuation&lt;T&gt;
 ) : ScopeCoroutine&lt;T&gt;(context, uCont) &#123;

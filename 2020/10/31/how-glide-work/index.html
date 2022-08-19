@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-31-how-glide-work/glide_memory_cache.jpg">
 <meta property="og:image" content="https://www.dalvik.work/image/2020-10-31-how-glide-work/glide_disk_cache.jpg">
 <meta property="article:published_time" content="2020-10-31T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-07-01T10:38:02.350Z">
+<meta property="article:modified_time" content="2022-08-19T10:39:31.268Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="glide">
 <meta property="article:tag" content="fresco">
@@ -313,7 +313,7 @@
 <span class="hljs-comment">// 看下 AUTOMATIC 的情况</span>
 <span class="hljs-comment">// data cache，只缓存网络资源，不缓存 asset file，local disk file 等本地资源</span>
 <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isDataCacheable</span><span class="hljs-params">(DataSource dataSource)</span> &#123;
-    <span class="hljs-type">return</span> <span class="hljs-variable">dataSource</span> <span class="hljs-operator">=</span>= DataSource.REMOTE;
+    <span class="hljs-keyword">return</span> dataSource == DataSource.REMOTE;
 &#125;
 
 <span class="hljs-comment">// resource cache 只缓存 asset file，local disk file 等本地资源</span>

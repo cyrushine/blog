@@ -26,7 +26,7 @@
 <meta property="og:description" content="for 操作符具有以下特征的对象可以被 for 操作符遍历：  具有 operator 函数 iterator() 其返回 Iterator 具有 operator 函数 hasNext() 和 next()  public interface Sequence&lt;out T&gt; &amp;#123;     public operator fun iterator(): Iterator&lt;">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-04-09T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-07-01T10:38:02.358Z">
+<meta property="article:modified_time" content="2022-08-19T10:39:31.280Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="kotlin">
 <meta property="article:tag" content="coroutine">
@@ -273,11 +273,11 @@
 <li>具有 <code>operator</code> 函数 <code>iterator()</code></li>
 <li>其返回 <code>Iterator</code> 具有 <code>operator</code> 函数 <code>hasNext()</code> 和 <code>next()</code></li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Sequence</span>&lt;<span class="hljs-type">out T</span>&gt; </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Sequence</span>&lt;<span class="hljs-type">out T</span>&gt; &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">iterator</span><span class="hljs-params">()</span></span>: Iterator&lt;T&gt;
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Iterator</span>&lt;<span class="hljs-type">out T</span>&gt; </span>&#123;
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Iterator</span>&lt;<span class="hljs-type">out T</span>&gt; &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">next</span><span class="hljs-params">()</span></span>: T
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">hasNext</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Boolean</span>
 &#125;</code></pre></div>
@@ -566,7 +566,7 @@ println()
 
 <h1 id="用-Flow-替代-LiveData"><a href="#用-Flow-替代-LiveData" class="headerlink" title="用 Flow 替代 LiveData"></a>用 Flow 替代 LiveData</h1><p>Android 正在大力推广 coroutine，然而 <code>LiveData</code> 并不能很好地与 coroutine 结合使用，而 <code>StateFlow</code> 正是其继任者</p>
 <p>flow 需要配合着 repeatOnLifecycle 一起使用才不会造成 Activity/Fragment 的泄漏</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LatestNewsViewModel</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LatestNewsViewModel</span>(
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> newsRepository: NewsRepository
 ) : ViewModel() &#123;
 
@@ -590,12 +590,12 @@ println()
 &#125;
 
 <span class="hljs-comment">// Represents different states for the LatestNews screen</span>
-<span class="hljs-keyword">sealed</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LatestNewsUiState</span> </span>&#123;
-    <span class="hljs-keyword">data</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Success</span></span>(news: List&lt;ArticleHeadline&gt;): LatestNewsUiState()
-    <span class="hljs-keyword">data</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Error</span></span>(exception: Throwable): LatestNewsUiState()
+<span class="hljs-keyword">sealed</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LatestNewsUiState</span> &#123;
+    <span class="hljs-keyword">data</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Success</span>(news: List&lt;ArticleHeadline&gt;): LatestNewsUiState()
+    <span class="hljs-keyword">data</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Error</span>(exception: Throwable): LatestNewsUiState()
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LatestNewsActivity</span> : <span class="hljs-type">AppCompatActivity</span></span>() &#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">LatestNewsActivity</span> : <span class="hljs-type">AppCompatActivity</span>() &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> latestNewsViewModel = <span class="hljs-comment">// getViewModel()</span>
 
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">onCreate</span><span class="hljs-params">(savedInstanceState: <span class="hljs-type">Bundle</span>?)</span></span> &#123;
@@ -637,7 +637,7 @@ println()
         )
     &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CloseableCoroutineScope</span></span>(context: CoroutineContext) : Closeable, CoroutineScope &#123;
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CloseableCoroutineScope</span>(context: CoroutineContext) : Closeable, CoroutineScope &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> coroutineContext: CoroutineContext = context
 
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">close</span><span class="hljs-params">()</span></span> &#123;
@@ -671,7 +671,7 @@ println()
         &#125;
     &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LifecycleCoroutineScopeImpl</span></span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LifecycleCoroutineScopeImpl</span>(
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> lifecycle: Lifecycle,
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> coroutineContext: CoroutineContext
 ) : LifecycleCoroutineScope(), LifecycleEventObserver &#123;
@@ -725,7 +725,7 @@ launch &#123; state.collect &#123;  &#125; &#125;</code></pre></div>
 <li>一旦 collect 返回，state 将不再持有 collector，也就不再持有 Activity</li>
 <li>当 state 改变时，<code>collectorJob?.ensureActive()</code> 确保 destroyed activity 不会再执行任何逻辑</li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StateFlowImpl</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">private</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StateFlowImpl</span> &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">collect</span><span class="hljs-params">(collector: <span class="hljs-type">FlowCollector</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span>: <span class="hljs-built_in">Nothing</span> &#123;
         <span class="hljs-keyword">val</span> slot = allocateSlot()
         <span class="hljs-keyword">try</span> &#123;
@@ -759,7 +759,7 @@ launch &#123; state.collect &#123;  &#125; &#125;</code></pre></div>
     <span class="hljs-keyword">if</span> (!isActive) <span class="hljs-keyword">throw</span> getCancellationException()
 &#125;
 
-<span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StateFlowSlot</span> </span>&#123;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StateFlowSlot</span> &#123;
     <span class="hljs-keyword">suspend</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">awaitPending</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Unit</span> = suspendCancellableCoroutine <span class="hljs-symbol">sc@</span> &#123; cont -&gt;
         assert &#123; _state.value !<span class="hljs-keyword">is</span> CancellableContinuationImpl&lt;*&gt; &#125; <span class="hljs-comment">// can be NONE or PENDING</span>
         <span class="hljs-keyword">if</span> (_state.compareAndSet(NONE, cont)) <span class="hljs-keyword">return</span><span class="hljs-symbol">@sc</span> <span class="hljs-comment">// installed continuation, waiting for pending</span>
@@ -779,7 +779,7 @@ launch &#123; state.collect &#123;  &#125; &#125;</code></pre></div>
 <span class="hljs-params"><span class="hljs-function">)</span></span>: T</code></pre></div>
 
 <p>StateFlow.value 是线程安全的</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">MutableStateFlow</span>&lt;<span class="hljs-type">T</span>&gt; : <span class="hljs-type">StateFlow</span>&lt;<span class="hljs-type">T</span>&gt;, <span class="hljs-type">MutableSharedFlow</span>&lt;<span class="hljs-type">T</span>&gt; </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">MutableStateFlow</span>&lt;<span class="hljs-type">T</span>&gt; : <span class="hljs-type">StateFlow</span>&lt;<span class="hljs-type">T</span>&gt;, <span class="hljs-type">MutableSharedFlow</span>&lt;<span class="hljs-type">T</span>&gt; &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * The current value of this state flow.</span>
 <span class="hljs-comment">     *</span>

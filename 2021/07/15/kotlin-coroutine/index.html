@@ -26,7 +26,7 @@
 <meta property="og:description" content="launch - 启动协程从 kotlin coroutines 的 Hello World! 看起 &#x2F;&#x2F; https:&#x2F;&#x2F;github.com&#x2F;Kotlin&#x2F;kotlinx.coroutines&#x2F;blob&#x2F;master&#x2F;kotlinx-coroutines-core&#x2F;jvm&#x2F;test&#x2F;guide&#x2F;example-basic-01.kt fun main() &#x3D; runBlocking &amp;#123">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-07-15T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-07-01T10:38:02.354Z">
+<meta property="article:modified_time" content="2022-08-19T10:39:31.276Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="kotlin">
 <meta property="article:tag" content="coroutine">
@@ -372,7 +372,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
         BlockingEventLoop.dispatch
             BlockingEventLoop.enqueue
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplBase</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">EventLoopImplBase</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">enqueue</span><span class="hljs-params">(task: <span class="hljs-type">Runnable</span>)</span></span> &#123;
         <span class="hljs-keyword">if</span> (enqueueImpl(task)) &#123;
             unpark()
@@ -442,7 +442,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
     <span class="hljs-keyword">return</span> coroutine.joinBlocking()
 &#125;
 
-<span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BlockingCoroutine</span> </span>&#123;
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">BlockingCoroutine</span> &#123;
     <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">joinBlocking</span><span class="hljs-params">()</span></span>: T &#123;
         registerTimeLoopThread()
         <span class="hljs-keyword">try</span> &#123;
@@ -472,14 +472,14 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><code>launch</code> 把 block 放入任务队列等待执行，类似于 <code>ExecutorService.submit</code> 和 <code>Handler.post</code>，同时说明 <code>协程</code> 本质上就是对任务的调度，底层是线程/线程池 + 任务队列</p>
 <h1 id="Dispatcher-任务调度"><a href="#Dispatcher-任务调度" class="headerlink" title="Dispatcher - 任务调度"></a>Dispatcher - 任务调度</h1><p>首先要了解下 <code>CoroutineContext</code> 这个概念，跟 Android 上 <code>Context</code> 的意义是一样的，就是代表了一系列 coroutine API 的 <code>上下文</code>，本质上是一个 <code>Map</code>，通过 <code>CoroutineContext[key] = value</code> 存取</p>
 <p>其中有一个非常重要的组件：<code>CoroutineContext[ContinuationInterceptor]</code>，负责分发/调度 coroutine，有 <code>BlockingEventLoop</code>, <code>Dispatchers.Default</code>, <code>Dispatchers.IO</code> 等等</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">CoroutineContext</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">CoroutineContext</span> &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * Returns the element with the given [key] from this context or `null`.</span>
 <span class="hljs-comment">     */</span>
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">operator</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;E : Element&gt;</span> <span class="hljs-title">get</span><span class="hljs-params">(key: <span class="hljs-type">Key</span>&lt;<span class="hljs-type">E</span>&gt;)</span></span>: E?
 &#125;
 
-<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">ContinuationInterceptor</span> : <span class="hljs-type">CoroutineContext.Element &#123;</span></span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">ContinuationInterceptor</span> : <span class="hljs-type">CoroutineContext.Element</span> &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * The key that defines *the* context interceptor.</span>
 <span class="hljs-comment">     */</span>
@@ -541,14 +541,14 @@ startCoroutineCancellable(receiver, completion, onCancellation)
     &#125;
 &#125;            
 
-<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ContinuationImpl</span> </span>&#123;
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ContinuationImpl</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">intercepted</span><span class="hljs-params">()</span></span>: Continuation&lt;Any?&gt; =
         intercepted
             ?: (context[ContinuationInterceptor]?.interceptContinuation(<span class="hljs-keyword">this</span>) ?: <span class="hljs-keyword">this</span>)
                 .also &#123; intercepted = it &#125;
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CoroutineDispatcher</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">CoroutineDispatcher</span> &#123;
    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> <span class="hljs-title">interceptContinuation</span><span class="hljs-params">(continuation: <span class="hljs-type">Continuation</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span>: Continuation&lt;T&gt; =
         DispatchedContinuation(<span class="hljs-keyword">this</span>, continuation)   
 &#125;</code></pre></div>
@@ -591,13 +591,13 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 &#125;
 
 <span class="hljs-comment">// https://github.com/Kotlin/kotlinx.coroutines/blob/master/kotlinx-coroutines-core/jvm/src/EventLoop.kt</span>
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BlockingEventLoop</span></span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">BlockingEventLoop</span>(
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> thread: Thread
 ) : EventLoopImplBase()
 
 <span class="hljs-keyword">internal</span> <span class="hljs-keyword">actual</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">createEventLoop</span><span class="hljs-params">()</span></span>: EventLoop = BlockingEventLoop(Thread.currentThread())
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplBase</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">EventLoopImplBase</span> &#123;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> _queue = atomic&lt;Any?&gt;(<span class="hljs-literal">null</span>)
 
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">dispatch</span><span class="hljs-params">(context: <span class="hljs-type">CoroutineContext</span>, block: <span class="hljs-type">Runnable</span>)</span></span> = enqueue(block)
@@ -667,7 +667,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
 
 <span class="hljs-keyword">internal</span> <span class="hljs-keyword">object</span> DefaultScheduler : ExperimentalCoroutineDispatcher()
 
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">open</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ExperimentalCoroutineDispatcher</span></span>(
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">open</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ExperimentalCoroutineDispatcher</span>(
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> corePoolSize: <span class="hljs-built_in">Int</span>,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> maxPoolSize: <span class="hljs-built_in">Int</span>,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> idleWorkerKeepAliveNs: <span class="hljs-built_in">Long</span>,
@@ -704,7 +704,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
     <span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">createScheduler</span><span class="hljs-params">()</span></span> = CoroutineScheduler(corePoolSize, maxPoolSize, idleWorkerKeepAliveNs, schedulerName)        
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CoroutineScheduler</span></span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CoroutineScheduler</span>(
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">val</span> corePoolSize: <span class="hljs-built_in">Int</span>,
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">val</span> maxPoolSize: <span class="hljs-built_in">Int</span>,
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">val</span> idleWorkerKeepAliveNs: <span class="hljs-built_in">Long</span> = IDLE_WORKER_KEEP_ALIVE_NS,
@@ -751,7 +751,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
     )
 &#125;
 
-<span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LimitingDispatcher</span></span>(
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LimitingDispatcher</span>(
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> dispatcher: ExperimentalCoroutineDispatcher,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> parallelism: <span class="hljs-built_in">Int</span>,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> name: String?,
@@ -912,7 +912,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
     &#125;
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AndroidDispatcherFactory</span> : <span class="hljs-type">MainDispatcherFactory &#123;</span></span>
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AndroidDispatcherFactory</span> : <span class="hljs-type">MainDispatcherFactory</span> &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">createDispatcher</span><span class="hljs-params">(allFactories: <span class="hljs-type">List</span>&lt;<span class="hljs-type">MainDispatcherFactory</span>&gt;)</span></span> =
         HandlerContext(Looper.getMainLooper().asHandler(async = <span class="hljs-literal">true</span>))
 &#125;
@@ -940,7 +940,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">constructor</span>.newInstance(<span class="hljs-keyword">this</span>, <span class="hljs-literal">null</span>, <span class="hljs-literal">true</span>)
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HandlerContext</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span></span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">HandlerContext</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span>(
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> handler: Handler,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> name: String?,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> invokeImmediately: <span class="hljs-built_in">Boolean</span>
@@ -1056,7 +1056,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
             DebugProbesKt.probeCoroutineSuspended($completion);
          &#125;
 
-         <span class="hljs-type">return</span> <span class="hljs-variable">var10000</span> <span class="hljs-operator">=</span>= IntrinsicsKt.getCOROUTINE_SUSPENDED() ? var10000 : Unit.INSTANCE;
+         <span class="hljs-keyword">return</span> var10000 == IntrinsicsKt.getCOROUTINE_SUSPENDED() ? var10000 : Unit.INSTANCE;
       &#125;
    &#125;
 
@@ -1064,17 +1064,17 @@ startCoroutineCancellable(receiver, completion, onCancellation)
    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> Delay <span class="hljs-title function_">getDelay</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> CoroutineContext $<span class="hljs-built_in">this</span>$delay)</span> &#123;
       <span class="hljs-type">Element</span> <span class="hljs-variable">var2</span> <span class="hljs-operator">=</span> $<span class="hljs-built_in">this</span>$delay.get((Key)ContinuationInterceptor.Key);
       <span class="hljs-type">Delay</span> <span class="hljs-variable">var1</span> <span class="hljs-operator">=</span> var2 <span class="hljs-keyword">instanceof</span> Delay ? (Delay)var2 : <span class="hljs-literal">null</span>;
-      <span class="hljs-type">return</span> <span class="hljs-variable">var1</span> <span class="hljs-operator">=</span>= <span class="hljs-literal">null</span> ? DefaultExecutorKt.getDefaultDelay() : var1;
+      <span class="hljs-keyword">return</span> var1 == <span class="hljs-literal">null</span> ? DefaultExecutorKt.getDefaultDelay() : var1;
    &#125;
    
 &#125;</code></pre></div>
 
 <h2 id="BlockingEventLoop"><a href="#BlockingEventLoop" class="headerlink" title="BlockingEventLoop"></a>BlockingEventLoop</h2><p>block 被层层包装为 <code>DelayedResumeTask</code> 并被放入 <code>_delayed: atomic&lt;DelayedTaskQueue?&gt;</code>，等待在 <code>delay</code> 毫秒后重新调度，类似于 <code>Handler.postDelayed(r, delayMillis)</code>，可重新调度任务后 block 不就重新被执行了一遍吗？</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BlockingEventLoop</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">BlockingEventLoop</span>(
     <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> thread: Thread
 ) : EventLoopImplBase()
 
-<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span></span>(), Delay &#123;
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span>(), Delay &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">scheduleResumeAfterDelay</span><span class="hljs-params">(timeMillis: <span class="hljs-type">Long</span>, continuation: <span class="hljs-type">CancellableContinuation</span>&lt;<span class="hljs-type">Unit</span>&gt;)</span></span> &#123;
         <span class="hljs-keyword">val</span> timeNanos = delayToNanos(timeMillis)
         <span class="hljs-keyword">if</span> (timeNanos &lt; MAX_DELAY_NS) &#123;
@@ -1105,7 +1105,7 @@ startCoroutineCancellable(receiver, completion, onCancellation)
     &#125;        
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DelayedTask</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">DelayedTask</span> &#123;
     <span class="hljs-meta">@Synchronized</span>
     <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">scheduleTask</span><span class="hljs-params">(now: <span class="hljs-type">Long</span>, delayed: <span class="hljs-type">DelayedTaskQueue</span>, eventLoop: <span class="hljs-type">EventLoopImplBase</span>)</span></span>: <span class="hljs-built_in">Int</span> &#123;
         <span class="hljs-keyword">if</span> (_heap === DISPOSED_TASK) <span class="hljs-keyword">return</span> SCHEDULE_DISPOSED <span class="hljs-comment">// don&#x27;t add -- was already disposed</span>
@@ -1261,7 +1261,7 @@ lbl49:
 
 <h3 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h3><p>coroutine 本质是任务队列，而 <code>delay</code> 本质是重新调度（重新入队至 <code>EventLoopImplBase._delay</code>），通过引入成员属性 <code>label</code>，以及将各个代码段用 <code>switch</code> 分段，即可实现在重新调度时跳转到指定 <code>代码行</code> 而不重复执行前面的代码</p>
 <h2 id="HandlerContext"><a href="#HandlerContext" class="headerlink" title="HandlerContext"></a>HandlerContext</h2><p><code>Dispatchers.Main</code> 在 Android 上是底层为单线程/主线程的 <code>HandlerContext(Looper.getMainLooper().asHandler(async = true))</code>，它实现了 <code>Delay</code>，通过 <code>Handler.postDelayed</code> 实现重新调度</p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HandlerContext</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span></span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">HandlerContext</span> <span class="hljs-keyword">private</span> <span class="hljs-keyword">constructor</span>(
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> handler: Handler,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> name: String?,
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> invokeImmediately: <span class="hljs-built_in">Boolean</span>
@@ -1291,7 +1291,7 @@ lbl49:
 <li><code>DefaultExecutor</code> 将 <code>_delay</code> 里第一个到执行时间点的 task 转移到任务队列 <code>_queue</code> 并执行</li>
 </ul>
 <p>而任务队列里的 <code>Runnable</code> 实际上是 <code>DispatchedContinuation</code></p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span></span>(), Delay &#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span>(), Delay &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">scheduleResumeAfterDelay</span><span class="hljs-params">(timeMillis: <span class="hljs-type">Long</span>, continuation: <span class="hljs-type">CancellableContinuation</span>&lt;<span class="hljs-type">Unit</span>&gt;)</span></span> &#123;
         <span class="hljs-keyword">val</span> timeNanos = delayToNanos(timeMillis)
         <span class="hljs-keyword">if</span> (timeNanos &lt; MAX_DELAY_NS) &#123;
@@ -1315,7 +1315,7 @@ lbl49:
     <span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">shouldUnpark</span><span class="hljs-params">(task: <span class="hljs-type">DelayedTask</span>)</span></span>: <span class="hljs-built_in">Boolean</span> = _delayed.value?.peek() === task    
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplPlatform</span>: <span class="hljs-type">EventLoop</span></span>() &#123;
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">actual</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EventLoopImplPlatform</span>: <span class="hljs-type">EventLoop</span>() &#123;
     <span class="hljs-keyword">protected</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">val</span> thread: Thread
 
     <span class="hljs-keyword">protected</span> <span class="hljs-keyword">actual</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">unpark</span><span class="hljs-params">()</span></span> &#123;
@@ -1360,7 +1360,7 @@ lbl49:
     &#125;    
 &#125;
 
-<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span></span>(), Delay &#123;
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">EventLoopImplBase</span>: <span class="hljs-type">EventLoopImplPlatform</span>(), Delay &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">processNextEvent</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Long</span> &#123;
         <span class="hljs-comment">// unconfined events take priority</span>
         <span class="hljs-keyword">if</span> (processUnconfinedEvent()) <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>
@@ -1392,12 +1392,12 @@ lbl49:
 
 <p>上面曾经说过 block 会经过重重包装，其中一层就是 <code>DispatchedContinuation</code>，它也是一个 <code>Runnable</code>（被 <code>DefaultExecutor</code> 执行）：<code>SchedulerTask.run</code> -&gt;  <code>DispatchedContinuation.resumeWith</code> -&gt; <code>CoroutineDispatcher.dispatch</code></p>
 <p>也就说 <code>DispatchedContinuation</code> = <code>CoroutineDispatcher</code> + <code>Continuation</code>，它被执行时是将任务交由对应的 Dispatcher 执行而不是由当前的线程执行（正如它的名字描述的那样），同时也实现了一个很重要的概念：<code>线程切换</code></p>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedContinuation</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DispatchedContinuation</span>&lt;<span class="hljs-type">in T</span>&gt;(
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">val</span> dispatcher: CoroutineDispatcher,
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">val</span> continuation: Continuation&lt;T&gt;
 ) : DispatchedTask&lt;T&gt;(MODE_UNINITIALIZED), CoroutineStackFrame, Continuation&lt;T&gt; <span class="hljs-keyword">by</span> continuation
 
-<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedTask</span>&lt;<span class="hljs-type">in T</span>&gt;</span>(
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DispatchedTask</span>&lt;<span class="hljs-type">in T</span>&gt;(
     <span class="hljs-meta">@JvmField</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">var</span> resumeMode: <span class="hljs-built_in">Int</span>
 ) : SchedulerTask() &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">run</span><span class="hljs-params">()</span></span> &#123;
@@ -1442,7 +1442,7 @@ lbl49:
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">inline</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-type">&lt;T&gt;</span> Continuation<span class="hljs-type">&lt;T&gt;</span>.<span class="hljs-title">resume</span><span class="hljs-params">(value: <span class="hljs-type">T</span>)</span></span>: <span class="hljs-built_in">Unit</span> =
     resumeWith(Result.success(value))
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DispatchedContinuation</span> </span>&#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">DispatchedContinuation</span> &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">resumeWith</span><span class="hljs-params">(result: <span class="hljs-type">Result</span>&lt;<span class="hljs-type">T</span>&gt;)</span></span> &#123;
         <span class="hljs-keyword">val</span> context = continuation.context
         <span class="hljs-keyword">val</span> state = result.toState()
@@ -1465,7 +1465,7 @@ lbl49:
 <li><code>runBlocking</code> - 用当前线程作为调度器，会阻塞代码的执行直到所有协程都执行完毕</li>
 <li><code>CoroutineScope(EmptyCoroutineContext|Dispatchers.Main|Dispatchers.IO|...)</code> - 构造 scope，使用指定的上下文/调度器，如果上下文里不包含调度器则使用默认的 <code>Dispatchers.Default</code></li>
 </ul>
-<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">CoroutineScope</span> </span>&#123;
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">CoroutineScope</span> &#123;
     <span class="hljs-comment">/**</span>
 <span class="hljs-comment">     * The context of this scope.</span>
 <span class="hljs-comment">     * Context is encapsulated by the scope and used for implementation of coroutine builders that are extensions on the scope.</span>

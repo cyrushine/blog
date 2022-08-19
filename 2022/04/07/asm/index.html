@@ -31,7 +31,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/transformation.png">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-04-07-asm/change_version_transformation.png">
 <meta property="article:published_time" content="2022-04-07T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-07-01T10:38:02.358Z">
+<meta property="article:modified_time" content="2022-08-19T10:39:31.280Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="asm">
 <meta property="article:tag" content="字节码">
@@ -454,7 +454,7 @@
     reader.accept(printer, <span class="hljs-number">0</span>)
 &#125;
 
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ClassPrinter</span>: <span class="hljs-type">ClassVisitor</span></span>(ASM9) &#123;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ClassPrinter</span>: <span class="hljs-type">ClassVisitor</span>(ASM9) &#123;
     <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">visit</span><span class="hljs-params">(version: <span class="hljs-type">Int</span>, access: <span class="hljs-type">Int</span>, name: <span class="hljs-type">String</span>?, signature: <span class="hljs-type">String</span>?, superName: <span class="hljs-type">String</span>?, interfaces: <span class="hljs-type">Array</span>&lt;<span class="hljs-type">out</span> <span class="hljs-type">String</span>&gt;?)</span></span> &#123;
         println(...)
     &#125;
