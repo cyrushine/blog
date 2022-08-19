@@ -1,5 +1,5 @@
 ---
-title: 深入 Binder 之
+title: 深入 Binder 之客户端
 date: 2022-06-27 12:00:00 +0800
 ---
 
@@ -313,10 +313,10 @@ jobject javaObjectForIBinder(JNIEnv* env, const sp<IBinder>& val)
 
 # Parcel
 
-`Parcel` 在 binder IPC 里被用作一个容器，用以承载输入/输出（参数/返回值）：`boolean transact(int code, Parcel data, Parcel reply, int flags)`，如下所示
+`Parcel` 在 binder IPC 里被用作一个 `容器`，用以承载输入/输出（参数/返回值）：`boolean transact(int code, Parcel data, Parcel reply, int flags)`，如下所示
 
 - 参数列表按顺序打包到 `_data` 里（Parcel.write），返回值则被 server 写入至 `_reply`，client 用 Parcel.read 按顺序读取出来
-- 这两个容器都是在 binder IPC 前临时申请的，作用域限定在方法 `fetchFromDB` 内
+- 这两个容器都是在 binder IPC 前临时申请的，作用域限定在方法 `fetchFromDB` 内，用完后会被回收 `Parcel.recycle()`
 
 ```java
 // Item.aidl
@@ -336,40 +336,38 @@ public interface IAidlExampleInterface extends android.os.IInterface {
     public static abstract class Stub extends android.os.Binder implements work.dalvik.binder.example.IAidlExampleInterface {
         private static class Proxy implements work.dalvik.binder.example.IAidlExampleInterface {
             @Override 
-            public work.dalvik.binder.example.Item fetchFromDB(work.dalvik.binder.example.Item query, int size, long from, boolean distint) throws android.os.RemoteException
-            {
-            android.os.Parcel _data = android.os.Parcel.obtain();
-            android.os.Parcel _reply = android.os.Parcel.obtain();
-            work.dalvik.binder.example.Item _result;
-            try {
-              _data.writeInterfaceToken(DESCRIPTOR);
-              if ((query!=null)) {
-                _data.writeInt(1);
-                query.writeToParcel(_data, 0);
-              }
-              else {
-                _data.writeInt(0);
-              }
-              _data.writeInt(size);
-              _data.writeLong(from);
-              _data.writeInt(((distint)?(1):(0)));
-              boolean _status = mRemote.transact(Stub.TRANSACTION_fetchFromDB, _data, _reply, 0);
-              if (!_status && getDefaultImpl() != null) {
-                return getDefaultImpl().fetchFromDB(query, size, from, distint);
-              }
-              _reply.readException();
-              if ((0!=_reply.readInt())) {
-                _result = work.dalvik.binder.example.Item.CREATOR.createFromParcel(_reply);
-              }
-              else {
-                _result = null;
-              }
-            }
-            finally {
-              _reply.recycle();
-              _data.recycle();
-            }
-            return _result;
+            public work.dalvik.binder.example.Item fetchFromDB(work.dalvik.binder.example.Item query, 
+                int size, long from, boolean distint) throws android.os.RemoteException {
+
+                android.os.Parcel _data = android.os.Parcel.obtain();
+                android.os.Parcel _reply = android.os.Parcel.obtain();
+                work.dalvik.binder.example.Item _result;
+                try {
+                    _data.writeInterfaceToken(DESCRIPTOR);
+                    if ((query!=null)) {
+                        _data.writeInt(1);
+                        query.writeToParcel(_data, 0);
+                    } else {
+                        _data.writeInt(0);
+                    }
+                    _data.writeInt(size);
+                    _data.writeLong(from);
+                    _data.writeInt(((distint)?(1):(0)));
+                    boolean _status = mRemote.transact(Stub.TRANSACTION_fetchFromDB, _data, _reply, 0);
+                    if (!_status && getDefaultImpl() != null) {
+                        return getDefaultImpl().fetchFromDB(query, size, from, distint);
+                    }
+                    _reply.readException();
+                    if ((0!=_reply.readInt())) {
+                        _result = work.dalvik.binder.example.Item.CREATOR.createFromParcel(_reply);
+                    } else {
+                      _result = null;
+                    }
+                } finally {
+                    _reply.recycle();
+                    _data.recycle();
+                }
+                return _result;
             }
         }
     }
@@ -485,6 +483,14 @@ static jlong android_os_Parcel_create(JNIEnv* env, jclass clazz)  // 对应 java
 }
 ```
 
+过一遍 `Parcel` 的写操作 `writeInt32(val)` 逻辑，可以了解到：
+
+- Parcel backend 是一块连续的内存，`mData` 指向这块内存的起始地址，`mDataCapacity` 是这块内存的大小，那么 `[mData, mDataCapacity]` 就是这块内存的地址空间
+- `mDataSize` 表示写入的、可读的数据的长度
+- Parcel 有个隐藏的、虚拟的属性：读写模式，要不处于写模式，要不处于读模式；比如 client 将其置为写模式并将参数依次写入，server 收到后将其置为读模式并将参数依次读取出来
+- `mDataPos` 是一个滑动的指示器，`[mData + mDataPos]` 在写操作里表示将要写入的起始位置，在读操作里表示将要读取的起始位置，读/写完后 mDataPos 都要往右移动也即逐渐增大
+- 写操作时，mDataPos 从 0 开始逐渐增大，作为滑动窗口看就是从左到右；读操作时，需要先将 mDataPos 重置至开始位置即 0，然后从左到右依次读取，它的操作顺序与写操作的顺序是一致的
+
 ```cpp
 // frameworks/native/libs/binder/Parcel.cpp
 status_t Parcel::writeInt32(int32_t val)
@@ -497,9 +503,9 @@ status_t Parcel::writeAligned(T val) {
     static_assert(PAD_SIZE_UNSAFE(sizeof(T)) == sizeof(T));
     static_assert(std::is_trivially_copyable_v<T>);
 
-    if ((mDataPos+sizeof(val)) <= mDataCapacity) {  // 
-restart_write:
-        memcpy(mData + mDataPos, &val, sizeof(val));
+    if ((mDataPos+sizeof(val)) <= mDataCapacity) {    // 写操作的逻辑 
+restart_write:                                        // 如果有足够的容量则将内容复制过去
+        memcpy(mData + mDataPos, &val, sizeof(val));  // 否则进行扩容操作
         return finishWrite(sizeof(val));
     }
 
@@ -567,99 +573,13 @@ status_t Parcel::continueWrite(size_t desired /* 扩容后的大小 */)
     }
 
     if (mOwner) {
-        // If the size is going to zero, just release the owner's data.
-        if (desired == 0) {
-            freeData();
-            return NO_ERROR;
-        }
-
-        // If there is a different owner, we need to take
-        // posession.
-        uint8_t* data = (uint8_t*)malloc(desired);
-        if (!data) {
-            mError = NO_MEMORY;
-            return NO_MEMORY;
-        }
-        binder_size_t* objects = nullptr;
-
-        if (objectsSize) {
-            objects = (binder_size_t*)calloc(objectsSize, sizeof(binder_size_t));
-            if (!objects) {
-                free(data);
-
-                mError = NO_MEMORY;
-                return NO_MEMORY;
-            }
-
-            // Little hack to only acquire references on objects
-            // we will be keeping.
-            size_t oldObjectsSize = kernelFields->mObjectsSize;
-            kernelFields->mObjectsSize = objectsSize;
-            acquireObjects();
-            kernelFields->mObjectsSize = oldObjectsSize;
-        }
-
-        if (mData) {
-            memcpy(data, mData, mDataSize < desired ? mDataSize : desired);
-        }
-        if (objects && kernelFields && kernelFields->mObjects) {
-            memcpy(objects, kernelFields->mObjects, objectsSize * sizeof(binder_size_t));
-        }
-        //ALOGI("Freeing data ref of %p (pid=%d)", this, getpid());
-        mOwner(this, mData, mDataSize, kernelFields ? kernelFields->mObjects : nullptr,
-               kernelFields ? kernelFields->mObjectsSize : 0);
-        mOwner = nullptr;
-
-        LOG_ALLOC("Parcel %p: taking ownership of %zu capacity", this, desired);
-        gParcelGlobalAllocSize += desired;
-        gParcelGlobalAllocCount++;
-
-        mData = data;
-        mDataSize = (mDataSize < desired) ? mDataSize : desired;
-        ALOGV("continueWrite Setting data size of %p to %zu", this, mDataSize);
-        mDataCapacity = desired;
-        if (kernelFields) {
-            kernelFields->mObjects = objects;
-            kernelFields->mObjectsSize = kernelFields->mObjectsCapacity = objectsSize;
-            kernelFields->mNextObjectHint = 0;
-            kernelFields->mObjectsSorted = false;
-        }
-
+        // ...
     } else if (mData) {
-        if (kernelFields && objectsSize < kernelFields->mObjectsSize) {
-            // Need to release refs on any objects we are dropping.
-            const sp<ProcessState> proc(ProcessState::self());
-            for (size_t i = objectsSize; i < kernelFields->mObjectsSize; i++) {
-                const flat_binder_object* flat =
-                        reinterpret_cast<flat_binder_object*>(mData + kernelFields->mObjects[i]);
-                if (flat->hdr.type == BINDER_TYPE_FD) {
-                    // will need to rescan because we may have lopped off the only FDs
-                    kernelFields->mFdsKnown = false;
-                }
-                release_object(proc, *flat, this);
-            }
-
-            if (objectsSize == 0) {
-                free(kernelFields->mObjects);
-                kernelFields->mObjects = nullptr;
-                kernelFields->mObjectsCapacity = 0;
-            } else {
-                binder_size_t* objects =
-                        (binder_size_t*)realloc(kernelFields->mObjects,
-                                                objectsSize * sizeof(binder_size_t));
-                if (objects) {
-                    kernelFields->mObjects = objects;
-                    kernelFields->mObjectsCapacity = objectsSize;
-                }
-            }
-            kernelFields->mObjectsSize = objectsSize;
-            kernelFields->mNextObjectHint = 0;
-            kernelFields->mObjectsSorted = false;
-        }
-
-        // We own the data, so we can just do a realloc().
-        if (desired > mDataCapacity) {
-            // 
+        // ...
+        // 如果目标大小 desired 要比当前容量/大小 mDataCapacity 要大（一般情况）
+        // 那么将内存空间地址 mData 从当前容量 mDataCapacity 扩大至 desired
+        // 可能是原地扩大地址空间至 desired 大小，也可能是新开辟的、desired 大小的新地址空间
+        if (desired > mDataCapacity) { 
             uint8_t* data = reallocZeroFree(mData, mDataCapacity, desired, mDeallocZero /* default false */);
             if (data) {
                 LOG_ALLOC("Parcel %p: continue from %zu to %zu capacity", this, mDataCapacity,
@@ -673,6 +593,10 @@ status_t Parcel::continueWrite(size_t desired /* 扩容后的大小 */)
                 return NO_MEMORY;
             }
         } else {
+
+            // 如果目标大小 desired 要比当前容量/大小 mDataCapacity 要小（应该属于特殊情况吧）
+            // 不改变当前已分配的内存地址空间大小 mDataCapacity
+            // 而是将数据长度 mDataSize 和读写指示器 mDataPos 缩小至 desired，也即将数据内容裁剪至 desired 大小
             if (mDataSize > desired) {
                 mDataSize = desired;
                 ALOGV("continueWrite Setting data size of %p to %zu", this, mDataSize);
@@ -717,9 +641,46 @@ static uint8_t* reallocZeroFree(uint8_t* data, size_t oldCapacity, size_t newCap
     free(data);                                                // 释放 data
     return newData;
 }
+
+/******************************** 读操作 ***********************************/
+
+int32_t Parcel::readInt32() const
+{
+    return readAligned<int32_t>();
+}
+
+template<class T>
+T Parcel::readAligned() const {
+    T result;
+    if (readAligned(&result) != NO_ERROR) {
+        result = 0;
+    }
+    return result;
+}
+
+template<class T>
+status_t Parcel::readAligned(T *pArg) const {
+    static_assert(PAD_SIZE_UNSAFE(sizeof(T)) == sizeof(T));
+    if ((mDataPos+sizeof(T)) <= mDataSize) {
+        if (mObjectsSize > 0) {
+            status_t err = validateReadData(mDataPos + sizeof(T));
+            if(err != NO_ERROR) {
+                // Still increment the data position by the expected length
+                mDataPos += sizeof(T);
+                return err;
+            }
+        }
+        const void* data = mData+mDataPos;
+        mDataPos += sizeof(T);
+        *pArg =  *reinterpret_cast<const T*>(data);
+        return NO_ERROR;
+    } else {
+        return NOT_ENOUGH_DATA;
+    }
+}
 ```
 
-# BinderProxy
+# BinderProxy & BpBinder - 客户端
 
 > std::variant 是 C++ 17 所提供的变体类型，`variant<X, Y, Z>` 是可存放 X, Y, Z 这三种类型数据的变体类型<br>
 > 
@@ -735,6 +696,8 @@ static uint8_t* reallocZeroFree(uint8_t* data, size_t oldCapacity, size_t newCap
 > `std::get<T>(v)`               如果变体类型 v 存放的数据类型为 T，那么返回所存放的数据，否则报错  
 > `std::get_if<T>(&v)`           如果变体类型 v 存放的数据类型为 T，那么返回所存放数据的指针，否则返回空指针
 
+在 binder 通讯模型里，java 层的 `BinderProxy` 和其对应的 native 层的 `BpBinder` 都属于客户端 client，而且他俩一般是由 binder 驱动创建给我们使用
+
 ```cpp
 public final class BinderProxy implements IBinder {
     public boolean transact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
@@ -745,7 +708,9 @@ public final class BinderProxy implements IBinder {
     public native boolean transactNative(int code, Parcel data, Parcel reply, int flags) throws RemoteException;	
 }
 
-// frameworks/base/core/jni/android_util_Binder.cpp
+// 与 binder driver 通讯，code 和 dataObj 将被写入 mOut 发送给 binder driver，ipc 请求参数由 binder 转发给 server 进程
+// 响应数据（包括 server 进程的 ipc 响应数据）被 binder driver 写入 mIn，replyObj 指向其中的数据结构
+// https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-mainline-12.0.0_r114/core/jni/android_util_Binder.cpp
 static jboolean android_os_BinderProxy_transact(JNIEnv* env, jobject obj,
         jint code, jobject dataObj, jobject replyObj, jint flags) // throws RemoteException
 {
@@ -771,45 +736,15 @@ static jboolean android_os_BinderProxy_transact(JNIEnv* env, jobject obj,
         return JNI_FALSE;
     }
 
-    ALOGV("Java code calling transact on %p in Java object %p with code %" PRId32 "\n",
-            target, obj, code);
-
-
-    bool time_binder_calls;
-    int64_t start_millis;
-    if (kEnableBinderSample) {
-        // Only log the binder call duration for things on the Java-level main thread.
-        // But if we don't
-        time_binder_calls = should_time_binder_calls();
-
-        if (time_binder_calls) {
-            start_millis = uptimeMillis();
-        }
-    }
-
-    //printf("Transact from Java code to %p sending: ", target); data->print();
-    status_t err = target->transact(code, *data, reply, flags);  // BpBinder::transact
-    //if (reply) printf("Transact from Java code to %p received: ", target); reply->print();
-
-    if (kEnableBinderSample) {
-        if (time_binder_calls) {
-            conditionally_log_binder_call(start_millis, target, code);
-        }
-    }
-
-    if (err == NO_ERROR) {
-        return JNI_TRUE;
-    } else if (err == UNKNOWN_TRANSACTION) {
-        return JNI_FALSE;
-    }
-
-    signalExceptionForError(env, obj, err, true /*canThrowRemoteException*/, data->dataSize());
+    status_t err = target->transact(code, *data, reply, flags);    // 这里进行 binder 通讯
+    // ...
     return JNI_FALSE;
 }
 
-// frameworks/native/libs/binder/BpBinder.cpp
-status_t BpBinder::transact(
-    uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
+// 通过 binder driver 与 server 进程通讯
+// code 和 data 作为 request 写入 mOut 发送给 server 进程，响应被保存至 mIn 然后 reply 指向其中的数据结构
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/BpBinder.cpp
+status_t BpBinder::transact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
 {
     // Once a binder has died, it will never come back to life.
     if (mAlive) {
@@ -840,6 +775,7 @@ status_t BpBinder::transact(
         } else {  // ServiceManager 对应的 BpBinder.mHandle 是 BinderHandle 且其 handle == 0
             status = IPCThreadState::self()->transact(binderHandle(), code, data, reply, flags);
         }
+
         if (data.dataSize() > LOG_TRANSACTIONS_OVER_SIZE) {
             Mutex::Autolock _l(mLock);
             ALOGW("Large outgoing transaction of %zu bytes, interface descriptor %s, code %d",
@@ -848,39 +784,20 @@ status_t BpBinder::transact(
                                           : "<uncached descriptor>",
                   code);
         }
-
         if (status == DEAD_OBJECT) mAlive = 0;
-
         return status;
     }
-
     return DEAD_OBJECT;
 }
 
-// 判断 mHandle 是否是 RpcHandle
-bool BpBinder::isRpcBinder() const {
-    return std::holds_alternative<RpcHandle>(mHandle);
-}
-
-// frameworks/native/libs/binder/include/binder/BpBinder.h
-class BpBinder : public IBinder
-{
-private:
-    using Handle = std::variant<BinderHandle, RpcHandle>;
-
-    BpBinder(BinderHandle&& handle, int32_t trackedUid);
-    Handle mHandle;	
-}
-
-// frameworks/native/libs/binder/IPCThreadState.cpp
-status_t IPCThreadState::transact(int32_t handle,
-                                  uint32_t code, const Parcel& data,
-                                  Parcel* reply, uint32_t flags)
+// 通过 ioctl 陷入内核与 binder driver 通讯，binder 将 mOut 作为 request 发送给 server 进程，并将响应放在 mIn
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/IPCThreadState.cpp
+status_t IPCThreadState::transact(int32_t handle,                       // handle 是 server 进程的编号
+                                  uint32_t code, const Parcel& data,    // code 和 data 作为 request 写入 mOut
+                                  Parcel* reply, uint32_t flags)        // reply 指向 mIn 里的数据结构
 {
     LOG_ALWAYS_FATAL_IF(data.isForRpc(), "Parcel constructed for RPC, but being used with binder.");
-
     status_t err;
-
     flags |= TF_ACCEPT_FDS;
 
     IF_LOG_TRANSACTIONS() {
@@ -892,53 +809,23 @@ status_t IPCThreadState::transact(int32_t handle,
 
     LOG_ONEWAY(">>>> SEND from pid %d uid %d %s", getpid(), getuid(),
         (flags & TF_ONE_WAY) == 0 ? "READ REPLY" : "ONE WAY");
-    err = writeTransactionData(BC_TRANSACTION, flags, handle, code, data, nullptr);
+    err = writeTransactionData(BC_TRANSACTION, flags, handle, code, data, nullptr);    // 将 data 写入 mOut（后续会被 binder 发送给 server 进程）
 
     if (err != NO_ERROR) {
         if (reply) reply->setError(err);
         return (mLastError = err);
     }
 
-    if ((flags & TF_ONE_WAY) == 0) {  // 一般为 false
-        if (UNLIKELY(mCallRestriction != ProcessState::CallRestriction::NONE)) {
-            if (mCallRestriction == ProcessState::CallRestriction::ERROR_IF_NOT_ONEWAY) {
-                ALOGE("Process making non-oneway call (code: %u) but is restricted.", code);
-                CallStack::logStack("non-oneway call", CallStack::getCurrent(10).get(),
-                    ANDROID_LOG_ERROR);
-            } else /* FATAL_IF_NOT_ONEWAY */ {
-                LOG_ALWAYS_FATAL("Process may not make non-oneway calls (code: %u).", code);
-            }
-        }
-
-        #if 0
-        if (code == 4) { // relayout
-            ALOGI(">>>>>> CALLING transaction 4");
-        } else {
-            ALOGI(">>>>>> CALLING transaction %d", code);
-        }
-        #endif
+    // 通过 ioctl 与 binder driver 通讯，binder 将 mOut 发送给 server 进程并将响应数据放到 mIn
+    // 非单向调用，会阻塞当前线程直到 server 返回 response，提供一个 reply 指向 response 里的数据结构
+    if ((flags & TF_ONE_WAY) == 0) {
         if (reply) {
             err = waitForResponse(reply);
         } else {
             Parcel fakeReply;
             err = waitForResponse(&fakeReply);
         }
-        #if 0
-        if (code == 4) { // relayout
-            ALOGI("<<<<<< RETURNING transaction 4");
-        } else {
-            ALOGI("<<<<<< RETURNING transaction %d", code);
-        }
-        #endif
-
-        IF_LOG_TRANSACTIONS() {
-            TextOutput::Bundle _b(alog);
-            alog << "BR_REPLY thr " << (void*)pthread_self() << " / hand "
-                << handle << ": ";
-            if (reply) alog << indent << *reply << dedent << endl;
-            else alog << "(none requested)" << endl;
-        }
-    } else {
+    } else {    // 单向调用的话，binder 将 mOut 发送给 server 进程后就直接返回
         err = waitForResponse(nullptr, nullptr);
     }
 
@@ -946,7 +833,7 @@ status_t IPCThreadState::transact(int32_t handle,
 }
 
 // [深入 Binder 之架构篇]介绍过，BC_TRANSACTION 表示 client 向 binder driver 传输数据，结构是 binder_transaction_data
-
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/IPCThreadState.cpp
 status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,  // cmd == BC_TRANSACTION
     int32_t handle, uint32_t code, const Parcel& data, status_t* statusBuffer)    // handle == 0
 {
@@ -985,16 +872,18 @@ status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,
     return NO_ERROR;
 }
 
-status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)  // reply == null, acquireResult == null
+// 通过 ioctl 陷入内核态与 binder driver 通讯
+// 内存区域 mOut 里的数据将被 binder 发送给 server 进程，内存区域 mIn 由 binder 填充来自 server 进程的响应数据，然后将 reply 指向 mIn 里的数据结构
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/IPCThreadState.cpp
+status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
 {
     uint32_t cmd;
     int32_t err;
 
     while (1) {
-        if ((err=talkWithDriver()) < NO_ERROR) break;  // talkWithDriver() 通过 ioctl(BINDER_WRITE_READ) 与 binder driver 交互
-        err = mIn.errorCheck();                        // binder_write_read.write_buffer(mOut) 被 binder driver 读取（copy 至内核空间）
-        if (err < NO_ERROR) break;                     // binder_write_read.read_buffer(mIn) 是 server 的返回值，需要 client 读取
-        if (mIn.dataAvail() == 0) continue;
+        if ((err=talkWithDriver()) < NO_ERROR) break;  // talkWithDriver() 通过 ioctl 与 binder driver 通讯
+        err = mIn.errorCheck();                        // binder 作为中间商，将 mOut 发送给 server 进程，而 mIn 接收 client 进程发送给本进程的 request
+        if (mIn.dataAvail() == 0) continue;            // 所以下面就是解析并处理 mIn 的逻辑
 
         cmd = (uint32_t)mIn.readInt32();               // [深入 Binder 之架构篇] 介绍过 BR_ 是 binder 给 client 的响应码
         switch (cmd) {                                 
@@ -1004,15 +893,15 @@ status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
         case BR_FAILED_REPLY:
         case BR_FROZEN_REPLY:
         case BR_ACQUIRE_RESULT:
-        case BR_REPLY:                                 // BR_REPLY 指示 client 接收 server 返回的响应数据，内存布局同 BC_TRANSACTION 一样是 binder_transaction_data
-            {
+        case BR_REPLY:                      // BR_REPLY 指示 client（本进程）接收 server 返回的响应数据，内存布局同 BC_TRANSACTION 一样是 binder_transaction_data
+            {                               // reply 指向响应数据
                 binder_transaction_data tr;
                 err = mIn.read(&tr, sizeof(tr));
                 ALOG_ASSERT(err == NO_ERROR, "Not enough command data for brREPLY");
                 if (err != NO_ERROR) goto finish;
 
-                if (reply) {
-                    if ((tr.flags & TF_STATUS_CODE) == 0) {  // 将 replay 指向 server 返回的响应
+                if (reply) {    // 非单向调用，会将 reply 指向 mIn 里的响应数据
+                    if ((tr.flags & TF_STATUS_CODE) == 0) {
                         reply->ipcSetDataReference(
                             reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
                             tr.data_size,
@@ -1028,6 +917,8 @@ status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
                             tr.offsets_size/sizeof(binder_size_t));
                     }
                 } else {
+
+                    // 单向调用，不管响应，直接将其释放掉
                     freeBuffer(nullptr,
                         reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
                         tr.data_size,
@@ -1056,8 +947,10 @@ finish:
     return err;
 }
 
+// 通过系统调用 ioctl(fd, request, args...) 陷入内核态与 binder driver 通讯，参数是 binder_write_read
+// binder 将 bwr.write_buffer 发送给 server 进程，并将接收到的 response 写入 bwr.read_buffer，这两块内存就是本进程的 mOut 和 mIn
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/IPCThreadState.cpp
-status_t IPCThreadState::talkWithDriver(bool doReceive)    // doReceive 默认为 true
+status_t IPCThreadState::talkWithDriver(bool doReceive /* default true */)
 {
     if (mProcess->mDriverFD < 0) {
         return -EBADF;
