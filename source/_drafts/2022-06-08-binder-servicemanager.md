@@ -3,6 +3,8 @@ title: 深入 Binder 之 servicemanager 进程
 date: 2022-06-08 12:00:00 +0800
 ---
 
+# 主例程
+
 `servicemanager` 进程是由 init 进程通过 [servicemanager.rc](https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/servicemanager.rc) 配置文件启动的，其所在的可执行文件在 `system/bin/servicemanager`，对应的源文件是 [/platform/frameworks/native/cmds/servicemanager/main.cpp](https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp)
 
 ```rc
@@ -31,17 +33,22 @@ int main(int argc, char** argv) {
     }
     const char* driver = argc == 2 ? argv[1] : "/dev/binder";    // binder IPC 的默认地址是 /dev/binder
 
-    // 
+    // 初始化 binder 连接
     sp<ProcessState> ps = ProcessState::initWithDriver(driver);
-    ps->setThreadPoolMaxThreadCount(0);
+    ps->setThreadPoolMaxThreadCount(0);    // ioctl(mDriverFD, BINDER_SET_MAX_THREADS, &maxThreads)
     ps->setCallRestriction(ProcessState::CallRestriction::FATAL_IF_NOT_ONEWAY);
 
+    // 注册成为 binder 的服务管理器（ContextManager），id == 0
     sp<ServiceManager> manager = sp<ServiceManager>::make(std::make_unique<Access>());
     if (!manager->addService("manager", manager, false /*allowIsolated*/, IServiceManager::DUMP_FLAG_PRIORITY_DEFAULT).isOk()) {
         LOG(ERROR) << "Could not self register servicemanager";
     }
+    // IPCThreadState 实例是线程本地变量（thread local），通过 IPCThreadState::self() 获得
+    // cpp 通过 pthread_getspecific(key) 和 pthread_setspecific(key, value) 设置/获取线程本地变量
     IPCThreadState::self()->setTheContextObject(manager);
-    ps->becomeContextManager();
+    ps->becomeContextManager();    // BINDER_SET_CONTEXT_MGR_EXT
+
+    // 开始主循环：提供注册&查询服务
     sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
     BinderCallback::setupTo(looper);
     ClientCallbackCallback::setupTo(looper, manager);
@@ -51,14 +58,26 @@ int main(int argc, char** argv) {
     // should not be reached
     return EXIT_FAILURE;
 }
+```
 
+# 初始化 binder 连接
+
+1. 通过系统调用 `open` 打开 `/dev/binder` 得到 binder 驱动的文件描述符 fd
+2. 通过 `ioctl` 与 binder 驱动交互进行一系列的初始化操作
+    1. BINDER_VERSION 版本校验
+    2. BINDER_SET_MAX_THREADS 设置 binder 驱动线程池的容量
+    3. BINDER_ENABLE_ONEWAY_SPAM_DETECTION
+    4. ...
+3. 通过 `mmap` 在 servicemanager 进程分配一块虚存用以后续使用（对应 binder 驱动的 `binder_mmap`）
+
+```cpp
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/ProcessState.cpp
 sp<ProcessState> ProcessState::initWithDriver(const char* driver) { return init(driver, true /*requireDefault*/); }
 sp<ProcessState> ProcessState::init(const char *driver, bool requireDefault) {...}
 ProcessState::ProcessState(const char *driver)          // driver 参数是指 binder 的路径：/dev/binder
     : mDriverName(String8(driver))                      // 记录 binder 路径
     , mDriverFD(open_driver(driver))                    // 打开 binder 并记录下它的 fd
-    , mVMStart(MAP_FAILED)
+    , mVMStart(MAP_FAILED)                              // mmap 分配的一块内存空间，后续会用到
     , mThreadCountLock(PTHREAD_MUTEX_INITIALIZER)
     , mThreadCountDecrement(PTHREAD_COND_INITIALIZER)
     , mExecutingThreadsCount(0)
@@ -114,11 +133,20 @@ static int open_driver(const char *driver /* /dev/binder */)
     }
     return fd;
 }
+```
 
+# 注册为服务管理器
+
+```cpp
 // ServiceManager 内部维护了一个 map：mNameToService，string -> IBinder
-// 注册 name -> binder 映射
+// 这里将自己添加进去：manager -> ServiceManager
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/ServiceManager.cpp
-Status ServiceManager::addService(const std::string& name, const sp<IBinder>& binder, bool allowIsolated, int32_t dumpPriority) {
+Status ServiceManager::addService(
+    const std::string& name   /* manager */, 
+    const sp<IBinder>& binder /* this */, 
+    bool allowIsolated        /* false */, 
+    int32_t dumpPriority      /* IServiceManager::DUMP_FLAG_PRIORITY_DEFAULT */
+) {
     auto ctx = mAccess->getCallingContext();
     // apps cannot add services
     if (multiuser_get_app_id(ctx.uid) >= AID_APP) {
@@ -159,6 +187,36 @@ Status ServiceManager::addService(const std::string& name, const sp<IBinder>& bi
     return Status::ok();
 }
 
+// 发送消息 BINDER_SET_CONTEXT_MGR_EXT 给 binder，使自己成为服务管理器
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/ProcessState.cpp
+
+bool ProcessState::becomeContextManager()
+{
+    AutoMutex _l(mLock);
+
+    flat_binder_object obj {
+        .flags = FLAT_BINDER_FLAG_TXN_SECURITY_CTX,
+    };
+
+    int result = ioctl(mDriverFD, BINDER_SET_CONTEXT_MGR_EXT, &obj);
+
+    // fallback to original method
+    if (result != 0) {
+        android_errorWriteLog(0x534e4554, "121035042");
+
+        int unused = 0;
+        result = ioctl(mDriverFD, BINDER_SET_CONTEXT_MGR, &unused);
+    }
+
+    if (result == -1) {
+        ALOGE("Binder ioctl to become context manager failed: %s\n", strerror(errno));
+    }
+
+    return result == 0;
+}
+```
+
+```cpp
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
 class BinderCallback : public LooperCallback {
 public:
