@@ -62,7 +62,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.2","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.3","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -214,7 +214,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2022/06/15/binder-arch/" target="_self">
         <div>
-          学习 binder 我感觉得从上到下：先对 binder 架构&#x2F;理论有个大概的认识、对 binder 里的数据结构有个印象，再深入代码细节；整个 binder 涉及到应用侧和驱动侧、app 侧和 framework 侧、java 层和 native 层，代码量巨大而且跨度很大，只有对整个 binder 架构有清晰的认识才不会迷失在细节里 Linux 设备 linux 系统将设备分为3类：字符设备、
+          学习 binder 我感觉得从上到下：先对 binder 架构/理论有个大概的认识、对 binder 里的数据结构有个印象，再深入代码细节；整个 binder 涉及到应用侧和驱动侧、app 侧和 framework 侧、java 层和 native 层，代码量巨大而且跨度很大，只有对整个 binder 架构有清晰的认识才不会迷失在细节里 Linux 设备 linux 系统将设备分为3类：字符设备、
         </div>
       </a>
 
@@ -247,7 +247,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2022/06/08/binder-aidl/" target="_self">
         <div>
-          应用层从 AIDL 说起，AIDL 全称 Android Interface Definition Language，是一个用以描述&#x2F;定义 接口 的文本文件，有着与 java 类似的简单语法 下面是一个非常简单的 AIDL 文件，位于 &amp;#123;projectPath&amp;#125;&#x2F;app&#x2F;src&#x2F;main&#x2F;aidl&#x2F;work&#x2F;dalvik&#x2F;binder&#x2F;example&#x2F;IAidlExampleI
+          应用层从 AIDL 说起，AIDL 全称 Android Interface Definition Language，是一个用以描述/定义 接口 的文本文件，有着与 java 类似的简单语法 下面是一个非常简单的 AIDL 文件，位于 &#123;projectPath&#125;/app/src/main/aidl/work/dalvik/binder/example/IAidlExampleI
         </div>
       </a>
 
@@ -280,7 +280,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2022/06/01/mmkv/" target="_self">
         <div>
-          mmapmmap 在进程的虚拟地址空间开辟一块区域，这块区域映射文件在磁盘上的物理地址，是将内存地址空间映射到磁盘地址空间的一种方法 读&#x2F;写操作访问虚拟地址空间这一段映射地址，通过查询页表发现这一段地址并不在物理页面上（因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中），因此引发缺页异常，内核发起请求调页过程。调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没
+          mmapmmap 在进程的虚拟地址空间开辟一块区域，这块区域映射文件在磁盘上的物理地址，是将内存地址空间映射到磁盘地址空间的一种方法 读/写操作访问虚拟地址空间这一段映射地址，通过查询页表发现这一段地址并不在物理页面上（因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中），因此引发缺页异常，内核发起请求调页过程。调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没
         </div>
       </a>
 
@@ -374,7 +374,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2022/04/09/flow-basic/" target="_self">
         <div>
-          for 操作符具有以下特征的对象可以被 for 操作符遍历：  具有 operator 函数 iterator() 其返回 Iterator 具有 operator 函数 hasNext() 和 next()  public interface Sequence&lt;out T&gt; &amp;#123;     public operator fun iterator(): Iterator&lt;
+          for 操作符具有以下特征的对象可以被 for 操作符遍历：  具有 operator 函数 iterator() 其返回 Iterator 具有 operator 函数 hasNext() 和 next()  public interface Sequence&lt;out T&gt; &#123;     public operator fun iterator(): Iterator&lt;
         </div>
       </a>
 
@@ -470,7 +470,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2022/03/14/case-testonly/" target="_self">
         <div>
-          Launcher 里的 AppStore 模块会根据服务端的配置安装&#x2F;卸载 APP，当然用户也可以手动安装 AppStore 里的 APP 某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的  静默安装是指 AppStore 自动在后台安装，无须用户手动点击安装 静默安装是通过广播 android.intent.action.SILENCE_INSTALL 实现的，由
+          Launcher 里的 AppStore 模块会根据服务端的配置安装/卸载 APP，当然用户也可以手动安装 AppStore 里的 APP 某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的  静默安装是指 AppStore 自动在后台安装，无须用户手动点击安装 静默安装是通过广播 android.intent.action.SILENCE_INSTALL 实现的，由
         </div>
       </a>
 

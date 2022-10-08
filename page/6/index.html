@@ -62,7 +62,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.2","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.3","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -298,7 +298,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2020/11/19/scoped-storage/" target="_self">
         <div>
-          以前的存储访问权限先看看以前（ &lt; 10&#x2F;Q ）的存储访问权限是怎样的 从 APP 目录（app-specific directories）的角度看，可以分为：  内部存储（app-specific directories in internal storage） 对于 app 自己，无需申请任何读&#x2F;写权限 对于其他 app，没有访问权限   外部存储（app-specific direct
+          以前的存储访问权限先看看以前（ &lt; 10/Q ）的存储访问权限是怎样的 从 APP 目录（app-specific directories）的角度看，可以分为：  内部存储（app-specific directories in internal storage） 对于 app 自己，无需申请任何读/写权限 对于其他 app，没有访问权限   外部存储（app-specific direct
         </div>
       </a>
 
@@ -338,7 +338,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2020/11/11/starting-window/" target="_self">
         <div>
-          问题中午和同事聊天时，提到一个问题：设计把爱范儿 app 的启动页改成暗黑样式，本来很简单的一个改动，测试却发现启动会有闪屏；下午我看了下效果，发现确实有问题：  把启动页的图片换成暗黑主体的图片后，冷&#x2F;热启动都会有从白色到黑色的闪动 同事给的 bug fixed 是 windowDisablePreview &#x3D; true，这导致 app 热启动时，会有很长的一段延迟  starting wind
+          问题中午和同事聊天时，提到一个问题：设计把爱范儿 app 的启动页改成暗黑样式，本来很简单的一个改动，测试却发现启动会有闪屏；下午我看了下效果，发现确实有问题：  把启动页的图片换成暗黑主体的图片后，冷/热启动都会有从白色到黑色的闪动 同事给的 bug fixed 是 windowDisablePreview = true，这导致 app 热启动时，会有很长的一段延迟  starting wind
         </div>
       </a>
 
@@ -466,7 +466,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2020/10/20/anr/" target="_self">
         <div>
-          根据日常的经验我们大概知道，如果 app 没有及时消费 MotionEvent，超过 5s 就会弹出 ANR 对话框；那么 ANR 的逻辑肯定是在事件分发过程中产生的，我们从事件的源头找起，看看 input 事件是怎么产生的 input 的分发 事件分发是从线程 InputReaderThread 开始的，它的主要工作是：  从目录 &#x2F;dev&#x2F;input 获取 input event 看来 and
+          根据日常的经验我们大概知道，如果 app 没有及时消费 MotionEvent，超过 5s 就会弹出 ANR 对话框；那么 ANR 的逻辑肯定是在事件分发过程中产生的，我们从事件的源头找起，看看 input 事件是怎么产生的 input 的分发 事件分发是从线程 InputReaderThread 开始的，它的主要工作是：  从目录 /dev/input 获取 input event 看来 and
         </div>
       </a>
 
@@ -550,7 +550,7 @@
       
       <a class="index-excerpt index-excerpt__noimg" href="/2020/09/27/handler-messagequeue-looper/" target="_self">
         <div>
-          MessageQueue 是个单向链表，按 Message.when 自然序排 它有类似于「生产者 - 消费者」模型的阻塞队列：没有 Message 时，阻塞直到新 Message 入队；否则阻塞到下一个 Message.when &#x2F;&#x2F; 这里会阻塞 nativePollOnce(ptr, nextPollTimeoutMillis);  synchronized (this) &amp;#123;
+          MessageQueue 是个单向链表，按 Message.when 自然序排 它有类似于「生产者 - 消费者」模型的阻塞队列：没有 Message 时，阻塞直到新 Message 入队；否则阻塞到下一个 Message.when // 这里会阻塞 nativePollOnce(ptr, nextPollTimeoutMillis);  synchronized (this) &#123;
         </div>
       </a>
 
