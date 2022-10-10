@@ -214,6 +214,202 @@ bool ProcessState::becomeContextManager()
 
     return result == 0;
 }
+
+// https://android.googlesource.com/kernel/common/+/refs/tags/android-13.0.0_r0.20/drivers/android/binder.c
+static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	switch (cmd) {
+	// ...
+	case BINDER_SET_CONTEXT_MGR_EXT: {
+		struct flat_binder_object fbo;
+		if (copy_from_user(&fbo, ubuf, sizeof(fbo))) {
+			ret = -EINVAL;
+			goto err;
+		}
+		ret = binder_ioctl_set_ctx_mgr(filp, &fbo);
+		if (ret)
+			goto err;
+		break;
+	}
+    // ...
+	}
+}
+
+static int binder_ioctl_set_ctx_mgr(struct file *filp,
+				    struct flat_binder_object *fbo)
+{
+	int ret = 0;
+	struct binder_proc *proc = filp->private_data;
+	struct binder_context *context = proc->context;
+	struct binder_node *new_node;
+	kuid_t curr_euid = current_euid();
+	mutex_lock(&context->context_mgr_node_lock);
+	if (context->binder_context_mgr_node) {
+		pr_err("BINDER_SET_CONTEXT_MGR already set\n");
+		ret = -EBUSY;
+		goto out;
+	}
+	ret = security_binder_set_context_mgr(proc->cred);
+	if (ret < 0)
+		goto out;
+	if (uid_valid(context->binder_context_mgr_uid)) {
+		if (!uid_eq(context->binder_context_mgr_uid, curr_euid)) {
+			pr_err("BINDER_SET_CONTEXT_MGR bad uid %d != %d\n",
+			       from_kuid(&init_user_ns, curr_euid),
+			       from_kuid(&init_user_ns,
+					 context->binder_context_mgr_uid));
+			ret = -EPERM;
+			goto out;
+		}
+	} else {
+		context->binder_context_mgr_uid = curr_euid;
+	}
+	new_node = binder_new_node(proc, fbo);
+	if (!new_node) {
+		ret = -ENOMEM;
+		goto out;
+	}
+	binder_node_lock(new_node);
+	new_node->local_weak_refs++;
+	new_node->local_strong_refs++;
+	new_node->has_strong_ref = 1;
+	new_node->has_weak_ref = 1;
+	context->binder_context_mgr_node = new_node;
+	binder_node_unlock(new_node);
+	binder_put_node(new_node);
+out:
+	mutex_unlock(&context->context_mgr_node_lock);
+	return ret;
+}
+
+```
+
+# 注册
+
+# 查询
+
+```java
+class ActivityManager {
+    public List<RunningAppProcessInfo> getRunningAppProcesses() {
+        try {
+            return getService().getRunningAppProcesses();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    // IActivityManager 看起来像是 aidl 生成的 java interface
+    // 一搜果然没有 IActivityManager.java 只有 frameworks/base/core/java/android/app/IActivityManager.aidl
+    public static IActivityManager getService() {
+        return IActivityManagerSingleton.get();
+    }
+
+    private static final Singleton<IActivityManager> IActivityManagerSingleton =
+            new Singleton<IActivityManager>() {
+                @Override
+                protected IActivityManager create() {
+                    final IBinder b = ServiceManager.getService(Context.ACTIVITY_SERVICE);
+                    final IActivityManager am = IActivityManager.Stub.asInterface(b);  // 获得 client proxy，真正与 server 通讯的是 b
+                                                                                       // 参考【深入 Binder 之 AIDL】
+                    return am;
+                }
+            };        
+}
+
+// 看看如何获取 IActivityManager client binder
+class ServiceManager {
+    public static IBinder getService(String name) {
+        try {
+            IBinder service = sCache.get(name);
+            if (service != null) {
+                return service;
+            } else {
+                return Binder.allowBlocking(rawGetService(name));
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "error in getService", e);
+        }
+        return null;
+    }
+
+    private static IBinder rawGetService(String name) throws RemoteException {
+        final long start = sStatLogger.getTime();
+        final IBinder binder = getIServiceManager().getService(name);  // IServiceManager? 看起来又是一个 aidl，又是一个 binder ipc
+        // ...                                                         // 即是 IActivityManager client binder 是从 IServiceManager server 获得的
+        return binder;
+    }
+
+// 有了上面的经验就可以很快地知道 IServiceManager.Stub.asInterface(remote) 返回的是 IServiceManager client proxy
+// 真正的通讯是由 BinderInternal.getContextObject() 得到的 client binder 实现的
+    private static IServiceManager getIServiceManager() {
+        if (sServiceManager != null) {
+            return sServiceManager;
+        }
+
+        // Find the service manager
+        sServiceManager = ServiceManagerNative
+                .asInterface(Binder.allowBlocking(BinderInternal.getContextObject()));
+        return sServiceManager;
+    }            
+}
+
+public static IServiceManager ServiceManagerNative.asInterface(IBinder obj) {
+    return new ServiceManagerProxy(obj);
+}
+
+class ServiceManagerProxy implements IServiceManager {
+    public ServiceManagerProxy(IBinder remote) {
+        mRemote = remote;
+        mServiceManager = IServiceManager.Stub.asInterface(remote);
+    }
+}
+
+public static final native IBinder BinderInternal.getContextObject();
+```
+
+```cpp
+// frameworks/base/core/jni/android_util_Binder.cpp
+static jobject android_os_BinderInternal_getContextObject(JNIEnv* env, jobject clazz)
+{
+    sp<IBinder> b = ProcessState::self()->getContextObject(NULL);
+    return javaObjectForIBinder(env, b);
+}
+
+// frameworks/native/libs/binder/ProcessState.cpp
+sp<IBinder> ProcessState::getContextObject(const sp<IBinder>& /*caller*/)
+{
+    sp<IBinder> context = getStrongProxyForHandle(0);
+    return context;
+}
+sp<IBinder> ProcessState::getStrongProxyForHandle(int32_t handle)  // handle == 0
+{
+    sp<IBinder> result;
+    AutoMutex _l(mLock);
+    if (handle == 0 && the_context_object != nullptr) return the_context_object;
+    handle_entry* e = lookupHandleLocked(handle);  // 有个成员属性 Vector<handle_entry> mHandleToObject 用以缓存 IBinder
+    if (e != nullptr) {                            // 当 handle 所在位置为空时会创建一个新的 entry 实例返回
+        IBinder* b = e->binder;                    // 此时 b == null
+        if (b == nullptr || !e->refs->attemptIncWeak(this)) {
+            //...
+            sp<BpBinder> b = BpBinder::PrivateAccessor::create(handle);  // 这里的 IBinder 是 BpBinder，而且是 handle == 0 的 BpBinder
+            e->binder = b.get();
+            if (b) e->refs = b->getWeakRefs();
+            result = b;
+        } else {
+            // This little bit of nastyness is to allow us to add a primary
+            // reference to the remote proxy when this team doesn't have one
+            // but another team is sending the handle to us.
+            result.force_set(b);
+            e->refs->decWeak(this);
+        }
+    }
+    return result;
+}
+
+// 从【深入 Binder 之架构篇】知道 BpBinder 是 native client，负责：
+// 从 servicemanager 查找 service handle，然后将 request 发送给 binder driver，由 binder driver 转发 request 给目标 server
+// 但 servicemanager handler 又得从哪里获取呢？答案很简单，它的 handle == 0，无需通过查找获得
+
 ```
 
 ```cpp
