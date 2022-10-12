@@ -288,6 +288,12 @@ out:
 
 # 查询
 
+随便找个 biner ipc 比如 `ActivityManager.getRunningAppProcesses()` 开始深入下去：
+
+1. 内部是调用了 `IActivityManager.getRunningAppProcesses()`，`IActivityManager` 明显也是个 binder ipc，它的 binder proxy 是从 `ServiceManager.getService` 获取的
+2. `ServiceManager` 内部调用了 `IServiceManager.getService`，看起来 `IServiceManager` 又是个 binder ipc，它的 binder proxy 是从 `BinderInternal.getContextObject()` 获得的
+3. 往下看发现 `IServiceManager` 的 binder proxy 实际上是个 handle == 0 的 `BpBinder`（binder client 包括 java 层的 `BinderProxy` 和 native 层的 `BpBinder`）
+
 
 
 ```java
