@@ -288,6 +288,8 @@ out:
 
 # 查询
 
+
+
 ```java
 class ActivityManager {
     public List<RunningAppProcessInfo> getRunningAppProcesses() {
@@ -408,8 +410,143 @@ sp<IBinder> ProcessState::getStrongProxyForHandle(int32_t handle)  // handle == 
 
 // 从【深入 Binder 之架构篇】知道 BpBinder 是 native client，负责：
 // 从 servicemanager 查找 service handle，然后将 request 发送给 binder driver，由 binder driver 转发 request 给目标 server
-// 但 servicemanager handler 又得从哪里获取呢？答案很简单，它的 handle == 0，无需通过查找获得
+// 但 servicemanager handler 又得从哪里获取呢？答案很简单，它的 handle == 0，无需通过查找获得，只要 handle == 0 就表示 server 是 service manager
 
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c
+// common/drivers/android/binder.c
+static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	// ...
+	switch (cmd) {
+	case BINDER_WRITE_READ:
+		ret = binder_ioctl_write_read(filp, cmd, arg, thread);
+		if (ret)
+			goto err;
+		break;
+	case BINDER_SET_MAX_THREADS:
+	case BINDER_SET_CONTEXT_MGR_EXT: {
+    // ...
+    }
+}
+
+static int binder_ioctl_write_read(struct file *filp,
+				unsigned int cmd, unsigned long arg,
+				struct binder_thread *thread)
+{
+	int ret = 0;
+	struct binder_proc *proc = filp->private_data;
+	unsigned int size = _IOC_SIZE(cmd);
+	void __user *ubuf = (void __user *)arg;
+	struct binder_write_read bwr;
+
+	if (size != sizeof(struct binder_write_read)) {
+		ret = -EINVAL;
+		goto out;
+	}
+	if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {
+		ret = -EFAULT;
+		goto out;
+	}
+	if (bwr.write_size > 0) {
+		ret = binder_thread_write(proc, thread,
+					  bwr.write_buffer,
+					  bwr.write_size,
+					  &bwr.write_consumed);
+		trace_binder_write_done(ret);
+		if (ret < 0) {
+			bwr.read_consumed = 0;
+			if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
+				ret = -EFAULT;
+			goto out;
+		}
+	}
+	if (bwr.read_size > 0)
+        // ...
+}
+
+static int binder_thread_write(struct binder_proc *proc,
+			struct binder_thread *thread,
+			binder_uintptr_t binder_buffer, size_t size,
+			binder_size_t *consumed)
+{
+	uint32_t cmd;
+	struct binder_context *context = proc->context;
+	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
+	void __user *ptr = buffer + *consumed;
+	void __user *end = buffer + size;
+
+	while (ptr < end && thread->return_error.cmd == BR_OK) {
+		int ret;
+		if (get_user(cmd, (uint32_t __user *)ptr))
+			return -EFAULT;
+		ptr += sizeof(uint32_t);
+
+		switch (cmd) {
+		case BC_TRANSACTION:
+		case BC_REPLY: {
+			struct binder_transaction_data tr;
+			if (copy_from_user(&tr, ptr, sizeof(tr)))
+				return -EFAULT;
+			ptr += sizeof(tr);
+			binder_transaction(proc, thread, &tr, cmd == BC_REPLY, 0);
+			break;
+		}
+        // ...
+		}
+		*consumed = ptr - buffer;
+	}
+	return 0;
+}
+
+static void binder_transaction(struct binder_proc *proc,
+			       struct binder_thread *thread,
+			       struct binder_transaction_data *tr, int reply,
+			       binder_size_t extra_buffers_size)
+{
+    // ...
+	if (reply) {
+		// server response -> client ...
+	} else {
+        // client request -> server
+		if (tr->target.handle) {  // handle > 0 的情况下，根据 handle 查找出 server/target
+			struct binder_ref *ref;
+			binder_proc_lock(proc);
+			ref = binder_get_ref_olocked(proc, tr->target.handle,
+						     true);
+			if (ref) {
+				target_node = binder_get_node_refs_for_txn(
+						ref->node, &target_proc,
+						&return_error);
+			} else {
+				binder_user_error("%d:%d got transaction to invalid handle, %u\n",
+						  proc->pid, thread->pid, tr->target.handle);
+				return_error = BR_FAILED_REPLY;
+			}
+			binder_proc_unlock(proc);
+		} else {
+
+            // handle == 0 说明 server/target 是 service manager，它保存在 binder_context_mgr_node
+			mutex_lock(&context->context_mgr_node_lock);
+			target_node = context->binder_context_mgr_node;
+			if (target_node)
+				target_node = binder_get_node_refs_for_txn(
+						target_node, &target_proc,
+						&return_error);
+			else
+				return_error = BR_DEAD_REPLY;
+			mutex_unlock(&context->context_mgr_node_lock);
+			if (target_node && target_proc->pid == proc->pid) {
+				binder_user_error("%d:%d got transaction to context manager from process owning it\n",
+						  proc->pid, thread->pid);
+				return_error = BR_FAILED_REPLY;
+				return_error_param = -EINVAL;
+				return_error_line = __LINE__;
+				goto err_invalid_target_handle;
+			}
+		}
+        // ...
+    }
+}
 ```
 
 ```cpp
