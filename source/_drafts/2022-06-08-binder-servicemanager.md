@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     ps->setThreadPoolMaxThreadCount(0);    // ioctl(mDriverFD, BINDER_SET_MAX_THREADS, &maxThreads)
     ps->setCallRestriction(ProcessState::CallRestriction::FATAL_IF_NOT_ONEWAY);
 
-    // 注册成为 binder 的服务管理器（ContextManager），id == 0
+    // 注册成为 binder 的服务管理器（ContextManager），id == 0，handle == 0
     sp<ServiceManager> manager = sp<ServiceManager>::make(std::make_unique<Access>());
     if (!manager->addService("manager", manager, false /*allowIsolated*/, IServiceManager::DUMP_FLAG_PRIORITY_DEFAULT).isOk()) {
         LOG(ERROR) << "Could not self register servicemanager";
@@ -192,7 +192,6 @@ Status ServiceManager::addService(
 
 // 发送消息 BINDER_SET_CONTEXT_MGR_EXT 给 binder，使自己成为服务管理器
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/libs/binder/ProcessState.cpp
-
 bool ProcessState::becomeContextManager()
 {
     AutoMutex _l(mLock);
@@ -294,9 +293,13 @@ out:
 看看其他进程（client）是如何使用 servicemanager 提供的查询服务的，随便找个 biner ipc 比如 `ActivityManager.getRunningAppProcesses()` 开始深入下去：
 
 1. 内部是调用了 `IActivityManager.getRunningAppProcesses()`，`IActivityManager` 明显是个 binder ipc，它的 binder client proxy 是从 `ServiceManager.getService` 获取的
+
 2. `ServiceManager` 内部调用了 `IServiceManager.getService`，看起来 `IServiceManager` 又是个 binder ipc，它的 proxy 是从 `BinderInternal.getContextObject()` 获得的
+
 3. 往下看发现 `IServiceManager` 的 proxy 实际上是个 handle == 0 的 `BpBinder`（binder client 包括 java 层的 `BinderProxy` 和 native 层的 `BpBinder`）
+
 4. binder ipc 过程中，client 通过 `ioctl(binder_fd, BC_TRANSACTION, binder_transaction_data)` 将 request 发送给 binder driver，再由 binder driver 根据 `binder_transaction_data.target.handle` 字段找到对应的 server 将 request 转发给它，具体流程是 `binder_ioctl -> binder_ioctl_write_read -> binder_thread_write -> binder_transaction`
+
 5. 在 `binder_transaction` 可以看到如果发现 handle == 0 则取 `binder_context_mgr_node` 作为 target server，而在章节 [注册为服务管理器](#注册为服务管理器) 有说到 servicemanager 进程会通过 `BINDER_SET_CONTEXT_MGR_EXT/binder_ioctl_set_ctx_mgr` 把自己注册至 `binder_context_mgr_node`
 
 整理下逻辑：app 进行 binder ipc 时需要得到 target server handle，可以通过 `ServiceManager.getService` 查询得到，这个 ipc 方法最终会调用 servicemanager 进程提供的查询功能；而 servicemanager 早已在 binder driver 里把自己注册为服务管理器（`binder_context_mgr_node`，handle == 0），这样 app 进程就无需再进行查找即可调用 `ServiceManager`
@@ -562,9 +565,7 @@ static void binder_transaction(struct binder_proc *proc,
 }
 ```
 
-## 实现查询
-
-
+## 响应 binder 消息
 
 ```cpp
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
@@ -906,3 +907,6 @@ private:
     sp<ServiceManager> mManager;
 };
 ```
+
+## 实现查询
+
