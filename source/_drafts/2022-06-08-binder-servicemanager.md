@@ -565,18 +565,26 @@ static void binder_transaction(struct binder_proc *proc,
 }
 ```
 
-## 响应 binder 消息
+## 实现查询
+
+1. 通过 `epoll(binder_driver_fd)` 响应 binder driver 发来的消息
+
+2. client 进程查询 service handle 时，通过将 request handle 置为 0 来标识 target/server 是 servicemanager 进程（详见上一章节[暴露自己](#暴露自己)）
+
+3. 处理 binder driver 消息的逻辑在 `IPCThreadState`，对于 target handle == 0 的情况，使用 `the_context_object` 来处理消息，而 `the_context_object` 在 [主例程](#主例程) 里被设置为 `ServiceManager`
+
+4. 查询的逻辑就是从 string -> IBinder 的 Map 里根据 service name 找到对应的 IBinder 并返回
 
 ```cpp
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
 class BinderCallback : public LooperCallback {
 public:
-    static sp<BinderCallback> setupTo(const sp<Looper>& looper) {    // 监听 binder driver fd，当有数据时回调 handlePolledCommands
+    static sp<BinderCallback> setupTo(const sp<Looper>& looper) {
         sp<BinderCallback> cb = sp<BinderCallback>::make();
         int binder_fd = -1;
-        IPCThreadState::self()->setupPolling(&binder_fd);
+        IPCThreadState::self()->setupPolling(&binder_fd);    // 获得已打开的 binder driver fd
         LOG_ALWAYS_FATAL_IF(binder_fd < 0, "Failed to setupPolling: %d", binder_fd);
-        int ret = looper->addFd(binder_fd,
+        int ret = looper->addFd(binder_fd,                   // 当有数据时回调 handlePolledCommands
                                 Looper::POLL_CALLBACK,
                                 Looper::EVENT_INPUT,
                                 cb,
@@ -663,69 +671,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
     RefBase::weakref_type* refs;
     status_t result = NO_ERROR;
     switch ((uint32_t)cmd) {
-    case BR_ERROR:
-        result = mIn.readInt32();
-        break;
-    case BR_OK:
-        break;
-    case BR_ACQUIRE:
-        refs = (RefBase::weakref_type*)mIn.readPointer();
-        obj = (BBinder*)mIn.readPointer();
-        ALOG_ASSERT(refs->refBase() == obj,
-                   "BR_ACQUIRE: object %p does not match cookie %p (expected %p)",
-                   refs, obj, refs->refBase());
-        obj->incStrong(mProcess.get());
-        IF_LOG_REMOTEREFS() {
-            LOG_REMOTEREFS("BR_ACQUIRE from driver on %p", obj);
-            obj->printRefs();
-        }
-        mOut.writeInt32(BC_ACQUIRE_DONE);
-        mOut.writePointer((uintptr_t)refs);
-        mOut.writePointer((uintptr_t)obj);
-        break;
-    case BR_RELEASE:
-        refs = (RefBase::weakref_type*)mIn.readPointer();
-        obj = (BBinder*)mIn.readPointer();
-        ALOG_ASSERT(refs->refBase() == obj,
-                   "BR_RELEASE: object %p does not match cookie %p (expected %p)",
-                   refs, obj, refs->refBase());
-        IF_LOG_REMOTEREFS() {
-            LOG_REMOTEREFS("BR_RELEASE from driver on %p", obj);
-            obj->printRefs();
-        }
-        mPendingStrongDerefs.push(obj);
-        break;
-    case BR_INCREFS:
-        refs = (RefBase::weakref_type*)mIn.readPointer();
-        obj = (BBinder*)mIn.readPointer();
-        refs->incWeak(mProcess.get());
-        mOut.writeInt32(BC_INCREFS_DONE);
-        mOut.writePointer((uintptr_t)refs);
-        mOut.writePointer((uintptr_t)obj);
-        break;
-    case BR_DECREFS:
-        refs = (RefBase::weakref_type*)mIn.readPointer();
-        obj = (BBinder*)mIn.readPointer();
-        // NOTE: This assertion is not valid, because the object may no
-        // longer exist (thus the (BBinder*)cast above resulting in a different
-        // memory address).
-        //ALOG_ASSERT(refs->refBase() == obj,
-        //           "BR_DECREFS: object %p does not match cookie %p (expected %p)",
-        //           refs, obj, refs->refBase());
-        mPendingWeakDerefs.push(refs);
-        break;
-    case BR_ATTEMPT_ACQUIRE:
-        refs = (RefBase::weakref_type*)mIn.readPointer();
-        obj = (BBinder*)mIn.readPointer();
-        {
-            const bool success = refs->attemptIncStrong(mProcess.get());
-            ALOG_ASSERT(success && refs->refBase() == obj,
-                       "BR_ATTEMPT_ACQUIRE: object %p does not match cookie %p (expected %p)",
-                       refs, obj, refs->refBase());
-            mOut.writeInt32(BC_ACQUIRE_RESULT);
-            mOut.writeInt32((int32_t)success);
-        }
-        break;
+    // ...
     case BR_TRANSACTION_SEC_CTX:
     case BR_TRANSACTION:
         {
@@ -791,122 +737,232 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
                     error = UNKNOWN_TRANSACTION;
                 }
             } else {
+
+                // 在上一章节【暴露自己】说过 servicemanager 进程的 handle == 0，那么 tr.target.ptr == null
+                // 那么在 servicemanager 进程（服务端）里会使用 the_context_object 来处理 request
+                // 而在章节【主例程】里有说，这个 the_context_object 其实被设置为了 ServiceManager
+                // IPCThreadState::self()->setTheContextObject(manager);
                 error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
             }
-            //ALOGI("<<<< TRANSACT from pid %d restore pid %d sid %s uid %d\n",
-            //     mCallingPid, origPid, (origSid ? origSid : "<N/A>"), origUid);
-            if ((tr.flags & TF_ONE_WAY) == 0) {
-                LOG_ONEWAY("Sending reply to %d!", mCallingPid);
-                if (error < NO_ERROR) reply.setError(error);
-                constexpr uint32_t kForwardReplyFlags = TF_CLEAR_BUF;
-                sendReply(reply, (tr.flags & kForwardReplyFlags));
-            } else {
-                if (error != OK) {
-                    alog << "oneway function results for code " << tr.code
-                         << " on binder at "
-                         << reinterpret_cast<void*>(tr.target.ptr)
-                         << " will be dropped but finished with status "
-                         << statusToString(error);
-                    // ideally we could log this even when error == OK, but it
-                    // causes too much logspam because some manually-written
-                    // interfaces have clients that call methods which always
-                    // write results, sometimes as oneway methods.
-                    if (reply.dataSize() != 0) {
-                         alog << " and reply parcel size " << reply.dataSize();
-                    }
-                    alog << endl;
-                }
-                LOG_ONEWAY("NOT sending reply to %d!", mCallingPid);
-            }
-            mServingStackPointer = origServingStackPointer;
-            mCallingPid = origPid;
-            mCallingSid = origSid;
-            mCallingUid = origUid;
-            mStrictModePolicy = origStrictModePolicy;
-            mLastTransactionBinderFlags = origTransactionBinderFlags;
-            mWorkSource = origWorkSource;
-            mPropagateWorkSource = origPropagateWorkSet;
-            IF_LOG_TRANSACTIONS() {
-                TextOutput::Bundle _b(alog);
-                alog << "BC_REPLY thr " << (void*)pthread_self() << " / obj "
-                    << tr.target.ptr << ": " << indent << reply << dedent << endl;
-            }
-        }
-        break;
-    case BR_DEAD_BINDER:
-        {
-            BpBinder *proxy = (BpBinder*)mIn.readPointer();
-            proxy->sendObituary();
-            mOut.writeInt32(BC_DEAD_BINDER_DONE);
-            mOut.writePointer((uintptr_t)proxy);
-        } break;
-    case BR_CLEAR_DEATH_NOTIFICATION_DONE:
-        {
-            BpBinder *proxy = (BpBinder*)mIn.readPointer();
-            proxy->getWeakRefs()->decWeak(proxy);
-        } break;
-    case BR_FINISHED:
-        result = TIMED_OUT;
-        break;
-    case BR_NOOP:
-        break;
-    case BR_SPAWN_LOOPER:
-        mProcess->spawnPooledThread(false);
-        break;
-    default:
-        ALOGE("*** BAD COMMAND %d received from Binder driver\n", cmd);
-        result = UNKNOWN_ERROR;
-        break;
-    }
-    if (result != NO_ERROR) {
-        mLastError = result;
-    }
-    return result;
+            // ...
 }
 
-// LooperCallback for IClientCallback
-// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
-class ClientCallbackCallback : public LooperCallback {
-public:
-    static sp<ClientCallbackCallback> setupTo(const sp<Looper>& looper, const sp<ServiceManager>& manager) {
-        sp<ClientCallbackCallback> cb = sp<ClientCallbackCallback>::make(manager);
-        int fdTimer = timerfd_create(CLOCK_MONOTONIC, 0 /*flags*/);
-        LOG_ALWAYS_FATAL_IF(fdTimer < 0, "Failed to timerfd_create: fd: %d err: %d", fdTimer, errno);
-        itimerspec timespec {
-            .it_interval = {
-                .tv_sec = 5,
-                .tv_nsec = 0,
-            },
-            .it_value = {
-                .tv_sec = 5,
-                .tv_nsec = 0,
-            },
-        };
-        int timeRes = timerfd_settime(fdTimer, 0 /*flags*/, &timespec, nullptr);
-        LOG_ALWAYS_FATAL_IF(timeRes < 0, "Failed to timerfd_settime: res: %d err: %d", timeRes, errno);
-        int addRes = looper->addFd(fdTimer,
-                                   Looper::POLL_CALLBACK,
-                                   Looper::EVENT_INPUT,
-                                   cb,
-                                   nullptr);
-        LOG_ALWAYS_FATAL_IF(addRes != 1, "Failed to add client callback FD to Looper");
-        return cb;
-    }
-    int handleEvent(int fd, int /*events*/, void* /*data*/) override {
-        uint64_t expirations;
-        int ret = read(fd, &expirations, sizeof(expirations));
-        if (ret != sizeof(expirations)) {
-            ALOGE("Read failed to callback FD: ret: %d err: %d", ret, errno);
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/ServiceManager.cpp
+Status ServiceManager::getService(const std::string& name, sp<IBinder>* outBinder) {
+    *outBinder = tryGetService(name, true);
+    // returns ok regardless of result for legacy reasons
+    return Status::ok();
+}
+
+// ServiceManager 内部维护了一个 map：mNameToService，string -> IBinder
+// 查找过程主要就是根据 name 找到对应的 IBinder，以及做一些权限检查
+sp<IBinder> ServiceManager::tryGetService(const std::string& name, bool startIfNotFound) {
+    auto ctx = mAccess->getCallingContext();
+
+    sp<IBinder> out;
+    Service* service = nullptr;
+    if (auto it = mNameToService.find(name); it != mNameToService.end()) {
+        service = &(it->second);
+
+        if (!service->allowIsolated) {
+            uid_t appid = multiuser_get_app_id(ctx.uid);
+            bool isIsolated = appid >= AID_ISOLATED_START && appid <= AID_ISOLATED_END;
+
+            if (isIsolated) {
+                return nullptr;
+            }
         }
-        mManager->handleClientCallbacks();
-        return 1;  // Continue receiving callbacks.
+        out = service->binder;
     }
-private:
-    friend sp<ClientCallbackCallback>;
-    ClientCallbackCallback(const sp<ServiceManager>& manager) : mManager(manager) {}
-    sp<ServiceManager> mManager;
-};
+
+    if (!mAccess->canFind(ctx, name)) {
+        return nullptr;
+    }
+
+    if (!out && startIfNotFound) {
+        tryStartService(name);
+    }
+
+    if (out) {
+        // Setting this guarantee each time we hand out a binder ensures that the client-checking
+        // loop knows about the event even if the client immediately drops the service
+        service->guaranteeClient = true;
+    }
+
+    return out;
+}
 ```
 
-## 实现查询
+# 注册
+
+将 service name -> IBinder 添加到 Map 里（`mNameToService`）
+
+```cpp
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/ServiceManager.cpp
+Status ServiceManager::addService(const std::string& name, const sp<IBinder>& binder, bool allowIsolated, int32_t dumpPriority) {
+    auto ctx = mAccess->getCallingContext();
+
+    if (multiuser_get_app_id(ctx.uid) >= AID_APP) {
+        return Status::fromExceptionCode(Status::EX_SECURITY, "App UIDs cannot add services");
+    }
+
+    if (!mAccess->canAdd(ctx, name)) {
+        return Status::fromExceptionCode(Status::EX_SECURITY, "SELinux denial");
+    }
+
+    if (binder == nullptr) {
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT, "Null binder");
+    }
+
+    if (!isValidServiceName(name)) {
+        ALOGE("Invalid service name: %s", name.c_str());
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT, "Invalid service name");
+    }
+
+#ifndef VENDORSERVICEMANAGER
+    if (!meetsDeclarationRequirements(binder, name)) {
+        // already logged
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT, "VINTF declaration error");
+    }
+#endif  // !VENDORSERVICEMANAGER
+
+    // implicitly unlinked when the binder is removed
+    if (binder->remoteBinder() != nullptr &&
+        binder->linkToDeath(sp<ServiceManager>::fromExisting(this)) != OK) {
+        ALOGE("Could not linkToDeath when adding %s", name.c_str());
+        return Status::fromExceptionCode(Status::EX_ILLEGAL_STATE, "linkToDeath failure");
+    }
+
+    auto it = mNameToService.find(name);
+    if (it != mNameToService.end()) {
+        const Service& existing = it->second;
+
+        // We could do better than this because if the other service dies, it
+        // may not have an entry here. However, this case is unlikely. We are
+        // only trying to detect when two different services are accidentally installed.
+
+        if (existing.ctx.uid != ctx.uid) {
+            ALOGW("Service '%s' originally registered from UID %u but it is now being registered "
+                  "from UID %u. Multiple instances installed?",
+                  name.c_str(), existing.ctx.uid, ctx.uid);
+        }
+
+        if (existing.ctx.sid != ctx.sid) {
+            ALOGW("Service '%s' originally registered from SID %s but it is now being registered "
+                  "from SID %s. Multiple instances installed?",
+                  name.c_str(), existing.ctx.sid.c_str(), ctx.sid.c_str());
+        }
+
+        ALOGI("Service '%s' originally registered from PID %d but it is being registered again "
+              "from PID %d. Bad state? Late death notification? Multiple instances installed?",
+              name.c_str(), existing.ctx.debugPid, ctx.debugPid);
+    }
+
+    // Overwrite the old service if it exists
+    mNameToService[name] = Service{
+            .binder = binder,
+            .allowIsolated = allowIsolated,
+            .dumpPriority = dumpPriority,
+            .ctx = ctx,
+    };
+
+    if (auto it = mNameToRegistrationCallback.find(name); it != mNameToRegistrationCallback.end()) {
+        for (const sp<IServiceCallback>& cb : it->second) {
+            mNameToService[name].guaranteeClient = true;
+            // permission checked in registerForNotifications
+            cb->onRegistration(name, binder);
+        }
+    }
+
+    return Status::ok();
+}
+```
+
+## AMS 的例子
+
+以 `ActivityManagerService` 为例看看 server 端是如何使用 servicemanager 提供的注册服务的
+
+1. AMS 是运行在 system_server 进程内的，所以从 system_server 进程的 entry point 开始
+
+2. 在章节 [暴露自己](#暴露自己) 介绍 `IActivityManager.getRunningAppProcesses()` 的实现时，发现是通过 `ServiceManager.getService(Context.ACTIVITY_SERVICE)` 来查找得到 AMS 的 handle 
+
+3. AMS 的注册也用到了 `ServiceManager`，使用它的 `ServiceManager.addService(Context.ACTIVITY_SERVICE...)` 将自己注册到 servicemanager 进程
+
+4. 看来 `ServiceManager` 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理
+
+```java
+/**
+ * Entry point to {@code system_server}.
+ */
+public final class SystemServer {
+    /**
+     * The main entry point from zygote.
+     */
+    public static void main(String[] args) {
+        new SystemServer().run();
+    }
+
+    private void run() {
+        // ...
+        // Start services.
+        try {
+            t.traceBegin("StartServices");
+            startBootstrapServices(t);
+            startCoreServices(t);
+            startOtherServices(t);
+            startApexServices(t);
+        } catch (Throwable ex) {
+        // ...
+        // Loop forever.
+        Looper.loop();
+        throw new RuntimeException("Main thread loop unexpectedly exited");
+    }    
+
+    /**
+     * Starts the small tangle of critical services that are needed to get the system off the
+     * ground.  These services have complex mutual dependencies which is why we initialize them all
+     * in one place here.  Unless your service is also entwined in these dependencies, it should be
+     * initialized in one of the other functions.
+     */
+    private void startBootstrapServices(@NonNull TimingsTraceAndSlog t) {
+        // ...
+        // Set up the Application instance for the system process and get started.
+        t.traceBegin("SetSystemProcess");
+        mActivityManagerService.setSystemProcess();
+        t.traceEnd();
+        // ...
+    }    
+}
+
+public class ActivityManagerService extends IActivityManager.Stub {
+    public void setSystemProcess() {
+        try {
+            ServiceManager.addService(Context.ACTIVITY_SERVICE, this, /* allowIsolated= */ true,
+                    DUMP_FLAG_PRIORITY_CRITICAL | DUMP_FLAG_PRIORITY_NORMAL | DUMP_FLAG_PROTO);
+            ServiceManager.addService(ProcessStats.SERVICE_NAME, mProcessStats);
+            ServiceManager.addService("meminfo", new MemBinder(this), /* allowIsolated= */ false,
+                    DUMP_FLAG_PRIORITY_HIGH);
+            ServiceManager.addService("gfxinfo", new GraphicsBinder(this));
+            ServiceManager.addService("dbinfo", new DbBinder(this));
+            mAppProfiler.setCpuInfoService();
+            ServiceManager.addService("permission", new PermissionController(this));
+            ServiceManager.addService("processinfo", new ProcessInfoService(this));
+            ServiceManager.addService("cacheinfo", new CacheBinder(this));
+            // ...
+    }
+}
+
+public final class ServiceManager {
+    public static void addService(String name, IBinder service, boolean allowIsolated,
+            int dumpPriority) {
+        try {
+            getIServiceManager().addService(name, service, allowIsolated, dumpPriority);
+        } catch (RemoteException e) {
+            Log.e(TAG, "error in addService", e);
+        }
+    }
+}
+```
+
+# handle 是什么
 
