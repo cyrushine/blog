@@ -1,6 +1,6 @@
 ---
 title: 深入 Binder 之 servicemanager 进程
-date: 2022-06-08 12:00:00 +0800
+date: 2022-10-26 12:00:00 +0800
 ---
 
 # 主例程
@@ -963,8 +963,4 @@ public final class ServiceManager {
     }
 }
 ```
-
-# handle 是什么
-
-
 
