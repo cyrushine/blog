@@ -206,6 +206,54 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2022/02/16/toutiao-anr-samples/" target="_self">
+          【转】今日头条 ANR 优化实践系列（3）- 实例剖析集锦
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-samples/" target="_self">
+        <div>
+          简述：在前文，我们用了较多的篇幅介绍了 ANR 设计原理及影响因素，并根据不同场景进行了分类，如：当前消息严重耗时，历史消息耗时严重，业务异常密集执行，进程内资源抢占，进程间资源抢占等场景。为了应对系统监控能力不足以及应用侧获取信息受限的情况，我们在应用侧实现了一套 消息调度监控工具，重点监控主线程的“过去，现在和将来”，同时结合相关日志对 ANR 问题的分析思路进行了总结。 为了便于大家更好的理
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-02-16 06:00" pubdate>
+              2022-02-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ANR/">#ANR</a>
+            
+              <a href="/tags/bytedance/">#bytedance</a>
+            
+              <a href="/tags/toutiao/">#toutiao</a>
+            
+              <a href="/tags/%E5%AD%97%E8%8A%82/">#字节</a>
+            
+              <a href="/tags/%E5%A4%B4%E6%9D%A1/">#头条</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2022/02/16/toutiao-anr-tools/" target="_self">
           【转】今日头条 ANR 优化实践系列（2）- 监控工具与分析思路
         </a>
@@ -597,46 +645,6 @@
               <a href="/tags/coroutine/">#coroutine</a>
             
               <a href="/tags/%E5%8D%8F%E7%A8%8B/">#协程</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/07/10/deep-drive-into-anr/" target="_self">
-          深入 ANR：产生的根源、处理流程和日志文件
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2021/07/10/deep-drive-into-anr/" target="_self">
-        <div>
-          overview在 阅读源码系列：ANR 是怎么产生的 聊过不及时消费 input event 会产生 ANR：  InputReaderThread 不断地从 /dev/input 读取 input event 并放入 InputDispatcher.mInboundQueue 等待分发 InputDispatcher 寻找 input event 对应的 window 并分发到它的待发送队列里
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-07-10 04:00" pubdate>
-              2021-07-10
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/anr/">#anr</a>
             
           </div>
         

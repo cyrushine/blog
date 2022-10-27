@@ -206,6 +206,48 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2020/12/27/render-thread/" target="_self">
+          Android 图形栈（三）render thread
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2020/12/27/render-thread/" target="_self">
+        <div>
+          接着上一篇文章，在上篇文章里我们知道了 ui thread 在 view drawing 阶段产生了 DisplayList，而 render thread 会根据 DisplayList 执行真正的渲染工作，主要是 DrawFrameTask.syncFrameState 和 CanvasContext.draw 这两个方法 syncFrameState重要的方法有三个：makeCurrent，
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-12-27 04:00" pubdate>
+              2020-12-27
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/vsync/">#vsync</a>
+            
+              <a href="/tags/render-thread/">#render thread</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2020/12/13/ui-thread-in-vsync/" target="_self">
           Android 图形栈（二）ui thread
         </a>
@@ -571,46 +613,6 @@
               <a href="/tags/Looper/">#Looper</a>
             
               <a href="/tags/Handler/">#Handler</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2020/09/15/git-log/" target="_self">
-          git log命令全解析，打log还能这么随心所欲！
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2020/09/15/git-log/" target="_self">
-        <div>
-          git log 命令非常强大而好用，在复杂系统的版本管理中扮演着重要的角色，但默认的 git log 命令显示出的东西实在太丑，不好好打扮一下根本没法见人，打扮好了用 alias 命令拍个照片，就正式出道了！ 下面先详细而系统地介绍 git log 的所有配置知识（用我一向简洁清晰的表述方式），熟悉了这些东西，你就可以自由配置自己美丽的 git log 了～最后上个干货，直接给一个我打扮好的 al
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2020-09-15 04:00" pubdate>
-              2020-09-15
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/git/">#git</a>
             
           </div>
         
