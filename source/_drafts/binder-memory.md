@@ -308,7 +308,10 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
 
 # binder get request
 
+https://zhuanlan.zhihu.com/p/381310378
+
 ```cpp
+// https://vscode.dev/github/cyrus-lin/msm-google
 static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int ret;
@@ -338,7 +341,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 }
 
 // binder_proc 有个红黑树结构的线程组 threads
-// thread->pid 取创建 binder_thread 结构的处理器核心的 id 并按此成员属性排序，左大右小
+// thread->pid 取创建 binder_thread 结构的处理器核心的 id 并按此成员属性排序，左小右大
 // 那么最终 binder_proc->threads 就是一个大小等于处理器核心数的红黑树
 // binder_get_thread 就是取当前处理器核心对应的那个 binder_thread 实例
 struct binder_proc {
@@ -512,7 +515,7 @@ static int binder_thread_write(struct binder_proc *proc /* 当前进程 */,
 
 static void binder_transaction(struct binder_proc *proc /* 当前进程 */,
 			       struct binder_thread *thread /* 当前处理器核心对应的 binder_thread */,
-			       struct binder_transaction_data *tr, int reply,
+			       struct binder_transaction_data *tr, int reply /* false，暂时只考虑 request 的情况 */,
 			       binder_size_t extra_buffers_size)
 {
 	int ret;
@@ -547,15 +550,73 @@ static void binder_transaction(struct binder_proc *proc /* 当前进程 */,
 	INIT_LIST_HEAD(&pf_head);
 
 	if (reply) {
+		// ...
+	} else {
+		if (tr->target.handle) {
+			struct binder_ref *ref;
+			binder_proc_lock(proc);
+			ref = binder_get_ref_olocked(proc, tr->target.handle,
+						     true);
+			if (ref) {
+				target_node = binder_get_node_refs_for_txn(
+						ref->node, &target_proc,
+						&return_error);
+			} else {
+				binder_user_error("%d:%d got transaction to invalid handle\n",
+						  proc->pid, thread->pid);
+				return_error = BR_FAILED_REPLY;
+			}
+			binder_proc_unlock(proc);
+		} else {
+			mutex_lock(&context->context_mgr_node_lock);
+			target_node = context->binder_context_mgr_node;
+			// handle == 0 表示 server 是 servicemanager，这个在【深入 Binder 之 servicemanager 进程】有讲过
+            // ...
+		}
+		e->to_node = target_node->debug_id;
+		if (security_binder_transaction(proc->cred,
+						target_proc->cred) < 0) {
+			return_error = BR_FAILED_REPLY;
+			return_error_param = -EPERM;
+			return_error_line = __LINE__;
+			goto err_invalid_target_handle;
+		}
 		binder_inner_proc_lock(proc);
-		in_reply_to = thread->transaction_stack;
-		thread->transaction_stack = in_reply_to->to_parent;
+		if (!(tr->flags & TF_ONE_WAY) && thread->transaction_stack) {
+			struct binder_transaction *tmp;
+
+			tmp = thread->transaction_stack;
+			if (tmp->to_thread != thread) {
+				spin_lock(&tmp->lock);
+				binder_user_error("%d:%d got new transaction with bad transaction stack, transaction %d has target %d:%d\n",
+					proc->pid, thread->pid, tmp->debug_id,
+					tmp->to_proc ? tmp->to_proc->pid : 0,
+					tmp->to_thread ?
+					tmp->to_thread->pid : 0);
+				spin_unlock(&tmp->lock);
+				binder_inner_proc_unlock(proc);
+				return_error = BR_FAILED_REPLY;
+				return_error_param = -EPROTO;
+				return_error_line = __LINE__;
+				goto err_bad_call_stack;
+			}
+			while (tmp) {
+				struct binder_thread *from;
+
+				spin_lock(&tmp->lock);
+				from = tmp->from;
+				if (from && from->proc == target_proc) {
+					atomic_inc(&from->tmp_ref);
+					target_thread = from;
+					spin_unlock(&tmp->lock);
+					break;
+				}
+				spin_unlock(&tmp->lock);
+				tmp = tmp->from_parent;
+			}
+		}
 		binder_inner_proc_unlock(proc);
-		target_thread = binder_get_txn_from_and_acq_inner(in_reply_to);
-		target_proc = target_thread->proc;
-		target_proc->tmp_ref++;
-		binder_inner_proc_unlock(target_thread->proc);
-	} else // ...
+	}
 
 	/* TODO: reuse incoming transaction for reply */
 	t = kzalloc(sizeof(*t), GFP_KERNEL);
@@ -746,34 +807,27 @@ static void binder_transaction(struct binder_proc *proc /* 当前进程 */,
 		// error...
 	}
 
-	ret = binder_do_deferred_txn_copies(&target_proc->alloc, t->buffer,
-					    &sgc_head, &pf_head);
-	if (t->buffer->oneway_spam_suspect)
-		tcomplete->type = BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT;
-	else
-		tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
-	t->work.type = BINDER_WORK_TRANSACTION;
-
 	if (reply) {
-		binder_enqueue_thread_work(thread, tcomplete);
-		binder_inner_proc_lock(target_proc);
+		// ...
+	} else if (!(t->flags & TF_ONE_WAY)) {
 		BUG_ON(t->buffer->async_transaction != 0);
-		binder_pop_transaction_ilocked(target_thread, in_reply_to);
-		binder_enqueue_thread_work_ilocked(target_thread, &t->work);
-		target_proc->outstanding_txns++;
-		binder_inner_proc_unlock(target_proc);
-		if (in_reply_to->is_nested) {
-			spin_lock(&thread->prio_lock);
-			thread->prio_state = BINDER_PRIO_PENDING;
-			thread->prio_next = in_reply_to->saved_priority;
-			spin_unlock(&thread->prio_lock);
+		binder_inner_proc_lock(proc);
+		/*
+		 * Defer the TRANSACTION_COMPLETE, so we don't return to
+		 * userspace immediately; this allows the target process to
+		 * immediately start processing this transaction, reducing
+		 * latency. We will then return the TRANSACTION_COMPLETE when
+		 * the target replies (or there is an error).
+		 */
+		binder_enqueue_deferred_thread_work_ilocked(thread, tcomplete);
+		t->need_reply = 1;
+		t->from_parent = thread->transaction_stack;
+		thread->transaction_stack = t;
+		binder_inner_proc_unlock(proc);
+		return_error = binder_proc_transaction(t,
+				target_proc, target_thread);
 		}
-		wake_up_interruptible_sync(&target_thread->wait);
-		trace_android_vh_binder_restore_priority(in_reply_to, current);
-		binder_restore_priority(thread, &in_reply_to->saved_priority);
-		binder_free_transaction(in_reply_to);
-	}
-    // else ...
+	} // ...
 	return;
 
 err_dead_proc_or_thread:
@@ -784,4 +838,132 @@ err_bad_parent:
 err_copy_data_failed:
 // errors ...
 }
+
+/**
+ * binder_proc_transaction() - sends a transaction to a process and wakes it up
+ * @t:		transaction to send
+ * @proc:	process to send the transaction to
+ * @thread:	thread in @proc to send the transaction to (may be NULL)
+ *
+ * This function queues a transaction to the specified process. It will try
+ * to find a thread in the target process to handle the transaction and
+ * wake it up. If no thread is found, the work is queued to the proc
+ * waitqueue.
+ *
+ * If the @thread parameter is not NULL, the transaction is always queued
+ * to the waitlist of that specific thread.
+ *
+ * Return:	0 if the transaction was successfully queued
+ *		BR_DEAD_REPLY if the target process or thread is dead
+ *		BR_FROZEN_REPLY if the target process or thread is frozen
+ */
+static int binder_proc_transaction(struct binder_transaction *t,
+				    struct binder_proc *proc,
+				    struct binder_thread *thread)
+{
+	struct binder_node *node = t->buffer->target_node;
+	struct binder_priority node_prio;
+	bool oneway = !!(t->flags & TF_ONE_WAY);
+	bool pending_async = false;
+
+	BUG_ON(!node);
+	binder_node_lock(node);
+	node_prio.prio = node->min_priority;
+	node_prio.sched_policy = node->sched_policy;
+
+	if (oneway) {
+		BUG_ON(thread);
+		if (node->has_async_transaction) {
+			pending_async = true;
+		} else {
+			node->has_async_transaction = true;
+		}
+	}
+
+	binder_inner_proc_lock(proc);
+	if (proc->is_frozen) {
+		proc->sync_recv |= !oneway;
+		proc->async_recv |= oneway;
+	}
+
+	if ((proc->is_frozen && !oneway) || proc->is_dead ||
+			(thread && thread->is_dead)) {
+		bool proc_is_dead = proc->is_dead
+			|| (thread && thread->is_dead);
+		binder_inner_proc_unlock(proc);
+		binder_node_unlock(node);
+		return proc_is_dead ? BR_DEAD_REPLY : BR_FROZEN_REPLY;
+	}
+
+	if (!thread && !pending_async)
+		thread = binder_select_thread_ilocked(proc);
+
+	if (thread) {
+		binder_transaction_priority(thread->task, t, node_prio,
+					    node->inherit_rt);
+		binder_enqueue_thread_work_ilocked(thread, &t->work);
+	} else if (!pending_async) {
+		binder_enqueue_work_ilocked(&t->work, &proc->todo);
+	} else {
+		binder_enqueue_work_ilocked(&t->work, &node->async_todo);
+	}
+
+	if (!pending_async)
+		binder_wakeup_thread_ilocked(proc, thread, !oneway /* sync */);
+
+	proc->outstanding_txns++;
+	binder_inner_proc_unlock(proc);
+	binder_node_unlock(node);
+
+	return 0;
+}
+
+/**
+ * binder_wakeup_thread_ilocked() - wakes up a thread for doing proc work.
+ * @proc:	process to wake up a thread in
+ * @thread:	specific thread to wake-up (may be NULL)
+ * @sync:	whether to do a synchronous wake-up
+ *
+ * This function wakes up a thread in the @proc process.
+ * The caller may provide a specific thread to wake-up in
+ * the @thread parameter. If @thread is NULL, this function
+ * will wake up threads that have called poll().
+ *
+ * Note that for this function to work as expected, callers
+ * should first call binder_select_thread() to find a thread
+ * to handle the work (if they don't have a thread already),
+ * and pass the result into the @thread parameter.
+ */
+static void binder_wakeup_thread_ilocked(struct binder_proc *proc,
+					 struct binder_thread *thread,
+					 bool sync)
+{
+	assert_spin_locked(&proc->inner_lock);
+
+	if (thread) {
+		if (sync)
+			wake_up_interruptible_sync(&thread->wait); // server thread 在这里 epoll
+		else
+			wake_up_interruptible(&thread->wait);
+		return;
+	}
+
+	/* Didn't find a thread waiting for proc work; this can happen
+	 * in two scenarios:
+	 * 1. All threads are busy handling transactions
+	 *    In that case, one of those threads should call back into
+	 *    the kernel driver soon and pick up this work.
+	 * 2. Threads are using the (e)poll interface, in which case
+	 *    they may be blocked on the waitqueue without having been
+	 *    added to waiting_threads. For this case, we just iterate
+	 *    over all threads not handling transaction work, and
+	 *    wake them all up. We wake all because we don't know whether
+	 *    a thread that called into (e)poll is handling non-binder
+	 *    work currently.
+	 */
+	binder_wakeup_poll_threads_ilocked(proc, sync);
+}
 ```
+
+# server register
+
