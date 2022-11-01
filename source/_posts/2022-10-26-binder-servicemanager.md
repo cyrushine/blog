@@ -240,37 +240,11 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 static int binder_ioctl_set_ctx_mgr(struct file *filp,
 				    struct flat_binder_object *fbo)
 {
-	int ret = 0;
+    // ...
 	struct binder_proc *proc = filp->private_data;
 	struct binder_context *context = proc->context;
 	struct binder_node *new_node;
-	kuid_t curr_euid = current_euid();
-	mutex_lock(&context->context_mgr_node_lock);
-	if (context->binder_context_mgr_node) {
-		pr_err("BINDER_SET_CONTEXT_MGR already set\n");
-		ret = -EBUSY;
-		goto out;
-	}
-	ret = security_binder_set_context_mgr(proc->cred);
-	if (ret < 0)
-		goto out;
-	if (uid_valid(context->binder_context_mgr_uid)) {
-		if (!uid_eq(context->binder_context_mgr_uid, curr_euid)) {
-			pr_err("BINDER_SET_CONTEXT_MGR bad uid %d != %d\n",
-			       from_kuid(&init_user_ns, curr_euid),
-			       from_kuid(&init_user_ns,
-					 context->binder_context_mgr_uid));
-			ret = -EPERM;
-			goto out;
-		}
-	} else {
-		context->binder_context_mgr_uid = curr_euid;
-	}
 	new_node = binder_new_node(proc, fbo);
-	if (!new_node) {
-		ret = -ENOMEM;
-		goto out;
-	}
 	binder_node_lock(new_node);
 	new_node->local_weak_refs++;
 	new_node->local_strong_refs++;
@@ -279,9 +253,6 @@ static int binder_ioctl_set_ctx_mgr(struct file *filp,
 	context->binder_context_mgr_node = new_node;
 	binder_node_unlock(new_node);
 	binder_put_node(new_node);
-out:
-	mutex_unlock(&context->context_mgr_node_lock);
-	return ret;
 }
 
 ```
@@ -389,7 +360,10 @@ public static final native IBinder BinderInternal.getContextObject();
 static jobject android_os_BinderInternal_getContextObject(JNIEnv* env, jobject clazz)
 {
     sp<IBinder> b = ProcessState::self()->getContextObject(NULL);
-    return javaObjectForIBinder(env, b);
+    // If the argument is a JavaBBinder, return the Java object that was used to create it.
+    // Otherwise return a BinderProxy for the IBinder. If a previous call was passed the
+    // same IBinder, and the original BinderProxy is still alive, return the same BinderProxy.
+    return javaObjectForIBinder(env, b);  // 返回 java 层的 BinderProxy 实例
 }
 
 // frameworks/native/libs/binder/ProcessState.cpp
@@ -964,3 +938,165 @@ public final class ServiceManager {
 }
 ```
 
+# binder 消息循环
+
+```cpp
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
+int main(int argc, char** argv) {
+    // ...
+    // 开始主循环
+    sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
+    BinderCallback::setupTo(looper);
+    ClientCallbackCallback::setupTo(looper, manager);
+    while(true) {
+        looper->pollAll(-1);
+    }
+    // should not be reached
+    return EXIT_FAILURE;
+}
+
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
+class BinderCallback : public LooperCallback {
+public:
+    static sp<BinderCallback> setupTo(const sp<Looper>& looper) {
+        sp<BinderCallback> cb = sp<BinderCallback>::make();
+        int binder_fd = -1;
+        IPCThreadState::self()->setupPolling(&binder_fd);    // 获得已打开的 binder driver fd
+        LOG_ALWAYS_FATAL_IF(binder_fd < 0, "Failed to setupPolling: %d", binder_fd);
+        int ret = looper->addFd(binder_fd,                   // 当有数据时回调 handlePolledCommands
+                                Looper::POLL_CALLBACK,
+                                Looper::EVENT_INPUT,
+                                cb,
+                                nullptr /*data*/);
+        LOG_ALWAYS_FATAL_IF(ret != 1, "Failed to add binder FD to Looper");
+        return cb;
+    }
+
+    int handleEvent(int /* fd */, int /* events */, void* /* data */) override {
+        IPCThreadState::self()->handlePolledCommands();
+        return 1;  // Continue receiving callbacks.
+    }
+};
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp
+status_t IPCThreadState::handlePolledCommands()
+{
+    status_t result;
+
+    do {
+        result = getAndExecuteCommand();
+    } while (mIn.dataPosition() < mIn.dataSize());
+
+    processPendingDerefs();
+    flushCommands();
+    return result;
+}
+status_t IPCThreadState::getAndExecuteCommand()
+{
+    // request 已写入 mOut
+    // ioctl 陷入 binder driver，binder driver 拷贝并处理 mOut 里的内容
+    result = talkWithDriver();
+    // ...
+    cmd = mIn.readInt32()
+    result = executeCommand(cmd);
+    // ...
+}
+
+
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    BBinder* obj;
+    RefBase::weakref_type* refs;
+    status_t result = NO_ERROR;
+    switch ((uint32_t)cmd) {
+    case BR_TRANSACTION_SEC_CTX:
+    case BR_TRANSACTION:
+        {
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data& tr = tr_secctx.transaction_data;
+
+            if (cmd == (int) BR_TRANSACTION_SEC_CTX) {
+                result = mIn.read(&tr_secctx, sizeof(tr_secctx));
+            } else {
+                result = mIn.read(&tr, sizeof(tr));
+                tr_secctx.secctx = 0;
+            }
+
+            if (tr.target.ptr) {
+                // We only have a weak reference on the target object, so we must first try to
+                // safely acquire a strong reference before doing anything else with it.
+                if (reinterpret_cast<RefBase::weakref_type*>(
+                        tr.target.ptr)->attemptIncStrong(this)) {
+                    error = reinterpret_cast<BBinder*>(tr.cookie)->transact(tr.code, buffer,
+                            &reply, tr.flags);
+                    reinterpret_cast<BBinder*>(tr.cookie)->decStrong(this);
+                } else {
+                    error = UNKNOWN_TRANSACTION;
+                }
+
+            } else {
+                // client 想要访问 service_manager 只需要构造一个 BpBinder(handle = 0)
+                // binder driver 遇到 handle == 0 会交由注册的服务管理器处理（也就是 service_manager）
+                // 在 service_manager 进程内，
+                error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
+            }
+
+            //ALOGI("<<<< TRANSACT from pid %d restore pid %d sid %s uid %d\n",
+            //     mCallingPid, origPid, (origSid ? origSid : "<N/A>"), origUid);
+
+            if ((tr.flags & TF_ONE_WAY) == 0) {
+                LOG_ONEWAY("Sending reply to %d!", mCallingPid);
+                if (error < NO_ERROR) reply.setError(error);
+
+                // b/238777741: clear buffer before we send the reply.
+                // Otherwise, there is a race where the client may
+                // receive the reply and send another transaction
+                // here and the space used by this transaction won't
+                // be freed for the client.
+                buffer.setDataSize(0);
+
+                constexpr uint32_t kForwardReplyFlags = TF_CLEAR_BUF;
+                sendReply(reply, (tr.flags & kForwardReplyFlags));
+            } else {
+                if (error != OK) {
+                    std::ostringstream logStream;
+                    logStream << "oneway function results for code " << tr.code << " on binder at "
+                              << reinterpret_cast<void*>(tr.target.ptr)
+                              << " will be dropped but finished with status "
+                              << statusToString(error);
+
+                    // ideally we could log this even when error == OK, but it
+                    // causes too much logspam because some manually-written
+                    // interfaces have clients that call methods which always
+                    // write results, sometimes as oneway methods.
+                    if (reply.dataSize() != 0) {
+                        logStream << " and reply parcel size " << reply.dataSize();
+                    }
+                    std::string message = logStream.str();
+                    ALOGI("%s", message.c_str());
+                }
+                LOG_ONEWAY("NOT sending reply to %d!", mCallingPid);
+            }
+
+            mServingStackPointer = origServingStackPointer;
+            mCallingPid = origPid;
+            mCallingSid = origSid;
+            mCallingUid = origUid;
+            mStrictModePolicy = origStrictModePolicy;
+            mLastTransactionBinderFlags = origTransactionBinderFlags;
+            mWorkSource = origWorkSource;
+            mPropagateWorkSource = origPropagateWorkSet;
+
+            IF_LOG_TRANSACTIONS() {
+                std::ostringstream logStream;
+                logStream << "BC_REPLY thr " << (void*)pthread_self() << " / obj " << tr.target.ptr
+                          << ": \t" << reply << "\n";
+                std::string message = logStream.str();
+                ALOGI("%s", message.c_str());
+            }
+
+        }
+        break;
+    // ...
+}
+```

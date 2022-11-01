@@ -2,6 +2,13 @@
 
 # client request
 
+## get server binder
+
+
+
+
+## send request
+
 binder client native 层与 binder driver 通讯用的是 `BpBinder::transact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)`，它又调用 `IPCThreadState::transact(int32_t handle, uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)`
 
 `IPCThreadState` 是线程私有的，它依靠全局单例 `ProcessState` 打开 binder driver 得到 binder fd
@@ -967,3 +974,470 @@ static void binder_wakeup_thread_ilocked(struct binder_proc *proc,
 
 # server register
 
+```cpp
+// system_server 进程是由 zygote 进程 fork 出来的（其实所有的 app 进程都是由 zygote 进程 fork 出来的）
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp
+int main(int argc, char* const argv[])
+{
+    // ...
+    bool zygote = false;
+    while (i < argc) {
+        const char* arg = argv[i++];
+        if (strcmp(arg, "--zygote") == 0) {
+            zygote = true;
+            niceName = ZYGOTE_NICE_NAME;
+    // ...
+    if (zygote) {
+        runtime.start("com.android.internal.os.ZygoteInit", args, zygote);  // 启动虚拟机，并调用 ZygoteInit.main(String argv[])
+    } else if // ...
+}
+
+/**
+ * 主要做四件事：
+ * 
+ * 1、注册 socket
+ * 2、预加载资源
+ * 3、启动 system_server
+ * 4、启动消息循环
+ * 
+ * This is the entry point for a Zygote process.  It creates the Zygote server, loads resources,
+ * and handles other tasks related to preparing the process for forking into applications
+ */
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/com/android/internal/os/ZygoteInit.java
+public static void main(String[] argv) {
+    // ...
+    boolean startSystemServer = false;
+    for (int i = 1; i < argv.length; i++) {
+        if ("start-system-server".equals(argv[i])) {
+            startSystemServer = true;
+        }
+    // ...
+    if (startSystemServer) {
+        Runnable r = forkSystemServer(abiList, zygoteSocketName, zygoteServer);
+        // ...
+}
+// fork 出 system_server 进程并进入其逻辑
+private static Runnable forkSystemServer(String abiList, String socketName,
+        ZygoteServer zygoteServer) {
+    // ...
+    /* Request to fork the system server process */
+    pid = Zygote.forkSystemServer(
+            parsedArgs.mUid, parsedArgs.mGid,
+            parsedArgs.mGids,
+            parsedArgs.mRuntimeFlags,
+            null,
+            parsedArgs.mPermittedCapabilities,
+            parsedArgs.mEffectiveCapabilities);
+
+    /* For child process */
+    if (pid == 0) {
+        if (hasSecondZygote(abiList)) {
+            waitForSecondaryZygote(socketName);
+        }
+        zygoteServer.closeServerSocket();
+        return handleSystemServerProcess(parsedArgs);
+    }
+    return null;
+}
+private static Runnable handleSystemServerProcess(ZygoteArguments parsedArgs) {
+        // ...
+        /*
+         * Pass the remaining arguments to SystemServer.
+         */
+        return ZygoteInit.zygoteInit(parsedArgs.mTargetSdkVersion,
+                parsedArgs.mDisabledCompatChanges,
+                parsedArgs.mRemainingArgs, cl);
+    }
+    /* should never reach here */
+}
+/**
+ * The main function called when started through the zygote process. This could be unified with
+ * main(), if the native code in nativeFinishInit() were rationalized with Zygote startup.
+ */
+public static Runnable zygoteInit(int targetSdkVersion, long[] disabledCompatChanges,
+        String[] argv, ClassLoader classLoader) {
+    // ...
+    ZygoteInit.nativeZygoteInit();
+    return RuntimeInit.applicationInit(targetSdkVersion, disabledCompatChanges, argv,
+            classLoader);
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/AndroidRuntime.cpp
+static void com_android_internal_os_ZygoteInit_nativeZygoteInit(JNIEnv* env, jobject clazz)
+{
+    gCurRuntime->onZygoteInit();  // AppRuntime->onZygoteInit()
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp
+virtual void onZygoteInit()
+{
+    // 上面介绍过，ProcessState 是单例模式，初始化实例时会：
+    // 1，打开 binder driver：open("/dev/binder") && mmap
+    // 2，版本查询和校验：BINDER_VERSION
+    // 3，设置线程数：BINDER_SET_MAX_THREADS
+    // ...
+    sp<ProcessState> proc = ProcessState::self();
+    ALOGV("App process: starting thread pool.\n");
+    proc->startThreadPool();
+}
+
+// 开启一个子线程执行 binder 消息通讯的 loop：IPCThreadState::self()->joinThreadPool = talkWithDriver + executeCommand
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
+void ProcessState::startThreadPool()
+{
+    AutoMutex _l(mLock);
+    if (!mThreadPoolStarted) {
+        if (mMaxThreads == 0) {
+            ALOGW("Extra binder thread started, but 0 threads requested. Do not use "
+                  "*startThreadPool when zero threads are requested.");
+        }
+        mThreadPoolStarted = true;
+        spawnPooledThread(true);
+    }
+}
+void ProcessState::spawnPooledThread(bool isMain /* true */)
+{
+    if (mThreadPoolStarted) {
+        String8 name = makeBinderThreadName();
+        ALOGV("Spawning new pooled thread, name=%s\n", name.string());
+        sp<Thread> t = sp<PoolThread>::make(isMain);
+        t->run(name.string());
+        pthread_mutex_lock(&mThreadCountLock);
+        mKernelStartedThreads++;
+        pthread_mutex_unlock(&mThreadCountLock);
+    }
+}
+class PoolThread : public Thread
+{
+    virtual bool threadLoop()
+    {
+        IPCThreadState::self()->joinThreadPool(mIsMain /* true */);
+        return false;
+    }
+};
+void IPCThreadState::joinThreadPool(bool isMain)
+{
+    // mOut 是给 binder driver 读取的区域，此时是 BC_ENTER_LOOPER
+    mOut.writeInt32(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
+    mIsLooper = true;
+    status_t result;
+    do {
+        // now get the next command to be processed, waiting if necessary
+        result = getAndExecuteCommand();
+        // ...
+    } while (result != -ECONNREFUSED && result != -EBADF);
+    // ...
+}
+status_t IPCThreadState::getAndExecuteCommand()
+{
+    status_t result;
+    int32_t cmd;
+    result = talkWithDriver();
+    if (result >= NO_ERROR) {
+        // ...
+        cmd = mIn.readInt32();
+        result = executeCommand(cmd);
+        // ...
+}
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    switch ((uint32_t)cmd) {
+    case BR_ERROR:
+    case BR_OK:
+    case BR_TRANSACTION_SEC_CTX:
+    case BR_TRANSACTION:
+        {
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data& tr = tr_secctx.transaction_data;
+
+            if (cmd == BR_TRANSACTION_SEC_CTX) {
+                result = mIn.read(&tr_secctx, sizeof(tr_secctx));
+            } else {
+                result = mIn.read(&tr, sizeof(tr));
+                tr_secctx.secctx = 0;
+            }
+
+            ALOG_ASSERT(result == NO_ERROR,
+                "Not enough command data for brTRANSACTION");
+            if (result != NO_ERROR) break;
+
+            Parcel buffer;
+            buffer.ipcSetDataReference(
+                reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                tr.data_size,
+                reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                tr.offsets_size/sizeof(binder_size_t), freeBuffer, this);
+
+            const void* origServingStackPointer = mServingStackPointer;
+            mServingStackPointer = &origServingStackPointer; // anything on the stack
+
+            const pid_t origPid = mCallingPid;
+            const char* origSid = mCallingSid;
+            const uid_t origUid = mCallingUid;
+            const int32_t origStrictModePolicy = mStrictModePolicy;
+            const int32_t origTransactionBinderFlags = mLastTransactionBinderFlags;
+
+            mCallingPid = tr.sender_pid;
+            mCallingSid = reinterpret_cast<const char*>(tr_secctx.secctx);
+            mCallingUid = tr.sender_euid;
+            mLastTransactionBinderFlags = tr.flags;
+
+            Parcel reply;
+            status_t error;
+            bool reply_sent = false;
+            constexpr size_t kForwardReplyFlags = TF_CLEAR_BUF;
+            auto reply_callback = [&] (auto &replyParcel) {
+                if (reply_sent) {
+                    // Reply was sent earlier, ignore it.
+                    ALOGE("Dropping binder reply, it was sent already.");
+                    return;
+                }
+                reply_sent = true;
+                if ((tr.flags & TF_ONE_WAY) == 0) {
+                    replyParcel.setError(NO_ERROR);
+                    sendReply(replyParcel, (tr.flags & kForwardReplyFlags));
+                } else {
+                    ALOGE("Not sending reply in one-way transaction");
+                }
+            };
+
+            if (tr.target.ptr) {
+                // We only have a weak reference on the target object, so we must first try to
+                // safely acquire a strong reference before doing anything else with it.
+                if (reinterpret_cast<RefBase::weakref_type*>(
+                        tr.target.ptr)->attemptIncStrong(this)) {
+                    error = reinterpret_cast<BHwBinder*>(tr.cookie)->transact(tr.code, buffer,
+                            &reply, tr.flags, reply_callback);
+                    reinterpret_cast<BHwBinder*>(tr.cookie)->decStrong(this);
+                } else {
+                    error = UNKNOWN_TRANSACTION;
+                }
+
+            } else {
+                error = the_context_object->transact(tr.code, buffer, &reply, tr.flags, reply_callback);
+            }
+
+            if ((tr.flags & TF_ONE_WAY) == 0) {
+                if (!reply_sent) {
+                    // Should have been a reply but there wasn't, so there
+                    // must have been an error instead.
+                    reply.setError(error);
+                    sendReply(reply, (tr.flags & kForwardReplyFlags));
+                } else {
+                    if (error != NO_ERROR) {
+                        ALOGE("transact() returned error after sending reply.");
+                    } else {
+                        // Ok, reply sent and transact didn't return an error.
+                    }
+                }
+            } else {
+                // One-way transaction, don't care about return value or reply.
+            }
+            // ...
+}
+```
+
+## AMS
+
+上接 system_server 的启动流程
+
+```cpp
+
+// The main function called when started through the zygote process. This could be unified with
+// main(), if the native code in nativeFinishInit() were rationalized with Zygote startup.
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/com/android/internal/os/ZygoteInit.java
+public static Runnable zygoteInit(int targetSdkVersion, long[] disabledCompatChanges,
+        String[] argv, ClassLoader classLoader) {
+    // ...
+    ZygoteInit.nativeZygoteInit();
+    // ZygoteInit.forkSystemServer() 函数里写死的启动 system_server 进程的参数，argv 应该是 com.android.server.SystemServer
+    return RuntimeInit.applicationInit(targetSdkVersion, disabledCompatChanges, argv,
+            classLoader);
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/com/android/internal/os/RuntimeInit.java
+protected static Runnable applicationInit(int targetSdkVersion, long[] disabledCompatChanges,
+        String[] argv, ClassLoader classLoader) {
+    // Remaining arguments are passed to the start class's static main
+    // 执行 SystemServer.main(String[] args)
+    return findStaticMain(args.startClass /* com.android.server.SystemServer */, args.startArgs, classLoader);
+}
+
+// The main entry point from zygote.
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/java/com/android/server/SystemServer.java
+public static void main(String[] args) {
+    new SystemServer().run();
+}    
+private void run() {
+    // ...
+    // Start services.
+    try {
+        t.traceBegin("StartServices");
+        startBootstrapServices(t);
+        startCoreServices(t);
+        startOtherServices(t);
+        startApexServices(t);
+    }
+    // ...
+    // Loop forever.
+    Looper.loop();
+    throw new RuntimeException("Main thread loop unexpectedly exited");
+}    
+private void startBootstrapServices(@NonNull TimingsTraceAndSlog t) {
+    // ...
+    // Activity manager runs the show.
+    t.traceBegin("StartActivityManager");
+    // TODO: Might need to move after migration to WM.
+    ActivityTaskManagerService atm = mSystemServiceManager.startService(
+            ActivityTaskManagerService.Lifecycle.class).getService();
+    mActivityManagerService = ActivityManagerService.Lifecycle.startService(
+            mSystemServiceManager, atm);
+    mActivityManagerService.setSystemServiceManager(mSystemServiceManager);
+    mActivityManagerService.setInstaller(installer);
+    mWindowManagerGlobalLock = atm.getGlobalLock();
+    t.traceEnd();
+    // ...
+    // Set up the Application instance for the system process and get started.
+    t.traceBegin("SetSystemProcess");
+    mActivityManagerService.setSystemProcess();
+    t.traceEnd();
+    // ...
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java
+public void setSystemProcess() {
+    ServiceManager.addService(Context.ACTIVITY_SERVICE, this, /* allowIsolated= */ true,
+                DUMP_FLAG_PRIORITY_CRITICAL | DUMP_FLAG_PRIORITY_NORMAL | DUMP_FLAG_PROTO);
+        ServiceManager.addService(ProcessStats.SERVICE_NAME, mProcessStats);
+        ServiceManager.addService("meminfo", new MemBinder(this), /* allowIsolated= */ false,
+                DUMP_FLAG_PRIORITY_HIGH);
+        ServiceManager.addService("gfxinfo", new GraphicsBinder(this));
+        ServiceManager.addService("dbinfo", new DbBinder(this));
+        mAppProfiler.setCpuInfoService();
+        ServiceManager.addService("permission", new PermissionController(this));
+        ServiceManager.addService("processinfo", new ProcessInfoService(this));
+        ServiceManager.addService("cacheinfo", new CacheBinder(this));
+        // ...
+}
+
+// 此方法在【深入 Binder 之 servicemanager 进程】中介绍过
+// getIServiceManager() 实际上是返回一个 handle == 0 的 BpBinder(native) / BinderProxy(java)
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/os/ServiceManager.java
+public static void addService(String name, IBinder service, boolean allowIsolated,
+        int dumpPriority) {
+    try {
+        getIServiceManager().addService(name, service /* ActivityManagerService */, allowIsolated, dumpPriority);
+    } catch (RemoteException e) {
+        Log.e(TAG, "error in addService", e);
+    }
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/os/Parcel.java
+public final void writeStrongBinder(IBinder val) {
+    nativeWriteStrongBinder(mNativePtr, val);
+}
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/android_os_Parcel.cpp
+static void android_os_Parcel_writeStrongBinder(JNIEnv* env, jclass clazz, jlong nativePtr, jobject object)
+{
+    Parcel* parcel = reinterpret_cast<Parcel*>(nativePtr);
+    if (parcel != NULL) {
+        const status_t err = parcel->writeStrongBinder(ibinderForJavaObject(env, object));
+        if (err != NO_ERROR) {
+            signalExceptionForError(env, clazz, err);
+        }
+    }
+}
+
+// ActivityManagerService 继承自 IActivityManager.Stub 它又继承自 Binder
+// server 端继承自 Binder，client 端是 BinderProxy
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/android_util_Binder.cpp
+sp<IBinder> ibinderForJavaObject(JNIEnv* env, jobject obj)
+{
+    if (obj == NULL) return NULL;
+
+    // Instance of Binder?
+    if (env->IsInstanceOf(obj, gBinderOffsets.mClass)) {
+        JavaBBinderHolder* jbh = (JavaBBinderHolder*)
+            env->GetLongField(obj, gBinderOffsets.mObject);  // Binder.mObject
+        return jbh->get(env, obj);
+    }
+
+    // Instance of BinderProxy?
+    if (env->IsInstanceOf(obj, gBinderProxyOffsets.mClass)) {
+        return getBPNativeData(env, obj)->mObject;
+    }
+
+    ALOGW("ibinderForJavaObject: %p is not a Binder object", obj);
+    return NULL;
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/Parcel.cpp
+status_t Parcel::writeStrongBinder(const sp<IBinder>& val)
+{
+    return flattenBinder(val);
+}
+
+status_t Parcel::flattenBinder(const sp<IBinder>& binder) {
+    BBinder* local = nullptr;
+    if (binder) local = binder->localBinder();
+    // ...
+    if (!local) {  // 比如 BpBinder 它只有 server handle
+        const int32_t handle = proxy ? proxy->getPrivateAccessor().binderHandle() : 0;
+        obj.hdr.type = BINDER_TYPE_HANDLE;
+        obj.binder = 0; /* Don't pass uninitialized stack data to a remote process */
+        obj.flags = 0;
+        obj.handle = handle;
+        obj.cookie = 0;
+    } else {
+
+        // 比如 BBinder
+        // java Binder.mObject 是 native JavaBBinderHolder，它持有 JavaBBinder，而 JavaBBinder 继承自 BBinder
+        // ActivityManagerService 继承自 IActivityManager.Stub，它又继承自 Binder
+        obj.hdr.type = BINDER_TYPE_BINDER;
+        obj.binder = reinterpret_cast<uintptr_t>(local->getWeakRefs());
+        obj.cookie = reinterpret_cast<uintptr_t>(local);  // cookie 是 IBinder 在 server/client 进程内的内存地址
+    }
+    status_t status = writeObject(obj, false);
+    // ...
+}
+
+// BpBinder 通过 IPCThreadState::self()->transact(...) 与 binder driver 通讯
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/BpBinder.cpp
+status_t BpBinder::transact(
+    uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
+{
+    // ...
+    status_t status;
+    if (CC_UNLIKELY(isRpcBinder())) {
+        status = rpcSession()->transact(sp<IBinder>::fromExisting(this), code, data, reply, flags);
+    } else {
+        status = IPCThreadState::self()->transact(binderHandle(), code, data, reply, flags);
+    }
+    // ...
+}
+
+// binder driver 遇到 handle == 0 会将 request 交由 service_manager 进程处理，本质是一个 map：string -> IBinder
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/ServiceManager.cpp
+ServiceManager::addService(...) {...}
+```
+
+## server handle request
+
+
+
+```cpp
+// 开启一个子线程执行 binder 消息通讯的 loop：IPCThreadState::self()->joinThreadPool = talkWithDriver + executeCommand
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
+void ProcessState::startThreadPool()
+
+// 在当前线程进行 binder 消息通讯 loop
+void IPCThreadState::joinThreadPool(bool isMain)
+
+
+```
+
+
+# 参考
+
+- [掌握 binder 机制？驱动核心源码详解](https://zhuanlan.zhihu.com/p/381310378)
+- [Binder（四）system_server中binder的初始化](https://blog.csdn.net/Mumuuuuuuu/article/details/122108510)
