@@ -26,7 +26,7 @@
 <meta property="og:description" content="主例程servicemanager 进程是由 init 进程通过 servicemanager.rc 配置文件启动的，其所在的可执行文件在 system&#x2F;bin&#x2F;servicemanager，对应的源文件是 &#x2F;platform&#x2F;frameworks&#x2F;native&#x2F;cmds&#x2F;servicemanager&#x2F;main.cpp service servicemanager &#x2F;system&#x2F;bin&#x2F;serv">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-10-26T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-10-28T12:10:21.733Z">
+<meta property="article:modified_time" content="2022-11-01T12:16:34.485Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
   
@@ -206,7 +206,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          30k 字
+          35k 字
         
       </span>
     
@@ -218,7 +218,7 @@
         
         
           <!-- compatible with older versions-->
-          254 分钟
+          291 分钟
         
       </span>
     
@@ -487,37 +487,11 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
 <span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_ioctl_set_ctx_mgr</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp,</span></span>
 <span class="hljs-params"><span class="hljs-function">				    <span class="hljs-keyword">struct</span> flat_binder_object *fbo)</span></span>
 <span class="hljs-function"></span>&#123;
-	<span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+    <span class="hljs-comment">// ...</span>
 	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *proc = filp-&gt;private_data;
 	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_context</span> *context = proc-&gt;context;
 	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_node</span> *new_node;
-	<span class="hljs-type">kuid_t</span> curr_euid = <span class="hljs-built_in">current_euid</span>();
-	<span class="hljs-built_in">mutex_lock</span>(&amp;context-&gt;context_mgr_node_lock);
-	<span class="hljs-keyword">if</span> (context-&gt;binder_context_mgr_node) &#123;
-		<span class="hljs-built_in">pr_err</span>(<span class="hljs-string">&quot;BINDER_SET_CONTEXT_MGR already set\n&quot;</span>);
-		ret = -EBUSY;
-		<span class="hljs-keyword">goto</span> out;
-	&#125;
-	ret = <span class="hljs-built_in">security_binder_set_context_mgr</span>(proc-&gt;cred);
-	<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>)
-		<span class="hljs-keyword">goto</span> out;
-	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">uid_valid</span>(context-&gt;binder_context_mgr_uid)) &#123;
-		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">uid_eq</span>(context-&gt;binder_context_mgr_uid, curr_euid)) &#123;
-			<span class="hljs-built_in">pr_err</span>(<span class="hljs-string">&quot;BINDER_SET_CONTEXT_MGR bad uid %d != %d\n&quot;</span>,
-			       <span class="hljs-built_in">from_kuid</span>(&amp;init_user_ns, curr_euid),
-			       <span class="hljs-built_in">from_kuid</span>(&amp;init_user_ns,
-					 context-&gt;binder_context_mgr_uid));
-			ret = -EPERM;
-			<span class="hljs-keyword">goto</span> out;
-		&#125;
-	&#125; <span class="hljs-keyword">else</span> &#123;
-		context-&gt;binder_context_mgr_uid = curr_euid;
-	&#125;
 	new_node = <span class="hljs-built_in">binder_new_node</span>(proc, fbo);
-	<span class="hljs-keyword">if</span> (!new_node) &#123;
-		ret = -ENOMEM;
-		<span class="hljs-keyword">goto</span> out;
-	&#125;
 	<span class="hljs-built_in">binder_node_lock</span>(new_node);
 	new_node-&gt;local_weak_refs++;
 	new_node-&gt;local_strong_refs++;
@@ -526,9 +500,6 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
 	context-&gt;binder_context_mgr_node = new_node;
 	<span class="hljs-built_in">binder_node_unlock</span>(new_node);
 	<span class="hljs-built_in">binder_put_node</span>(new_node);
-out:
-	<span class="hljs-built_in">mutex_unlock</span>(&amp;context-&gt;context_mgr_node_lock);
-	<span class="hljs-keyword">return</span> ret;
 &#125;
 </code></pre></div>
 
@@ -627,7 +598,10 @@ out:
 <span class="hljs-function"><span class="hljs-type">static</span> jobject <span class="hljs-title">android_os_BinderInternal_getContextObject</span><span class="hljs-params">(JNIEnv* env, jobject clazz)</span></span>
 <span class="hljs-function"></span>&#123;
     sp&lt;IBinder&gt; b = ProcessState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">getContextObject</span>(<span class="hljs-literal">NULL</span>);
-    <span class="hljs-keyword">return</span> <span class="hljs-built_in">javaObjectForIBinder</span>(env, b);
+    <span class="hljs-comment">// If the argument is a JavaBBinder, return the Java object that was used to create it.</span>
+    <span class="hljs-comment">// Otherwise return a BinderProxy for the IBinder. If a previous call was passed the</span>
+    <span class="hljs-comment">// same IBinder, and the original BinderProxy is still alive, return the same BinderProxy.</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">javaObjectForIBinder</span>(env, b);  <span class="hljs-comment">// 返回 java 层的 BinderProxy 实例</span>
 &#125;
 
 <span class="hljs-comment">// frameworks/native/libs/binder/ProcessState.cpp</span>
@@ -1191,7 +1165,164 @@ out:
     &#125;
 &#125;</code></pre></div>
 
+<h1 id="binder-消息循环"><a href="#binder-消息循环" class="headerlink" title="binder 消息循环"></a>binder 消息循环</h1><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp</span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span>** argv)</span> </span>&#123;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-comment">// 开始主循环</span>
+    sp&lt;Looper&gt; looper = Looper::<span class="hljs-built_in">prepare</span>(<span class="hljs-literal">false</span> <span class="hljs-comment">/*allowNonCallbacks*/</span>);
+    BinderCallback::<span class="hljs-built_in">setupTo</span>(looper);
+    ClientCallbackCallback::<span class="hljs-built_in">setupTo</span>(looper, manager);
+    <span class="hljs-keyword">while</span>(<span class="hljs-literal">true</span>) &#123;
+        looper-&gt;<span class="hljs-built_in">pollAll</span>(<span class="hljs-number">-1</span>);
+    &#125;
+    <span class="hljs-comment">// should not be reached</span>
+    <span class="hljs-keyword">return</span> EXIT_FAILURE;
+&#125;
 
+<span class="hljs-comment">// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">BinderCallback</span> : <span class="hljs-keyword">public</span> LooperCallback &#123;
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-function"><span class="hljs-type">static</span> sp&lt;BinderCallback&gt; <span class="hljs-title">setupTo</span><span class="hljs-params">(<span class="hljs-type">const</span> sp&lt;Looper&gt;&amp; looper)</span> </span>&#123;
+        sp&lt;BinderCallback&gt; cb = sp&lt;BinderCallback&gt;::<span class="hljs-built_in">make</span>();
+        <span class="hljs-type">int</span> binder_fd = <span class="hljs-number">-1</span>;
+        IPCThreadState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">setupPolling</span>(&amp;binder_fd);    <span class="hljs-comment">// 获得已打开的 binder driver fd</span>
+        <span class="hljs-built_in">LOG_ALWAYS_FATAL_IF</span>(binder_fd &lt; <span class="hljs-number">0</span>, <span class="hljs-string">&quot;Failed to setupPolling: %d&quot;</span>, binder_fd);
+        <span class="hljs-type">int</span> ret = looper-&gt;<span class="hljs-built_in">addFd</span>(binder_fd,                   <span class="hljs-comment">// 当有数据时回调 handlePolledCommands</span>
+                                Looper::POLL_CALLBACK,
+                                Looper::EVENT_INPUT,
+                                cb,
+                                <span class="hljs-literal">nullptr</span> <span class="hljs-comment">/*data*/</span>);
+        <span class="hljs-built_in">LOG_ALWAYS_FATAL_IF</span>(ret != <span class="hljs-number">1</span>, <span class="hljs-string">&quot;Failed to add binder FD to Looper&quot;</span>);
+        <span class="hljs-keyword">return</span> cb;
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">handleEvent</span><span class="hljs-params">(<span class="hljs-type">int</span> <span class="hljs-comment">/* fd */</span>, <span class="hljs-type">int</span> <span class="hljs-comment">/* events */</span>, <span class="hljs-type">void</span>* <span class="hljs-comment">/* data */</span>)</span> <span class="hljs-keyword">override</span> </span>&#123;
+        IPCThreadState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">handlePolledCommands</span>();
+        <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;  <span class="hljs-comment">// Continue receiving callbacks.</span>
+    &#125;
+&#125;;
+
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::handlePolledCommands</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-type">status_t</span> result;
+
+    <span class="hljs-keyword">do</span> &#123;
+        result = <span class="hljs-built_in">getAndExecuteCommand</span>();
+    &#125; <span class="hljs-keyword">while</span> (mIn.<span class="hljs-built_in">dataPosition</span>() &lt; mIn.<span class="hljs-built_in">dataSize</span>());
+
+    <span class="hljs-built_in">processPendingDerefs</span>();
+    <span class="hljs-built_in">flushCommands</span>();
+    <span class="hljs-keyword">return</span> result;
+&#125;
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::getAndExecuteCommand</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// request 已写入 mOut</span>
+    <span class="hljs-comment">// ioctl 陷入 binder driver，binder driver 拷贝并处理 mOut 里的内容</span>
+    result = <span class="hljs-built_in">talkWithDriver</span>();
+    <span class="hljs-comment">// ...</span>
+    cmd = mIn.<span class="hljs-built_in">readInt32</span>()
+    result = <span class="hljs-built_in">executeCommand</span>(cmd);
+    <span class="hljs-comment">// ...</span>
+&#125;
+
+
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::executeCommand</span><span class="hljs-params">(<span class="hljs-type">int32_t</span> cmd)</span></span>
+<span class="hljs-function"></span>&#123;
+    BBinder* obj;
+    RefBase::weakref_type* refs;
+    <span class="hljs-type">status_t</span> result = NO_ERROR;
+    <span class="hljs-keyword">switch</span> ((<span class="hljs-type">uint32_t</span>)cmd) &#123;
+    <span class="hljs-keyword">case</span> BR_TRANSACTION_SEC_CTX:
+    <span class="hljs-keyword">case</span> BR_TRANSACTION:
+        &#123;
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data&amp; tr = tr_secctx.transaction_data;
+
+            <span class="hljs-keyword">if</span> (cmd == (<span class="hljs-type">int</span>) BR_TRANSACTION_SEC_CTX) &#123;
+                result = mIn.<span class="hljs-built_in">read</span>(&amp;tr_secctx, <span class="hljs-built_in">sizeof</span>(tr_secctx));
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                result = mIn.<span class="hljs-built_in">read</span>(&amp;tr, <span class="hljs-built_in">sizeof</span>(tr));
+                tr_secctx.secctx = <span class="hljs-number">0</span>;
+            &#125;
+
+            <span class="hljs-keyword">if</span> (tr.target.ptr) &#123;
+                <span class="hljs-comment">// We only have a weak reference on the target object, so we must first try to</span>
+                <span class="hljs-comment">// safely acquire a strong reference before doing anything else with it.</span>
+                <span class="hljs-keyword">if</span> (<span class="hljs-built_in">reinterpret_cast</span>&lt;RefBase::weakref_type*&gt;(
+                        tr.target.ptr)-&gt;<span class="hljs-built_in">attemptIncStrong</span>(<span class="hljs-keyword">this</span>)) &#123;
+                    error = <span class="hljs-built_in">reinterpret_cast</span>&lt;BBinder*&gt;(tr.cookie)-&gt;<span class="hljs-built_in">transact</span>(tr.code, buffer,
+                            &amp;reply, tr.flags);
+                    <span class="hljs-built_in">reinterpret_cast</span>&lt;BBinder*&gt;(tr.cookie)-&gt;<span class="hljs-built_in">decStrong</span>(<span class="hljs-keyword">this</span>);
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    error = UNKNOWN_TRANSACTION;
+                &#125;
+
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-comment">// client 想要访问 service_manager 只需要构造一个 BpBinder(handle = 0)</span>
+                <span class="hljs-comment">// binder driver 遇到 handle == 0 会交由注册的服务管理器处理（也就是 service_manager）</span>
+                <span class="hljs-comment">// 在 service_manager 进程内，</span>
+                error = the_context_object-&gt;<span class="hljs-built_in">transact</span>(tr.code, buffer, &amp;reply, tr.flags);
+            &#125;
+
+            <span class="hljs-comment">//ALOGI(&quot;&lt;&lt;&lt;&lt; TRANSACT from pid %d restore pid %d sid %s uid %d\n&quot;,</span>
+            <span class="hljs-comment">//     mCallingPid, origPid, (origSid ? origSid : &quot;&lt;N/A&gt;&quot;), origUid);</span>
+
+            <span class="hljs-keyword">if</span> ((tr.flags &amp; TF_ONE_WAY) == <span class="hljs-number">0</span>) &#123;
+                <span class="hljs-built_in">LOG_ONEWAY</span>(<span class="hljs-string">&quot;Sending reply to %d!&quot;</span>, mCallingPid);
+                <span class="hljs-keyword">if</span> (error &lt; NO_ERROR) reply.<span class="hljs-built_in">setError</span>(error);
+
+                <span class="hljs-comment">// b/238777741: clear buffer before we send the reply.</span>
+                <span class="hljs-comment">// Otherwise, there is a race where the client may</span>
+                <span class="hljs-comment">// receive the reply and send another transaction</span>
+                <span class="hljs-comment">// here and the space used by this transaction won&#x27;t</span>
+                <span class="hljs-comment">// be freed for the client.</span>
+                buffer.<span class="hljs-built_in">setDataSize</span>(<span class="hljs-number">0</span>);
+
+                <span class="hljs-keyword">constexpr</span> <span class="hljs-type">uint32_t</span> kForwardReplyFlags = TF_CLEAR_BUF;
+                <span class="hljs-built_in">sendReply</span>(reply, (tr.flags &amp; kForwardReplyFlags));
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-keyword">if</span> (error != OK) &#123;
+                    std::ostringstream logStream;
+                    logStream &lt;&lt; <span class="hljs-string">&quot;oneway function results for code &quot;</span> &lt;&lt; tr.code &lt;&lt; <span class="hljs-string">&quot; on binder at &quot;</span>
+                              &lt;&lt; <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">void</span>*&gt;(tr.target.ptr)
+                              &lt;&lt; <span class="hljs-string">&quot; will be dropped but finished with status &quot;</span>
+                              &lt;&lt; <span class="hljs-built_in">statusToString</span>(error);
+
+                    <span class="hljs-comment">// ideally we could log this even when error == OK, but it</span>
+                    <span class="hljs-comment">// causes too much logspam because some manually-written</span>
+                    <span class="hljs-comment">// interfaces have clients that call methods which always</span>
+                    <span class="hljs-comment">// write results, sometimes as oneway methods.</span>
+                    <span class="hljs-keyword">if</span> (reply.<span class="hljs-built_in">dataSize</span>() != <span class="hljs-number">0</span>) &#123;
+                        logStream &lt;&lt; <span class="hljs-string">&quot; and reply parcel size &quot;</span> &lt;&lt; reply.<span class="hljs-built_in">dataSize</span>();
+                    &#125;
+                    std::string message = logStream.<span class="hljs-built_in">str</span>();
+                    <span class="hljs-built_in">ALOGI</span>(<span class="hljs-string">&quot;%s&quot;</span>, message.<span class="hljs-built_in">c_str</span>());
+                &#125;
+                <span class="hljs-built_in">LOG_ONEWAY</span>(<span class="hljs-string">&quot;NOT sending reply to %d!&quot;</span>, mCallingPid);
+            &#125;
+
+            mServingStackPointer = origServingStackPointer;
+            mCallingPid = origPid;
+            mCallingSid = origSid;
+            mCallingUid = origUid;
+            mStrictModePolicy = origStrictModePolicy;
+            mLastTransactionBinderFlags = origTransactionBinderFlags;
+            mWorkSource = origWorkSource;
+            mPropagateWorkSource = origPropagateWorkSet;
+
+            <span class="hljs-built_in">IF_LOG_TRANSACTIONS</span>() &#123;
+                std::ostringstream logStream;
+                logStream &lt;&lt; <span class="hljs-string">&quot;BC_REPLY thr &quot;</span> &lt;&lt; (<span class="hljs-type">void</span>*)<span class="hljs-built_in">pthread_self</span>() &lt;&lt; <span class="hljs-string">&quot; / obj &quot;</span> &lt;&lt; tr.target.ptr
+                          &lt;&lt; <span class="hljs-string">&quot;: \t&quot;</span> &lt;&lt; reply &lt;&lt; <span class="hljs-string">&quot;\n&quot;</span>;
+                std::string message = logStream.<span class="hljs-built_in">str</span>();
+                <span class="hljs-built_in">ALOGI</span>(<span class="hljs-string">&quot;%s&quot;</span>, message.<span class="hljs-built_in">c_str</span>());
+            &#125;
+
+        &#125;
+        <span class="hljs-keyword">break</span>;
+    <span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
                 
               </div>
             
