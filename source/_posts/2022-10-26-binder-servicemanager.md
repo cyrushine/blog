@@ -137,8 +137,10 @@ static int open_driver(const char *driver /* /dev/binder */)
 
 # 注册为服务管理器
 
-1. 进程内的 `ServiceManager` 注册为 `manager`
-2. 通过 `ioctl(BINDER_SET_CONTEXT_MGR_EXT)` 在 binder driver 将自己注册为服务管理器 `binder_context_mgr_node`，handle == 0
+1. 通过 `ioctl(BINDER_SET_CONTEXT_MGR_EXT)` 在 binder driver 将自己注册为服务管理器 `binder_context_mgr_node`，handle == 0
+2. 将 `ServiceManager` 注册为本地进程响应 binder 消息的服务管理器：`IPCThreadState::self()->setTheContextObject(manager)`
+3. 将 `ServiceManager` 实例自己给自己注册为 `manager`
+4. 服务管理器的作用后面会讲到，主要是处理 handle == 0 的情况，client 查找 server 时得先有 service_manager 标识
 
 ```cpp
 // ServiceManager 内部维护了一个 map：mNameToService，string -> IBinder
@@ -255,6 +257,207 @@ static int binder_ioctl_set_ctx_mgr(struct file *filp,
 	binder_put_node(new_node);
 }
 
+```
+
+# 开始 binder 消息循环
+
+1. `epoll` 监听 driver fd，当 binder 发消息过来时（`Looper::EVENT_INPUT`）主动调用 `IPCThreadState::self()->handlePolledCommands()` 处理 binder 消息
+2. `ServiceManager` 继承自 `BnServiceManager` 得到 `onTransact` 方法，BnServiceManager 是类似于 AIDL 这样的机制自动生成的代码，根据 aidl code 调用对应的业务方法，并从 `Parcel` 解包请求参数，将响应打包至 `Parcel`
+
+
+```cpp
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
+int main(int argc, char** argv) {
+    // ...
+    // 开始主循环
+    sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
+    BinderCallback::setupTo(looper);
+    ClientCallbackCallback::setupTo(looper, manager);
+    while(true) {
+        looper->pollAll(-1);
+    }
+    // should not be reached
+    return EXIT_FAILURE;
+}
+
+// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
+class BinderCallback : public LooperCallback {
+public:
+    static sp<BinderCallback> setupTo(const sp<Looper>& looper) {
+        sp<BinderCallback> cb = sp<BinderCallback>::make();
+        int binder_fd = -1;
+        IPCThreadState::self()->setupPolling(&binder_fd);    // 获得已打开的 binder driver fd
+        LOG_ALWAYS_FATAL_IF(binder_fd < 0, "Failed to setupPolling: %d", binder_fd);
+        int ret = looper->addFd(binder_fd,                   // binder 发消息过来时回调 handlePolledCommands
+                                Looper::POLL_CALLBACK,
+                                Looper::EVENT_INPUT,
+                                cb,
+                                nullptr /*data*/);
+        LOG_ALWAYS_FATAL_IF(ret != 1, "Failed to add binder FD to Looper");
+        return cb;
+    }
+
+    int handleEvent(int /* fd */, int /* events */, void* /* data */) override {
+        IPCThreadState::self()->handlePolledCommands();
+        return 1;  // Continue receiving callbacks.
+    }
+};
+
+// binder 有消息过来，需要处理
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp
+status_t IPCThreadState::handlePolledCommands()
+{
+    // ...
+    result = getAndExecuteCommand();
+}
+status_t IPCThreadState::getAndExecuteCommand()
+{
+    // ...
+    result = talkWithDriver();
+    cmd = mIn.readInt32()
+    result = executeCommand(cmd);
+}
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    // ...
+    switch ((uint32_t)cmd) {
+    case BR_TRANSACTION_SEC_CTX:
+    case BR_TRANSACTION:
+        {
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data& tr = tr_secctx.transaction_data;
+
+            if (cmd == (int) BR_TRANSACTION_SEC_CTX) {
+                result = mIn.read(&tr_secctx, sizeof(tr_secctx));
+            } else {
+                result = mIn.read(&tr, sizeof(tr));
+                tr_secctx.secctx = 0;
+            }
+
+            if (tr.target.ptr) {
+                // ...
+            } else {
+                // client 想要访问 service_manager 只需要构造一个 BpBinder(handle = 0)
+                // binder driver 遇到 handle == 0 会交由注册的服务管理器处理（也就是 service_manager）
+                // 在 service_manager 进程内响应 binder 消息时，遇到 handle == 0 又会交由 the_context_object 处理
+                // 它其实是 ServiceManager 实例，上一章节讲过
+                error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
+            }
+
+            // 返回响应数据
+            if ((tr.flags & TF_ONE_WAY) == 0) {
+                sendReply(reply, (tr.flags & kForwardReplyFlags));
+                // ...
+            }
+}
+
+// BnServiceManager 看起来跟 AIDL 一样是自动生成的代码
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/ServiceManager.h
+class ServiceManager : public os::BnServiceManager, public IBinder::DeathRecipient {
+public:
+    binder::Status getService(const std::string& name, sp<IBinder>* outBinder) override;
+    binder::Status checkService(const std::string& name, sp<IBinder>* outBinder) override;
+    binder::Status addService(const std::string& name, const sp<IBinder>& binder,
+                              bool allowIsolated, int32_t dumpPriority) override;
+// ...                              
+
+// https://cs.android.com/android/platform/superproject/+/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_recovery_x86_64_silvermont_shared/gen/aidl/android/os/BnServiceManager.h
+class BnServiceManager : public ::android::BnInterface<IServiceManager> {
+public:
+  static constexpr uint32_t TRANSACTION_getService = ::android::IBinder::FIRST_CALL_TRANSACTION + 0;
+  static constexpr uint32_t TRANSACTION_checkService = ::android::IBinder::FIRST_CALL_TRANSACTION + 1;
+  static constexpr uint32_t TRANSACTION_addService = ::android::IBinder::FIRST_CALL_TRANSACTION + 2;
+  static constexpr uint32_t TRANSACTION_listServices = ::android::IBinder::FIRST_CALL_TRANSACTION + 3;
+  static constexpr uint32_t TRANSACTION_registerForNotifications = ::android::IBinder::FIRST_CALL_TRANSACTION + 4;
+  static constexpr uint32_t TRANSACTION_unregisterForNotifications = ::android::IBinder::FIRST_CALL_TRANSACTION + 5;
+  static constexpr uint32_t TRANSACTION_isDeclared = ::android::IBinder::FIRST_CALL_TRANSACTION + 6;
+  static constexpr uint32_t TRANSACTION_getDeclaredInstances = ::android::IBinder::FIRST_CALL_TRANSACTION + 7;
+  static constexpr uint32_t TRANSACTION_updatableViaApex = ::android::IBinder::FIRST_CALL_TRANSACTION + 8;
+  static constexpr uint32_t TRANSACTION_getConnectionInfo = ::android::IBinder::FIRST_CALL_TRANSACTION + 9;
+  static constexpr uint32_t TRANSACTION_registerClientCallback = ::android::IBinder::FIRST_CALL_TRANSACTION + 10;
+  static constexpr uint32_t TRANSACTION_tryUnregisterService = ::android::IBinder::FIRST_CALL_TRANSACTION + 11;
+  static constexpr uint32_t TRANSACTION_getServiceDebugInfo = ::android::IBinder::FIRST_CALL_TRANSACTION + 12;
+  explicit BnServiceManager();
+  ::android::status_t onTransact(uint32_t _aidl_code, const ::android::Parcel& _aidl_data, ::android::Parcel* _aidl_reply, uint32_t _aidl_flags) override;
+};  // class BnServiceManager
+
+// https://cs.android.com/android/platform/superproject/+/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_x86_64_silvermont_shared_fuzzer/gen/aidl/android/os/IServiceManager.cpp
+::android::status_t BnServiceManager::onTransact(uint32_t _aidl_code, const ::android::Parcel& _aidl_data, ::android::Parcel* _aidl_reply, uint32_t _aidl_flags) {
+  ::android::status_t _aidl_ret_status = ::android::OK;
+  switch (_aidl_code) {
+  case BnServiceManager::TRANSACTION_getService:
+  {
+    ::std::string in_name;
+    ::android::sp<::android::IBinder> _aidl_return;
+    if (!(_aidl_data.checkInterface(this))) {
+      _aidl_ret_status = ::android::BAD_TYPE;
+      break;
+    }
+    ::android::binder::ScopedTrace _aidl_trace(ATRACE_TAG_AIDL, "AIDL::cpp::IServiceManager::getService::cppServer");
+    _aidl_ret_status = _aidl_data.readUtf8FromUtf16(&in_name);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    if (auto st = _aidl_data.enforceNoDataAvail(); !st.isOk()) {
+      _aidl_ret_status = st.writeToParcel(_aidl_reply);
+      break;
+    }
+    ::android::binder::Status _aidl_status(getService(in_name, &_aidl_return));
+    _aidl_ret_status = _aidl_status.writeToParcel(_aidl_reply);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    if (!_aidl_status.isOk()) {
+      break;
+    }
+    _aidl_ret_status = _aidl_reply->writeStrongBinder(_aidl_return);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+  }
+  break;
+  case BnServiceManager::TRANSACTION_addService:
+  {
+    ::std::string in_name;
+    ::android::sp<::android::IBinder> in_service;
+    bool in_allowIsolated;
+    int32_t in_dumpPriority;
+    if (!(_aidl_data.checkInterface(this))) {
+      _aidl_ret_status = ::android::BAD_TYPE;
+      break;
+    }
+    ::android::binder::ScopedTrace _aidl_trace(ATRACE_TAG_AIDL, "AIDL::cpp::IServiceManager::addService::cppServer");
+    _aidl_ret_status = _aidl_data.readUtf8FromUtf16(&in_name);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    _aidl_ret_status = _aidl_data.readStrongBinder(&in_service);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    _aidl_ret_status = _aidl_data.readBool(&in_allowIsolated);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    _aidl_ret_status = _aidl_data.readInt32(&in_dumpPriority);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    if (auto st = _aidl_data.enforceNoDataAvail(); !st.isOk()) {
+      _aidl_ret_status = st.writeToParcel(_aidl_reply);
+      break;
+    }
+    ::android::binder::Status _aidl_status(addService(in_name, in_service, in_allowIsolated, in_dumpPriority));
+    _aidl_ret_status = _aidl_status.writeToParcel(_aidl_reply);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    if (!_aidl_status.isOk()) {
+      break;
+    }
+  }
+  break;
+  // ...
 ```
 
 # 查询
@@ -935,168 +1138,5 @@ public final class ServiceManager {
             Log.e(TAG, "error in addService", e);
         }
     }
-}
-```
-
-# binder 消息循环
-
-```cpp
-// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
-int main(int argc, char** argv) {
-    // ...
-    // 开始主循环
-    sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
-    BinderCallback::setupTo(looper);
-    ClientCallbackCallback::setupTo(looper, manager);
-    while(true) {
-        looper->pollAll(-1);
-    }
-    // should not be reached
-    return EXIT_FAILURE;
-}
-
-// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
-class BinderCallback : public LooperCallback {
-public:
-    static sp<BinderCallback> setupTo(const sp<Looper>& looper) {
-        sp<BinderCallback> cb = sp<BinderCallback>::make();
-        int binder_fd = -1;
-        IPCThreadState::self()->setupPolling(&binder_fd);    // 获得已打开的 binder driver fd
-        LOG_ALWAYS_FATAL_IF(binder_fd < 0, "Failed to setupPolling: %d", binder_fd);
-        int ret = looper->addFd(binder_fd,                   // 当有数据时回调 handlePolledCommands
-                                Looper::POLL_CALLBACK,
-                                Looper::EVENT_INPUT,
-                                cb,
-                                nullptr /*data*/);
-        LOG_ALWAYS_FATAL_IF(ret != 1, "Failed to add binder FD to Looper");
-        return cb;
-    }
-
-    int handleEvent(int /* fd */, int /* events */, void* /* data */) override {
-        IPCThreadState::self()->handlePolledCommands();
-        return 1;  // Continue receiving callbacks.
-    }
-};
-
-// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp
-status_t IPCThreadState::handlePolledCommands()
-{
-    status_t result;
-
-    do {
-        result = getAndExecuteCommand();
-    } while (mIn.dataPosition() < mIn.dataSize());
-
-    processPendingDerefs();
-    flushCommands();
-    return result;
-}
-status_t IPCThreadState::getAndExecuteCommand()
-{
-    // request 已写入 mOut
-    // ioctl 陷入 binder driver，binder driver 拷贝并处理 mOut 里的内容
-    result = talkWithDriver();
-    // ...
-    cmd = mIn.readInt32()
-    result = executeCommand(cmd);
-    // ...
-}
-
-
-status_t IPCThreadState::executeCommand(int32_t cmd)
-{
-    BBinder* obj;
-    RefBase::weakref_type* refs;
-    status_t result = NO_ERROR;
-    switch ((uint32_t)cmd) {
-    case BR_TRANSACTION_SEC_CTX:
-    case BR_TRANSACTION:
-        {
-            binder_transaction_data_secctx tr_secctx;
-            binder_transaction_data& tr = tr_secctx.transaction_data;
-
-            if (cmd == (int) BR_TRANSACTION_SEC_CTX) {
-                result = mIn.read(&tr_secctx, sizeof(tr_secctx));
-            } else {
-                result = mIn.read(&tr, sizeof(tr));
-                tr_secctx.secctx = 0;
-            }
-
-            if (tr.target.ptr) {
-                // We only have a weak reference on the target object, so we must first try to
-                // safely acquire a strong reference before doing anything else with it.
-                if (reinterpret_cast<RefBase::weakref_type*>(
-                        tr.target.ptr)->attemptIncStrong(this)) {
-                    error = reinterpret_cast<BBinder*>(tr.cookie)->transact(tr.code, buffer,
-                            &reply, tr.flags);
-                    reinterpret_cast<BBinder*>(tr.cookie)->decStrong(this);
-                } else {
-                    error = UNKNOWN_TRANSACTION;
-                }
-
-            } else {
-                // client 想要访问 service_manager 只需要构造一个 BpBinder(handle = 0)
-                // binder driver 遇到 handle == 0 会交由注册的服务管理器处理（也就是 service_manager）
-                // 在 service_manager 进程内，
-                error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
-            }
-
-            //ALOGI("<<<< TRANSACT from pid %d restore pid %d sid %s uid %d\n",
-            //     mCallingPid, origPid, (origSid ? origSid : "<N/A>"), origUid);
-
-            if ((tr.flags & TF_ONE_WAY) == 0) {
-                LOG_ONEWAY("Sending reply to %d!", mCallingPid);
-                if (error < NO_ERROR) reply.setError(error);
-
-                // b/238777741: clear buffer before we send the reply.
-                // Otherwise, there is a race where the client may
-                // receive the reply and send another transaction
-                // here and the space used by this transaction won't
-                // be freed for the client.
-                buffer.setDataSize(0);
-
-                constexpr uint32_t kForwardReplyFlags = TF_CLEAR_BUF;
-                sendReply(reply, (tr.flags & kForwardReplyFlags));
-            } else {
-                if (error != OK) {
-                    std::ostringstream logStream;
-                    logStream << "oneway function results for code " << tr.code << " on binder at "
-                              << reinterpret_cast<void*>(tr.target.ptr)
-                              << " will be dropped but finished with status "
-                              << statusToString(error);
-
-                    // ideally we could log this even when error == OK, but it
-                    // causes too much logspam because some manually-written
-                    // interfaces have clients that call methods which always
-                    // write results, sometimes as oneway methods.
-                    if (reply.dataSize() != 0) {
-                        logStream << " and reply parcel size " << reply.dataSize();
-                    }
-                    std::string message = logStream.str();
-                    ALOGI("%s", message.c_str());
-                }
-                LOG_ONEWAY("NOT sending reply to %d!", mCallingPid);
-            }
-
-            mServingStackPointer = origServingStackPointer;
-            mCallingPid = origPid;
-            mCallingSid = origSid;
-            mCallingUid = origUid;
-            mStrictModePolicy = origStrictModePolicy;
-            mLastTransactionBinderFlags = origTransactionBinderFlags;
-            mWorkSource = origWorkSource;
-            mPropagateWorkSource = origPropagateWorkSet;
-
-            IF_LOG_TRANSACTIONS() {
-                std::ostringstream logStream;
-                logStream << "BC_REPLY thr " << (void*)pthread_self() << " / obj " << tr.target.ptr
-                          << ": \t" << reply << "\n";
-                std::string message = logStream.str();
-                ALOGI("%s", message.c_str());
-            }
-
-        }
-        break;
-    // ...
 }
 ```
