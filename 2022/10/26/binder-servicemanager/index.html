@@ -26,7 +26,7 @@
 <meta property="og:description" content="主例程servicemanager 进程是由 init 进程通过 servicemanager.rc 配置文件启动的，其所在的可执行文件在 system&#x2F;bin&#x2F;servicemanager，对应的源文件是 &#x2F;platform&#x2F;frameworks&#x2F;native&#x2F;cmds&#x2F;servicemanager&#x2F;main.cpp service servicemanager &#x2F;system&#x2F;bin&#x2F;serv">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-10-26T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-11-02T12:00:58.462Z">
+<meta property="article:modified_time" content="2022-11-02T12:15:26.706Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
   
@@ -206,7 +206,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          38k 字
+          35k 字
         
       </span>
     
@@ -218,7 +218,7 @@
         
         
           <!-- compatible with older versions-->
-          316 分钟
+          291 分钟
         
       </span>
     
@@ -506,8 +506,10 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
 </code></pre></div>
 
 <h1 id="开始-binder-消息循环"><a href="#开始-binder-消息循环" class="headerlink" title="开始 binder 消息循环"></a>开始 binder 消息循环</h1><ol>
-<li><code>epoll</code> 监听 driver fd，当 binder 发消息过来时（<code>Looper::EVENT_INPUT</code>）主动调用 <code>IPCThreadState::self()-&gt;handlePolledCommands()</code> 处理 binder 消息</li>
-<li><code>ServiceManager</code> 继承自 <code>BnServiceManager</code> 得到 <code>onTransact</code> 方法，BnServiceManager 是类似于 AIDL 这样的机制自动生成的代码，根据 aidl code 调用对应的业务方法，并从 <code>Parcel</code> 解包请求参数，将响应打包至 <code>Parcel</code></li>
+<li><p><code>epoll</code> 监听 driver fd，当 binder 发消息过来时（<code>Looper::EVENT_INPUT</code>）主动调用 <code>IPCThreadState::self()-&gt;handlePolledCommands()</code> 处理 binder 消息</p>
+</li>
+<li><p><code>ServiceManager</code> 继承自 <code>BnServiceManager</code> 得到 <code>onTransact</code> 方法，BnServiceManager 是类似于 AIDL 这样的机制自动生成的代码，根据 aidl code 调用对应的业务方法，并从 <code>Parcel</code> 解包请求参数，将响应打包至 <code>Parcel</code></p>
+</li>
 </ol>
 <div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp</span>
 <span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span>** argv)</span> </span>&#123;
@@ -702,7 +704,7 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
   <span class="hljs-keyword">break</span>;
   <span class="hljs-comment">// ...</span></code></pre></div>
 
-<h1 id="查询"><a href="#查询" class="headerlink" title="查询"></a>查询</h1><h2 id="暴露自己"><a href="#暴露自己" class="headerlink" title="暴露自己"></a>暴露自己</h2><p>看看其他进程（client）是如何使用 servicemanager 提供的查询服务的，随便找个 biner ipc 比如 <code>ActivityManager.getRunningAppProcesses()</code> 开始深入下去：</p>
+<h1 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h1><h2 id="暴露自己"><a href="#暴露自己" class="headerlink" title="暴露自己"></a>暴露自己</h2><p>看看其他进程（client）是如何使用 servicemanager 提供的查询服务的，随便找个 biner ipc 比如 <code>ActivityManager.getRunningAppProcesses()</code> 开始深入下去：</p>
 <ol>
 <li><p>内部是调用了 <code>IActivityManager.getRunningAppProcesses()</code>，<code>IActivityManager</code> 明显是个 binder ipc，它的 binder client proxy 是从 <code>ServiceManager.getService</code> 获取的</p>
 </li>
@@ -840,7 +842,6 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
 <span class="hljs-comment">// 看看在 binder driver 里是如何处理 handle == 0 的情况得</span>
 
 <span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c</span>
-<span class="hljs-comment">// common/drivers/android/binder.c</span>
 <span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">long</span> <span class="hljs-title">binder_ioctl</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> cmd, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> arg)</span></span>
 <span class="hljs-function"></span>&#123;
 	<span class="hljs-comment">// ...</span>
@@ -975,7 +976,90 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="实现查询"><a href="#实现查询" class="headerlink" title="实现查询"></a>实现查询</h2><ol>
+<h2 id="AMS-的例子"><a href="#AMS-的例子" class="headerlink" title="AMS 的例子"></a>AMS 的例子</h2><p>以 <code>ActivityManagerService</code> 为例看看 server 端是如何使用 servicemanager 提供的注册服务的</p>
+<ol>
+<li><p>AMS 是运行在 system_server 进程内的，所以从 system_server 进程的 entry point 开始</p>
+</li>
+<li><p>在章节 <a href="#%E6%9A%B4%E9%9C%B2%E8%87%AA%E5%B7%B1">暴露自己</a> 介绍 <code>IActivityManager.getRunningAppProcesses()</code> 的实现时，发现是通过 <code>ServiceManager.getService(Context.ACTIVITY_SERVICE)</code> 来查找得到 AMS 的 handle </p>
+</li>
+<li><p>AMS 的注册也用到了 <code>ServiceManager</code>，使用它的 <code>ServiceManager.addService(Context.ACTIVITY_SERVICE...)</code> 将自己注册到 servicemanager 进程</p>
+</li>
+<li><p>看来 <code>ServiceManager</code> 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理</p>
+</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * Entry point to &#123;<span class="hljs-doctag">@code</span> system_server&#125;.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SystemServer</span> &#123;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * The main entry point from zygote.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> &#123;
+        <span class="hljs-keyword">new</span> <span class="hljs-title class_">SystemServer</span>().run();
+    &#125;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-comment">// ...</span>
+        <span class="hljs-comment">// Start services.</span>
+        <span class="hljs-keyword">try</span> &#123;
+            t.traceBegin(<span class="hljs-string">&quot;StartServices&quot;</span>);
+            startBootstrapServices(t);
+            startCoreServices(t);
+            startOtherServices(t);
+            startApexServices(t);
+        &#125; <span class="hljs-keyword">catch</span> (Throwable ex) &#123;
+        <span class="hljs-comment">// ...</span>
+        <span class="hljs-comment">// Loop forever.</span>
+        Looper.loop();
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Main thread loop unexpectedly exited&quot;</span>);
+    &#125;    
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * Starts the small tangle of critical services that are needed to get the system off the</span>
+<span class="hljs-comment">     * ground.  These services have complex mutual dependencies which is why we initialize them all</span>
+<span class="hljs-comment">     * in one place here.  Unless your service is also entwined in these dependencies, it should be</span>
+<span class="hljs-comment">     * initialized in one of the other functions.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startBootstrapServices</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> TimingsTraceAndSlog t)</span> &#123;
+        <span class="hljs-comment">// ...</span>
+        <span class="hljs-comment">// Set up the Application instance for the system process and get started.</span>
+        t.traceBegin(<span class="hljs-string">&quot;SetSystemProcess&quot;</span>);
+        mActivityManagerService.setSystemProcess();
+        t.traceEnd();
+        <span class="hljs-comment">// ...</span>
+    &#125;    
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ActivityManagerService</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">IActivityManager</span>.Stub &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setSystemProcess</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            ServiceManager.addService(Context.ACTIVITY_SERVICE, <span class="hljs-built_in">this</span>, <span class="hljs-comment">/* allowIsolated= */</span> <span class="hljs-literal">true</span>,
+                    DUMP_FLAG_PRIORITY_CRITICAL | DUMP_FLAG_PRIORITY_NORMAL | DUMP_FLAG_PROTO);
+            ServiceManager.addService(ProcessStats.SERVICE_NAME, mProcessStats);
+            ServiceManager.addService(<span class="hljs-string">&quot;meminfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">MemBinder</span>(<span class="hljs-built_in">this</span>), <span class="hljs-comment">/* allowIsolated= */</span> <span class="hljs-literal">false</span>,
+                    DUMP_FLAG_PRIORITY_HIGH);
+            ServiceManager.addService(<span class="hljs-string">&quot;gfxinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">GraphicsBinder</span>(<span class="hljs-built_in">this</span>));
+            ServiceManager.addService(<span class="hljs-string">&quot;dbinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">DbBinder</span>(<span class="hljs-built_in">this</span>));
+            mAppProfiler.setCpuInfoService();
+            ServiceManager.addService(<span class="hljs-string">&quot;permission&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">PermissionController</span>(<span class="hljs-built_in">this</span>));
+            ServiceManager.addService(<span class="hljs-string">&quot;processinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">ProcessInfoService</span>(<span class="hljs-built_in">this</span>));
+            ServiceManager.addService(<span class="hljs-string">&quot;cacheinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">CacheBinder</span>(<span class="hljs-built_in">this</span>));
+            <span class="hljs-comment">// ...</span>
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ServiceManager</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">addService</span><span class="hljs-params">(String name, IBinder service, <span class="hljs-type">boolean</span> allowIsolated,</span>
+<span class="hljs-params">            <span class="hljs-type">int</span> dumpPriority)</span> &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            getIServiceManager().addService(name, service, allowIsolated, dumpPriority);
+        &#125; <span class="hljs-keyword">catch</span> (RemoteException e) &#123;
+            Log.e(TAG, <span class="hljs-string">&quot;error in addService&quot;</span>, e);
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="查询"><a href="#查询" class="headerlink" title="查询"></a>查询</h1><h2 id="实现查询"><a href="#实现查询" class="headerlink" title="实现查询"></a>实现查询</h2><ol>
 <li><p>通过 <code>epoll(binder_driver_fd)</code> 响应 binder driver 发来的消息</p>
 </li>
 <li><p>client 进程查询 service handle 时，通过将 request handle 置为 0 来标识 target/server 是 servicemanager 进程（详见上一章节<a href="#%E6%9A%B4%E9%9C%B2%E8%87%AA%E5%B7%B1">暴露自己</a>）</p>
@@ -1200,170 +1284,6 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
 
     <span class="hljs-keyword">return</span> out;
 &#125;</code></pre></div>
-
-<h1 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h1><p>将 service name -&gt; IBinder 添加到 Map 里（<code>mNameToService</code>）</p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/ServiceManager.cpp</span>
-<span class="hljs-function">Status <span class="hljs-title">ServiceManager::addService</span><span class="hljs-params">(<span class="hljs-type">const</span> std::string&amp; name, <span class="hljs-type">const</span> sp&lt;IBinder&gt;&amp; binder, <span class="hljs-type">bool</span> allowIsolated, <span class="hljs-type">int32_t</span> dumpPriority)</span> </span>&#123;
-    <span class="hljs-keyword">auto</span> ctx = mAccess-&gt;<span class="hljs-built_in">getCallingContext</span>();
-
-    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">multiuser_get_app_id</span>(ctx.uid) &gt;= AID_APP) &#123;
-        <span class="hljs-keyword">return</span> Status::<span class="hljs-built_in">fromExceptionCode</span>(Status::EX_SECURITY, <span class="hljs-string">&quot;App UIDs cannot add services&quot;</span>);
-    &#125;
-
-    <span class="hljs-keyword">if</span> (!mAccess-&gt;<span class="hljs-built_in">canAdd</span>(ctx, name)) &#123;
-        <span class="hljs-keyword">return</span> Status::<span class="hljs-built_in">fromExceptionCode</span>(Status::EX_SECURITY, <span class="hljs-string">&quot;SELinux denial&quot;</span>);
-    &#125;
-
-    <span class="hljs-keyword">if</span> (binder == <span class="hljs-literal">nullptr</span>) &#123;
-        <span class="hljs-keyword">return</span> Status::<span class="hljs-built_in">fromExceptionCode</span>(Status::EX_ILLEGAL_ARGUMENT, <span class="hljs-string">&quot;Null binder&quot;</span>);
-    &#125;
-
-    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isValidServiceName</span>(name)) &#123;
-        <span class="hljs-built_in">ALOGE</span>(<span class="hljs-string">&quot;Invalid service name: %s&quot;</span>, name.<span class="hljs-built_in">c_str</span>());
-        <span class="hljs-keyword">return</span> Status::<span class="hljs-built_in">fromExceptionCode</span>(Status::EX_ILLEGAL_ARGUMENT, <span class="hljs-string">&quot;Invalid service name&quot;</span>);
-    &#125;
-
-<span class="hljs-meta">#<span class="hljs-keyword">ifndef</span> VENDORSERVICEMANAGER</span>
-    <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">meetsDeclarationRequirements</span>(binder, name)) &#123;
-        <span class="hljs-comment">// already logged</span>
-        <span class="hljs-keyword">return</span> Status::<span class="hljs-built_in">fromExceptionCode</span>(Status::EX_ILLEGAL_ARGUMENT, <span class="hljs-string">&quot;VINTF declaration error&quot;</span>);
-    &#125;
-<span class="hljs-meta">#<span class="hljs-keyword">endif</span>  <span class="hljs-comment">// !VENDORSERVICEMANAGER</span></span>
-
-    <span class="hljs-comment">// implicitly unlinked when the binder is removed</span>
-    <span class="hljs-keyword">if</span> (binder-&gt;<span class="hljs-built_in">remoteBinder</span>() != <span class="hljs-literal">nullptr</span> &amp;&amp;
-        binder-&gt;<span class="hljs-built_in">linkToDeath</span>(sp&lt;ServiceManager&gt;::<span class="hljs-built_in">fromExisting</span>(<span class="hljs-keyword">this</span>)) != OK) &#123;
-        <span class="hljs-built_in">ALOGE</span>(<span class="hljs-string">&quot;Could not linkToDeath when adding %s&quot;</span>, name.<span class="hljs-built_in">c_str</span>());
-        <span class="hljs-keyword">return</span> Status::<span class="hljs-built_in">fromExceptionCode</span>(Status::EX_ILLEGAL_STATE, <span class="hljs-string">&quot;linkToDeath failure&quot;</span>);
-    &#125;
-
-    <span class="hljs-keyword">auto</span> it = mNameToService.<span class="hljs-built_in">find</span>(name);
-    <span class="hljs-keyword">if</span> (it != mNameToService.<span class="hljs-built_in">end</span>()) &#123;
-        <span class="hljs-type">const</span> Service&amp; existing = it-&gt;second;
-
-        <span class="hljs-comment">// We could do better than this because if the other service dies, it</span>
-        <span class="hljs-comment">// may not have an entry here. However, this case is unlikely. We are</span>
-        <span class="hljs-comment">// only trying to detect when two different services are accidentally installed.</span>
-
-        <span class="hljs-keyword">if</span> (existing.ctx.uid != ctx.uid) &#123;
-            <span class="hljs-built_in">ALOGW</span>(<span class="hljs-string">&quot;Service &#x27;%s&#x27; originally registered from UID %u but it is now being registered &quot;</span>
-                  <span class="hljs-string">&quot;from UID %u. Multiple instances installed?&quot;</span>,
-                  name.<span class="hljs-built_in">c_str</span>(), existing.ctx.uid, ctx.uid);
-        &#125;
-
-        <span class="hljs-keyword">if</span> (existing.ctx.sid != ctx.sid) &#123;
-            <span class="hljs-built_in">ALOGW</span>(<span class="hljs-string">&quot;Service &#x27;%s&#x27; originally registered from SID %s but it is now being registered &quot;</span>
-                  <span class="hljs-string">&quot;from SID %s. Multiple instances installed?&quot;</span>,
-                  name.<span class="hljs-built_in">c_str</span>(), existing.ctx.sid.<span class="hljs-built_in">c_str</span>(), ctx.sid.<span class="hljs-built_in">c_str</span>());
-        &#125;
-
-        <span class="hljs-built_in">ALOGI</span>(<span class="hljs-string">&quot;Service &#x27;%s&#x27; originally registered from PID %d but it is being registered again &quot;</span>
-              <span class="hljs-string">&quot;from PID %d. Bad state? Late death notification? Multiple instances installed?&quot;</span>,
-              name.<span class="hljs-built_in">c_str</span>(), existing.ctx.debugPid, ctx.debugPid);
-    &#125;
-
-    <span class="hljs-comment">// Overwrite the old service if it exists</span>
-    mNameToService[name] = Service&#123;
-            .binder = binder,
-            .allowIsolated = allowIsolated,
-            .dumpPriority = dumpPriority,
-            .ctx = ctx,
-    &#125;;
-
-    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">auto</span> it = mNameToRegistrationCallback.<span class="hljs-built_in">find</span>(name); it != mNameToRegistrationCallback.<span class="hljs-built_in">end</span>()) &#123;
-        <span class="hljs-keyword">for</span> (<span class="hljs-type">const</span> sp&lt;IServiceCallback&gt;&amp; cb : it-&gt;second) &#123;
-            mNameToService[name].guaranteeClient = <span class="hljs-literal">true</span>;
-            <span class="hljs-comment">// permission checked in registerForNotifications</span>
-            cb-&gt;<span class="hljs-built_in">onRegistration</span>(name, binder);
-        &#125;
-    &#125;
-
-    <span class="hljs-keyword">return</span> Status::<span class="hljs-built_in">ok</span>();
-&#125;</code></pre></div>
-
-<h2 id="AMS-的例子"><a href="#AMS-的例子" class="headerlink" title="AMS 的例子"></a>AMS 的例子</h2><p>以 <code>ActivityManagerService</code> 为例看看 server 端是如何使用 servicemanager 提供的注册服务的</p>
-<ol>
-<li><p>AMS 是运行在 system_server 进程内的，所以从 system_server 进程的 entry point 开始</p>
-</li>
-<li><p>在章节 <a href="#%E6%9A%B4%E9%9C%B2%E8%87%AA%E5%B7%B1">暴露自己</a> 介绍 <code>IActivityManager.getRunningAppProcesses()</code> 的实现时，发现是通过 <code>ServiceManager.getService(Context.ACTIVITY_SERVICE)</code> 来查找得到 AMS 的 handle </p>
-</li>
-<li><p>AMS 的注册也用到了 <code>ServiceManager</code>，使用它的 <code>ServiceManager.addService(Context.ACTIVITY_SERVICE...)</code> 将自己注册到 servicemanager 进程</p>
-</li>
-<li><p>看来 <code>ServiceManager</code> 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理</p>
-</li>
-</ol>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
-<span class="hljs-comment"> * Entry point to &#123;<span class="hljs-doctag">@code</span> system_server&#125;.</span>
-<span class="hljs-comment"> */</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SystemServer</span> &#123;
-    <span class="hljs-comment">/**</span>
-<span class="hljs-comment">     * The main entry point from zygote.</span>
-<span class="hljs-comment">     */</span>
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> &#123;
-        <span class="hljs-keyword">new</span> <span class="hljs-title class_">SystemServer</span>().run();
-    &#125;
-
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
-        <span class="hljs-comment">// ...</span>
-        <span class="hljs-comment">// Start services.</span>
-        <span class="hljs-keyword">try</span> &#123;
-            t.traceBegin(<span class="hljs-string">&quot;StartServices&quot;</span>);
-            startBootstrapServices(t);
-            startCoreServices(t);
-            startOtherServices(t);
-            startApexServices(t);
-        &#125; <span class="hljs-keyword">catch</span> (Throwable ex) &#123;
-        <span class="hljs-comment">// ...</span>
-        <span class="hljs-comment">// Loop forever.</span>
-        Looper.loop();
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Main thread loop unexpectedly exited&quot;</span>);
-    &#125;    
-
-    <span class="hljs-comment">/**</span>
-<span class="hljs-comment">     * Starts the small tangle of critical services that are needed to get the system off the</span>
-<span class="hljs-comment">     * ground.  These services have complex mutual dependencies which is why we initialize them all</span>
-<span class="hljs-comment">     * in one place here.  Unless your service is also entwined in these dependencies, it should be</span>
-<span class="hljs-comment">     * initialized in one of the other functions.</span>
-<span class="hljs-comment">     */</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startBootstrapServices</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> TimingsTraceAndSlog t)</span> &#123;
-        <span class="hljs-comment">// ...</span>
-        <span class="hljs-comment">// Set up the Application instance for the system process and get started.</span>
-        t.traceBegin(<span class="hljs-string">&quot;SetSystemProcess&quot;</span>);
-        mActivityManagerService.setSystemProcess();
-        t.traceEnd();
-        <span class="hljs-comment">// ...</span>
-    &#125;    
-&#125;
-
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ActivityManagerService</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">IActivityManager</span>.Stub &#123;
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setSystemProcess</span><span class="hljs-params">()</span> &#123;
-        <span class="hljs-keyword">try</span> &#123;
-            ServiceManager.addService(Context.ACTIVITY_SERVICE, <span class="hljs-built_in">this</span>, <span class="hljs-comment">/* allowIsolated= */</span> <span class="hljs-literal">true</span>,
-                    DUMP_FLAG_PRIORITY_CRITICAL | DUMP_FLAG_PRIORITY_NORMAL | DUMP_FLAG_PROTO);
-            ServiceManager.addService(ProcessStats.SERVICE_NAME, mProcessStats);
-            ServiceManager.addService(<span class="hljs-string">&quot;meminfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">MemBinder</span>(<span class="hljs-built_in">this</span>), <span class="hljs-comment">/* allowIsolated= */</span> <span class="hljs-literal">false</span>,
-                    DUMP_FLAG_PRIORITY_HIGH);
-            ServiceManager.addService(<span class="hljs-string">&quot;gfxinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">GraphicsBinder</span>(<span class="hljs-built_in">this</span>));
-            ServiceManager.addService(<span class="hljs-string">&quot;dbinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">DbBinder</span>(<span class="hljs-built_in">this</span>));
-            mAppProfiler.setCpuInfoService();
-            ServiceManager.addService(<span class="hljs-string">&quot;permission&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">PermissionController</span>(<span class="hljs-built_in">this</span>));
-            ServiceManager.addService(<span class="hljs-string">&quot;processinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">ProcessInfoService</span>(<span class="hljs-built_in">this</span>));
-            ServiceManager.addService(<span class="hljs-string">&quot;cacheinfo&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">CacheBinder</span>(<span class="hljs-built_in">this</span>));
-            <span class="hljs-comment">// ...</span>
-    &#125;
-&#125;
-
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ServiceManager</span> &#123;
-    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">addService</span><span class="hljs-params">(String name, IBinder service, <span class="hljs-type">boolean</span> allowIsolated,</span>
-<span class="hljs-params">            <span class="hljs-type">int</span> dumpPriority)</span> &#123;
-        <span class="hljs-keyword">try</span> &#123;
-            getIServiceManager().addService(name, service, allowIsolated, dumpPriority);
-        &#125; <span class="hljs-keyword">catch</span> (RemoteException e) &#123;
-            Log.e(TAG, <span class="hljs-string">&quot;error in addService&quot;</span>, e);
-        &#125;
-    &#125;
-&#125;</code></pre></div>
-
                 
               </div>
             
