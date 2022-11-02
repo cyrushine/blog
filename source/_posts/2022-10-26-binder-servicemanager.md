@@ -262,8 +262,8 @@ static int binder_ioctl_set_ctx_mgr(struct file *filp,
 # 开始 binder 消息循环
 
 1. `epoll` 监听 driver fd，当 binder 发消息过来时（`Looper::EVENT_INPUT`）主动调用 `IPCThreadState::self()->handlePolledCommands()` 处理 binder 消息
-2. `ServiceManager` 继承自 `BnServiceManager` 得到 `onTransact` 方法，BnServiceManager 是类似于 AIDL 这样的机制自动生成的代码，根据 aidl code 调用对应的业务方法，并从 `Parcel` 解包请求参数，将响应打包至 `Parcel`
 
+2. `ServiceManager` 继承自 `BnServiceManager` 得到 `onTransact` 方法，BnServiceManager 是类似于 AIDL 这样的机制自动生成的代码，根据 aidl code 调用对应的业务方法，并从 `Parcel` 解包请求参数，将响应打包至 `Parcel`
 
 ```cpp
 // https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-mainline-12.0.0_r114/cmds/servicemanager/main.cpp
@@ -460,7 +460,7 @@ public:
   // ...
 ```
 
-# 查询
+# 注册
 
 ## 暴露自己
 
@@ -606,7 +606,6 @@ sp<IBinder> ProcessState::getStrongProxyForHandle(int32_t handle)  // handle == 
 // 看看在 binder driver 里是如何处理 handle == 0 的情况得
 
 // https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c
-// common/drivers/android/binder.c
 static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	// ...
@@ -741,6 +740,94 @@ static void binder_transaction(struct binder_proc *proc,
     }
 }
 ```
+
+## AMS 的例子
+
+以 `ActivityManagerService` 为例看看 server 端是如何使用 servicemanager 提供的注册服务的
+
+1. AMS 是运行在 system_server 进程内的，所以从 system_server 进程的 entry point 开始
+
+2. 在章节 [暴露自己](#暴露自己) 介绍 `IActivityManager.getRunningAppProcesses()` 的实现时，发现是通过 `ServiceManager.getService(Context.ACTIVITY_SERVICE)` 来查找得到 AMS 的 handle 
+
+3. AMS 的注册也用到了 `ServiceManager`，使用它的 `ServiceManager.addService(Context.ACTIVITY_SERVICE...)` 将自己注册到 servicemanager 进程
+
+4. 看来 `ServiceManager` 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理
+
+```java
+/**
+ * Entry point to {@code system_server}.
+ */
+public final class SystemServer {
+    /**
+     * The main entry point from zygote.
+     */
+    public static void main(String[] args) {
+        new SystemServer().run();
+    }
+
+    private void run() {
+        // ...
+        // Start services.
+        try {
+            t.traceBegin("StartServices");
+            startBootstrapServices(t);
+            startCoreServices(t);
+            startOtherServices(t);
+            startApexServices(t);
+        } catch (Throwable ex) {
+        // ...
+        // Loop forever.
+        Looper.loop();
+        throw new RuntimeException("Main thread loop unexpectedly exited");
+    }    
+
+    /**
+     * Starts the small tangle of critical services that are needed to get the system off the
+     * ground.  These services have complex mutual dependencies which is why we initialize them all
+     * in one place here.  Unless your service is also entwined in these dependencies, it should be
+     * initialized in one of the other functions.
+     */
+    private void startBootstrapServices(@NonNull TimingsTraceAndSlog t) {
+        // ...
+        // Set up the Application instance for the system process and get started.
+        t.traceBegin("SetSystemProcess");
+        mActivityManagerService.setSystemProcess();
+        t.traceEnd();
+        // ...
+    }    
+}
+
+public class ActivityManagerService extends IActivityManager.Stub {
+    public void setSystemProcess() {
+        try {
+            ServiceManager.addService(Context.ACTIVITY_SERVICE, this, /* allowIsolated= */ true,
+                    DUMP_FLAG_PRIORITY_CRITICAL | DUMP_FLAG_PRIORITY_NORMAL | DUMP_FLAG_PROTO);
+            ServiceManager.addService(ProcessStats.SERVICE_NAME, mProcessStats);
+            ServiceManager.addService("meminfo", new MemBinder(this), /* allowIsolated= */ false,
+                    DUMP_FLAG_PRIORITY_HIGH);
+            ServiceManager.addService("gfxinfo", new GraphicsBinder(this));
+            ServiceManager.addService("dbinfo", new DbBinder(this));
+            mAppProfiler.setCpuInfoService();
+            ServiceManager.addService("permission", new PermissionController(this));
+            ServiceManager.addService("processinfo", new ProcessInfoService(this));
+            ServiceManager.addService("cacheinfo", new CacheBinder(this));
+            // ...
+    }
+}
+
+public final class ServiceManager {
+    public static void addService(String name, IBinder service, boolean allowIsolated,
+            int dumpPriority) {
+        try {
+            getIServiceManager().addService(name, service, allowIsolated, dumpPriority);
+        } catch (RemoteException e) {
+            Log.e(TAG, "error in addService", e);
+        }
+    }
+}
+```
+
+# 查询
 
 ## 实现查询
 
@@ -967,176 +1054,5 @@ sp<IBinder> ServiceManager::tryGetService(const std::string& name, bool startIfN
     }
 
     return out;
-}
-```
-
-# 注册
-
-将 service name -> IBinder 添加到 Map 里（`mNameToService`）
-
-```cpp
-// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/ServiceManager.cpp
-Status ServiceManager::addService(const std::string& name, const sp<IBinder>& binder, bool allowIsolated, int32_t dumpPriority) {
-    auto ctx = mAccess->getCallingContext();
-
-    if (multiuser_get_app_id(ctx.uid) >= AID_APP) {
-        return Status::fromExceptionCode(Status::EX_SECURITY, "App UIDs cannot add services");
-    }
-
-    if (!mAccess->canAdd(ctx, name)) {
-        return Status::fromExceptionCode(Status::EX_SECURITY, "SELinux denial");
-    }
-
-    if (binder == nullptr) {
-        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT, "Null binder");
-    }
-
-    if (!isValidServiceName(name)) {
-        ALOGE("Invalid service name: %s", name.c_str());
-        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT, "Invalid service name");
-    }
-
-#ifndef VENDORSERVICEMANAGER
-    if (!meetsDeclarationRequirements(binder, name)) {
-        // already logged
-        return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT, "VINTF declaration error");
-    }
-#endif  // !VENDORSERVICEMANAGER
-
-    // implicitly unlinked when the binder is removed
-    if (binder->remoteBinder() != nullptr &&
-        binder->linkToDeath(sp<ServiceManager>::fromExisting(this)) != OK) {
-        ALOGE("Could not linkToDeath when adding %s", name.c_str());
-        return Status::fromExceptionCode(Status::EX_ILLEGAL_STATE, "linkToDeath failure");
-    }
-
-    auto it = mNameToService.find(name);
-    if (it != mNameToService.end()) {
-        const Service& existing = it->second;
-
-        // We could do better than this because if the other service dies, it
-        // may not have an entry here. However, this case is unlikely. We are
-        // only trying to detect when two different services are accidentally installed.
-
-        if (existing.ctx.uid != ctx.uid) {
-            ALOGW("Service '%s' originally registered from UID %u but it is now being registered "
-                  "from UID %u. Multiple instances installed?",
-                  name.c_str(), existing.ctx.uid, ctx.uid);
-        }
-
-        if (existing.ctx.sid != ctx.sid) {
-            ALOGW("Service '%s' originally registered from SID %s but it is now being registered "
-                  "from SID %s. Multiple instances installed?",
-                  name.c_str(), existing.ctx.sid.c_str(), ctx.sid.c_str());
-        }
-
-        ALOGI("Service '%s' originally registered from PID %d but it is being registered again "
-              "from PID %d. Bad state? Late death notification? Multiple instances installed?",
-              name.c_str(), existing.ctx.debugPid, ctx.debugPid);
-    }
-
-    // Overwrite the old service if it exists
-    mNameToService[name] = Service{
-            .binder = binder,
-            .allowIsolated = allowIsolated,
-            .dumpPriority = dumpPriority,
-            .ctx = ctx,
-    };
-
-    if (auto it = mNameToRegistrationCallback.find(name); it != mNameToRegistrationCallback.end()) {
-        for (const sp<IServiceCallback>& cb : it->second) {
-            mNameToService[name].guaranteeClient = true;
-            // permission checked in registerForNotifications
-            cb->onRegistration(name, binder);
-        }
-    }
-
-    return Status::ok();
-}
-```
-
-## AMS 的例子
-
-以 `ActivityManagerService` 为例看看 server 端是如何使用 servicemanager 提供的注册服务的
-
-1. AMS 是运行在 system_server 进程内的，所以从 system_server 进程的 entry point 开始
-
-2. 在章节 [暴露自己](#暴露自己) 介绍 `IActivityManager.getRunningAppProcesses()` 的实现时，发现是通过 `ServiceManager.getService(Context.ACTIVITY_SERVICE)` 来查找得到 AMS 的 handle 
-
-3. AMS 的注册也用到了 `ServiceManager`，使用它的 `ServiceManager.addService(Context.ACTIVITY_SERVICE...)` 将自己注册到 servicemanager 进程
-
-4. 看来 `ServiceManager` 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理
-
-```java
-/**
- * Entry point to {@code system_server}.
- */
-public final class SystemServer {
-    /**
-     * The main entry point from zygote.
-     */
-    public static void main(String[] args) {
-        new SystemServer().run();
-    }
-
-    private void run() {
-        // ...
-        // Start services.
-        try {
-            t.traceBegin("StartServices");
-            startBootstrapServices(t);
-            startCoreServices(t);
-            startOtherServices(t);
-            startApexServices(t);
-        } catch (Throwable ex) {
-        // ...
-        // Loop forever.
-        Looper.loop();
-        throw new RuntimeException("Main thread loop unexpectedly exited");
-    }    
-
-    /**
-     * Starts the small tangle of critical services that are needed to get the system off the
-     * ground.  These services have complex mutual dependencies which is why we initialize them all
-     * in one place here.  Unless your service is also entwined in these dependencies, it should be
-     * initialized in one of the other functions.
-     */
-    private void startBootstrapServices(@NonNull TimingsTraceAndSlog t) {
-        // ...
-        // Set up the Application instance for the system process and get started.
-        t.traceBegin("SetSystemProcess");
-        mActivityManagerService.setSystemProcess();
-        t.traceEnd();
-        // ...
-    }    
-}
-
-public class ActivityManagerService extends IActivityManager.Stub {
-    public void setSystemProcess() {
-        try {
-            ServiceManager.addService(Context.ACTIVITY_SERVICE, this, /* allowIsolated= */ true,
-                    DUMP_FLAG_PRIORITY_CRITICAL | DUMP_FLAG_PRIORITY_NORMAL | DUMP_FLAG_PROTO);
-            ServiceManager.addService(ProcessStats.SERVICE_NAME, mProcessStats);
-            ServiceManager.addService("meminfo", new MemBinder(this), /* allowIsolated= */ false,
-                    DUMP_FLAG_PRIORITY_HIGH);
-            ServiceManager.addService("gfxinfo", new GraphicsBinder(this));
-            ServiceManager.addService("dbinfo", new DbBinder(this));
-            mAppProfiler.setCpuInfoService();
-            ServiceManager.addService("permission", new PermissionController(this));
-            ServiceManager.addService("processinfo", new ProcessInfoService(this));
-            ServiceManager.addService("cacheinfo", new CacheBinder(this));
-            // ...
-    }
-}
-
-public final class ServiceManager {
-    public static void addService(String name, IBinder service, boolean allowIsolated,
-            int dumpPriority) {
-        try {
-            getIServiceManager().addService(name, service, allowIsolated, dumpPriority);
-        } catch (RemoteException e) {
-            Log.e(TAG, "error in addService", e);
-        }
-    }
 }
 ```

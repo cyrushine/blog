@@ -972,7 +972,9 @@ static void binder_wakeup_thread_ilocked(struct binder_proc *proc,
 }
 ```
 
-# server register
+# 服务端
+
+
 
 ```cpp
 // system_server 进程是由 zygote 进程 fork 出来的（其实所有的 app 进程都是由 zygote 进程 fork 出来的）
