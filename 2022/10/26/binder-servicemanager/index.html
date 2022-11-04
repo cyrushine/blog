@@ -26,7 +26,7 @@
 <meta property="og:description" content="主例程servicemanager 进程是由 init 进程通过 servicemanager.rc 配置文件启动的，其所在的可执行文件在 system&#x2F;bin&#x2F;servicemanager，对应的源文件是 &#x2F;platform&#x2F;frameworks&#x2F;native&#x2F;cmds&#x2F;servicemanager&#x2F;main.cpp service servicemanager &#x2F;system&#x2F;bin&#x2F;serv">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-10-26T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-11-03T03:46:24.451Z">
+<meta property="article:modified_time" content="2022-11-04T02:57:18.748Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
   
@@ -218,7 +218,7 @@
         
         
           <!-- compatible with older versions-->
-          291 分钟
+          289 分钟
         
       </span>
     
@@ -976,9 +976,9 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
     &#125;
 &#125;</code></pre></div>
 
-<h2 id="AMS-的例子"><a href="#AMS-的例子" class="headerlink" title="AMS 的例子"></a>AMS 的例子</h2><p>以 <code>ActivityManagerService</code> 为例看看 server 端是如何使用 servicemanager 提供的注册服务的</p>
+<h2 id="以-AMS-为例"><a href="#以-AMS-为例" class="headerlink" title="以 AMS 为例"></a>以 AMS 为例</h2><p>以 <code>ActivityManagerService</code> 为例看看 server 端是如何使用 service_manager 提供的注册服务的</p>
 <ol>
-<li><p>AMS 是运行在 system_server 进程内的，所以从 system_server 进程的 entry point 开始</p>
+<li><p>AMS 是运行在 system_server 进程内的一个 java 对象，system_server 进程里还注册了许多其他服务如：WINDOW_SERVICE、INPUT_SERVICE，它们也是一个个的 java 对象，由 system_server 的 binder loop 分发消息给它们处理</p>
 </li>
 <li><p>在章节 <a href="#%E6%9A%B4%E9%9C%B2%E8%87%AA%E5%B7%B1">暴露自己</a> 介绍 <code>IActivityManager.getRunningAppProcesses()</code> 的实现时，发现是通过 <code>ServiceManager.getService(Context.ACTIVITY_SERVICE)</code> 来查找得到 AMS 的 handle </p>
 </li>
@@ -987,13 +987,7 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
 <li><p>看来 <code>ServiceManager</code> 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理</p>
 </li>
 </ol>
-<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
-<span class="hljs-comment"> * Entry point to &#123;<span class="hljs-doctag">@code</span> system_server&#125;.</span>
-<span class="hljs-comment"> */</span>
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SystemServer</span> &#123;
-    <span class="hljs-comment">/**</span>
-<span class="hljs-comment">     * The main entry point from zygote.</span>
-<span class="hljs-comment">     */</span>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SystemServer</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> &#123;
         <span class="hljs-keyword">new</span> <span class="hljs-title class_">SystemServer</span>().run();
     &#125;
@@ -1012,14 +1006,8 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
         <span class="hljs-comment">// Loop forever.</span>
         Looper.loop();
         <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Main thread loop unexpectedly exited&quot;</span>);
-    &#125;    
+    &#125;
 
-    <span class="hljs-comment">/**</span>
-<span class="hljs-comment">     * Starts the small tangle of critical services that are needed to get the system off the</span>
-<span class="hljs-comment">     * ground.  These services have complex mutual dependencies which is why we initialize them all</span>
-<span class="hljs-comment">     * in one place here.  Unless your service is also entwined in these dependencies, it should be</span>
-<span class="hljs-comment">     * initialized in one of the other functions.</span>
-<span class="hljs-comment">     */</span>
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startBootstrapServices</span><span class="hljs-params">(<span class="hljs-meta">@NonNull</span> TimingsTraceAndSlog t)</span> &#123;
         <span class="hljs-comment">// ...</span>
         <span class="hljs-comment">// Set up the Application instance for the system process and get started.</span>
@@ -1048,6 +1036,7 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
     &#125;
 &#125;
 
+<span class="hljs-comment">// getIServiceManager() 得到 BinderPro</span>
 <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ServiceManager</span> &#123;
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">addService</span><span class="hljs-params">(String name, IBinder service, <span class="hljs-type">boolean</span> allowIsolated,</span>
 <span class="hljs-params">            <span class="hljs-type">int</span> dumpPriority)</span> &#123;
