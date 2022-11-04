@@ -747,13 +747,14 @@ static void binder_transaction(struct binder_proc *proc,
 
 1. AMS 是运行在 system_server 进程内的一个 java 对象，system_server 进程里还注册了许多其他服务如：WINDOW_SERVICE、INPUT_SERVICE，它们也是一个个的 java 对象，由 system_server 的 binder loop 分发消息给它们处理
 
-2. 在章节 [暴露自己](#暴露自己) 介绍 `IActivityManager.getRunningAppProcesses()` 的实现时，发现是通过 `ServiceManager.getService(Context.ACTIVITY_SERVICE)` 来查找得到 AMS 的 handle 
+2. AMS 使用 `ServiceManager.addService(Context.ACTIVITY_SERVICE...)` 将自己注册到 service_manager 进程，service_manager 不需要查询它是固定的 `BpBinder(handle == 0)`
 
-3. AMS 的注册也用到了 `ServiceManager`，使用它的 `ServiceManager.addService(Context.ACTIVITY_SERVICE...)` 将自己注册到 servicemanager 进程
+3. AMS 对象的内存地址（cookie）在 binder driver 被转换为一个 int 类型的 handle 注册进 service_manager，app 进程查询得到的也是 handle 而不是 cookie
 
-4. 看来 `ServiceManager` 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理
+4. 当 app 进程通过 handle 进行 rpc 调用时，request 在 binder 又被从 handle 转换为 cookie，从而 server 端能够直接用 cookie 定位到服务对象
 
 ```java
+// // https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/java/com/android/server/SystemServer.java
 public final class SystemServer {
     public static void main(String[] args) {
         new SystemServer().run();
@@ -785,6 +786,7 @@ public final class SystemServer {
     }    
 }
 
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java
 public class ActivityManagerService extends IActivityManager.Stub {
     public void setSystemProcess() {
         try {
@@ -803,7 +805,9 @@ public class ActivityManagerService extends IActivityManager.Stub {
     }
 }
 
-// getIServiceManager() 得到 BinderPro
+// getIServiceManager() 得到了 IServiceManager 的实现，但却是层层代理：
+// ServiceManagerProxy -> IServiceManager.Stub.Proxy -> BinderProxy -> 持有真正的实现，native 层的 BpBinder(handle == 0)
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/os/ServiceManager.java
 public final class ServiceManager {
     public static void addService(String name, IBinder service, boolean allowIsolated,
             int dumpPriority) {
@@ -814,11 +818,276 @@ public final class ServiceManager {
         }
     }
 }
+
+// 此时 service 是 ActivityManagerService，它是 Binder
+// 看下它是怎么序列化的，而 service_manager 又是如何应用它的
+private static class Proxy implements android.os.IServiceManager {
+    @Override public void addService(java.lang.String name, android.os.IBinder service, boolean allowIsolated, int dumpPriority) throws android.os.RemoteException
+    {
+      android.os.Parcel _data = android.os.Parcel.obtain();
+      android.os.Parcel _reply = android.os.Parcel.obtain();
+      try {
+        _data.writeInterfaceToken(DESCRIPTOR);
+        _data.writeString(name);
+        _data.writeStrongBinder(service);
+        _data.writeBoolean(allowIsolated);
+        _data.writeInt(dumpPriority);
+        boolean _status = mRemote.transact(Stub.TRANSACTION_addService, _data, _reply, 0);
+        _reply.readException();
+      }
+      finally {
+        _reply.recycle();
+        _data.recycle();
+      }
+    }
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/os/Parcel.java
+public final void writeStrongBinder(IBinder val) {
+    nativeWriteStrongBinder(mNativePtr, val);
+}
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/android_os_Parcel.cpp
+static void android_os_Parcel_writeStrongBinder(JNIEnv* env, jclass clazz, jlong nativePtr, jobject object)
+{
+    Parcel* parcel = reinterpret_cast<Parcel*>(nativePtr);
+    if (parcel != NULL) {
+        const status_t err = parcel->writeStrongBinder(ibinderForJavaObject(env, object) /* JavaBBinder */);
+        if (err != NO_ERROR) {
+            signalExceptionForError(env, clazz, err);
+        }
+    }
+}
+
+// AMS 是 Binder，Binder.mObject 指向 native 层的 JavaBBinderHolder
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/android_util_Binder.cpp
+sp<IBinder> ibinderForJavaObject(JNIEnv* env, jobject obj)
+{
+    // Instance of Binder?
+    if (env->IsInstanceOf(obj, gBinderOffsets.mClass)) {
+        JavaBBinderHolder* jbh = (JavaBBinderHolder*)
+            env->GetLongField(obj, gBinderOffsets.mObject);
+        return jbh->get(env, obj);  // JavaBBinder
+    }
+    // ...
+}
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/Parcel.cpp
+status_t Parcel::writeStrongBinder(const sp<IBinder>& val)
+{
+    return flattenBinder(val);
+}
+status_t Parcel::flattenBinder(const sp<IBinder>& binder) {
+    BBinder* local = nullptr;
+    if (binder) local = binder->localBinder();  // JavaBBinder 返回 this
+    // ...
+    // 如果 binder 是一个远程的代理，则序列化为 int 类型的 handle 即可
+    flat_binder_object obj;..
+    if (!local) {
+        const int32_t handle = proxy ? proxy->getPrivateAccessor().binderHandle() : 0;
+        obj.hdr.type = BINDER_TYPE_HANDLE;
+        obj.binder = 0; /* Don't pass uninitialized stack data to a remote process */
+        obj.flags = 0;
+        obj.handle = handle;
+        obj.cookie = 0;
+    } else {
+
+        // 如果 binder 是本地实例，则序列化为其内存地址
+        obj.hdr.type = BINDER_TYPE_BINDER;
+        obj.binder = reinterpret_cast<uintptr_t>(local->getWeakRefs());
+        obj.cookie = reinterpret_cast<uintptr_t>(local);
+        // ...
+        status_t status = writeObject(obj, false);
+}
+
+// 由 system_server 进程陷入内核来到 binder driver
+BpBinder::transact
+--IPCThreadState::self()->transact(binderHandle() /* 0 */, code, data, reply, flags)
+----IPCThreadState::writeTransactionData(BC_TRANSACTION, flags, handle, code, data, nullptr)
+----IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
+------IPCThreadState::talkWithDriver(bool doReceive)
+--------ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr)
+
+// binder driver 遇到 handle == 0 的情况会转发给服务管理器，而它正是 service_manager 进程
+binder_ioctl
+--binder_ioctl_write_read
+----binder_thread_write(BC_TRANSACTION/BC_REPLY)
+------binder_transaction
+static void binder_transaction(struct binder_proc *proc,
+			       struct binder_thread *thread,
+			       struct binder_transaction_data *tr, int reply,
+			       binder_size_t extra_buffers_size)
+{
+    // ...
+	if (tr->target.handle) {
+		// ...
+	} else {
+		mutex_lock(&context->context_mgr_node_lock);
+		target_node = context->binder_context_mgr_node;
+		if (target_node)
+			target_node = binder_get_node_refs_for_txn(
+					target_node, &target_proc,
+					&return_error);
+		else
+			return_error = BR_DEAD_REPLY;
+		mutex_unlock(&context->context_mgr_node_lock);    
+    // ...
+
+    // 然而 service_manager 进程获得 system_server 进程内的 AMS 对象地址并没有啥用处，跨进程内存是被隔离的
+    // app 进程通过 service_manager 拿到 system_server 进程内的 AMS 对象地址同样也没啥用处，万一 AMS 对象的地址变了呢
+    // 所以 binder driver 在这里有个很重要的转换过程
+    // AMS 注册时给 binder 的是 BINDER_TYPE_BINDER + cookie（ServiceManager 内存地址），被 binder 转换为 BINDER_TYPE_HANDLE + handle 交给 service_manager
+    // 那么 app 从 service_manager 查询得到的也是 handle
+    // app 通过这个 handle 进行 ipc rpc 调用时，又被 binder 转换为 cookie 发给 server 进程，使其通过内存地址定位到服务对象
+
+	switch (hdr->type) {
+	case BINDER_TYPE_BINDER:
+	case BINDER_TYPE_WEAK_BINDER: {
+		struct flat_binder_object *fp;
+		fp = to_flat_binder_object(hdr);
+		ret = binder_translate_binder(fp, t, thread);
+	} break;    
+
+    case BINDER_TYPE_HANDLE:
+	case BINDER_TYPE_WEAK_HANDLE: {
+		struct flat_binder_object *fp;
+		fp = to_flat_binder_object(hdr);
+		ret = binder_translate_handle(fp, t, thread);
+	} break;
+}
+
+static int binder_translate_binder(struct flat_binder_object *fp,
+				   struct binder_transaction *t,
+				   struct binder_thread *thread)
+{
+	struct binder_node *node;
+	struct binder_proc *proc = thread->proc;
+	struct binder_proc *target_proc = t->to_proc;
+	struct binder_ref_data rdata;
+	int ret = 0;
+
+	node = binder_get_node(proc, fp->binder);
+	ret = binder_inc_ref_for_node(target_proc, node,
+			fp->hdr.type == BINDER_TYPE_BINDER,
+			&thread->todo, &rdata);
+
+	if (fp->hdr.type == BINDER_TYPE_BINDER)
+		fp->hdr.type = BINDER_TYPE_HANDLE;
+	else
+		fp->hdr.type = BINDER_TYPE_WEAK_HANDLE;
+	fp->binder = 0;
+	fp->handle = rdata.desc;
+	fp->cookie = 0;
+
+	trace_binder_transaction_node_to_ref(t, node, &rdata);
+	binder_debug(BINDER_DEBUG_TRANSACTION,
+		     "        node %d u%016llx -> ref %d desc %d\n",
+		     node->debug_id, (u64)node->ptr,
+		     rdata.debug_id, rdata.desc);
+done:
+	binder_put_node(node);
+	return ret;
+}
+
+// 在 service_manager 进程里来到上章节的 binder 消息循环，遇到 handle == 0 交给进程内的上下文管理器处理：ProcessState::becomeContextManager
+// 它就是 ServiceManager
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    // ...
+    case BR_TRANSACTION_SEC_CTX:
+    case BR_TRANSACTION:
+        if (tr.target.ptr) {
+            // ...
+        } else {
+            error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
+        }
+        // ...
+}
+
+// 从 Parcel 里解包出各个类型的参数，重点看 in_service
+// https://cs.android.com/android/platform/superproject/+/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_x86_64_silvermont_shared_fuzzer/gen/aidl/android/os/IServiceManager.cpp
+::android::status_t BnServiceManager::onTransact(uint32_t _aidl_code, const ::android::Parcel& _aidl_data, ::android::Parcel* _aidl_reply, uint32_t _aidl_flags) {
+  ::android::status_t _aidl_ret_status = ::android::OK;
+  switch (_aidl_code) {
+  case BnServiceManager::TRANSACTION_addService:
+  {
+    ::std::string in_name;
+    ::android::sp<::android::IBinder> in_service;
+    bool in_allowIsolated;
+    int32_t in_dumpPriority;
+    if (!(_aidl_data.checkInterface(this))) {
+      _aidl_ret_status = ::android::BAD_TYPE;
+      break;
+    }
+    ::android::binder::ScopedTrace _aidl_trace(ATRACE_TAG_AIDL, "AIDL::cpp::IServiceManager::addService::cppServer");
+    _aidl_ret_status = _aidl_data.readUtf8FromUtf16(&in_name);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    _aidl_ret_status = _aidl_data.readStrongBinder(&in_service);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    _aidl_ret_status = _aidl_data.readBool(&in_allowIsolated);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    _aidl_ret_status = _aidl_data.readInt32(&in_dumpPriority);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    if (auto st = _aidl_data.enforceNoDataAvail(); !st.isOk()) {
+      _aidl_ret_status = st.writeToParcel(_aidl_reply);
+      break;
+    }
+    ::android::binder::Status _aidl_status(addService(in_name, in_service, in_allowIsolated, in_dumpPriority));
+    _aidl_ret_status = _aidl_status.writeToParcel(_aidl_reply);
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    if (!_aidl_status.isOk()) {
+      break;
+    }
+  }
+  break;
+  // ...
+
+// 注意此时 service_manager 拿到的已经不是 cookie（服务对象的内存地址），而是经过 binder 转换的 handle 
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/Parcel.cpp
+status_t Parcel::readStrongBinder(sp<IBinder>* val) const
+{
+    status_t status = readNullableStrongBinder(val);
+    if (status == OK && !val->get()) {
+        ALOGW("Expecting binder but got null!");
+        status = UNEXPECTED_NULL;
+    }
+    return status;
+}
+status_t Parcel::readNullableStrongBinder(sp<IBinder>* val) const
+{
+    return unflattenBinder(val);
+}
+status_t Parcel::unflattenBinder(sp<IBinder>* out) const
+{
+    // ...
+    const flat_binder_object* flat = readObject(false);
+    if (flat) {
+        switch (flat->hdr.type) {
+            case BINDER_TYPE_BINDER: {
+                sp<IBinder> binder =
+                        sp<IBinder>::fromExisting(reinterpret_cast<IBinder*>(flat->cookie));
+                return finishUnflattenBinder(binder, out);
+            }
+            case BINDER_TYPE_HANDLE: {
+                sp<IBinder> binder =
+                    ProcessState::self()->getStrongProxyForHandle(flat->handle);
+                return finishUnflattenBinder(binder, out);
+            }
+        }
+    }
+}
+
 ```
 
 # 查询
-
-
 
 ## 实现查询
 
