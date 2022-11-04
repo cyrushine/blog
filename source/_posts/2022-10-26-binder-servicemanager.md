@@ -741,11 +741,11 @@ static void binder_transaction(struct binder_proc *proc,
 }
 ```
 
-## AMS 的例子
+## 以 AMS 为例
 
-以 `ActivityManagerService` 为例看看 server 端是如何使用 servicemanager 提供的注册服务的
+以 `ActivityManagerService` 为例看看 server 端是如何使用 service_manager 提供的注册服务的
 
-1. AMS 是运行在 system_server 进程内的，所以从 system_server 进程的 entry point 开始
+1. AMS 是运行在 system_server 进程内的一个 java 对象，system_server 进程里还注册了许多其他服务如：WINDOW_SERVICE、INPUT_SERVICE，它们也是一个个的 java 对象，由 system_server 的 binder loop 分发消息给它们处理
 
 2. 在章节 [暴露自己](#暴露自己) 介绍 `IActivityManager.getRunningAppProcesses()` 的实现时，发现是通过 `ServiceManager.getService(Context.ACTIVITY_SERVICE)` 来查找得到 AMS 的 handle 
 
@@ -754,13 +754,7 @@ static void binder_transaction(struct binder_proc *proc,
 4. 看来 `ServiceManager` 就是 client 进程与 servicemanager 进程进行 binder ipc 通讯的 java 层代理
 
 ```java
-/**
- * Entry point to {@code system_server}.
- */
 public final class SystemServer {
-    /**
-     * The main entry point from zygote.
-     */
     public static void main(String[] args) {
         new SystemServer().run();
     }
@@ -779,14 +773,8 @@ public final class SystemServer {
         // Loop forever.
         Looper.loop();
         throw new RuntimeException("Main thread loop unexpectedly exited");
-    }    
+    }
 
-    /**
-     * Starts the small tangle of critical services that are needed to get the system off the
-     * ground.  These services have complex mutual dependencies which is why we initialize them all
-     * in one place here.  Unless your service is also entwined in these dependencies, it should be
-     * initialized in one of the other functions.
-     */
     private void startBootstrapServices(@NonNull TimingsTraceAndSlog t) {
         // ...
         // Set up the Application instance for the system process and get started.
@@ -815,6 +803,7 @@ public class ActivityManagerService extends IActivityManager.Stub {
     }
 }
 
+// getIServiceManager() 得到 BinderPro
 public final class ServiceManager {
     public static void addService(String name, IBinder service, boolean allowIsolated,
             int dumpPriority) {
