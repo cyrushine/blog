@@ -26,7 +26,7 @@
 <meta property="og:description" content="设计模式 观察者（Observer），LiveData 单例（Singleton），double check 适配器（Adapter），RecyclerView.Adapter 装饰器（Decorator），ContextWrapper 代理模式（Proxy），例如 VPN、Retrofit 责任链（Chain of Responsibility），OkHttp 大体上就是个责任链模式 建造者（B">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-01-19T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-11-04T02:57:18.740Z">
+<meta property="article:modified_time" content="2022-11-18T01:47:23.587Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="面试">
 <meta property="article:tag" content="备忘录">
@@ -222,7 +222,7 @@
         
         
           <!-- compatible with older versions-->
-          99 分钟
+          100 分钟
         
       </span>
     
@@ -275,8 +275,8 @@
 <li>建造者（Builder）</li>
 <li>工厂（Factory）</li>
 </ul>
-<p>代理模式强调不能直接访问一个对象，只能通过代理间接访问，不能直接访问的原因比如：权限校验、操作日志、RPC</p>
-<p>装饰器模式强调增强对象的功能：把一个对象的功能拆分为几部分，在运行时按需组装</p>
+<p>代理模式强调不能直接访问一个对象，只能通过代理间接访问，不能直接访问的原因比如：权限校验、操作日志、RPC，比如 AIDL 生成的 <code>IAidlInterface.Stub.Proxy</code> 类就是代理了 remote IBinder </p>
+<p>装饰器模式强调增强对象的功能：把一个对象的功能拆分为几部分，在运行时按需组装，比如：<code>BufferedOutputStream</code>、<code>JarOutputStream</code>、<code>ZipOutputStream</code></p>
 <h1 id="实现-LRU"><a href="#实现-LRU" class="headerlink" title="实现 LRU"></a>实现 LRU</h1><p><code>map</code> + 双端链表，链尾是最近使用过的，链头是最久未使用的</p>
 <ul>
 <li><code>get(key)</code>，通过 <code>map</code> 可以在 O(1) 时间内找到 <code>value</code>，然后把 <code>value</code> 从双端链表中断开并移到链尾，双端链表的特性使得「断开」操作很容易实现</li>
