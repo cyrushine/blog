@@ -75,7 +75,7 @@ server 通过它进行服务注册 `addService(String name, IBinder service)`，
 
 4，`ProcessState::startThreadPool()`
 
-则会开一个新线程执行消息处理循环（ProcessState 是进程内单例所以只会开一个消息循环线程），参见 [Zygote & system server](#zygote--system-server)
+则会开一个新线程执行消息处理循环（ProcessState 是进程内单例所以只会开一个消息循环线程），参见 [Zygote & system server](#Zygote--system-server)
 
 # ProcessState
 
