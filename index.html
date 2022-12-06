@@ -206,6 +206,39 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2022/12/06/binder-objects/" target="_self">
+          Binder IPC 过程中常用的对象和类
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/12/06/binder-objects/" target="_self">
+        <div>
+          Summaryclient 端BpBinder client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle == 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 AMS的例子 // BpBindere 会直接用 serv
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-12-06 04:00" pubdate>
+              2022-12-06
+            </time>
+          </div>
+        
+        
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2022/10/26/binder-servicemanager/" target="_self">
           深入 Binder 之 servicemanager 进程
         </a>
@@ -556,54 +589,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-02-16 08:00" pubdate>
-              2022-02-16
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/ANR/">#ANR</a>
-            
-              <a href="/tags/bytedance/">#bytedance</a>
-            
-              <a href="/tags/toutiao/">#toutiao</a>
-            
-              <a href="/tags/%E5%AD%97%E8%8A%82/">#字节</a>
-            
-              <a href="/tags/%E5%A4%B4%E6%9D%A1/">#头条</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/02/16/toutiao-anr-barrier/" target="_self">
-          【转】今日头条 ANR 优化实践系列（4）- Barrier 导致主线程假死
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-barrier/" target="_self">
-        <div>
-          简述：前文，我们通过线上案例对影响 ANR 问题的六大场景进行剖析，这几类场景基本覆盖了线上大部分问题，详见 ANR 案例分析集锦。同时我们选取了较多 NativePollOnce 场景的案例，便于大家更好理解，ANR 时看到的 NativePollOnce 场景的问题，并不是导致 ANR 的根本问题。 下面要介绍的这类问题，Trace 现场依然是 NativePollOnce 信息，但与前几类问
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-02-16 07:00" pubdate>
               2022-02-16
             </time>
           </div>

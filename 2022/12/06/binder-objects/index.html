@@ -1,0 +1,1038 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Summaryclient 端BpBinder client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle &#x3D;&#x3D; 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 AMS的例子 &#x2F;&#x2F; BpBindere 会直接用 serv">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Binder IPC 过程中常用的对象和类">
+<meta property="og:url" content="https://www.dalvik.work/2022/12/06/binder-objects/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="Summaryclient 端BpBinder client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle &#x3D;&#x3D; 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 AMS的例子 &#x2F;&#x2F; BpBindere 会直接用 serv">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-12-06T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-12-06T11:09:11.082Z">
+<meta property="article:author" content="Cyrus">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Binder IPC 过程中常用的对象和类 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.3","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">Binder IPC 过程中常用的对象和类</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-12-06 04:00" pubdate>
+          2022年12月6日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          133 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Binder IPC 过程中常用的对象和类</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h1><h2 id="client-端"><a href="#client-端" class="headerlink" title="client 端"></a>client 端</h2><p><code>BpBinder</code></p>
+<p>client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle == 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 <a href="../../../../2022/10/26/binder-servicemanager/#%E4%BB%A5-AMS-%E4%B8%BA%E4%BE%8B">AMS的例子</a></p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// BpBindere 会直接用 server handle 调用 IPCThreadState::transact() 与 binder driver 进行通讯</span>
+BpBinder::transact
+--IPCThreadState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">transact</span>(<span class="hljs-built_in">binderHandle</span>() <span class="hljs-comment">/* 0 */</span>, code, data, reply, flags)
+----IPCThreadState::<span class="hljs-built_in">writeTransactionData</span>(BC_TRANSACTION, flags, handle, code, data, <span class="hljs-literal">nullptr</span>)
+----IPCThreadState::<span class="hljs-built_in">waitForResponse</span>(Parcel *reply, <span class="hljs-type">status_t</span> *acquireResult)
+------IPCThreadState::<span class="hljs-built_in">talkWithDriver</span>(<span class="hljs-type">bool</span> doReceive)
+--------<span class="hljs-built_in">ioctl</span>(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, &amp;bwr)</code></pre></div>
+
+<p><code>BinderProxy</code></p>
+<p>client java proxy，客户端 java 层的 binder ipc 代理（IBinder），是 BpBinder 在 java 层的体现，参看 <a href="../../../../2022/10/26/binder-servicemanager/#%E6%9A%B4%E9%9C%B2%E8%87%AA%E5%B7%B1">AMS的例子</a></p>
+<p><code>IActivityManager.Stub.asInterface(IBinder)</code></p>
+<p>client 通过此方法获得一个实现了 IActivityManager 的代理，IBinder 可以是 Stub 子类（本地），也可以是 BinderProxy（IPC）</p>
+<p><code>IServiceManager.Stub.Proxy</code></p>
+<p>它实现了契约接口 IServiceManager，需要一个 BinderProxy 作为底层实现，它将参数打包为 Parcel 交由 BinderProxy 处理，并从 BinderProxy 返回的 Parcel 里读取返回值，参看 <a href="../../../../2022/10/26/binder-servicemanager/#%E4%BB%A5-AMS-%E4%B8%BA%E4%BE%8B">AMS的例子</a></p>
+<h2 id="server-端"><a href="#server-端" class="headerlink" title="server 端"></a>server 端</h2><p><code>IActivityManager.Stub extends android.os.Binder</code></p>
+<p>server java impl，server 端对契约接口的实现继承自 Stub 类（IBinder），实现约定好的业务方法（java 层）</p>
+<p><code>BBinder &amp; JavaBBinder</code></p>
+<p>server native ref，server 端的业务实现 Stub 类在 native 层的体现（IBinder），<code>Binder.mObject</code> 指向 native 层的 <code>JavaBBinderHolder</code>，从 holder 可以获取 JavaBBinder（BBinder 的子类），binder ipc 序列化 <code>IBInder</code> 时，如果是 <code>BpBinder</code> 则写入 handle 即可，如果是 <code>BBinder</code> 则写入此对象的地址，那么 server 端在收到 RPC 请求时就可以通过对象地址找到 BBinder -&gt; JavaBBinder -&gt; Stub 类 -&gt; 调用指定的方法，参看 <a href="../../../../2022/10/26/binder-servicemanager/#%E4%BB%A5-AMS-%E4%B8%BA%E4%BE%8B">AMS的例子</a></p>
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p><code>IActivityManager</code></p>
+<p>约定了 client 与 server 之间数据交互（RPC）的契约（contract）的 java interface</p>
+<p><code>ServiceManager</code></p>
+<p>server 通过它进行服务注册 <code>addService(String name, IBinder service)</code>，client 通过他获得通讯句柄 <code>getService(String name)</code></p>
+<p><code>ProcessState</code></p>
+<p>进程内单例，负责打开 binder driver 文件描述符，并进行 mmap 操作</p>
+<p><code>IPCThreadState</code></p>
+<p>线程私有（ThreadLocal），负责与 binder driver 通讯，实现了 binder ipc 大部分的底层逻辑，它有很多种使用方式：</p>
+<p>1，<code>IPCThreadState::transact(int32_t handle, uint32_t code, const Parcel&amp; data, Parcel* reply, uint32_t flags)</code></p>
+<p>最简单、最常用的方式，需要一个从 <a href="../../../../2022/10/26/binder-servicemanager/">service manager</a> 获取的 server 端句柄，直接向 server 端发送请求并等待响应</p>
+<p>2，<code>IPCThreadState::handlePolledCommands()</code></p>
+<p>当 binder fd 上有事件发生时调用此方法让 IPCThreadState 处理 binder driver 过来的数据，参见 <a href="../../../../2022/10/26/binder-servicemanager/#%E5%BC%80%E5%A7%8B-binder-%E6%B6%88%E6%81%AF%E5%BE%AA%E7%8E%AF">service manager 处理 binder 消息的循环</a></p>
+<p>3，<code>IPCThreadState::joinThreadPool(bool isMain)</code></p>
+<p>使当前线程进入 talkWithDriver() + executeCommand(mIn.readInt32()) 的消息处理循环</p>
+<p>4，<code>ProcessState::startThreadPool()</code></p>
+<p>则会开一个新线程执行消息处理循环（ProcessState 是进程内单例所以只会开一个消息循环线程），参见 <a href="#zygote--system-server">Zygote &amp; system server</a></p>
+<h1 id="ProcessState"><a href="#ProcessState" class="headerlink" title="ProcessState"></a>ProcessState</h1><ul>
+<li>打开 binder driver 文件描述符 <code>open(&quot;/dev/binder&quot;)</code></li>
+<li>进行初始化操作 <code>ioctl</code>：版本校验 <code>BINDER_VERSION</code>、设置默认线程数量 <code>DEFAULT_MAX_BINDER_THREADS</code> 等</li>
+<li>初始化所需内存空间 mmap</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp</span>
+<span class="hljs-function">sp&lt;ProcessState&gt; <span class="hljs-title">ProcessState::self</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">init</span>(kDefaultDriver <span class="hljs-comment">/* /dev/binder */</span>, <span class="hljs-literal">false</span> <span class="hljs-comment">/*requireDefault*/</span>);
+&#125;
+
+<span class="hljs-comment">// ProcessState 是全局单例模式（gProcess）</span>
+<span class="hljs-function">sp&lt;ProcessState&gt; <span class="hljs-title">ProcessState::init</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span> *driver, <span class="hljs-type">bool</span> requireDefault)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">if</span> (driver == <span class="hljs-literal">nullptr</span>) &#123;
+        <span class="hljs-function">std::lock_guard&lt;std::mutex&gt; <span class="hljs-title">l</span><span class="hljs-params">(gProcessMutex)</span></span>;
+        <span class="hljs-keyword">if</span> (gProcess) &#123;
+            <span class="hljs-built_in">verifyNotForked</span>(gProcess-&gt;mForked);
+        &#125;
+        <span class="hljs-keyword">return</span> gProcess;
+    &#125;
+
+    [[clang::no_destroy]] <span class="hljs-type">static</span> std::once_flag gProcessOnce;
+    std::<span class="hljs-built_in">call_once</span>(gProcessOnce, [&amp;]()&#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">access</span>(driver, R_OK) == <span class="hljs-number">-1</span>) &#123;
+            <span class="hljs-built_in">ALOGE</span>(<span class="hljs-string">&quot;Binder driver %s is unavailable. Using /dev/binder instead.&quot;</span>, driver);
+            driver = <span class="hljs-string">&quot;/dev/binder&quot;</span>;
+        &#125;
+
+        <span class="hljs-comment">// we must install these before instantiating the gProcess object,</span>
+        <span class="hljs-comment">// otherwise this would race with creating it, and there could be the</span>
+        <span class="hljs-comment">// possibility of an invalid gProcess object forked by another thread</span>
+        <span class="hljs-comment">// before these are installed</span>
+        <span class="hljs-type">int</span> ret = <span class="hljs-built_in">pthread_atfork</span>(ProcessState::onFork, ProcessState::parentPostFork,
+                                 ProcessState::childPostFork);
+        <span class="hljs-built_in">LOG_ALWAYS_FATAL_IF</span>(ret != <span class="hljs-number">0</span>, <span class="hljs-string">&quot;pthread_atfork error %s&quot;</span>, <span class="hljs-built_in">strerror</span>(ret));
+
+        std::lock_guard&lt;std::mutex&gt; <span class="hljs-built_in">l</span>(gProcessMutex);
+        gProcess = sp&lt;ProcessState&gt;::<span class="hljs-built_in">make</span>(driver);
+    &#125;);
+
+    <span class="hljs-keyword">if</span> (requireDefault) &#123;
+        <span class="hljs-comment">// Detect if we are trying to initialize with a different driver, and</span>
+        <span class="hljs-comment">// consider that an error. ProcessState will only be initialized once above.</span>
+        <span class="hljs-built_in">LOG_ALWAYS_FATAL_IF</span>(gProcess-&gt;<span class="hljs-built_in">getDriverName</span>() != driver,
+                            <span class="hljs-string">&quot;ProcessState was already initialized with %s,&quot;</span>
+                            <span class="hljs-string">&quot; can&#x27;t initialize with %s.&quot;</span>,
+                            gProcess-&gt;<span class="hljs-built_in">getDriverName</span>().<span class="hljs-built_in">c_str</span>(), driver);
+    &#125;
+
+    <span class="hljs-built_in">verifyNotForked</span>(gProcess-&gt;mForked);
+    <span class="hljs-keyword">return</span> gProcess;
+&#125;
+
+<span class="hljs-comment">// 构造 ProcessState 的时候就会打开 binder：open(&quot;/dev/binder&quot;) &amp;&amp; mmap</span>
+<span class="hljs-comment">// http://www.aospxref.com/android-13.0.0_r3/xref/frameworks/native/libs/binder/ProcessState.cpp#ProcessState</span>
+ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* driver)
+      : <span class="hljs-built_in">mDriverName</span>(<span class="hljs-built_in">String8</span>(driver)),
+        <span class="hljs-built_in">mDriverFD</span>(<span class="hljs-number">-1</span>),
+        <span class="hljs-built_in">mVMStart</span>(MAP_FAILED),
+        <span class="hljs-built_in">mThreadCountLock</span>(PTHREAD_MUTEX_INITIALIZER),
+        <span class="hljs-built_in">mThreadCountDecrement</span>(PTHREAD_COND_INITIALIZER),
+        <span class="hljs-built_in">mExecutingThreadsCount</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mWaitingForThreads</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mMaxThreads</span>(DEFAULT_MAX_BINDER_THREADS),
+        <span class="hljs-built_in">mStarvationStartTimeMs</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mForked</span>(<span class="hljs-literal">false</span>),
+        <span class="hljs-built_in">mThreadPoolStarted</span>(<span class="hljs-literal">false</span>),
+        <span class="hljs-built_in">mThreadPoolSeq</span>(<span class="hljs-number">1</span>),
+        <span class="hljs-built_in">mCallRestriction</span>(CallRestriction::NONE) &#123;
+    base::Result&lt;<span class="hljs-type">int</span>&gt; opened = <span class="hljs-built_in">open_driver</span>(driver);
+
+    <span class="hljs-keyword">if</span> (opened.<span class="hljs-built_in">ok</span>()) &#123;
+        <span class="hljs-comment">// mmap the binder, providing a chunk of virtual address space to receive transactions.</span>
+        mVMStart = <span class="hljs-built_in">mmap</span>(<span class="hljs-literal">nullptr</span>, BINDER_VM_SIZE, PROT_READ, MAP_PRIVATE | MAP_NORESERVE,
+                        opened.<span class="hljs-built_in">value</span>(), <span class="hljs-number">0</span>);
+        <span class="hljs-keyword">if</span> (mVMStart == MAP_FAILED) &#123;
+            <span class="hljs-built_in">close</span>(opened.<span class="hljs-built_in">value</span>());
+            <span class="hljs-comment">// *sigh*</span>
+            opened = base::<span class="hljs-built_in">Error</span>()
+                    &lt;&lt; <span class="hljs-string">&quot;Using &quot;</span> &lt;&lt; driver &lt;&lt; <span class="hljs-string">&quot; failed: unable to mmap transaction memory.&quot;</span>;
+            mDriverName.<span class="hljs-built_in">clear</span>();
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">if</span> (opened.<span class="hljs-built_in">ok</span>()) &#123;
+        mDriverFD = opened.<span class="hljs-built_in">value</span>();
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> base::Result&lt;<span class="hljs-type">int</span>&gt; <span class="hljs-title">open_driver</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* driver)</span> </span>&#123;
+    <span class="hljs-type">int</span> fd = <span class="hljs-built_in">open</span>(driver, O_RDWR | O_CLOEXEC);
+    <span class="hljs-keyword">if</span> (fd &lt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">return</span> base::<span class="hljs-built_in">ErrnoError</span>() &lt;&lt; <span class="hljs-string">&quot;Opening &#x27;&quot;</span> &lt;&lt; driver &lt;&lt; <span class="hljs-string">&quot;&#x27; failed&quot;</span>;
+    &#125;
+    <span class="hljs-type">int</span> vers = <span class="hljs-number">0</span>;
+    <span class="hljs-type">status_t</span> result = <span class="hljs-built_in">ioctl</span>(fd, BINDER_VERSION, &amp;vers);
+    <span class="hljs-keyword">if</span> (result == <span class="hljs-number">-1</span>) &#123;
+        <span class="hljs-built_in">close</span>(fd);
+        <span class="hljs-keyword">return</span> base::<span class="hljs-built_in">ErrnoError</span>() &lt;&lt; <span class="hljs-string">&quot;Binder ioctl to obtain version failed&quot;</span>;
+    &#125;
+    <span class="hljs-keyword">if</span> (result != <span class="hljs-number">0</span> || vers != BINDER_CURRENT_PROTOCOL_VERSION) &#123;
+        <span class="hljs-built_in">close</span>(fd);
+        <span class="hljs-keyword">return</span> base::<span class="hljs-built_in">Error</span>() &lt;&lt; <span class="hljs-string">&quot;Binder driver protocol(&quot;</span> &lt;&lt; vers
+                             &lt;&lt; <span class="hljs-string">&quot;) does not match user space protocol(&quot;</span>
+                             &lt;&lt; BINDER_CURRENT_PROTOCOL_VERSION
+                             &lt;&lt; <span class="hljs-string">&quot;)! ioctl() return value: &quot;</span> &lt;&lt; result;
+    &#125;
+    <span class="hljs-type">size_t</span> maxThreads = DEFAULT_MAX_BINDER_THREADS;
+    result = <span class="hljs-built_in">ioctl</span>(fd, BINDER_SET_MAX_THREADS, &amp;maxThreads);
+    <span class="hljs-keyword">if</span> (result == <span class="hljs-number">-1</span>) &#123;
+        <span class="hljs-built_in">ALOGE</span>(<span class="hljs-string">&quot;Binder ioctl to set max threads failed: %s&quot;</span>, <span class="hljs-built_in">strerror</span>(errno));
+    &#125;
+    <span class="hljs-type">uint32_t</span> enable = DEFAULT_ENABLE_ONEWAY_SPAM_DETECTION;
+    result = <span class="hljs-built_in">ioctl</span>(fd, BINDER_ENABLE_ONEWAY_SPAM_DETECTION, &amp;enable);
+    <span class="hljs-keyword">if</span> (result == <span class="hljs-number">-1</span>) &#123;
+        <span class="hljs-built_in">ALOGE_IF</span>(ProcessState::<span class="hljs-built_in">isDriverFeatureEnabled</span>(
+                     ProcessState::DriverFeature::ONEWAY_SPAM_DETECTION),
+                 <span class="hljs-string">&quot;Binder ioctl to enable oneway spam detection failed: %s&quot;</span>, <span class="hljs-built_in">strerror</span>(errno));
+    &#125;
+    <span class="hljs-keyword">return</span> fd;
+&#125;</code></pre></div>
+
+<h1 id="IPCThreadState"><a href="#IPCThreadState" class="headerlink" title="IPCThreadState"></a>IPCThreadState</h1><p><code>IPCThreadState</code> 是线程私有的，它依靠全局单例 <code>ProcessState</code> 打开 binder driver 得到 binder fd</p>
+<blockquote>
+<p>pthread_getspecific, pthread_setspecific — thread-specific data management</p>
+<p>The pthread_getspecific() function shall return the value currently bound to the specified key on behalf of the calling thread.</p>
+<p>The pthread_setspecific() function shall associate a thread-specific value with a key obtained via a previous call to pthread_key_create().  Different threads may bind different values to the same key. </p>
+</blockquote>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/BpBinder.cpp</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">BpBinder::transact</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">    <span class="hljs-type">uint32_t</span> code, <span class="hljs-type">const</span> Parcel&amp; data, Parcel* reply, <span class="hljs-type">uint32_t</span> flags)</span></span>
+<span class="hljs-function"></span>&#123;
+        <span class="hljs-comment">// ...</span>
+        <span class="hljs-type">status_t</span> status;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">CC_UNLIKELY</span>(<span class="hljs-built_in">isRpcBinder</span>())) &#123;
+            status = <span class="hljs-built_in">rpcSession</span>()-&gt;<span class="hljs-built_in">transact</span>(sp&lt;IBinder&gt;::<span class="hljs-built_in">fromExisting</span>(<span class="hljs-keyword">this</span>), code, data, reply,
+                                            flags);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-keyword">if</span> <span class="hljs-built_in">constexpr</span> (!kEnableKernelIpc) &#123;
+                <span class="hljs-built_in">LOG_ALWAYS_FATAL</span>(<span class="hljs-string">&quot;Binder kernel driver disabled at build time&quot;</span>);
+                <span class="hljs-keyword">return</span> INVALID_OPERATION;
+            &#125;
+            <span class="hljs-comment">// binderHandle() 是 server 句柄，比如 servicemanager 就是 0</span>
+            <span class="hljs-comment">// IPCThreadState::self() 返回线程本地/线程私有的 IPCThreadState 实例</span>
+            status = IPCThreadState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">transact</span>(<span class="hljs-built_in">binderHandle</span>(), code, data, reply, flags);
+        &#125;
+        <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// IPCThreadState 是线程私有的</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp</span>
+<span class="hljs-function">IPCThreadState* <span class="hljs-title">IPCThreadState::self</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">if</span> (gHaveTLS.<span class="hljs-built_in">load</span>(std::memory_order_acquire)) &#123;
+restart:
+        <span class="hljs-type">const</span> <span class="hljs-type">pthread_key_t</span> k = gTLS;
+        IPCThreadState* st = (IPCThreadState*)<span class="hljs-built_in">pthread_getspecific</span>(k);
+        <span class="hljs-keyword">if</span> (st) <span class="hljs-keyword">return</span> st;
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> IPCThreadState;
+    &#125;
+    <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp</span>
+IPCThreadState::<span class="hljs-built_in">IPCThreadState</span>()
+      : <span class="hljs-built_in">mProcess</span>(ProcessState::<span class="hljs-built_in">self</span>()),
+        <span class="hljs-built_in">mServingStackPointer</span>(<span class="hljs-literal">nullptr</span>),
+        <span class="hljs-built_in">mServingStackPointerGuard</span>(<span class="hljs-literal">nullptr</span>),
+        <span class="hljs-built_in">mWorkSource</span>(kUnsetWorkSource),
+        <span class="hljs-built_in">mPropagateWorkSource</span>(<span class="hljs-literal">false</span>),
+        <span class="hljs-built_in">mIsLooper</span>(<span class="hljs-literal">false</span>),
+        <span class="hljs-built_in">mIsFlushing</span>(<span class="hljs-literal">false</span>),
+        <span class="hljs-built_in">mStrictModePolicy</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mLastTransactionBinderFlags</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mCallRestriction</span>(mProcess-&gt;mCallRestriction) &#123;
+    <span class="hljs-built_in">pthread_setspecific</span>(gTLS, <span class="hljs-keyword">this</span>);
+    <span class="hljs-built_in">clearCaller</span>();
+    mIn.<span class="hljs-built_in">setDataCapacity</span>(<span class="hljs-number">256</span>);
+    mOut.<span class="hljs-built_in">setDataCapacity</span>(<span class="hljs-number">256</span>);
+&#125;
+
+
+
+<span class="hljs-comment">// http://www.aospxref.com/android-13.0.0_r3/xref/frameworks/native/libs/binder/IPCThreadState.cpp</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::transact</span><span class="hljs-params">(<span class="hljs-type">int32_t</span> handle,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                  <span class="hljs-type">uint32_t</span> code, <span class="hljs-type">const</span> Parcel&amp; data,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                  Parcel* reply, <span class="hljs-type">uint32_t</span> flags)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// 将 [BC_TRANSACTION][binder_transaction_data] 写入 mOut</span>
+    <span class="hljs-comment">// mOut 是 client 进程内的一块内存区域</span>
+    err = <span class="hljs-built_in">writeTransactionData</span>(BC_TRANSACTION, flags, handle, code, data, <span class="hljs-literal">nullptr</span>);
+    <span class="hljs-comment">// 将 request 发送给 binder driver 并等待 response</span>
+    err = <span class="hljs-built_in">waitForResponse</span>(reply);
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">return</span> err;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::writeTransactionData</span><span class="hljs-params">(<span class="hljs-type">int32_t</span> cmd, <span class="hljs-type">uint32_t</span> binderFlags,</span></span>
+<span class="hljs-params"><span class="hljs-function">    <span class="hljs-type">int32_t</span> handle, <span class="hljs-type">uint32_t</span> code, <span class="hljs-type">const</span> Parcel&amp; data, <span class="hljs-type">status_t</span>* statusBuffer)</span></span>
+<span class="hljs-function"></span>&#123;
+    binder_transaction_data tr;
+
+    tr.target.ptr = <span class="hljs-number">0</span>; <span class="hljs-comment">/* Don&#x27;t pass uninitialized stack data to a remote process */</span>
+    tr.target.handle = handle;
+    tr.code = code;
+    tr.flags = binderFlags;
+    tr.cookie = <span class="hljs-number">0</span>;
+    tr.sender_pid = <span class="hljs-number">0</span>;
+    tr.sender_euid = <span class="hljs-number">0</span>;
+
+    <span class="hljs-type">const</span> <span class="hljs-type">status_t</span> err = data.<span class="hljs-built_in">errorCheck</span>();
+    <span class="hljs-keyword">if</span> (err == NO_ERROR) &#123;
+        tr.data_size = data.<span class="hljs-built_in">ipcDataSize</span>();
+        tr.data.ptr.buffer = data.<span class="hljs-built_in">ipcData</span>();
+        tr.offsets_size = data.<span class="hljs-built_in">ipcObjectsCount</span>()*<span class="hljs-built_in">sizeof</span>(<span class="hljs-type">binder_size_t</span>);
+        tr.data.ptr.offsets = data.<span class="hljs-built_in">ipcObjects</span>();
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (statusBuffer) &#123;
+        tr.flags |= TF_STATUS_CODE;
+        *statusBuffer = err;
+        tr.data_size = <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">status_t</span>);
+        tr.data.ptr.buffer = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">uintptr_t</span>&gt;(statusBuffer);
+        tr.offsets_size = <span class="hljs-number">0</span>;
+        tr.data.ptr.offsets = <span class="hljs-number">0</span>;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-built_in">return</span> (mLastError = err);
+    &#125;
+
+    mOut.<span class="hljs-built_in">writeInt32</span>(cmd);
+    mOut.<span class="hljs-built_in">write</span>(&amp;tr, <span class="hljs-built_in">sizeof</span>(tr));
+
+    <span class="hljs-keyword">return</span> NO_ERROR;
+&#125;
+
+<span class="hljs-comment">// 处理 response</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::waitForResponse</span><span class="hljs-params">(Parcel *reply, <span class="hljs-type">status_t</span> *acquireResult)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-type">uint32_t</span> cmd;
+    <span class="hljs-type">int32_t</span> err;
+
+    <span class="hljs-keyword">while</span> (<span class="hljs-number">1</span>) &#123;
+        <span class="hljs-keyword">if</span> ((err=<span class="hljs-built_in">talkWithDriver</span>()) &lt; NO_ERROR) <span class="hljs-keyword">break</span>;
+        err = mIn.<span class="hljs-built_in">errorCheck</span>();
+        <span class="hljs-keyword">if</span> (err &lt; NO_ERROR) <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">if</span> (mIn.<span class="hljs-built_in">dataAvail</span>() == <span class="hljs-number">0</span>) <span class="hljs-keyword">continue</span>;
+
+        cmd = (<span class="hljs-type">uint32_t</span>)mIn.<span class="hljs-built_in">readInt32</span>();
+        <span class="hljs-keyword">switch</span> (cmd) &#123;
+        <span class="hljs-keyword">case</span> BR_FAILED_REPLY:
+        <span class="hljs-keyword">case</span> BR_FROZEN_REPLY:
+        <span class="hljs-keyword">case</span> BR_ACQUIRE_RESULT:
+        <span class="hljs-keyword">case</span> BR_REPLY:
+        <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// 将 request 发送给 binder driver 并接收 response</span>
+<span class="hljs-comment">// ioctl(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, binder_write_read)</span>
+<span class="hljs-comment">// [write_buffer, write_size] 是 request</span>
+<span class="hljs-comment">// [read_buffer, read_size] 是 response</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::talkWithDriver</span><span class="hljs-params">(<span class="hljs-type">bool</span> doReceive)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">return</span> -EBADF;
+    &#125;
+
+    binder_write_read bwr;
+
+    <span class="hljs-comment">// Is the read buffer empty?</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">bool</span> needRead = mIn.<span class="hljs-built_in">dataPosition</span>() &gt;= mIn.<span class="hljs-built_in">dataSize</span>();
+
+    <span class="hljs-comment">// We don&#x27;t want to write anything if we are still reading</span>
+    <span class="hljs-comment">// from data left in the input buffer and the caller</span>
+    <span class="hljs-comment">// has requested to read the next data.</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> outAvail = (!doReceive || needRead) ? mOut.<span class="hljs-built_in">dataSize</span>() : <span class="hljs-number">0</span>;
+
+    bwr.write_size = outAvail;
+    bwr.write_buffer = (<span class="hljs-type">uintptr_t</span>)mOut.<span class="hljs-built_in">data</span>();
+
+    <span class="hljs-comment">// This is what we&#x27;ll read.</span>
+    <span class="hljs-keyword">if</span> (doReceive &amp;&amp; needRead) &#123;
+        bwr.read_size = mIn.<span class="hljs-built_in">dataCapacity</span>();
+        bwr.read_buffer = (<span class="hljs-type">uintptr_t</span>)mIn.<span class="hljs-built_in">data</span>();
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        bwr.read_size = <span class="hljs-number">0</span>;
+        bwr.read_buffer = <span class="hljs-number">0</span>;
+    &#125;
+
+    <span class="hljs-comment">// Return immediately if there is nothing to do.</span>
+    <span class="hljs-keyword">if</span> ((bwr.write_size == <span class="hljs-number">0</span>) &amp;&amp; (bwr.read_size == <span class="hljs-number">0</span>)) <span class="hljs-keyword">return</span> NO_ERROR;
+
+    bwr.write_consumed = <span class="hljs-number">0</span>;
+    bwr.read_consumed = <span class="hljs-number">0</span>;
+    <span class="hljs-type">status_t</span> err;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ioctl</span>(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, &amp;bwr) &gt;= <span class="hljs-number">0</span>)
+            err = NO_ERROR;
+        <span class="hljs-keyword">else</span>
+            err = -errno;
+        <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+            err = -EBADF;
+        &#125;
+    &#125; <span class="hljs-keyword">while</span> (err == -EINTR);
+    <span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
+
+<h2 id="Zygote-amp-system-server"><a href="#Zygote-amp-system-server" class="headerlink" title="Zygote &amp; system server"></a>Zygote &amp; system server</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// Main entry of app process.</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp</span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span>* <span class="hljs-type">const</span> argv[])</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-type">bool</span> zygote = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">while</span> (i &lt; argc) &#123;
+        <span class="hljs-type">const</span> <span class="hljs-type">char</span>* arg = argv[i++];
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strcmp</span>(arg, <span class="hljs-string">&quot;--zygote&quot;</span>) == <span class="hljs-number">0</span>) &#123;
+            zygote = <span class="hljs-literal">true</span>;
+            niceName = ZYGOTE_NICE_NAME;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">if</span> (zygote) &#123;
+        runtime.<span class="hljs-built_in">start</span>(<span class="hljs-string">&quot;com.android.internal.os.ZygoteInit&quot;</span>, args, zygote);  <span class="hljs-comment">// 启动虚拟机，并调用 ZygoteInit.main(String argv[])</span>
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * 主要做四件事：</span>
+<span class="hljs-comment"> * </span>
+<span class="hljs-comment"> * 1、注册 socket（通过 socket 让 zygote 进程 fork 出其他 app 进程）</span>
+<span class="hljs-comment"> * 2、预加载资源</span>
+<span class="hljs-comment"> * 3、启动 system_server</span>
+<span class="hljs-comment"> * 4、启动消息循环</span>
+<span class="hljs-comment"> * </span>
+<span class="hljs-comment"> * This is the entry point for a Zygote process.  It creates the Zygote server, loads resources,</span>
+<span class="hljs-comment"> * and handles other tasks related to preparing the process for forking into applications</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/com/android/internal/os/ZygoteInit.java</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-built_in">main</span>(String[] argv) &#123;
+    <span class="hljs-comment">// ...</span>
+    boolean startSystemServer = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">1</span>; i &lt; argv.length; i++) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-string">&quot;start-system-server&quot;</span>.<span class="hljs-built_in">equals</span>(argv[i])) &#123;
+            startSystemServer = <span class="hljs-literal">true</span>;
+        &#125;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">if</span> (startSystemServer) &#123;
+        Runnable r = forkSystemServer(abiList, zygoteSocketName, zygoteServer);
+        <span class="hljs-comment">// ...</span>
+&#125;
+<span class="hljs-comment">// fork 出 system_server 进程并进入其逻辑</span>
+<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-type">static</span> Runnable <span class="hljs-title">forkSystemServer</span><span class="hljs-params">(String abiList, String socketName,</span></span>
+<span class="hljs-params"><span class="hljs-function">        ZygoteServer zygoteServer)</span> </span>&#123;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-comment">/* Request to fork the system server process */</span>
+    pid = Zygote.forkSystemServer(
+            parsedArgs.mUid, parsedArgs.mGid,
+            parsedArgs.mGids,
+            parsedArgs.mRuntimeFlags,
+            null,
+            parsedArgs.mPermittedCapabilities,
+            parsedArgs.mEffectiveCapabilities);
+
+    <span class="hljs-comment">/* For child process */</span>
+    <span class="hljs-keyword">if</span> (pid == <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">hasSecondZygote</span>(abiList)) &#123;
+            <span class="hljs-built_in">waitForSecondaryZygote</span>(socketName);
+        &#125;
+        zygoteServer.<span class="hljs-built_in">closeServerSocket</span>();
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">handleSystemServerProcess</span>(parsedArgs);
+    &#125;
+    <span class="hljs-keyword">return</span> null;
+&#125;
+<span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-type">static</span> Runnable <span class="hljs-title">handleSystemServerProcess</span><span class="hljs-params">(ZygoteArguments parsedArgs)</span> </span>&#123;
+        <span class="hljs-comment">// ...</span>
+        <span class="hljs-comment">/*</span>
+<span class="hljs-comment">         * Pass the remaining arguments to SystemServer.</span>
+<span class="hljs-comment">         */</span>
+        <span class="hljs-keyword">return</span> ZygoteInit.<span class="hljs-built_in">zygoteInit</span>(parsedArgs.mTargetSdkVersion,
+                parsedArgs.mDisabledCompatChanges,
+                parsedArgs.mRemainingArgs, cl);
+    &#125;
+    <span class="hljs-comment">/* should never reach here */</span>
+&#125;
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * The main function called when started through the zygote process. This could be unified with</span>
+<span class="hljs-comment"> * main(), if the native code in nativeFinishInit() were rationalized with Zygote startup.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-type">static</span> Runnable <span class="hljs-title">zygoteInit</span><span class="hljs-params">(<span class="hljs-type">int</span> targetSdkVersion, <span class="hljs-type">long</span>[] disabledCompatChanges,</span></span>
+<span class="hljs-params"><span class="hljs-function">        String[] argv, ClassLoader classLoader)</span> </span>&#123;
+    <span class="hljs-comment">// ...</span>
+    ZygoteInit.<span class="hljs-built_in">nativeZygoteInit</span>();
+    <span class="hljs-keyword">return</span> RuntimeInit.<span class="hljs-built_in">applicationInit</span>(targetSdkVersion, disabledCompatChanges, argv,
+            classLoader);
+&#125;
+
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/AndroidRuntime.cpp</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">com_android_internal_os_ZygoteInit_nativeZygoteInit</span><span class="hljs-params">(JNIEnv* env, jobject clazz)</span></span>
+<span class="hljs-function"></span>&#123;
+    gCurRuntime-&gt;<span class="hljs-built_in">onZygoteInit</span>();  <span class="hljs-comment">// AppRuntime-&gt;onZygoteInit()</span>
+&#125;
+
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp</span>
+<span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">void</span> <span class="hljs-title">onZygoteInit</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// 上面介绍过，ProcessState 是单例模式，初始化实例时会：</span>
+    <span class="hljs-comment">// 1，打开 binder driver：open(&quot;/dev/binder&quot;) &amp;&amp; mmap</span>
+    <span class="hljs-comment">// 2，版本查询和校验：BINDER_VERSION</span>
+    <span class="hljs-comment">// 3，设置线程数：BINDER_SET_MAX_THREADS</span>
+    <span class="hljs-comment">// ...</span>
+    sp&lt;ProcessState&gt; proc = ProcessState::<span class="hljs-built_in">self</span>();
+    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;App process: starting thread pool.\n&quot;</span>);
+    proc-&gt;<span class="hljs-built_in">startThreadPool</span>();
+&#125;
+
+<span class="hljs-comment">// 开启一个子线程执行 binder 消息通讯的 loop：IPCThreadState::self()-&gt;joinThreadPool = talkWithDriver + executeCommand</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp</span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ProcessState::startThreadPool</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    AutoMutex _l(mLock);
+    <span class="hljs-keyword">if</span> (!mThreadPoolStarted) &#123;
+        <span class="hljs-keyword">if</span> (mMaxThreads == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-built_in">ALOGW</span>(<span class="hljs-string">&quot;Extra binder thread started, but 0 threads requested. Do not use &quot;</span>
+                  <span class="hljs-string">&quot;*startThreadPool when zero threads are requested.&quot;</span>);
+        &#125;
+        mThreadPoolStarted = <span class="hljs-literal">true</span>;
+        <span class="hljs-built_in">spawnPooledThread</span>(<span class="hljs-literal">true</span>);
+    &#125;
+&#125;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ProcessState::spawnPooledThread</span><span class="hljs-params">(<span class="hljs-type">bool</span> isMain <span class="hljs-comment">/* true */</span>)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">if</span> (mThreadPoolStarted) &#123;
+        String8 name = <span class="hljs-built_in">makeBinderThreadName</span>();
+        <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;Spawning new pooled thread, name=%s\n&quot;</span>, name.<span class="hljs-built_in">string</span>());
+        sp&lt;Thread&gt; t = sp&lt;PoolThread&gt;::<span class="hljs-built_in">make</span>(isMain);
+        t-&gt;<span class="hljs-built_in">run</span>(name.<span class="hljs-built_in">string</span>());
+        <span class="hljs-built_in">pthread_mutex_lock</span>(&amp;mThreadCountLock);
+        mKernelStartedThreads++;
+        <span class="hljs-built_in">pthread_mutex_unlock</span>(&amp;mThreadCountLock);
+    &#125;
+&#125;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">PoolThread</span> : <span class="hljs-keyword">public</span> Thread
+&#123;
+    <span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">bool</span> <span class="hljs-title">threadLoop</span><span class="hljs-params">()</span></span>
+<span class="hljs-function">    </span>&#123;
+        IPCThreadState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">joinThreadPool</span>(mIsMain <span class="hljs-comment">/* true */</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+&#125;;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">IPCThreadState::joinThreadPool</span><span class="hljs-params">(<span class="hljs-type">bool</span> isMain)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// mOut 是给 binder driver 读取的区域，此时是 BC_ENTER_LOOPER</span>
+    mOut.<span class="hljs-built_in">writeInt32</span>(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
+    mIsLooper = <span class="hljs-literal">true</span>;
+    <span class="hljs-type">status_t</span> result;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-comment">// now get the next command to be processed, waiting if necessary</span>
+        result = <span class="hljs-built_in">getAndExecuteCommand</span>();
+        <span class="hljs-comment">// ...</span>
+    &#125; <span class="hljs-keyword">while</span> (result != -ECONNREFUSED &amp;&amp; result != -EBADF);
+    <span class="hljs-comment">// ...</span>
+&#125;
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::getAndExecuteCommand</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// ...</span>
+    result = <span class="hljs-built_in">talkWithDriver</span>();
+    cmd = mIn.<span class="hljs-built_in">readInt32</span>()
+    result = <span class="hljs-built_in">executeCommand</span>(cmd);
+&#125;</code></pre></div>
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/10/26/binder-servicemanager/" title="深入 Binder 之 servicemanager 进程">
+                        <span class="hidden-mobile">深入 Binder 之 servicemanager 进程</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
