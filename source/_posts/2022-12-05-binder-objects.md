@@ -1,22 +1,81 @@
-Binder IPC 过程中常用的对象
+---
+title: Binder IPC 过程中常用的对象和类
+date: 2022-12-06 12:00:00 +0800
+---
 
-IActivityManager
+# Summary 
+
+## client 端
+
+`BpBinder`
+
+client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle == 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 [AMS的例子](../../../../2022/10/26/binder-servicemanager/#以-AMS-为例)
+
+```cpp
+// BpBindere 会直接用 server handle 调用 IPCThreadState::transact() 与 binder driver 进行通讯
+BpBinder::transact
+--IPCThreadState::self()->transact(binderHandle() /* 0 */, code, data, reply, flags)
+----IPCThreadState::writeTransactionData(BC_TRANSACTION, flags, handle, code, data, nullptr)
+----IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
+------IPCThreadState::talkWithDriver(bool doReceive)
+--------ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr)
+```
+
+`BinderProxy`
+
+client java proxy，客户端 java 层的 binder ipc 代理（IBinder），是 BpBinder 在 java 层的体现，参看 [AMS的例子](../../../../2022/10/26/binder-servicemanager/#暴露自己)
+
+`IActivityManager.Stub.asInterface(IBinder)`
+
+client 通过此方法获得一个实现了 IActivityManager 的代理，IBinder 可以是 Stub 子类（本地），也可以是 BinderProxy（IPC）
+
+`IServiceManager.Stub.Proxy`
+
+它实现了契约接口 IServiceManager，需要一个 BinderProxy 作为底层实现，它将参数打包为 Parcel 交由 BinderProxy 处理，并从 BinderProxy 返回的 Parcel 里读取返回值，参看 [AMS的例子](../../../../2022/10/26/binder-servicemanager/#以-AMS-为例)
+
+## server 端
+
+`IActivityManager.Stub extends android.os.Binder`
+
+server java impl，server 端对契约接口的实现继承自 Stub 类（IBinder），实现约定好的业务方法（java 层）
+
+`BBinder & JavaBBinder`
+
+server native ref，server 端的业务实现 Stub 类在 native 层的体现（IBinder），`Binder.mObject` 指向 native 层的 `JavaBBinderHolder`，从 holder 可以获取 JavaBBinder（BBinder 的子类），binder ipc 序列化 `IBInder` 时，如果是 `BpBinder` 则写入 handle 即可，如果是 `BBinder` 则写入此对象的地址，那么 server 端在收到 RPC 请求时就可以通过对象地址找到 BBinder -> JavaBBinder -> Stub 类 -> 调用指定的方法，参看 [AMS的例子](../../../../2022/10/26/binder-servicemanager/#以-AMS-为例)
+
+## 其他
+
+`IActivityManager`
+
 约定了 client 与 server 之间数据交互（RPC）的契约（contract）的 java interface
 
-IActivityManager.Stub
-server 实现类继承自此类，实现约定好的业务方法
+`ServiceManager`
 
-IActivityManager.Stub.asInterface(IBinder)
-client 通过此方法获得一个实现了 IActivityManager 的代理，底层实现是 Binder IPC
+server 通过它进行服务注册 `addService(String name, IBinder service)`，client 通过他获得通讯句柄 `getService(String name)`
 
-ServiceManager
-server 通过它进行服务注册 addService(String name, IBinder service)，client 通过他获得通讯句柄 getService(String name)
+`ProcessState`
 
-ProcessState
 进程内单例，负责打开 binder driver 文件描述符，并进行 mmap 操作
 
-IPCThreadState
-线程本地数据，
+`IPCThreadState`
+
+线程私有（ThreadLocal），负责与 binder driver 通讯，实现了 binder ipc 大部分的底层逻辑，它有很多种使用方式：
+
+1，`IPCThreadState::transact(int32_t handle, uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)`
+
+最简单、最常用的方式，需要一个从 [service manager](../../../../2022/10/26/binder-servicemanager/) 获取的 server 端句柄，直接向 server 端发送请求并等待响应
+
+2，`IPCThreadState::handlePolledCommands()`
+
+当 binder fd 上有事件发生时调用此方法让 IPCThreadState 处理 binder driver 过来的数据，参见 [service manager 处理 binder 消息的循环](../../../../2022/10/26/binder-servicemanager/#开始-binder-消息循环)
+
+3，`IPCThreadState::joinThreadPool(bool isMain)`
+
+使当前线程进入 talkWithDriver() + executeCommand(mIn.readInt32()) 的消息处理循环
+
+4，`ProcessState::startThreadPool()`
+
+则会开一个新线程执行消息处理循环（ProcessState 是进程内单例所以只会开一个消息循环线程），参见 [Zygote & system server](#zygote--system-server)
 
 # ProcessState
 
@@ -332,6 +391,167 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
 }
 ```
 
-# BpBinder
+## Zygote & system server 
 
-binder client native 层与 binder driver 通讯用的是 `BpBinder::transact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)`，它又调用 `IPCThreadState::transact(int32_t handle, uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)`
+```cpp
+// Main entry of app process.
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp
+int main(int argc, char* const argv[])
+{
+    // ...
+    bool zygote = false;
+    while (i < argc) {
+        const char* arg = argv[i++];
+        if (strcmp(arg, "--zygote") == 0) {
+            zygote = true;
+            niceName = ZYGOTE_NICE_NAME;
+    // ...
+    if (zygote) {
+        runtime.start("com.android.internal.os.ZygoteInit", args, zygote);  // 启动虚拟机，并调用 ZygoteInit.main(String argv[])
+    } else if // ...
+}
+
+/**
+ * 主要做四件事：
+ * 
+ * 1、注册 socket（通过 socket 让 zygote 进程 fork 出其他 app 进程）
+ * 2、预加载资源
+ * 3、启动 system_server
+ * 4、启动消息循环
+ * 
+ * This is the entry point for a Zygote process.  It creates the Zygote server, loads resources,
+ * and handles other tasks related to preparing the process for forking into applications
+ */
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/com/android/internal/os/ZygoteInit.java
+public static void main(String[] argv) {
+    // ...
+    boolean startSystemServer = false;
+    for (int i = 1; i < argv.length; i++) {
+        if ("start-system-server".equals(argv[i])) {
+            startSystemServer = true;
+        }
+    // ...
+    if (startSystemServer) {
+        Runnable r = forkSystemServer(abiList, zygoteSocketName, zygoteServer);
+        // ...
+}
+// fork 出 system_server 进程并进入其逻辑
+private static Runnable forkSystemServer(String abiList, String socketName,
+        ZygoteServer zygoteServer) {
+    // ...
+    /* Request to fork the system server process */
+    pid = Zygote.forkSystemServer(
+            parsedArgs.mUid, parsedArgs.mGid,
+            parsedArgs.mGids,
+            parsedArgs.mRuntimeFlags,
+            null,
+            parsedArgs.mPermittedCapabilities,
+            parsedArgs.mEffectiveCapabilities);
+
+    /* For child process */
+    if (pid == 0) {
+        if (hasSecondZygote(abiList)) {
+            waitForSecondaryZygote(socketName);
+        }
+        zygoteServer.closeServerSocket();
+        return handleSystemServerProcess(parsedArgs);
+    }
+    return null;
+}
+private static Runnable handleSystemServerProcess(ZygoteArguments parsedArgs) {
+        // ...
+        /*
+         * Pass the remaining arguments to SystemServer.
+         */
+        return ZygoteInit.zygoteInit(parsedArgs.mTargetSdkVersion,
+                parsedArgs.mDisabledCompatChanges,
+                parsedArgs.mRemainingArgs, cl);
+    }
+    /* should never reach here */
+}
+/**
+ * The main function called when started through the zygote process. This could be unified with
+ * main(), if the native code in nativeFinishInit() were rationalized with Zygote startup.
+ */
+public static Runnable zygoteInit(int targetSdkVersion, long[] disabledCompatChanges,
+        String[] argv, ClassLoader classLoader) {
+    // ...
+    ZygoteInit.nativeZygoteInit();
+    return RuntimeInit.applicationInit(targetSdkVersion, disabledCompatChanges, argv,
+            classLoader);
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/AndroidRuntime.cpp
+static void com_android_internal_os_ZygoteInit_nativeZygoteInit(JNIEnv* env, jobject clazz)
+{
+    gCurRuntime->onZygoteInit();  // AppRuntime->onZygoteInit()
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp
+virtual void onZygoteInit()
+{
+    // 上面介绍过，ProcessState 是单例模式，初始化实例时会：
+    // 1，打开 binder driver：open("/dev/binder") && mmap
+    // 2，版本查询和校验：BINDER_VERSION
+    // 3，设置线程数：BINDER_SET_MAX_THREADS
+    // ...
+    sp<ProcessState> proc = ProcessState::self();
+    ALOGV("App process: starting thread pool.\n");
+    proc->startThreadPool();
+}
+
+// 开启一个子线程执行 binder 消息通讯的 loop：IPCThreadState::self()->joinThreadPool = talkWithDriver + executeCommand
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
+void ProcessState::startThreadPool()
+{
+    AutoMutex _l(mLock);
+    if (!mThreadPoolStarted) {
+        if (mMaxThreads == 0) {
+            ALOGW("Extra binder thread started, but 0 threads requested. Do not use "
+                  "*startThreadPool when zero threads are requested.");
+        }
+        mThreadPoolStarted = true;
+        spawnPooledThread(true);
+    }
+}
+void ProcessState::spawnPooledThread(bool isMain /* true */)
+{
+    if (mThreadPoolStarted) {
+        String8 name = makeBinderThreadName();
+        ALOGV("Spawning new pooled thread, name=%s\n", name.string());
+        sp<Thread> t = sp<PoolThread>::make(isMain);
+        t->run(name.string());
+        pthread_mutex_lock(&mThreadCountLock);
+        mKernelStartedThreads++;
+        pthread_mutex_unlock(&mThreadCountLock);
+    }
+}
+class PoolThread : public Thread
+{
+    virtual bool threadLoop()
+    {
+        IPCThreadState::self()->joinThreadPool(mIsMain /* true */);
+        return false;
+    }
+};
+void IPCThreadState::joinThreadPool(bool isMain)
+{
+    // mOut 是给 binder driver 读取的区域，此时是 BC_ENTER_LOOPER
+    mOut.writeInt32(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
+    mIsLooper = true;
+    status_t result;
+    do {
+        // now get the next command to be processed, waiting if necessary
+        result = getAndExecuteCommand();
+        // ...
+    } while (result != -ECONNREFUSED && result != -EBADF);
+    // ...
+}
+status_t IPCThreadState::getAndExecuteCommand()
+{
+    // ...
+    result = talkWithDriver();
+    cmd = mIn.readInt32()
+    result = executeCommand(cmd);
+}
+```

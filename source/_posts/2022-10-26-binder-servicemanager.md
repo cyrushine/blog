@@ -881,7 +881,7 @@ status_t Parcel::flattenBinder(const sp<IBinder>& binder) {
     // ...
     // 如果 binder 是一个远程的代理，则序列化为 int 类型的 handle 即可
     flat_binder_object obj;..
-    if (!local) {
+    if (!local) {  // 比如 BpBinder 它只有 server handle
         const int32_t handle = proxy ? proxy->getPrivateAccessor().binderHandle() : 0;
         obj.hdr.type = BINDER_TYPE_HANDLE;
         obj.binder = 0; /* Don't pass uninitialized stack data to a remote process */
@@ -890,10 +890,12 @@ status_t Parcel::flattenBinder(const sp<IBinder>& binder) {
         obj.cookie = 0;
     } else {
 
-        // 如果 binder 是本地实例，则序列化为其内存地址
+        // 如果 binder 是本地实例（BBinder），则序列化为其内存地址
+        // java Binder.mObject 是 native JavaBBinderHolder，它持有 JavaBBinder，而 JavaBBinder 继承自 BBinder
+        // ActivityManagerService 继承自 IActivityManager.Stub，它又继承自 Binder
         obj.hdr.type = BINDER_TYPE_BINDER;
         obj.binder = reinterpret_cast<uintptr_t>(local->getWeakRefs());
-        obj.cookie = reinterpret_cast<uintptr_t>(local);
+        obj.cookie = reinterpret_cast<uintptr_t>(local);  // cookie 是 IBinder 在 server/client 进程内的内存地址
         // ...
         status_t status = writeObject(obj, false);
 }
