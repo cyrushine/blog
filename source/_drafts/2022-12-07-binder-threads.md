@@ -224,7 +224,8 @@ retry:
 	} else {
 		ret = binder_wait_for_work(thread, wait_for_proc_work);
 	}
-    // ...
+    // 直到 server 返回数据，response 在 buffer 里，开始读响应数据
+    // ... 
 }
 
 static int binder_wait_for_work(struct binder_thread *thread,
@@ -261,3 +262,6 @@ static int binder_wait_for_work(struct binder_thread *thread,
 
 # binder schedule
 
+
+
+# 进程调度

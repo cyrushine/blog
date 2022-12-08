@@ -478,6 +478,7 @@ public:
 
 整理下逻辑：app 进行 binder ipc 时需要得到 target server handle，可以通过 `ServiceManager.getService` 查询得到，这个 ipc 方法最终会调用 servicemanager 进程提供的查询功能；而 servicemanager 早已在 binder driver 里把自己注册为服务管理器（`binder_context_mgr_node`，handle == 0），这样 app 进程就无需再进行查找即可调用 `ServiceManager`
 
+![ServiceManager.getService()](../../../../image/2022-10-26-binder-servicemanager/getservice.webp)
 
 ```java
 class ActivityManager {
