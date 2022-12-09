@@ -28,7 +28,7 @@
 <meta property="og:image" content="https://www.dalvik.work/image/2022-12-05-binder-objects/objects.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-12-05-binder-objects/ipc.webp">
 <meta property="article:published_time" content="2022-12-06T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-12-08T03:51:25.772Z">
+<meta property="article:modified_time" content="2022-12-09T01:06:44.912Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2022-12-05-binder-objects/objects.webp">
@@ -301,7 +301,7 @@ BpBinder::transact
 <p>3，<code>IPCThreadState::joinThreadPool(bool isMain)</code></p>
 <p>使当前线程进入 talkWithDriver() + executeCommand(mIn.readInt32()) 的消息处理循环</p>
 <p>4，<code>ProcessState::startThreadPool()</code></p>
-<p>则会开一个新线程执行消息处理循环（ProcessState 是进程内单例所以只会开一个消息循环线程），参见 <a href="#Zygote--system-server">Zygote &amp; system server</a></p>
+<p>则会开一个新线程执行消息处理循环（ProcessState 是进程内单例所以只会开一个消息循环线程），参见 <a href="#Zygote-amp-system-server">Zygote &amp; system server</a></p>
 <h1 id="ProcessState"><a href="#ProcessState" class="headerlink" title="ProcessState"></a>ProcessState</h1><ul>
 <li>打开 binder driver 文件描述符 <code>open(&quot;/dev/binder&quot;)</code></li>
 <li>进行初始化操作 <code>ioctl</code>：版本校验 <code>BINDER_VERSION</code>、设置默认线程数量 <code>DEFAULT_MAX_BINDER_THREADS</code> 等</li>
