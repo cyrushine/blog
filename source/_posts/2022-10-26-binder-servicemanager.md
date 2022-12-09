@@ -1092,8 +1092,6 @@ status_t Parcel::unflattenBinder(sp<IBinder>* out) const
 
 # 查询
 
-## 实现查询
-
 1. 通过 `epoll(binder_driver_fd)` 响应 binder driver 发来的消息
 
 2. client 进程查询 service handle 时，通过将 request handle 置为 0 来标识 target/server 是 servicemanager 进程（详见上一章节[暴露自己](#暴露自己)）
