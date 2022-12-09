@@ -3,7 +3,9 @@ title: Binder IPC 线程调度模型
 date: 2022-12-07 12:00:00 +0800
 ---
 
-# client send request
+# client 端的线程调度
+
+
 
 ```cpp
 ActivityManager.getRunningAppProcesses                                                 // APP 进程 Java 层
@@ -17,6 +19,7 @@ IPCThreadState::talkWithDriver(bool doReceive)
 ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr)                                     // 陷入内核来到 binder driver
 binder_ioctl
 
+// 先写请求，再读响应
 // https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c
 static int binder_ioctl_write_read(struct file *filp,
 				unsigned int cmd, unsigned long arg,
@@ -79,10 +82,6 @@ static void binder_transaction(struct binder_proc *proc,
  *
  * If the @thread parameter is not NULL, the transaction is always queued
  * to the waitlist of that specific thread.
- *
- * Return:	0 if the transaction was successfully queued
- *		BR_DEAD_REPLY if the target process or thread is dead
- *		BR_FROZEN_REPLY if the target process or thread is frozen
  */
 static int binder_proc_transaction(struct binder_transaction *t,
 				    struct binder_proc *proc,
@@ -121,7 +120,7 @@ static int binder_proc_transaction(struct binder_transaction *t,
 	if (!thread && !pending_async)
 		thread = binder_select_thread_ilocked(proc);
 
-    // 如果目标进程中有可用线程，则将任务加到线程的 todo list
+    // 如果目标进程中有可用线程，则将任务加到线程的 todo list，并将 process_todo 置真
     // struct binder_thread {
     //     struct list_head todo; # 任务链表
 	//     bool process_todo;     # 标识是否处理任务
@@ -129,11 +128,6 @@ static int binder_proc_transaction(struct binder_transaction *t,
 	if (thread) {
 		binder_transaction_priority(thread, t, node);
 		binder_enqueue_thread_work_ilocked(thread, &t->work);
-
-    // 否则就把任务加到目标进程的 todo list
-    // struct binder_proc {
-    //     struct list_head todo; # 任务链表
-    // }
 	} else if (!pending_async) {
 		binder_enqueue_work_ilocked(&t->work, &proc->todo);
 	} else {
@@ -178,14 +172,15 @@ static int binder_proc_transaction(struct binder_transaction *t,
 	return 0;
 }                               
 
+// 写完请求后进行读响应操作
 static int binder_thread_read(struct binder_proc *proc,
 			      struct binder_thread *thread,
 			      binder_uintptr_t binder_buffer, size_t size,
 			      binder_size_t *consumed, int non_block)
 {
-	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
-	void __user *ptr = buffer + *consumed;
-	void __user *end = buffer + size;
+	void __user *buffer = (void __user *)(uintptr_t)binder_buffer; // 响应的起始内存地址
+	void __user *ptr = buffer + *consumed;                         // 指示下一次读取的起始地址
+	void __user *end = buffer + size;                              // 响应的结束内存地址
 
 	int ret = 0;
 	int wait_for_proc_work;
@@ -222,12 +217,58 @@ retry:
 		if (!binder_has_work(thread, wait_for_proc_work))
 			ret = -EAGAIN;
 	} else {
+        // 进程休眠直到 server 返回数据，response 在 buffer 里，下面开始读响应数据
+        // 跳出条件是 thread->process_todo == false
 		ret = binder_wait_for_work(thread, wait_for_proc_work);
 	}
-    // 直到 server 返回数据，response 在 buffer 里，开始读响应数据
-    // ... 
+
+	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
+	if (ret)
+		return ret;
+
+	while (1) {
+		uint32_t cmd;
+		struct binder_transaction_data_secctx tr;
+		struct binder_transaction_data *trd = &tr.transaction_data;
+		struct binder_work *w = NULL;
+		struct list_head *list = NULL;
+		struct binder_transaction *t = NULL;
+		struct binder_thread *t_from;
+		size_t trsize = sizeof(*trd);
+
+		binder_inner_proc_lock(proc);
+		if (!binder_worklist_empty_ilocked(&thread->todo))
+			list = &thread->todo;
+		else if (!binder_worklist_empty_ilocked(&proc->todo) &&
+			   wait_for_proc_work)
+			list = &proc->todo;
+		else {
+			binder_inner_proc_unlock(proc);
+
+			/* no data added */
+			if (ptr - buffer == 4 && !thread->looper_need_return)
+				goto retry;
+			break;
+		}
+
+		if (end - ptr < sizeof(tr) + 4) {
+			binder_inner_proc_unlock(proc);
+			break;
+		}
+		w = binder_dequeue_work_head_ilocked(list);
+		if (binder_worklist_empty_ilocked(&thread->todo))
+			thread->process_todo = false;
+
+		switch (w->type) {
+		case BINDER_WORK_TRANSACTION
+        case BINDER_WORK_RETURN_ERROR
+        case BINDER_WORK_TRANSACTION_COMPLETE
+		case BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT
+        // ...
 }
 
+// prepare_to_wait + schedule + finish_wait 是一套休眠进程的模板
+// 参考 https://github.com/cyrus-lin/bookmark/issues/40
 static int binder_wait_for_work(struct binder_thread *thread,
 				bool do_proc_work)
 {
@@ -238,7 +279,7 @@ static int binder_wait_for_work(struct binder_thread *thread,
 	binder_inner_proc_lock(proc);
 	for (;;) {
 		prepare_to_wait(&thread->wait, &wait, TASK_INTERRUPTIBLE|TASK_FREEZABLE);
-		if (binder_has_work_ilocked(thread, do_proc_work))
+		if (binder_has_work_ilocked(thread, do_proc_work))    // 跳出条件是 thread->process_todo == false
 			break;
 		if (do_proc_work)
 			list_add(&thread->waiting_thread_node,
@@ -248,7 +289,7 @@ static int binder_wait_for_work(struct binder_thread *thread,
 		schedule();
 		binder_inner_proc_lock(proc);
 		list_del_init(&thread->waiting_thread_node);
-		if (signal_pending(current)) {
+		if (signal_pending(current)) {    // 遇到信号也会跳出，这里先不理它
 			ret = -EINTR;
 			break;
 		}
@@ -264,4 +305,4 @@ static int binder_wait_for_work(struct binder_thread *thread,
 
 
 
-# 进程调度
+# 进程调度 & 等待队列
