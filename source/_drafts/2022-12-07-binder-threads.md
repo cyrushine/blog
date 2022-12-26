@@ -3,7 +3,7 @@ title: Binder IPC 线程调度模型
 date: 2022-12-07 12:00:00 +0800
 ---
 
-# client 端的线程调度
+# client 线程调度
 
 一次事务 `binder_thread.transaction_stack` 表示：client 发起请求 -> server 处理并返回响应 -> client 收到响应这么一整个流程，类似于一次完整的 HTTP 请求
 
@@ -210,7 +210,7 @@ static void binder_transaction(struct binder_proc *proc,
     }
     e->to_proc = target_proc->pid;
     
-    // 发送到目标进程 todo 列表的事务，由目标进程出来
+    // 发送到目标进程 todo 列表的事务，由目标进程处理
     t = kzalloc(sizeof(*t), GFP_KERNEL);                 
     if (t == NULL) {
         return_error = BR_FAILED_REPLY;
@@ -603,6 +603,42 @@ static int binder_wait_for_work(struct binder_thread *thread,
 	finish_wait(&thread->wait, &wait);
 	binder_inner_proc_unlock(proc);
 	return ret;
+}
+```
+
+# server 线程调度
+
+[上一章节](#client-线程调度)说过，binder 会将 request 添加到 server 进程的 todo list 并唤醒休眠在 wait 上的 server 线程
+
+```cpp
+static void binder_transaction(struct binder_proc *proc,
+                struct binder_thread *thread,
+                struct binder_transaction_data *tr, 
+                int reply)    // false: client request, true: server response
+{
+	// ...
+    wait_queue_head_t *target_wait;
+
+	// ...
+    // 找到 target_thread, 则 target_list 和 target_wait 分别初始化为目标线程的 todo 和 wait
+    // 这个意味着 client thread 与目标进程有过通讯记录
+    if (target_thread) {
+        e->to_thread = target_thread->pid;
+        target_list = &target_thread->todo;
+        target_wait = &target_thread->wait;
+    } else {
+
+        // 没有找到 target_thread, 那么 target_list 和 target_wait 分别初始化为目标进程的 todo 和 wait
+        // 这个情况只有BC_TRANSACTION命令才有可能发生
+        target_list = &target_proc->todo;
+        target_wait = &target_proc->wait;
+    }
+
+    // ...
+    // 唤醒休眠在 target_wait 上的线程去处理 todo 列表
+    if (target_wait)
+        wake_up_interruptible(target_wait);
+    // ...
 }
 ```
 
