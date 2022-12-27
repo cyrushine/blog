@@ -3,6 +3,99 @@ title: Binder IPC 线程调度模型
 date: 2022-12-07 12:00:00 +0800
 ---
 
+# Binder 主线程
+
+Binder 主线程是在其所在进程的初始化流程里启动的，Java 层进程的创建都是通过 [Process.start()](/2021/03/02/how-application-being-created-and-init/) 方法，向 Zygote 进程发出创建进程的 socket 消息，Zygote 进程收到消息后会调用 `Zygote.forkAndSpecialize()` 来 fork 出新进程，在新进程中会调用到 `RuntimeInit.nativeZygoteInit()` 方法，该方法经过 jni 映射最终会调用到 `app_main.cpp` 中的 `onZygoteInit`，那么接下来从这个方法说起
+
+```cpp
+/**
+ * The main function called when started through the zygote process. This could be unified with
+ * main(), if the native code in nativeFinishInit() were rationalized with Zygote startup.
+ */
+public static Runnable zygoteInit(int targetSdkVersion, long[] disabledCompatChanges,
+        String[] argv, ClassLoader classLoader) {
+    // ...
+    ZygoteInit.nativeZygoteInit();
+    return RuntimeInit.applicationInit(targetSdkVersion, disabledCompatChanges, argv,
+            classLoader);
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/AndroidRuntime.cpp
+static void com_android_internal_os_ZygoteInit_nativeZygoteInit(JNIEnv* env, jobject clazz)
+{
+    gCurRuntime->onZygoteInit();  // AppRuntime->onZygoteInit()
+}
+
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp
+virtual void onZygoteInit()
+{
+    // 上面介绍过，ProcessState 是单例模式，初始化实例时会：
+    // 1，打开 binder driver：open("/dev/binder") && mmap
+    // 2，版本查询和校验：BINDER_VERSION
+    // 3，设置线程数：BINDER_SET_MAX_THREADS
+    // ...
+    sp<ProcessState> proc = ProcessState::self();
+    ALOGV("App process: starting thread pool.\n");
+    proc->startThreadPool();
+}
+
+// 开启一个子线程执行 binder 消息通讯的 loop：IPCThreadState::self()->joinThreadPool = talkWithDriver + executeCommand
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
+void ProcessState::startThreadPool()
+{
+    AutoMutex _l(mLock);
+    if (!mThreadPoolStarted) {
+        if (mMaxThreads == 0) {
+            ALOGW("Extra binder thread started, but 0 threads requested. Do not use "
+                  "*startThreadPool when zero threads are requested.");
+        }
+        mThreadPoolStarted = true;
+        spawnPooledThread(true);
+    }
+}
+void ProcessState::spawnPooledThread(bool isMain /* true */)
+{
+    if (mThreadPoolStarted) {
+        String8 name = makeBinderThreadName();
+        ALOGV("Spawning new pooled thread, name=%s\n", name.string());
+        sp<Thread> t = sp<PoolThread>::make(isMain);
+        t->run(name.string());
+        pthread_mutex_lock(&mThreadCountLock);
+        mKernelStartedThreads++;
+        pthread_mutex_unlock(&mThreadCountLock);
+    }
+}
+class PoolThread : public Thread
+{
+    virtual bool threadLoop()
+    {
+        IPCThreadState::self()->joinThreadPool(mIsMain /* true */);
+        return false;
+    }
+};
+void IPCThreadState::joinThreadPool(bool isMain)
+{
+    // mOut 是给 binder driver 读取的区域，此时是 BC_ENTER_LOOPER
+    mOut.writeInt32(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
+    mIsLooper = true;
+    status_t result;
+    do {
+        // now get the next command to be processed, waiting if necessary
+        result = getAndExecuteCommand();
+        // ...
+    } while (result != -ECONNREFUSED && result != -EBADF);
+    // ...
+}
+status_t IPCThreadState::getAndExecuteCommand()
+{
+    // ...
+    result = talkWithDriver();
+    cmd = mIn.readInt32()
+    result = executeCommand(cmd);
+}
+```
+
+
 # client 线程调度
 
 一次事务 `binder_thread.transaction_stack` 表示：client 发起请求 -> server 处理并返回响应 -> client 收到响应这么一整个流程，类似于一次完整的 HTTP 请求
@@ -642,12 +735,6 @@ static void binder_transaction(struct binder_proc *proc,
 }
 ```
 
-# binder schedule
-
-
-
-# 进程调度 & 等待队列
-
 
 
 # 参考
@@ -655,3 +742,4 @@ static void binder_transaction(struct binder_proc *proc,
 - [Binder驱动之设备控制 binder_ioctl -- 一](https://www.jianshu.com/p/49830c3473b7)
 - [Binder驱动之设备控制 binder_ioctl -- 二](https://www.jianshu.com/p/12bec1b16a5b)
 - [Binder驱动之设备控制 binder_ioctl -- 三](https://www.jianshu.com/p/4be292a51388)
+- [进程的Binder线程池工作过程 - Gityuan](http://gityuan.com/2016/10/29/binder-thread-pool/)
