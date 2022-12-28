@@ -3,7 +3,17 @@ title: Binder IPC 线程调度模型
 date: 2022-12-07 12:00:00 +0800
 ---
 
-# Binder 主线程
+![1.png](/image/2022-12-07-binder-threads/1.png)
+
+# 主线程与普通线程
+
+Binder 线程可以分为两类：`主线程` 和 `普通线程`，它们的区别是：
+
+1. 主线程名称为 `Binder_1` or `Binder:<pid>_1`，普通线程则从 2 开始（`ProcessState::makeBinderThreadName`）
+
+2. 主线程在应用进程起来后立刻启动，且不会退出；普通线程由 [BR_SPAWN_LOOPER](#创建普通线程) 启动且会被 binder driver 命令 `TIMED_OUT` 退出（`IPCThreadState::joinThreadPool`）
+
+3. binder 线程上限（`BINDER_SET_MAX_THREADS`）只影响普通线程，更确切地说是只影响通过 `BR_SPAWN_LOOPER - BC_REGISTER_LOOPER` 创建的 binder 线程
 
 Binder 主线程是在其所在进程的初始化流程里启动的，Java 层进程的创建都是通过 [Process.start()](/2021/03/02/how-application-being-created-and-init/) 方法，向 Zygote 进程发出创建进程的 socket 消息，Zygote 进程收到消息后会调用 `Zygote.forkAndSpecialize()` 来 fork 出新进程，在新进程中会调用到 `RuntimeInit.nativeZygoteInit()` 方法，该方法经过 jni 映射最终会调用到 `app_main.cpp` 中的 `onZygoteInit`，那么接下来从这个方法说起
 
@@ -39,24 +49,27 @@ virtual void onZygoteInit()
     proc->startThreadPool();
 }
 
-// 开启一个子线程执行 binder 消息通讯的 loop：IPCThreadState::self()->joinThreadPool = talkWithDriver + executeCommand
+// 开启 binder 主线程执行 binder 消息通讯的 loop：IPCThreadState::self()->joinThreadPool = talkWithDriver + executeCommand
 // https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
 void ProcessState::startThreadPool()
 {
     AutoMutex _l(mLock);
     if (!mThreadPoolStarted) {
-        if (mMaxThreads == 0) {
-            ALOGW("Extra binder thread started, but 0 threads requested. Do not use "
-                  "*startThreadPool when zero threads are requested.");
-        }
         mThreadPoolStarted = true;
         spawnPooledThread(true);
     }
 }
-void ProcessState::spawnPooledThread(bool isMain /* true */)
+
+// spawn - 产卵
+// spawnPooledThread 是创建 binder 线程的核心函数，它创建新线程执行 IPCThreadState::joinThreadPool
+// 新的 binder 线程的生命流程：
+// 1，往 binder 发送 BC_ENTER_LOOPER（主线程） or BC_REGISTER_LOOPER（普通线程）
+// 2. 主循环：getAndExecuteCommand()
+// 3. 退出循环时发送 BC_EXIT_LOOPER 给 binder driver
+void ProcessState::spawnPooledThread(bool isMain /* true 表示主线程 */)
 {
     if (mThreadPoolStarted) {
-        String8 name = makeBinderThreadName();
+        String8 name = makeBinderThreadName();  // Binder_x or Binder:<pid>_x
         ALOGV("Spawning new pooled thread, name=%s\n", name.string());
         sp<Thread> t = sp<PoolThread>::make(isMain);
         t->run(name.string());
@@ -69,40 +82,188 @@ class PoolThread : public Thread
 {
     virtual bool threadLoop()
     {
-        IPCThreadState::self()->joinThreadPool(mIsMain /* true */);
+        IPCThreadState::self()->joinThreadPool(mIsMain);
         return false;
     }
 };
-void IPCThreadState::joinThreadPool(bool isMain)
+void IPCThreadState::joinThreadPool(bool isMain)    // binder 线程的整个生命流程
 {
-    // mOut 是给 binder driver 读取的区域，此时是 BC_ENTER_LOOPER
     mOut.writeInt32(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
-    mIsLooper = true;
     status_t result;
+    mIsLooper = true;
     do {
+        processPendingDerefs();
         // now get the next command to be processed, waiting if necessary
         result = getAndExecuteCommand();
-        // ...
+
+        // Let this thread exit the thread pool if it is no longer
+        // needed and it is not the main process thread.
+        if(result == TIMED_OUT && !isMain) {  // 可以看到主线程与普通线程的区别之一：主线程永远不会主动退出
+            break;
+        }
     } while (result != -ECONNREFUSED && result != -EBADF);
-    // ...
+
+    mOut.writeInt32(BC_EXIT_LOOPER);
+    mIsLooper = false;
+    talkWithDriver(false);
 }
-status_t IPCThreadState::getAndExecuteCommand()
+
+// 主线程注册（BC_REGISTER_LOOPER）和普通线程注册（BC_ENTER_LOOPER）很类似
+// 都是打开标志位 BINDER_LOOPER_STATE_ENTERED or BINDER_LOOPER_STATE_REGISTERED
+static int binder_thread_write(struct binder_proc *proc,
+			struct binder_thread *thread,
+			binder_uintptr_t binder_buffer, size_t size,
+			binder_size_t *consumed)
 {
-    // ...
-    result = talkWithDriver();
-    cmd = mIn.readInt32()
-    result = executeCommand(cmd);
+	case BC_REGISTER_LOOPER:
+		binder_inner_proc_lock(proc);
+		if (thread->looper & BINDER_LOOPER_STATE_ENTERED) {
+			thread->looper |= BINDER_LOOPER_STATE_INVALID;
+			binder_user_error("%d:%d ERROR: BC_REGISTER_LOOPER called after BC_ENTER_LOOPER\n",
+				proc->pid, thread->pid);
+		} else if (proc->requested_threads == 0) {
+			thread->looper |= BINDER_LOOPER_STATE_INVALID;
+			binder_user_error("%d:%d ERROR: BC_REGISTER_LOOPER called without request\n",
+				proc->pid, thread->pid);
+		} else {
+			proc->requested_threads--;
+			proc->requested_threads_started++;
+		}
+		thread->looper |= BINDER_LOOPER_STATE_REGISTERED;
+		binder_inner_proc_unlock(proc);
+		break;
+
+	case BC_ENTER_LOOPER:
+		if (thread->looper & BINDER_LOOPER_STATE_REGISTERED) {
+			thread->looper |= BINDER_LOOPER_STATE_INVALID;
+			binder_user_error("%d:%d ERROR: BC_ENTER_LOOPER called after BC_REGISTER_LOOPER\n",
+				proc->pid, thread->pid);
+		}
+		thread->looper |= BINDER_LOOPER_STATE_ENTERED;
+		break;	
 }
 ```
 
+## binder 线程命名
 
-# client 线程调度
+```cpp
+// binder 线程命名规则：Binder_x（如果 >= Android N 则是 Binder:<pid>_x）
+// 其中的 x 从 1 开始
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
+String8 ProcessState::makeBinderThreadName() {
+    int32_t s = android_atomic_add(1, &mThreadPoolSeq);
+    pid_t pid = getpid();
+
+    std::string_view driverName = mDriverName.c_str();
+    android::base::ConsumePrefix(&driverName, "/dev/");
+
+    String8 name;
+    name.appendFormat("%.*s:%d_%X", static_cast<int>(driverName.length()), driverName.data(), pid,
+                      s);
+    return name;
+}
+ProcessState::ProcessState(const char* driver)
+      : mDriverName(String8(driver)),
+        mDriverFD(-1),
+        mVMStart(MAP_FAILED),
+        mThreadCountLock(PTHREAD_MUTEX_INITIALIZER),
+        mThreadCountDecrement(PTHREAD_COND_INITIALIZER),
+        mExecutingThreadsCount(0),
+        mWaitingForThreads(0),
+        mMaxThreads(DEFAULT_MAX_BINDER_THREADS),
+        mCurrentThreads(0),
+        mKernelStartedThreads(0),
+        mStarvationStartTimeMs(0),
+        mForked(false),
+        mThreadPoolStarted(false),
+        mThreadPoolSeq(1),    // binder 线程名的序号从 1 开始
+        mCallRestriction(CallRestriction::NONE) {
+	// ...
+}
+```
+
+## 创建普通线程
+
+流程概览：binder driver 在满足以下条件的情况下，发送 `BR_SPAWN_LOOPER` 给应用进程，应用进程开启新线程 `ProcessState::spawnPooledThread(false)` 后，发送 `BC_REGISTER_LOOPER` 告知 binder driver 线程已启动
+
+有三种情况可以进入 `binder_thread_read` done 代码段：
+
+1. 当 binder driver 处理类型为 `BINDER_WORK_TRANSACTION` 的任务，即 binder driver 收到的命令是 `BC_TRANSACTION`（client 发送 request 至 binder） or `BC_REPLY`（server 响应 response 至 binder）
+
+2. 当前线程的 return_error 发生 error
+
+3. Binder Driver 向 client 发送死亡通知 `BR_DEAD_BINDER`
+
+按需启动普通 binder 线程的条件：
+
+1. 进程没有请求创建 binder 线程 `proc->requested_threads == 0`
+
+> @requested_threads: number of binder threads requested but not yet started. In current implementation, can only be 0 or 1.
+
+binder 发送 `BR_SPAWN_LOOPER` 给应用进程后将 requested_threads 置真，直到应用进程将新线程启动并回复 `BC_REGISTER_LOOPER` 后才将 requested_threads 置假
+
+2. 没有等待/阻塞在进程 todo list 的 client thread，`list_empty(&thread->proc->waiting_threads)`
+
+> @waiting_threads: threads currently waiting for proc work
+
+参考 [client 线程调度例子](#client-线程调度例子) 里的 `binder_wait_for_work`
+
+3. 已启动的 binder 线程数小于上限，`proc->requested_threads_started < proc->max_threads`
+
+binder 线程池上限默认 15，可通过 `BINDER_SET_MAX_THREADS` 修改
+
+4. 当前线程已从应用进程收到 `BC_ENTER_LOOPER` or `BC_REGISTER_LOOPER`，`thread->looper & (BINDER_LOOPER_STATE_REGISTERED | BINDER_LOOPER_STATE_ENTERED)`
+
+参考 [主线程与普通线程](#主线程与普通线程)
+
+```cpp
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c;l=4541?q=binder_thread_read
+static int binder_thread_read(struct binder_proc *proc,
+			      struct binder_thread *thread,
+			      binder_uintptr_t binder_buffer, size_t size,
+			      binder_size_t *consumed, int non_block)
+{
+// ...
+done:
+	*consumed = ptr - buffer;
+	binder_inner_proc_lock(proc);
+
+	if (proc->requested_threads == 0 &&
+	    list_empty(&thread->proc->waiting_threads) &&
+	    proc->requested_threads_started < proc->max_threads &&
+	    (thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
+	     BINDER_LOOPER_STATE_ENTERED)) /* the user-space code fails to */
+	     /*spawn a new thread if we leave this out */) {
+
+		proc->requested_threads++;
+		binder_inner_proc_unlock(proc);
+		if (put_user(BR_SPAWN_LOOPER, (uint32_t __user *)buffer))
+			return -EFAULT;
+		binder_stat_br(proc, thread, BR_SPAWN_LOOPER);
+	} else
+		binder_inner_proc_unlock(proc);
+	return 0;
+}
+
+// 应用进程收到 BR_SPAWN_LOOPER 后启动新的 binder 普通线程，参考【主线程与普通线程】对 spawnPooledThread(false) 的解析
+// https://cs.android.com/android/platform/superproject/+/master:system/libhwbinder/IPCThreadState.cpp
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    case BR_SPAWN_LOOPER:
+        mProcess->spawnPooledThread(false);
+        break;
+}
+
+
+```
+
+# client 线程调度例子
 
 一次事务 `binder_thread.transaction_stack` 表示：client 发起请求 -> server 处理并返回响应 -> client 收到响应这么一整个流程，类似于一次完整的 HTTP 请求
 
-client 是单线程即发起 Binder IPC 的那个线程，将 request 添加到目标进程 `binder_proc.todo` 或者目标线程 `binder_thread.todo` 的任务列表后，不同于常见的休眠/阻塞线程，client 在等待 server response 时是[休眠进程](https://github.com/cyrus-lin/bookmark/issues/40)，直到 server 返回响应唤醒 client 进程（`wake_up`）
+client 是单线程即发起 Binder IPC 的那个线程，将 request 添加到目标进程 `binder_proc.todo` 或者目标线程 `binder_thread.todo` 的任务列表后，通过 `schedule()` 让渡出 cpu 资源从而实现 [线程休眠](https://github.com/cyrus-lin/bookmark/issues/45)，直到 server 返回响应唤醒它（`wake_up`）
 
-`binder_thread_write` 将 request 添加到目标进程/目标线程的 todo 任务队列，`binder_thread_read` 将休眠 client 进程直到被 server reponse 唤醒
+`binder_thread_write` 将 request 添加到目标进程/目标线程的 todo 任务队列，`binder_thread_read` 将休眠此 client 线程直到被 server reponse 唤醒
 
 ```cpp
 ActivityManager.getRunningAppProcesses                                                 // APP 进程 Java 层
@@ -446,7 +607,7 @@ retry:
 	if (non_block) {
 		if (!binder_has_work(thread, wait_for_proc_work))
 			ret = -EAGAIN;
-	} else {  // 阻塞情况下，休眠整个进程直到别的进程 wake_up() 唤醒它
+	} else {  // 阻塞情况下，休眠当前线程直到别的线程 wake_up() 唤醒它
 		ret = binder_wait_for_work(thread, wait_for_proc_work);
 	}
 	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
@@ -488,7 +649,7 @@ retry:
 			thread->process_todo = false;
 
         // 上面 binder_thread_write 那里塞了个 BINDER_WORK_TRANSACTION_COMPLETE 到当前线程的 todo 列表里
-        // 这里回写个 BR_TRANSACTION_COMPLETE 到用户空间，然后跳转到 retry 休眠进程
+        // 这里回写个 BR_TRANSACTION_COMPLETE 到用户空间，然后跳转到 retry 休眠线程
 		switch (w->type) {
 		case BINDER_WORK_TRANSACTION_COMPLETE:
 		case BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT: {
@@ -510,9 +671,9 @@ retry:
 				     proc->pid, thread->pid);
 		} break;
 
-        // 在 retry 里休眠的进程，直到被 server 唤醒，当然不一定是刚才那个线程，可能是被别的线程抢到了
+        // 在 retry 里休眠的线程，直到被 server 唤醒，当然不一定是刚才那个线程，可能是被别的线程抢到了
         // server 进程在 binder_thread_write -> binder_transaction 最后会通过 wake_up_interruptible
-        // 唤醒目标进程，也就是 client 本进程
+        // 唤醒目标线程，也就是 client 发送 request 的那个线程
         case BINDER_WORK_TRANSACTION: {
 			binder_inner_proc_unlock(proc);
 			t = container_of(w, struct binder_transaction, work);
@@ -665,9 +826,9 @@ done:
 	return 0;
 }
 
-// prepare_to_wait + schedule + finish_wait 是一整套进程调度模板（休眠进程）
-// see https://github.com/cyrus-lin/bookmark/issues/40
-// 它使进程休眠在 binder_thread.wait 上直到别的进程通过 wake_up(head) 唤醒它
+// prepare_to_wait + schedule + finish_wait 是一整套线程调度模板（休眠线程）
+// see https://github.com/cyrus-lin/bookmark/issues/45
+// 它使线程休眠在 binder_thread.wait 上直到别的线程通过 wake_up(head) 唤醒它
 static int binder_wait_for_work(struct binder_thread *thread,
 				bool do_proc_work)
 {
@@ -701,7 +862,7 @@ static int binder_wait_for_work(struct binder_thread *thread,
 
 # server 线程调度
 
-[上一章节](#client-线程调度)说过，binder 会将 request 添加到 server 进程的 todo list 并唤醒休眠在 wait 上的 server 线程
+[上一章节](#client-线程调度例子)说过，binder 会将 request 添加到 server 进程的 todo list 并唤醒休眠在 wait 上的 server 线程
 
 ```cpp
 static void binder_transaction(struct binder_proc *proc,
@@ -734,8 +895,6 @@ static void binder_transaction(struct binder_proc *proc,
     // ...
 }
 ```
-
-
 
 # 参考
 
