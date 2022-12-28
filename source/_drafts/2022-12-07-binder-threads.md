@@ -860,6 +860,148 @@ static int binder_wait_for_work(struct binder_thread *thread,
 }
 ```
 
+# binder 线程主例程
+
+```cpp
+// https://cs.android.com/android/platform/superproject/+/master:system/libhwbinder/IPCThreadState.cpp
+void IPCThreadState::joinThreadPool(bool isMain /* true - 主线程*/ )
+{
+    mOut.writeInt32(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
+
+    status_t result;
+    mIsLooper = true;
+    do {
+        processPendingDerefs();
+        // now get the next command to be processed, waiting if necessary
+        result = getAndExecuteCommand();
+
+        // Let this thread exit the thread pool if it is no longer
+        // needed and it is not the main process thread.
+        if(result == TIMED_OUT && !isMain) {
+            break;
+        }
+    } while (result != -ECONNREFUSED && result != -EBADF);
+
+    mOut.writeInt32(BC_EXIT_LOOPER);
+    mIsLooper = false;
+    talkWithDriver(false);
+}
+
+status_t IPCThreadState::getAndExecuteCommand()
+{
+    status_t result;
+    int32_t cmd;
+
+    result = talkWithDriver();  // doReceive 默认为 true
+    // ...
+}
+
+status_t IPCThreadState::talkWithDriver(bool doReceive)
+{
+    if (mProcess->mDriverFD < 0) {
+        return -EBADF;
+    }
+
+    binder_write_read bwr;
+
+    // Is the read buffer empty?
+    const bool needRead = mIn.dataPosition() >= mIn.dataSize();
+
+    // We don't want to write anything if we are still reading
+    // from data left in the input buffer and the caller
+    // has requested to read the next data.
+    const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
+
+    bwr.write_size = outAvail;
+    bwr.write_buffer = (uintptr_t)mOut.data();
+
+    // This is what we'll read.
+    if (doReceive && needRead) {
+        bwr.read_size = mIn.dataCapacity();
+        bwr.read_buffer = (uintptr_t)mIn.data();
+    } else {
+        bwr.read_size = 0;
+        bwr.read_buffer = 0;
+    }
+
+    IF_LOG_COMMANDS() {
+        if (outAvail != 0) {
+            alog << "Sending commands to driver: " << indent;
+            const void* cmds = (const void*)bwr.write_buffer;
+            const void* end = ((const uint8_t*)cmds)+bwr.write_size;
+            alog << HexDump(cmds, bwr.write_size) << endl;
+            while (cmds < end) cmds = printCommand(alog, cmds);
+            alog << dedent;
+        }
+        alog << "Size of receive buffer: " << bwr.read_size
+            << ", needRead: " << needRead << ", doReceive: " << doReceive << endl;
+    }
+
+    // Return immediately if there is nothing to do.
+    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
+
+    bwr.write_consumed = 0;
+    bwr.read_consumed = 0;
+    status_t err;
+    do {
+        IF_LOG_COMMANDS() {
+            alog << "About to read/write, write size = " << mOut.dataSize() << endl;
+        }
+#if defined(__ANDROID__)
+        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
+            err = NO_ERROR;
+        else
+            err = -errno;
+#else
+        err = INVALID_OPERATION;
+#endif
+        if (mProcess->mDriverFD < 0) {
+            err = -EBADF;
+        }
+        IF_LOG_COMMANDS() {
+            alog << "Finished read/write, write size = " << mOut.dataSize() << endl;
+        }
+    } while (err == -EINTR);
+
+    IF_LOG_COMMANDS() {
+        alog << "Our err: " << (void*)(intptr_t)err << ", write consumed: "
+            << bwr.write_consumed << " (of " << mOut.dataSize()
+                        << "), read consumed: " << bwr.read_consumed << endl;
+    }
+
+    if (err >= NO_ERROR) {
+        if (bwr.write_consumed > 0) {
+            if (bwr.write_consumed < mOut.dataSize())
+                LOG_ALWAYS_FATAL("Driver did not consume write buffer. "
+                                 "err: %s consumed: %zu of %zu",
+                                 statusToString(err).c_str(),
+                                 (size_t)bwr.write_consumed,
+                                 mOut.dataSize());
+            else {
+                mOut.setDataSize(0);
+                processPostWriteDerefs();
+            }
+        }
+        if (bwr.read_consumed > 0) {
+            mIn.setDataSize(bwr.read_consumed);
+            mIn.setDataPosition(0);
+        }
+        IF_LOG_COMMANDS() {
+            alog << "Remaining data size: " << mOut.dataSize() << endl;
+            alog << "Received commands from driver: " << indent;
+            const void* cmds = mIn.data();
+            const void* end = mIn.data() + mIn.dataSize();
+            alog << HexDump(cmds, mIn.dataSize()) << endl;
+            while (cmds < end) cmds = printReturnCommand(alog, cmds);
+            alog << dedent;
+        }
+        return NO_ERROR;
+    }
+
+    return err;
+}
+```
+
 # server 线程调度
 
 [上一章节](#client-线程调度例子)说过，binder 会将 request 添加到 server 进程的 todo list 并唤醒休眠在 wait 上的 server 线程
