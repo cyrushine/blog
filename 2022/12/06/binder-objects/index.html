@@ -18,17 +18,18 @@
   <meta name="author" content="Cyrus">
   <meta name="keywords" content="">
   
-    <meta name="description" content="Summary  client 端BpBinder client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle &#x3D;&#x3D; 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 AMS的例子 &#x2F;&#x2F; BpBindere 会直接用 se">
+    <meta name="description" content="Summary   client 端BpBinder client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle &#x3D;&#x3D; 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 AMS的例子 &#x2F;&#x2F; BpBindere 会直接用 s">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Binder IPC 过程中常用的对象和类">
 <meta property="og:url" content="https://www.dalvik.work/2022/12/06/binder-objects/index.html">
 <meta property="og:site_name" content="Cyrus Blog">
-<meta property="og:description" content="Summary  client 端BpBinder client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle &#x3D;&#x3D; 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 AMS的例子 &#x2F;&#x2F; BpBindere 会直接用 se">
+<meta property="og:description" content="Summary   client 端BpBinder client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle &#x3D;&#x3D; 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 AMS的例子 &#x2F;&#x2F; BpBindere 会直接用 s">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-12-05-binder-objects/objects.webp">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-12-05-binder-objects/ipc.webp">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-12-05-binder-objects/all.webp">
 <meta property="article:published_time" content="2022-12-06T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-12-29T07:31:47.464Z">
+<meta property="article:modified_time" content="2022-12-29T11:08:40.001Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2022-12-05-binder-objects/objects.webp">
@@ -266,6 +267,7 @@
                 
                 <h1 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h1><p><img src="../../../../image/2022-12-05-binder-objects/objects.webp" srcset="/image/loading.gif" lazyload alt="Binder 类图"></p>
 <p><img src="../../../../image/2022-12-05-binder-objects/ipc.webp" srcset="/image/loading.gif" lazyload alt="Binder IPC 流程图"></p>
+<p><img src="/image/2022-12-05-binder-objects/all.webp" srcset="/image/loading.gif" lazyload alt="Big Picture"></p>
 <h2 id="client-端"><a href="#client-端" class="headerlink" title="client 端"></a>client 端</h2><p><code>BpBinder</code></p>
 <p>client native proxy，客户端 native 层的 binder ipc 代理（IBinder），它最重要的是持有 server 端句柄 handle，handle == 0 表示 service manager，其他的需要通过 service manager 查询得到，参看 <a href="../../../../2022/10/26/binder-servicemanager/#%E4%BB%A5-AMS-%E4%B8%BA%E4%BE%8B">AMS的例子</a></p>
 <div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// BpBindere 会直接用 server handle 调用 IPCThreadState::transact() 与 binder driver 进行通讯</span>
