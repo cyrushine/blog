@@ -862,8 +862,94 @@ static int binder_wait_for_work(struct binder_thread *thread,
 
 # binder 线程主例程
 
+binder 线程（包括主线程和普通线程）的主循环是 `getAndExecuteCommand()`，它有两个关键方法：`talkWithDriver()` 和 `executeCommand(cmd)`
+
+`talkWithDriver()` 发送 `BINDER_WRITE_READ` 指令，write 是应用进程发送给 binder driver 处理的任务，可能是空的，read 是 binder driver 需要返回给应用进程的数据，此时如果任务队列（`binder_thread.todo` or `binder_proc.todo`）为空，会通过 `schedule()` 让渡出 CPU，也即是让 binder 线程阻塞在这里，所以在 anr 日志里经常看到下面的调用栈：
+
+```
+// binder 线程因为任务队列为空，阻塞在 binder_thread_read 方法
+
+"Binder_1" prio=5 tid=12 Native
+  | group="main" sCount=1 dsCount=0 obj=0x12c7c0a0 self=0x7f96828800
+  | sysTid=1144 nice=0 cgrp=default sched=0/0 handle=0x7f9be97000
+  | state=S schedstat=( 1577699930 1373220151 5401 ) utm=113 stm=44 core=0 HZ=100
+  | stack=0x7f89c27000-0x7f89c29000 stackSize=1008KB
+  | held mutexes=
+  kernel: __switch_to+0x8c/0x98
+  kernel: binder_thread_read+0xe5c/0x117c
+  kernel: binder_ioctl_write_read+0x1a8/0x3c8
+  kernel: binder_ioctl+0x3c0/0x688
+  kernel: do_vfs_ioctl+0x368/0x588
+  kernel: SyS_ioctl+0x80/0x98
+  kernel: cpu_switch_to+0x48/0x4c
+  native: #00 pc 00062dc0  /system/lib64/libc.so (__ioctl+4)
+  native: #01 pc 000891e8  /system/lib64/libc.so (ioctl+96)
+  native: #02 pc 0002993c  /system/lib64/libbinder.so (android::IPCThreadState::talkWithDriver(bool)+164)
+  native: #03 pc 0002a174  /system/lib64/libbinder.so (android::IPCThreadState::getAndExecuteCommand()+24)
+  native: #04 pc 0002a22c  /system/lib64/libbinder.so (android::IPCThreadState::joinThreadPool(bool)+76)
+  native: #05 pc 00031bc8  /system/lib64/libbinder.so (???)
+  native: #06 pc 0001750c  /system/lib64/libutils.so (android::Thread::_threadLoop(void*)+208)
+  native: #07 pc 000947c4  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::javaThreadShell(void*)+96)
+  native: #08 pc 00016d4c  /system/lib64/libutils.so (???)
+  native: #09 pc 0001f000  /system/lib64/libc.so (__pthread_start(void*)+52)
+  native: #10 pc 0001b340  /system/lib64/libc.so (__start_thread+16)
+  (no managed stack frames)
+
+"Binder_2" prio=5 tid=13 Native
+  | group="main" sCount=1 dsCount=0 obj=0x12c970a0 self=0x7f9ccb5800
+  | sysTid=1146 nice=0 cgrp=default sched=0/0 handle=0x7f9be7c000
+  | state=S schedstat=( 1579795734 1531888975 5458 ) utm=117 stm=40 core=0 HZ=100
+  | stack=0x7f89b2a000-0x7f89b2c000 stackSize=1008KB
+  | held mutexes=
+  kernel: __switch_to+0x8c/0x98
+  kernel: binder_thread_read+0xe5c/0x117c
+  kernel: binder_ioctl_write_read+0x1a8/0x3c8
+  kernel: binder_ioctl+0x3c0/0x688
+  kernel: do_vfs_ioctl+0x368/0x588
+  kernel: SyS_ioctl+0x80/0x98
+  kernel: cpu_switch_to+0x48/0x4c
+  native: #00 pc 00062dc0  /system/lib64/libc.so (__ioctl+4)
+  native: #01 pc 000891e8  /system/lib64/libc.so (ioctl+96)
+  native: #02 pc 0002993c  /system/lib64/libbinder.so (android::IPCThreadState::talkWithDriver(bool)+164)
+  native: #03 pc 0002a174  /system/lib64/libbinder.so (android::IPCThreadState::getAndExecuteCommand()+24)
+  native: #04 pc 0002a22c  /system/lib64/libbinder.so (android::IPCThreadState::joinThreadPool(bool)+76)
+  native: #05 pc 00031bc8  /system/lib64/libbinder.so (???)
+  native: #06 pc 0001750c  /system/lib64/libutils.so (android::Thread::_threadLoop(void*)+208)
+  native: #07 pc 000947c4  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::javaThreadShell(void*)+96)
+  native: #08 pc 00016d4c  /system/lib64/libutils.so (???)
+  native: #09 pc 0001f000  /system/lib64/libc.so (__pthread_start(void*)+52)
+  native: #10 pc 0001b340  /system/lib64/libc.so (__start_thread+16)
+  (no managed stack frames)
+
+"Binder_5" prio=5 tid=65 Native
+  | group="main" sCount=1 dsCount=0 obj=0x131ed100 self=0x7f96834000
+  | sysTid=2014 nice=0 cgrp=default sched=0/0 handle=0x7f86ceb000
+  | state=S schedstat=( 1519499135 1394211486 5073 ) utm=109 stm=42 core=0 HZ=100
+  | stack=0x7f83adc000-0x7f83ade000 stackSize=1008KB
+  | held mutexes=
+  kernel: __switch_to+0x8c/0x98
+  kernel: binder_thread_read+0xe5c/0x117c
+  kernel: binder_ioctl_write_read+0x1a8/0x3c8
+  kernel: binder_ioctl+0x3c0/0x688
+  kernel: do_vfs_ioctl+0x368/0x588
+  kernel: SyS_ioctl+0x80/0x98
+  kernel: cpu_switch_to+0x48/0x4c
+  native: #00 pc 00062dc0  /system/lib64/libc.so (__ioctl+4)
+  native: #01 pc 000891e8  /system/lib64/libc.so (ioctl+96)
+  native: #02 pc 0002993c  /system/lib64/libbinder.so (android::IPCThreadState::talkWithDriver(bool)+164)
+  native: #03 pc 0002a174  /system/lib64/libbinder.so (android::IPCThreadState::getAndExecuteCommand()+24)
+  native: #04 pc 0002a22c  /system/lib64/libbinder.so (android::IPCThreadState::joinThreadPool(bool)+76)
+  native: #05 pc 00031bc8  /system/lib64/libbinder.so (???)
+  native: #06 pc 0001750c  /system/lib64/libutils.so (android::Thread::_threadLoop(void*)+208)
+  native: #07 pc 000947c4  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::javaThreadShell(void*)+96)
+  native: #08 pc 00016d4c  /system/lib64/libutils.so (???)
+  native: #09 pc 0001f000  /system/lib64/libc.so (__pthread_start(void*)+52)
+  native: #10 pc 0001b340  /system/lib64/libc.so (__start_thread+16)
+  (no managed stack frames)
+```
+
 ```cpp
-// https://cs.android.com/android/platform/superproject/+/master:system/libhwbinder/IPCThreadState.cpp
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp
 void IPCThreadState::joinThreadPool(bool isMain /* true - 主线程*/ )
 {
     mOut.writeInt32(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
@@ -892,11 +978,19 @@ status_t IPCThreadState::getAndExecuteCommand()
     status_t result;
     int32_t cmd;
 
-    result = talkWithDriver();  // doReceive 默认为 true
-    // ...
+    result = talkWithDriver();
+    if (result >= NO_ERROR) {
+        size_t IN = mIn.dataAvail();
+        if (IN < sizeof(int32_t)) return result;
+        cmd = mIn.readInt32();
+        // ...
+        result = executeCommand(cmd);
+		// ...
 }
 
-status_t IPCThreadState::talkWithDriver(bool doReceive)
+// write 指 binder driver 需要处理的数据，read 指应用进程想要收到的数据
+// 发送 BINDER_WRITE_READ 给 binder driver
+status_t IPCThreadState::talkWithDriver(bool doReceive /* default true */)
 {
     if (mProcess->mDriverFD < 0) {
         return -EBADF;
@@ -924,19 +1018,6 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
         bwr.read_buffer = 0;
     }
 
-    IF_LOG_COMMANDS() {
-        if (outAvail != 0) {
-            alog << "Sending commands to driver: " << indent;
-            const void* cmds = (const void*)bwr.write_buffer;
-            const void* end = ((const uint8_t*)cmds)+bwr.write_size;
-            alog << HexDump(cmds, bwr.write_size) << endl;
-            while (cmds < end) cmds = printCommand(alog, cmds);
-            alog << dedent;
-        }
-        alog << "Size of receive buffer: " << bwr.read_size
-            << ", needRead: " << needRead << ", doReceive: " << doReceive << endl;
-    }
-
     // Return immediately if there is nothing to do.
     if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
 
@@ -944,97 +1025,158 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
     bwr.read_consumed = 0;
     status_t err;
     do {
-        IF_LOG_COMMANDS() {
-            alog << "About to read/write, write size = " << mOut.dataSize() << endl;
-        }
-#if defined(__ANDROID__)
         if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
             err = NO_ERROR;
         else
             err = -errno;
-#else
-        err = INVALID_OPERATION;
-#endif
         if (mProcess->mDriverFD < 0) {
             err = -EBADF;
         }
-        IF_LOG_COMMANDS() {
-            alog << "Finished read/write, write size = " << mOut.dataSize() << endl;
-        }
     } while (err == -EINTR);
-
-    IF_LOG_COMMANDS() {
-        alog << "Our err: " << (void*)(intptr_t)err << ", write consumed: "
-            << bwr.write_consumed << " (of " << mOut.dataSize()
-                        << "), read consumed: " << bwr.read_consumed << endl;
-    }
-
-    if (err >= NO_ERROR) {
-        if (bwr.write_consumed > 0) {
-            if (bwr.write_consumed < mOut.dataSize())
-                LOG_ALWAYS_FATAL("Driver did not consume write buffer. "
-                                 "err: %s consumed: %zu of %zu",
-                                 statusToString(err).c_str(),
-                                 (size_t)bwr.write_consumed,
-                                 mOut.dataSize());
-            else {
-                mOut.setDataSize(0);
-                processPostWriteDerefs();
-            }
-        }
-        if (bwr.read_consumed > 0) {
-            mIn.setDataSize(bwr.read_consumed);
-            mIn.setDataPosition(0);
-        }
-        IF_LOG_COMMANDS() {
-            alog << "Remaining data size: " << mOut.dataSize() << endl;
-            alog << "Received commands from driver: " << indent;
-            const void* cmds = mIn.data();
-            const void* end = mIn.data() + mIn.dataSize();
-            alog << HexDump(cmds, mIn.dataSize()) << endl;
-            while (cmds < end) cmds = printReturnCommand(alog, cmds);
-            alog << dedent;
-        }
-        return NO_ERROR;
-    }
-
-    return err;
+	// ...
 }
-```
 
-# server 线程调度
-
-[上一章节](#client-线程调度例子)说过，binder 会将 request 添加到 server 进程的 todo list 并唤醒休眠在 wait 上的 server 线程
-
-```cpp
-static void binder_transaction(struct binder_proc *proc,
-                struct binder_thread *thread,
-                struct binder_transaction_data *tr, 
-                int reply)    // false: client request, true: server response
+// 进入内核，具体是 binder driver
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c
+static long binder_ioctl(struct file *filp, unsigned int cmd /* BINDER_WRITE_READ */, unsigned long arg)
 {
+	int ret;
+	struct binder_proc *proc = filp->private_data;
+	struct binder_thread *thread;
+	unsigned int size = _IOC_SIZE(cmd);
+	void __user *ubuf = (void __user *)arg;
+
+	binder_selftest_alloc(&proc->alloc);
+
+	trace_binder_ioctl(cmd, arg);
+
+	ret = wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
+	if (ret)
+		goto err_unlocked;
+
+	thread = binder_get_thread(proc);
+	if (thread == NULL) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	switch (cmd) {
+	case BINDER_WRITE_READ:
+		ret = binder_ioctl_write_read(filp, cmd, arg, thread);
+		if (ret)
+			goto err;
+		break;
 	// ...
-    wait_queue_head_t *target_wait;
+}
 
+static int binder_ioctl_write_read(struct file *filp,
+				unsigned int cmd, unsigned long arg,
+				struct binder_thread *thread)
+{
+	int ret = 0;
+	struct binder_proc *proc = filp->private_data;
+	unsigned int size = _IOC_SIZE(cmd);
+	void __user *ubuf = (void __user *)arg;
+	struct binder_write_read bwr;
+
+	if (size != sizeof(struct binder_write_read)) {
+		ret = -EINVAL;
+		goto out;
+	}
+	if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+    // binder 首先处理应用进程发送过来的数据
+	if (bwr.write_size > 0) {
+		ret = binder_thread_write(proc, thread,
+					  bwr.write_buffer,
+					  bwr.write_size,
+					  &bwr.write_consumed);
+		trace_binder_write_done(ret);
+		if (ret < 0) {
+			bwr.read_consumed = 0;
+			if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
+				ret = -EFAULT;
+			goto out;
+		}
+	}
+
+    // 然后返回应用进程想要的数据
+	if (bwr.read_size > 0) {
+		ret = binder_thread_read(proc, thread, bwr.read_buffer,
+					 bwr.read_size,
+					 &bwr.read_consumed,
+					 filp->f_flags & O_NONBLOCK);
+		trace_binder_read_done(ret);
+		binder_inner_proc_lock(proc);
+		if (!binder_worklist_empty_ilocked(&proc->todo))
+			binder_wakeup_proc_ilocked(proc);
+		binder_inner_proc_unlock(proc);
+		if (ret < 0) {
+			if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
+				ret = -EFAULT;
+			goto out;
+		}
+	}
 	// ...
-    // 找到 target_thread, 则 target_list 和 target_wait 分别初始化为目标线程的 todo 和 wait
-    // 这个意味着 client thread 与目标进程有过通讯记录
-    if (target_thread) {
-        e->to_thread = target_thread->pid;
-        target_list = &target_thread->todo;
-        target_wait = &target_thread->wait;
-    } else {
+}
 
-        // 没有找到 target_thread, 那么 target_list 和 target_wait 分别初始化为目标进程的 todo 和 wait
-        // 这个情况只有BC_TRANSACTION命令才有可能发生
-        target_list = &target_proc->todo;
-        target_wait = &target_proc->wait;
-    }
+static int binder_thread_read(struct binder_proc *proc,
+			      struct binder_thread *thread,
+			      binder_uintptr_t binder_buffer, size_t size,
+			      binder_size_t *consumed, int non_block)
+{
+	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
+	void __user *ptr = buffer + *consumed;
+	void __user *end = buffer + size;
 
-    // ...
-    // 唤醒休眠在 target_wait 上的线程去处理 todo 列表
-    if (target_wait)
-        wake_up_interruptible(target_wait);
-    // ...
+	int ret = 0;
+	int wait_for_proc_work;
+
+	if (*consumed == 0) {
+		if (put_user(BR_NOOP, (uint32_t __user *)ptr))
+			return -EFAULT;
+		ptr += sizeof(uint32_t);
+	}
+
+retry:
+	binder_inner_proc_lock(proc);
+	wait_for_proc_work = binder_available_for_proc_work_ilocked(thread);
+	binder_inner_proc_unlock(proc);
+
+	thread->looper |= BINDER_LOOPER_STATE_WAITING;
+
+	trace_binder_wait_for_work(wait_for_proc_work,
+				   !!thread->transaction_stack,
+				   !binder_worklist_empty(proc, &thread->todo));
+	if (wait_for_proc_work) {
+		// 在章节【主线程与普通线程】里讲过，应用进程将 binder 线程起起来后会发送 BC_ENTER_LOOPER | BC_REGISTER_LOOPER 给 binder driver
+		// 从而打开 BINDER_LOOPER_STATE_ENTERED | BINDER_LOOPER_STATE_REGISTERED 标志位
+		// BINDER_LOOPER_STATE_ENTERED 表示主线程，BINDER_LOOPER_STATE_REGISTERED 表示普通线程
+		if (!(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
+					BINDER_LOOPER_STATE_ENTERED))) {
+			binder_user_error("%d:%d ERROR: Thread waiting for process work before calling BC_REGISTER_LOOPER or BC_ENTER_LOOPER (state %x)\n",
+				proc->pid, thread->pid, thread->looper);
+			wait_event_interruptible(binder_user_error_wait,
+						 binder_stop_on_user_error < 2);
+		}
+		trace_android_vh_binder_restore_priority(NULL, current);
+		binder_restore_priority(thread, &proc->default_priority);
+	}
+
+	if (non_block) {
+		if (!binder_has_work(thread, wait_for_proc_work))
+			ret = -EAGAIN;
+	} else {
+		// 当前线程让渡出 CPU 直到 todo 列表里有任务，在章节【binder 线程主例程】里介绍过此函数以及对应的
+		// prepare_to_wait & schedule & finish_wait 进程/线程调度 API
+		ret = binder_wait_for_work(thread, wait_for_proc_work);
+	}
+
+	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
+	// ...
 }
 ```
 
