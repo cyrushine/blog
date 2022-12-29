@@ -217,7 +217,7 @@ binder 线程池上限默认 15，可通过 `BINDER_SET_MAX_THREADS` 修改
 参考 [主线程与普通线程](#主线程与普通线程)
 
 ```cpp
-// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c;l=4541?q=binder_thread_read
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c
 static int binder_thread_read(struct binder_proc *proc,
 			      struct binder_thread *thread,
 			      binder_uintptr_t binder_buffer, size_t size,
