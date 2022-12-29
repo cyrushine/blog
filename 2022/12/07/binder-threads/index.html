@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.dalvik.work/image/2022-12-07-binder-threads/1.png">
 <meta property="article:published_time" content="2022-12-07T04:00:00.000Z">
-<meta property="article:modified_time" content="2022-12-29T07:21:19.617Z">
+<meta property="article:modified_time" content="2022-12-29T07:31:47.468Z">
 <meta property="article:author" content="Cyrus">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://www.dalvik.work/image/2022-12-07-binder-threads/1.png">
@@ -466,7 +466,7 @@ ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-
 <li>当前线程已从应用进程收到 <code>BC_ENTER_LOOPER</code> or <code>BC_REGISTER_LOOPER</code>，<code>thread-&gt;looper &amp; (BINDER_LOOPER_STATE_REGISTERED | BINDER_LOOPER_STATE_ENTERED)</code></li>
 </ol>
 <p>参考 <a href="#%E4%B8%BB%E7%BA%BF%E7%A8%8B%E4%B8%8E%E6%99%AE%E9%80%9A%E7%BA%BF%E7%A8%8B">主线程与普通线程</a></p>
-<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c;l=4541?q=binder_thread_read</span>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c</span>
 <span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
 <span class="hljs-params"><span class="hljs-function">			      <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
 <span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_uintptr_t</span> binder_buffer, <span class="hljs-type">size_t</span> size,</span></span>
