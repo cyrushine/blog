@@ -206,6 +206,50 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/07/20/kotlin-coroutine-2/" target="_self">
+          深入分析 Kotlin Coroutines 是如何实现的（二）
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/07/20/kotlin-coroutine-2/" target="_self">
+        <div>
+          async / awaitasync 和 await 是一对较为现代的 API 用以实现 **结构化并发编程 (Structured Concurrency)**，如下面代码所示，虽然 runBlocking 底层是单个线程，但是 delay 操作是非阻塞的，这两个操作的结合模拟了多线程环境下的阻塞 IO job1、job2 和 job3 三个任务并发执行，不需要编写任何线程同步代码如 Condi
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-07-20 04:00" pubdate>
+              2021-07-20
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/kotlin/">#kotlin</a>
+            
+              <a href="/tags/coroutine/">#coroutine</a>
+            
+              <a href="/tags/%E5%8D%8F%E7%A8%8B/">#协程</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/07/15/kotlin-coroutine/" target="_self">
           深入分析 Kotlin Coroutines 是如何实现的
         </a>
@@ -591,52 +635,6 @@
               <a href="/tags/ART/">#ART</a>
             
               <a href="/tags/nio/">#nio</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
-          老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
-        <div>
-          DalvikDalvik HeapDalvik 的堆空间分为 Zygote Heap 和 Active Heap Android 系统的第一个 Dalvik 虚拟机是由 Zygote 进程创建的。应用程序进程是由 Zygote 进程 fork 出来的。也就是说应用程序进程使用了一种 写时拷贝技术（COW）来复制了 Zygote 进程的地址空间。这意味着一开始的时候，应用程序进程和 Zygote 进
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-05-28 04:00" pubdate>
-              2021-05-28
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/Dalvik/">#Dalvik</a>
-            
-              <a href="/tags/ART/">#ART</a>
-            
-              <a href="/tags/JVM/">#JVM</a>
-            
-              <a href="/tags/VM/">#VM</a>
             
           </div>
         

@@ -1,0 +1,1699 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="主线程与普通线程Binder 线程可以分为两类：主线程 和 普通线程，它们的区别是：  主线程名称为 Binder_1 or Binder:&lt;pid&gt;_1，普通线程则从 2 开始（ProcessState::makeBinderThreadName）  主线程在应用进程起来后立刻启动，且不会退出；普通线程由 BR_SPAWN_LOOPER 启动且会被 binder driver 命令">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Binder IPC 线程调度模型">
+<meta property="og:url" content="https://www.dalvik.work/2022/12/07/binder-threads/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="主线程与普通线程Binder 线程可以分为两类：主线程 和 普通线程，它们的区别是：  主线程名称为 Binder_1 or Binder:&lt;pid&gt;_1，普通线程则从 2 开始（ProcessState::makeBinderThreadName）  主线程在应用进程起来后立刻启动，且不会退出；普通线程由 BR_SPAWN_LOOPER 启动且会被 binder driver 命令">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.dalvik.work/image/2022-12-07-binder-threads/1.png">
+<meta property="article:published_time" content="2022-12-07T04:00:00.000Z">
+<meta property="article:modified_time" content="2022-12-29T07:21:19.617Z">
+<meta property="article:author" content="Cyrus">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.dalvik.work/image/2022-12-07-binder-threads/1.png">
+  
+  
+  
+  <title>Binder IPC 线程调度模型 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.4","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">Binder IPC 线程调度模型</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-12-07 04:00" pubdate>
+          2022年12月7日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          36k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          302 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Binder IPC 线程调度模型</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p><img src="/image/2022-12-07-binder-threads/1.png" srcset="/image/loading.gif" lazyload alt="1.png"></p>
+<h1 id="主线程与普通线程"><a href="#主线程与普通线程" class="headerlink" title="主线程与普通线程"></a>主线程与普通线程</h1><p>Binder 线程可以分为两类：<code>主线程</code> 和 <code>普通线程</code>，它们的区别是：</p>
+<ol>
+<li><p>主线程名称为 <code>Binder_1</code> or <code>Binder:&lt;pid&gt;_1</code>，普通线程则从 2 开始（<code>ProcessState::makeBinderThreadName</code>）</p>
+</li>
+<li><p>主线程在应用进程起来后立刻启动，且不会退出；普通线程由 <a href="#%E5%88%9B%E5%BB%BA%E6%99%AE%E9%80%9A%E7%BA%BF%E7%A8%8B">BR_SPAWN_LOOPER</a> 启动且会被 binder driver 命令 <code>TIMED_OUT</code> 退出（<code>IPCThreadState::joinThreadPool</code>）</p>
+</li>
+<li><p>binder 线程上限（<code>BINDER_SET_MAX_THREADS</code>）只影响普通线程，更确切地说是只影响通过 <code>BR_SPAWN_LOOPER - BC_REGISTER_LOOPER</code> 创建的 binder 线程</p>
+</li>
+</ol>
+<p>Binder 主线程是在其所在进程的初始化流程里启动的，Java 层进程的创建都是通过 <a href="/2021/03/02/how-application-being-created-and-init/">Process.start()</a> 方法，向 Zygote 进程发出创建进程的 socket 消息，Zygote 进程收到消息后会调用 <code>Zygote.forkAndSpecialize()</code> 来 fork 出新进程，在新进程中会调用到 <code>RuntimeInit.nativeZygoteInit()</code> 方法，该方法经过 jni 映射最终会调用到 <code>app_main.cpp</code> 中的 <code>onZygoteInit</code>，那么接下来从这个方法说起</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * The main function called when started through the zygote process. This could be unified with</span>
+<span class="hljs-comment"> * main(), if the native code in nativeFinishInit() were rationalized with Zygote startup.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-type">static</span> Runnable <span class="hljs-title">zygoteInit</span><span class="hljs-params">(<span class="hljs-type">int</span> targetSdkVersion, <span class="hljs-type">long</span>[] disabledCompatChanges,</span></span>
+<span class="hljs-params"><span class="hljs-function">        String[] argv, ClassLoader classLoader)</span> </span>&#123;
+    <span class="hljs-comment">// ...</span>
+    ZygoteInit.<span class="hljs-built_in">nativeZygoteInit</span>();
+    <span class="hljs-keyword">return</span> RuntimeInit.<span class="hljs-built_in">applicationInit</span>(targetSdkVersion, disabledCompatChanges, argv,
+            classLoader);
+&#125;
+
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/AndroidRuntime.cpp</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">com_android_internal_os_ZygoteInit_nativeZygoteInit</span><span class="hljs-params">(JNIEnv* env, jobject clazz)</span></span>
+<span class="hljs-function"></span>&#123;
+    gCurRuntime-&gt;<span class="hljs-built_in">onZygoteInit</span>();  <span class="hljs-comment">// AppRuntime-&gt;onZygoteInit()</span>
+&#125;
+
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/base/cmds/app_process/app_main.cpp</span>
+<span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">void</span> <span class="hljs-title">onZygoteInit</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// 上面介绍过，ProcessState 是单例模式，初始化实例时会：</span>
+    <span class="hljs-comment">// 1，打开 binder driver：open(&quot;/dev/binder&quot;) &amp;&amp; mmap</span>
+    <span class="hljs-comment">// 2，版本查询和校验：BINDER_VERSION</span>
+    <span class="hljs-comment">// 3，设置线程数：BINDER_SET_MAX_THREADS</span>
+    <span class="hljs-comment">// ...</span>
+    sp&lt;ProcessState&gt; proc = ProcessState::<span class="hljs-built_in">self</span>();
+    <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;App process: starting thread pool.\n&quot;</span>);
+    proc-&gt;<span class="hljs-built_in">startThreadPool</span>();
+&#125;
+
+<span class="hljs-comment">// 开启 binder 主线程执行 binder 消息通讯的 loop：IPCThreadState::self()-&gt;joinThreadPool = talkWithDriver + executeCommand</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp</span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ProcessState::startThreadPool</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    AutoMutex _l(mLock);
+    <span class="hljs-keyword">if</span> (!mThreadPoolStarted) &#123;
+        mThreadPoolStarted = <span class="hljs-literal">true</span>;
+        <span class="hljs-built_in">spawnPooledThread</span>(<span class="hljs-literal">true</span>);
+    &#125;
+&#125;
+
+<span class="hljs-comment">// spawn - 产卵</span>
+<span class="hljs-comment">// spawnPooledThread 是创建 binder 线程的核心函数，它创建新线程执行 IPCThreadState::joinThreadPool</span>
+<span class="hljs-comment">// 新的 binder 线程的生命流程：</span>
+<span class="hljs-comment">// 1，往 binder 发送 BC_ENTER_LOOPER（主线程） or BC_REGISTER_LOOPER（普通线程）</span>
+<span class="hljs-comment">// 2. 主循环：getAndExecuteCommand()</span>
+<span class="hljs-comment">// 3. 退出循环时发送 BC_EXIT_LOOPER 给 binder driver</span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ProcessState::spawnPooledThread</span><span class="hljs-params">(<span class="hljs-type">bool</span> isMain <span class="hljs-comment">/* true 表示主线程 */</span>)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">if</span> (mThreadPoolStarted) &#123;
+        String8 name = <span class="hljs-built_in">makeBinderThreadName</span>();  <span class="hljs-comment">// Binder_x or Binder:&lt;pid&gt;_x</span>
+        <span class="hljs-built_in">ALOGV</span>(<span class="hljs-string">&quot;Spawning new pooled thread, name=%s\n&quot;</span>, name.<span class="hljs-built_in">string</span>());
+        sp&lt;Thread&gt; t = sp&lt;PoolThread&gt;::<span class="hljs-built_in">make</span>(isMain);
+        t-&gt;<span class="hljs-built_in">run</span>(name.<span class="hljs-built_in">string</span>());
+        <span class="hljs-built_in">pthread_mutex_lock</span>(&amp;mThreadCountLock);
+        mKernelStartedThreads++;
+        <span class="hljs-built_in">pthread_mutex_unlock</span>(&amp;mThreadCountLock);
+    &#125;
+&#125;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">PoolThread</span> : <span class="hljs-keyword">public</span> Thread
+&#123;
+    <span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">bool</span> <span class="hljs-title">threadLoop</span><span class="hljs-params">()</span></span>
+<span class="hljs-function">    </span>&#123;
+        IPCThreadState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">joinThreadPool</span>(mIsMain);
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    &#125;
+&#125;;
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">IPCThreadState::joinThreadPool</span><span class="hljs-params">(<span class="hljs-type">bool</span> isMain)</span>    <span class="hljs-comment">// binder 线程的整个生命流程</span></span>
+<span class="hljs-function"></span>&#123;
+    mOut.<span class="hljs-built_in">writeInt32</span>(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
+    <span class="hljs-type">status_t</span> result;
+    mIsLooper = <span class="hljs-literal">true</span>;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-built_in">processPendingDerefs</span>();
+        <span class="hljs-comment">// now get the next command to be processed, waiting if necessary</span>
+        result = <span class="hljs-built_in">getAndExecuteCommand</span>();
+
+        <span class="hljs-comment">// Let this thread exit the thread pool if it is no longer</span>
+        <span class="hljs-comment">// needed and it is not the main process thread.</span>
+        <span class="hljs-keyword">if</span>(result == TIMED_OUT &amp;&amp; !isMain) &#123;  <span class="hljs-comment">// 可以看到主线程与普通线程的区别之一：主线程永远不会主动退出</span>
+            <span class="hljs-keyword">break</span>;
+        &#125;
+    &#125; <span class="hljs-keyword">while</span> (result != -ECONNREFUSED &amp;&amp; result != -EBADF);
+
+    mOut.<span class="hljs-built_in">writeInt32</span>(BC_EXIT_LOOPER);
+    mIsLooper = <span class="hljs-literal">false</span>;
+    <span class="hljs-built_in">talkWithDriver</span>(<span class="hljs-literal">false</span>);
+&#125;
+
+<span class="hljs-comment">// 主线程注册（BC_REGISTER_LOOPER）和普通线程注册（BC_ENTER_LOOPER）很类似</span>
+<span class="hljs-comment">// 都是打开标志位 BINDER_LOOPER_STATE_ENTERED or BINDER_LOOPER_STATE_REGISTERED</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_write</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			<span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">			<span class="hljs-type">binder_uintptr_t</span> binder_buffer, <span class="hljs-type">size_t</span> size,</span></span>
+<span class="hljs-params"><span class="hljs-function">			<span class="hljs-type">binder_size_t</span> *consumed)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-keyword">case</span> BC_REGISTER_LOOPER:
+		<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+		<span class="hljs-keyword">if</span> (thread-&gt;looper &amp; BINDER_LOOPER_STATE_ENTERED) &#123;
+			thread-&gt;looper |= BINDER_LOOPER_STATE_INVALID;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d ERROR: BC_REGISTER_LOOPER called after BC_ENTER_LOOPER\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid);
+		&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (proc-&gt;requested_threads == <span class="hljs-number">0</span>) &#123;
+			thread-&gt;looper |= BINDER_LOOPER_STATE_INVALID;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d ERROR: BC_REGISTER_LOOPER called without request\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid);
+		&#125; <span class="hljs-keyword">else</span> &#123;
+			proc-&gt;requested_threads--;
+			proc-&gt;requested_threads_started++;
+		&#125;
+		thread-&gt;looper |= BINDER_LOOPER_STATE_REGISTERED;
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+		<span class="hljs-keyword">break</span>;
+
+	<span class="hljs-keyword">case</span> BC_ENTER_LOOPER:
+		<span class="hljs-keyword">if</span> (thread-&gt;looper &amp; BINDER_LOOPER_STATE_REGISTERED) &#123;
+			thread-&gt;looper |= BINDER_LOOPER_STATE_INVALID;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d ERROR: BC_ENTER_LOOPER called after BC_REGISTER_LOOPER\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid);
+		&#125;
+		thread-&gt;looper |= BINDER_LOOPER_STATE_ENTERED;
+		<span class="hljs-keyword">break</span>;	
+&#125;</code></pre></div>
+
+<h2 id="binder-线程命名"><a href="#binder-线程命名" class="headerlink" title="binder 线程命名"></a>binder 线程命名</h2><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// binder 线程命名规则：Binder_x（如果 &gt;= Android N 则是 Binder:&lt;pid&gt;_x）</span>
+<span class="hljs-comment">// 其中的 x 从 1 开始</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp</span>
+<span class="hljs-function">String8 <span class="hljs-title">ProcessState::makeBinderThreadName</span><span class="hljs-params">()</span> </span>&#123;
+    <span class="hljs-type">int32_t</span> s = <span class="hljs-built_in">android_atomic_add</span>(<span class="hljs-number">1</span>, &amp;mThreadPoolSeq);
+    <span class="hljs-type">pid_t</span> pid = <span class="hljs-built_in">getpid</span>();
+
+    std::string_view driverName = mDriverName.<span class="hljs-built_in">c_str</span>();
+    android::base::<span class="hljs-built_in">ConsumePrefix</span>(&amp;driverName, <span class="hljs-string">&quot;/dev/&quot;</span>);
+
+    String8 name;
+    name.<span class="hljs-built_in">appendFormat</span>(<span class="hljs-string">&quot;%.*s:%d_%X&quot;</span>, <span class="hljs-built_in">static_cast</span>&lt;<span class="hljs-type">int</span>&gt;(driverName.<span class="hljs-built_in">length</span>()), driverName.<span class="hljs-built_in">data</span>(), pid,
+                      s);
+    <span class="hljs-keyword">return</span> name;
+&#125;
+ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-type">const</span> <span class="hljs-type">char</span>* driver)
+      : <span class="hljs-built_in">mDriverName</span>(<span class="hljs-built_in">String8</span>(driver)),
+        <span class="hljs-built_in">mDriverFD</span>(<span class="hljs-number">-1</span>),
+        <span class="hljs-built_in">mVMStart</span>(MAP_FAILED),
+        <span class="hljs-built_in">mThreadCountLock</span>(PTHREAD_MUTEX_INITIALIZER),
+        <span class="hljs-built_in">mThreadCountDecrement</span>(PTHREAD_COND_INITIALIZER),
+        <span class="hljs-built_in">mExecutingThreadsCount</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mWaitingForThreads</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mMaxThreads</span>(DEFAULT_MAX_BINDER_THREADS),
+        <span class="hljs-built_in">mCurrentThreads</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mKernelStartedThreads</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mStarvationStartTimeMs</span>(<span class="hljs-number">0</span>),
+        <span class="hljs-built_in">mForked</span>(<span class="hljs-literal">false</span>),
+        <span class="hljs-built_in">mThreadPoolStarted</span>(<span class="hljs-literal">false</span>),
+        <span class="hljs-built_in">mThreadPoolSeq</span>(<span class="hljs-number">1</span>),    <span class="hljs-comment">// binder 线程名的序号从 1 开始</span>
+        <span class="hljs-built_in">mCallRestriction</span>(CallRestriction::NONE) &#123;
+	<span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
+
+<h2 id="创建普通线程"><a href="#创建普通线程" class="headerlink" title="创建普通线程"></a>创建普通线程</h2><p>流程概览：binder driver 在满足以下条件的情况下，发送 <code>BR_SPAWN_LOOPER</code> 给应用进程，应用进程开启新线程 <code>ProcessState::spawnPooledThread(false)</code> 后，发送 <code>BC_REGISTER_LOOPER</code> 告知 binder driver 线程已启动</p>
+<p>有三种情况可以进入 <code>binder_thread_read</code> done 代码段：</p>
+<ol>
+<li><p>当 binder driver 处理类型为 <code>BINDER_WORK_TRANSACTION</code> 的任务，即 binder driver 收到的命令是 <code>BC_TRANSACTION</code>（client 发送 request 至 binder） or <code>BC_REPLY</code>（server 响应 response 至 binder）</p>
+</li>
+<li><p>当前线程的 return_error 发生 error</p>
+</li>
+<li><p>Binder Driver 向 client 发送死亡通知 <code>BR_DEAD_BINDER</code></p>
+</li>
+</ol>
+<p>按需启动普通 binder 线程的条件：</p>
+<ol>
+<li>进程没有请求创建 binder 线程 <code>proc-&gt;requested_threads == 0</code></li>
+</ol>
+<blockquote>
+<p>@requested_threads: number of binder threads requested but not yet started. In current implementation, can only be 0 or 1.</p>
+</blockquote>
+<p>binder 发送 <code>BR_SPAWN_LOOPER</code> 给应用进程后将 requested_threads 置真，直到应用进程将新线程启动并回复 <code>BC_REGISTER_LOOPER</code> 后才将 requested_threads 置假</p>
+<ol start="2">
+<li>没有等待/阻塞在进程 todo list 的 client thread，<code>list_empty(&amp;thread-&gt;proc-&gt;waiting_threads)</code></li>
+</ol>
+<blockquote>
+<p>@waiting_threads: threads currently waiting for proc work</p>
+</blockquote>
+<p>参考 <a href="#client-%E7%BA%BF%E7%A8%8B%E8%B0%83%E5%BA%A6%E4%BE%8B%E5%AD%90">client 线程调度例子</a> 里的 <code>binder_wait_for_work</code></p>
+<ol start="3">
+<li>已启动的 binder 线程数小于上限，<code>proc-&gt;requested_threads_started &lt; proc-&gt;max_threads</code></li>
+</ol>
+<p>binder 线程池上限默认 15，可通过 <code>BINDER_SET_MAX_THREADS</code> 修改</p>
+<ol start="4">
+<li>当前线程已从应用进程收到 <code>BC_ENTER_LOOPER</code> or <code>BC_REGISTER_LOOPER</code>，<code>thread-&gt;looper &amp; (BINDER_LOOPER_STATE_REGISTERED | BINDER_LOOPER_STATE_ENTERED)</code></li>
+</ol>
+<p>参考 <a href="#%E4%B8%BB%E7%BA%BF%E7%A8%8B%E4%B8%8E%E6%99%AE%E9%80%9A%E7%BA%BF%E7%A8%8B">主线程与普通线程</a></p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c;l=4541?q=binder_thread_read</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_uintptr_t</span> binder_buffer, <span class="hljs-type">size_t</span> size,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_size_t</span> *consumed, <span class="hljs-type">int</span> non_block)</span></span>
+<span class="hljs-function"></span>&#123;
+<span class="hljs-comment">// ...</span>
+done:
+	*consumed = ptr - buffer;
+	<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+
+	<span class="hljs-keyword">if</span> (proc-&gt;requested_threads == <span class="hljs-number">0</span> &amp;&amp;
+	    <span class="hljs-built_in">list_empty</span>(&amp;thread-&gt;proc-&gt;waiting_threads) &amp;&amp;
+	    proc-&gt;requested_threads_started &lt; proc-&gt;max_threads &amp;&amp;
+	    (thread-&gt;looper &amp; (BINDER_LOOPER_STATE_REGISTERED |
+	     BINDER_LOOPER_STATE_ENTERED)) <span class="hljs-comment">/* the user-space code fails to */</span>
+	     <span class="hljs-comment">/*spawn a new thread if we leave this out */</span>) &#123;
+
+		proc-&gt;requested_threads++;
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(BR_SPAWN_LOOPER, (<span class="hljs-type">uint32_t</span> __user *)buffer))
+			<span class="hljs-keyword">return</span> -EFAULT;
+		<span class="hljs-built_in">binder_stat_br</span>(proc, thread, BR_SPAWN_LOOPER);
+	&#125; <span class="hljs-keyword">else</span>
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+&#125;
+
+<span class="hljs-comment">// 应用进程收到 BR_SPAWN_LOOPER 后启动新的 binder 普通线程，参考【主线程与普通线程】对 spawnPooledThread(false) 的解析</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:system/libhwbinder/IPCThreadState.cpp</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::executeCommand</span><span class="hljs-params">(<span class="hljs-type">int32_t</span> cmd)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">case</span> BR_SPAWN_LOOPER:
+        mProcess-&gt;<span class="hljs-built_in">spawnPooledThread</span>(<span class="hljs-literal">false</span>);
+        <span class="hljs-keyword">break</span>;
+&#125;
+
+</code></pre></div>
+
+<h1 id="client-线程调度例子"><a href="#client-线程调度例子" class="headerlink" title="client 线程调度例子"></a>client 线程调度例子</h1><p>一次事务 <code>binder_thread.transaction_stack</code> 表示：client 发起请求 -&gt; server 处理并返回响应 -&gt; client 收到响应这么一整个流程，类似于一次完整的 HTTP 请求</p>
+<p>client 是单线程即发起 Binder IPC 的那个线程，将 request 添加到目标进程 <code>binder_proc.todo</code> 或者目标线程 <code>binder_thread.todo</code> 的任务列表后，通过 <code>schedule()</code> 让渡出 cpu 资源从而实现 <a target="_blank" rel="noopener" href="https://github.com/cyrus-lin/bookmark/issues/45">线程休眠</a>，直到 server 返回响应唤醒它（<code>wake_up</code>）</p>
+<p><code>binder_thread_write</code> 将 request 添加到目标进程/目标线程的 todo 任务队列，<code>binder_thread_read</code> 将休眠此 client 线程直到被 server reponse 唤醒</p>
+<div class="code-wrapper"><pre><code class="hljs cpp">ActivityManager.getRunningAppProcesses                                                 <span class="hljs-comment">// APP 进程 Java 层</span>
+IServiceManager.Stub.Proxy.getRunningAppProcesses
+BinderProxy.<span class="hljs-built_in">transact</span>(<span class="hljs-type">int</span> code, Parcel data, Parcel reply, <span class="hljs-type">int</span> flags)
+BpBinder.<span class="hljs-built_in">transact</span>(<span class="hljs-type">uint32_t</span> code, <span class="hljs-type">const</span> Parcel&amp; data, Parcel* reply, <span class="hljs-type">uint32_t</span> flags)    <span class="hljs-comment">// APP 进程 native 层</span>
+IPCThreadState::<span class="hljs-built_in">self</span>()-&gt;<span class="hljs-built_in">transact</span>(<span class="hljs-built_in">binderHandle</span>(), code, data, reply, flags)
+IPCThreadState::<span class="hljs-built_in">writeTransactionData</span>(BC_TRANSACTION, flags, handle, code, data, <span class="hljs-literal">nullptr</span>)
+IPCThreadState::<span class="hljs-built_in">waitForResponse</span>(Parcel *reply, <span class="hljs-type">status_t</span> *acquireResult)
+IPCThreadState::<span class="hljs-built_in">talkWithDriver</span>(<span class="hljs-type">bool</span> doReceive)
+<span class="hljs-built_in">ioctl</span>(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, &amp;bwr)                                     <span class="hljs-comment">// 陷入内核来到 binder driver</span>
+binder_ioctl
+
+<span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_ioctl_write_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp,</span></span>
+<span class="hljs-params"><span class="hljs-function">				<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> cmd, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> arg,</span></span>
+<span class="hljs-params"><span class="hljs-function">				<span class="hljs-keyword">struct</span> binder_thread *thread <span class="hljs-comment">/* 当前线程，此时即是 client 执行 request 的线程 */</span> )</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *proc = filp-&gt;private_data;
+    <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> size = _IOC_SIZE(cmd);    <span class="hljs-comment">// sizeof(struct binder_write_read)</span>
+    <span class="hljs-type">void</span> __user *ubuf = (<span class="hljs-type">void</span> __user *)arg;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_write_read</span> bwr;
+    <span class="hljs-keyword">if</span> (size != <span class="hljs-built_in">sizeof</span>(<span class="hljs-keyword">struct</span> binder_write_read)) &#123;
+        ret = -EINVAL;
+        <span class="hljs-keyword">goto</span> out;
+    &#125;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_from_user</span>(&amp;bwr, ubuf, <span class="hljs-built_in">sizeof</span>(bwr))) &#123;  <span class="hljs-comment">// 从用户进程地址空间拷贝 struct binder_write_read 至内核</span>
+        ret = -EFAULT;
+        <span class="hljs-keyword">goto</span> out;
+    &#125;    
+	<span class="hljs-comment">// binder_write_read.write_size &gt; 0 表示用户进程有数据发送到内核驱动</span>
+	<span class="hljs-keyword">if</span> (bwr.write_size &gt; <span class="hljs-number">0</span>) &#123;
+		ret = <span class="hljs-built_in">binder_thread_write</span>(proc, thread,
+					  bwr.write_buffer,
+					  bwr.write_size,
+					  &amp;bwr.write_consumed);
+		<span class="hljs-built_in">trace_binder_write_done</span>(ret);
+		<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>) &#123;
+			bwr.read_consumed = <span class="hljs-number">0</span>;
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr)))
+				ret = -EFAULT;
+			<span class="hljs-keyword">goto</span> out;
+		&#125;
+	&#125;
+    <span class="hljs-comment">// binder_write_read.read_size &gt; 0 表示用户进程希望内核驱动返回 read_size 大小的数据给他</span>
+	<span class="hljs-keyword">if</span> (bwr.read_size &gt; <span class="hljs-number">0</span>) &#123;
+		ret = <span class="hljs-built_in">binder_thread_read</span>(proc, thread, bwr.read_buffer,
+					 bwr.read_size,
+					 &amp;bwr.read_consumed,
+					 filp-&gt;f_flags &amp; O_NONBLOCK);
+		<span class="hljs-built_in">trace_binder_read_done</span>(ret);
+		<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_worklist_empty_ilocked</span>(&amp;proc-&gt;todo))
+			<span class="hljs-built_in">binder_wakeup_proc_ilocked</span>(proc);
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+		<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>) &#123;
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr)))
+				ret = -EFAULT;
+			<span class="hljs-keyword">goto</span> out;
+		&#125;
+	&#125;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr))) &#123;  <span class="hljs-comment">// 处理成功，将 struct binder_write_read 从内核拷贝/覆盖至用户进程空间</span>
+        ret = -EFAULT;
+        <span class="hljs-keyword">goto</span> out;
+    &#125;    
+	<span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// 将数据 binder_buffer 从用户内存空间发送到内核地址空间</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_write</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">            <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">            <span class="hljs-type">binder_uintptr_t</span> binder_buffer,  <span class="hljs-comment">/* binder_write_read.write_buffer */</span> </span></span>
+<span class="hljs-params"><span class="hljs-function">            <span class="hljs-type">size_t</span> size,                     <span class="hljs-comment">/* binder_write_read.write_size */</span></span></span>
+<span class="hljs-params"><span class="hljs-function">            <span class="hljs-type">binder_size_t</span> *consumed)</span>         <span class="hljs-comment">/* 输出，从 write_buffer 读取了多少数据 */</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-type">uint32_t</span> cmd;
+    <span class="hljs-type">void</span> __user *buffer = (<span class="hljs-type">void</span> __user *)(<span class="hljs-type">uintptr_t</span>)binder_buffer;  <span class="hljs-comment">// write_buffer 起始地址</span>
+    <span class="hljs-type">void</span> __user *ptr = buffer + *consumed;                          <span class="hljs-comment">// 指示器，标识下一次读取的位置</span>
+    <span class="hljs-type">void</span> __user *end = buffer + size;                               <span class="hljs-comment">// write_buffer 结束地址</span>
+    <span class="hljs-keyword">while</span> (ptr &lt; end &amp;&amp; thread-&gt;return_error == BR_OK) &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">get_user</span>(cmd, (<span class="hljs-type">uint32_t</span> __user *)ptr))                  <span class="hljs-comment">// 从用户内存空间 write_buffer 拷贝 4 bytes 到 cmd</span>
+            <span class="hljs-keyword">return</span> -EFAULT;
+        ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+        <span class="hljs-built_in">trace_binder_command</span>(cmd);
+        <span class="hljs-keyword">if</span> (_IOC_NR(cmd) &lt; <span class="hljs-built_in">ARRAY_SIZE</span>(binder_stats.bc)) &#123;
+            binder_stats.bc[_IOC_NR(cmd)]++;
+            proc-&gt;stats.bc[_IOC_NR(cmd)]++;
+            thread-&gt;stats.bc[_IOC_NR(cmd)]++;
+        &#125;
+
+        <span class="hljs-keyword">switch</span> (cmd) &#123;                          <span class="hljs-comment">// write 是指将数据从用户内存空间发送到内核内存空间</span>
+        <span class="hljs-keyword">case</span> BC_TRANSACTION:                    <span class="hljs-comment">// 客户端的请求数据 client request</span>
+        <span class="hljs-keyword">case</span> BC_REPLY: &#123;                        <span class="hljs-comment">// 服务端的响应数据 server response</span>
+            <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction_data</span> tr;  <span class="hljs-comment">// 它们使用的数据结构都是 binder_transaction_data</span>
+            <span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_from_user</span>(&amp;tr, ptr, <span class="hljs-built_in">sizeof</span>(tr)))
+                <span class="hljs-keyword">return</span> -EFAULT;
+            ptr += <span class="hljs-built_in">sizeof</span>(tr);
+            binder_transaction**(proc, thread, &amp;tr, cmd == BC_REPLY);
+            <span class="hljs-keyword">break</span>;
+            &#125;
+        <span class="hljs-comment">// ...</span>
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">binder_transaction</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">                <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">                <span class="hljs-keyword">struct</span> binder_transaction_data *tr, </span></span>
+<span class="hljs-params"><span class="hljs-function">                <span class="hljs-type">int</span> reply)</span>    <span class="hljs-comment">// false: client request, true: server response</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction</span> *t;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_work</span> *tcomplete;
+    <span class="hljs-type">binder_size_t</span> *offp, *off_end;
+    <span class="hljs-type">binder_size_t</span> off_min;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *target_proc;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_thread</span> *target_thread = <span class="hljs-literal">NULL</span>;**
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_node</span> *target_node = <span class="hljs-literal">NULL</span>;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">list_head</span> *target_list;
+    <span class="hljs-type">wait_queue_head_t</span> *target_wait;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction</span> *in_reply_to = <span class="hljs-literal">NULL</span>;
+    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction_log_entry</span> *e;
+    <span class="hljs-type">uint32_t</span> return_error;
+    e = <span class="hljs-built_in">binder_transaction_log_add</span>(&amp;binder_transaction_log);
+    e-&gt;call_type = reply ? <span class="hljs-number">2</span> : !!(tr-&gt;flags &amp; TF_ONE_WAY);
+    e-&gt;from_proc = proc-&gt;pid;
+    e-&gt;from_thread = thread-&gt;pid;
+    e-&gt;target_handle = tr-&gt;target.handle;
+    e-&gt;data_size = tr-&gt;data_size;
+    e-&gt;offsets_size = tr-&gt;offsets_size;
+    
+    <span class="hljs-keyword">if</span> (reply) &#123;                    <span class="hljs-comment">// BC_REPLY 说明这是一个 Server 发给 Client 的事务处理回复，在 server 端的线程上</span>
+        <span class="hljs-comment">// ...</span>
+    &#125; <span class="hljs-keyword">else</span> &#123;                        <span class="hljs-comment">// BC_TRANSACTION 说明这是一个 Client 发给 Server 的请求事务，在 Client 端线程上</span>
+        <span class="hljs-keyword">if</span> (tr-&gt;target.handle) &#123;    <span class="hljs-comment">// 确定目标进程 target_proc</span>
+            <span class="hljs-keyword">struct</span> binder_ref *ref;
+            ref = <span class="hljs-built_in">binder_get_ref</span>(proc, tr-&gt;target.handle);
+            <span class="hljs-keyword">if</span> (ref == <span class="hljs-literal">NULL</span>) &#123;
+                <span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d got transaction to invalid handle\n&quot;</span>,
+                    proc-&gt;pid, thread-&gt;pid);
+                return_error = BR_FAILED_REPLY;
+                <span class="hljs-keyword">goto</span> err_invalid_target_handle;
+            &#125;
+            target_node = ref-&gt;node;
+        &#125; <span class="hljs-keyword">else</span> &#123;                     <span class="hljs-comment">// handle == 0 表示是 service manager 进程</span>
+            target_node = binder_context_mgr_node;
+            <span class="hljs-keyword">if</span> (target_node == <span class="hljs-literal">NULL</span>) &#123;
+                return_error = BR_DEAD_REPLY;
+                <span class="hljs-keyword">goto</span> err_no_context_mgr_node;
+            &#125;
+        &#125;
+        e-&gt;to_node = target_node-&gt;debug_id;
+        target_proc = target_node-&gt;proc;
+        <span class="hljs-keyword">if</span> (target_proc == <span class="hljs-literal">NULL</span>) &#123;
+            return_error = BR_DEAD_REPLY;
+            <span class="hljs-keyword">goto</span> err_dead_binder;
+        &#125;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">security_binder_transaction</span>(proc-&gt;tsk,
+                        target_proc-&gt;tsk) &lt; <span class="hljs-number">0</span>) &#123;
+            return_error = BR_FAILED_REPLY;
+            <span class="hljs-keyword">goto</span> err_invalid_target_handle;
+        &#125;
+
+        <span class="hljs-comment">// 确定目标线程 target_thread</span>
+        <span class="hljs-comment">// 非 one_way（需要replay），则从栈顶向下搜索，从历史事务记录中过滤出与目标进程的通讯记录，复用以往使用过的线程</span>
+        <span class="hljs-keyword">if</span> (!(tr-&gt;flags &amp; TF_ONE_WAY) &amp;&amp; thread-&gt;transaction_stack) &#123;
+            <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction</span> *tmp;
+            tmp = thread-&gt;transaction_stack;
+            <span class="hljs-keyword">if</span> (tmp-&gt;to_thread != thread) &#123;
+                <span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d got new transaction with bad transaction stack, transaction %d has target %d:%d\n&quot;</span>,
+                    proc-&gt;pid, thread-&gt;pid, tmp-&gt;debug_id,
+                    tmp-&gt;to_proc ? tmp-&gt;to_proc-&gt;pid : <span class="hljs-number">0</span>,
+                    tmp-&gt;to_thread ?
+                    tmp-&gt;to_thread-&gt;pid : <span class="hljs-number">0</span>);
+                return_error = BR_FAILED_REPLY;
+                <span class="hljs-keyword">goto</span> err_bad_call_stack;
+            &#125;
+            <span class="hljs-keyword">while</span> (tmp) &#123;
+                <span class="hljs-keyword">if</span> (tmp-&gt;from &amp;&amp; tmp-&gt;from-&gt;proc == target_proc)
+                    target_thread = tmp-&gt;from;
+                tmp = tmp-&gt;from_parent;
+            &#125;
+        &#125;
+    &#125;
+
+    <span class="hljs-comment">// 找到 target_thread, 则 target_list 和 target_wait 分别初始化为目标线程的 todo 和 wait</span>
+    <span class="hljs-comment">// 这个意味着 client thread 与目标进程有过通讯记录</span>
+    <span class="hljs-keyword">if</span> (target_thread) &#123;
+        e-&gt;to_thread = target_thread-&gt;pid;
+        target_list = &amp;target_thread-&gt;todo;
+        target_wait = &amp;target_thread-&gt;wait;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+
+        <span class="hljs-comment">// 没有找到 target_thread, 那么 target_list 和 target_wait 分别初始化为目标进程的 todo 和 wait</span>
+        <span class="hljs-comment">// 这个情况只有BC_TRANSACTION命令才有可能发生</span>
+        target_list = &amp;target_proc-&gt;todo;
+        target_wait = &amp;target_proc-&gt;wait;
+    &#125;
+    e-&gt;to_proc = target_proc-&gt;pid;
+    
+    <span class="hljs-comment">// 发送到目标进程 todo 列表的事务，由目标进程处理</span>
+    t = <span class="hljs-built_in">kzalloc</span>(<span class="hljs-built_in">sizeof</span>(*t), GFP_KERNEL);                 
+    <span class="hljs-keyword">if</span> (t == <span class="hljs-literal">NULL</span>) &#123;
+        return_error = BR_FAILED_REPLY;
+        <span class="hljs-keyword">goto</span> err_alloc_t_failed;
+    &#125;
+    <span class="hljs-built_in">binder_stats_created</span>(BINDER_STAT_TRANSACTION);
+
+    <span class="hljs-comment">// 发送到本线程 todo 列表的任务，该 binder_work 会发送 BR_WORK_TRANSCAION_COMPLETE 给目标进程，告知请求/回复已发送出去</span>
+    tcomplete = <span class="hljs-built_in">kzalloc</span>(<span class="hljs-built_in">sizeof</span>(*tcomplete), GFP_KERNEL);
+    <span class="hljs-keyword">if</span> (tcomplete == <span class="hljs-literal">NULL</span>) &#123;
+        return_error = BR_FAILED_REPLY;
+        <span class="hljs-keyword">goto</span> err_alloc_tcomplete_failed;
+    &#125;
+    <span class="hljs-built_in">binder_stats_created</span>(BINDER_STAT_TRANSACTION_COMPLETE);
+
+    <span class="hljs-comment">// 初始化 binder_transaction</span>
+    <span class="hljs-keyword">if</span> (!reply &amp;&amp; !(tr-&gt;flags &amp; TF_ONE_WAY)) <span class="hljs-comment">// BC_TRANSACTION 且不是 one way，即需要 replay，则发起线程（from）设为当前线程</span>
+      t-&gt;from = thread;
+    <span class="hljs-keyword">else</span>                                     <span class="hljs-comment">// BC_REPLY，from 置为空</span>
+        t-&gt;from = <span class="hljs-literal">NULL</span>;
+    t-&gt;sender_euid = <span class="hljs-built_in">task_euid</span>(proc-&gt;tsk);
+    t-&gt;to_proc = target_proc;
+    t-&gt;to_thread = target_thread;
+    t-&gt;code = tr-&gt;code;
+    t-&gt;flags = tr-&gt;flags;
+    t-&gt;priority = <span class="hljs-built_in">task_nice</span>(current);
+    <span class="hljs-built_in">trace_binder_transaction</span>(reply, t, target_node);
+    t-&gt;buffer = **binder_alloc_buf**(target_proc, tr-&gt;data_size,
+        tr-&gt;offsets_size, !reply &amp;&amp; (t-&gt;flags &amp; TF_ONE_WAY));
+    <span class="hljs-keyword">if</span> (t-&gt;buffer == <span class="hljs-literal">NULL</span>) &#123;
+        return_error = BR_FAILED_REPLY;
+        <span class="hljs-keyword">goto</span> err_binder_alloc_buf_failed;
+    &#125;
+    t-&gt;buffer-&gt;allow_user_free = <span class="hljs-number">0</span>;
+    t-&gt;buffer-&gt;debug_id = t-&gt;debug_id;
+    t-&gt;buffer-&gt;transaction = t;
+    t-&gt;buffer-&gt;target_node = target_node;
+    <span class="hljs-built_in">trace_binder_transaction_alloc_buf</span>(t-&gt;buffer);
+    <span class="hljs-keyword">if</span> (target_node)
+       <span class="hljs-built_in">binder_inc_node</span>(target_node, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-literal">NULL</span>);
+
+    <span class="hljs-comment">// 做一些内存拷贝工作，从用户内存空间 -&gt; 内核空间</span>
+    <span class="hljs-comment">// ...</span>
+
+    <span class="hljs-keyword">if</span> (reply) &#123;  <span class="hljs-comment">// 事务处理完成，将本次 reply 对应的 transaction 从目标线程（Client）事务栈中移除，并释放其所占用的地址空间</span>
+        <span class="hljs-built_in">BUG_ON</span>(t-&gt;buffer-&gt;async_transaction != <span class="hljs-number">0</span>);
+        <span class="hljs-built_in">binder_pop_transaction</span>(target_thread, in_reply_to);
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!(t-&gt;flags &amp; TF_ONE_WAY)) &#123;
+
+        <span class="hljs-comment">// 一个 client 到 server 的 transaction，且需要 reply，将本次事务加入到本线程(client)事务栈中</span>
+        <span class="hljs-built_in">BUG_ON</span>(t-&gt;buffer-&gt;async_transaction != <span class="hljs-number">0</span>);
+        t-&gt;need_reply = <span class="hljs-number">1</span>;
+        t-&gt;from_parent = thread-&gt;transaction_stack;
+        thread-&gt;transaction_stack = t;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-built_in">BUG_ON</span>(target_node == <span class="hljs-literal">NULL</span>);
+        <span class="hljs-built_in">BUG_ON</span>(t-&gt;buffer-&gt;async_transaction != <span class="hljs-number">1</span>);
+        <span class="hljs-keyword">if</span> (target_node-&gt;has_async_transaction) &#123;
+            target_list = &amp;target_node-&gt;async_todo;
+            *target_wait = <span class="hljs-literal">NULL</span>;
+        &#125; <span class="hljs-keyword">else</span>
+            target_node-&gt;has_async_transaction = <span class="hljs-number">1</span>;
+    &#125;
+
+    <span class="hljs-comment">// 将事务 binder_transaction 加入至目标进程 or 目标线程的 todo 列表</span>
+    t-&gt;work.type = BINDER_WORK_TRANSACTION;
+    <span class="hljs-built_in">list_add_tail</span>(&amp;t-&gt;work.entry, target_list);
+
+    <span class="hljs-comment">// 添加一个事务到本线程的 todo 队列中，稍后在处理 todo 队列时（binder_thread_write）</span>
+    <span class="hljs-comment">// 该 binder_work 会发送 BR_WORK_TRANSCAION_COMPLETE 给目标进程，告知请求/回复已发送出去</span>
+    tcomplete-&gt;type = BINDER_WORK_TRANSACTION_COMPLETE;
+    <span class="hljs-built_in">list_add_tail</span>(&amp;tcomplete-&gt;entry, &amp;thread-&gt;todo);
+
+    <span class="hljs-comment">// 唤醒休眠在 target_wait 上的线程去处理 todo 列表</span>
+    <span class="hljs-keyword">if</span> (target_wait)
+        <span class="hljs-built_in">wake_up_interruptible</span>(target_wait);
+    <span class="hljs-keyword">return</span>;
+
+err_get_unused_fd_failed:
+err_fget_failed:
+err_fd_not_allowed:
+err_binder_get_ref_for_node_failed:
+err_binder_get_ref_failed:
+<span class="hljs-comment">// ... 异常处理</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_uintptr_t</span> binder_buffer, <span class="hljs-type">size_t</span> size,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_size_t</span> *consumed, <span class="hljs-type">int</span> non_block)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">void</span> __user *buffer = (<span class="hljs-type">void</span> __user *)(<span class="hljs-type">uintptr_t</span>)binder_buffer;
+	<span class="hljs-type">void</span> __user *ptr = buffer + *consumed;
+	<span class="hljs-type">void</span> __user *end = buffer + size;
+
+	<span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+	<span class="hljs-type">int</span> wait_for_proc_work;
+
+    <span class="hljs-comment">// 当前的写入位置为 bwr.read_buffer 的起始位置，先写入一个 BR_NOOP 命令到 read_buffer 中</span>
+    <span class="hljs-comment">// 该命令在用户态是一个空操作，什么也不做，主要意义应该是在输出日志等</span>
+	<span class="hljs-keyword">if</span> (*consumed == <span class="hljs-number">0</span>) &#123;
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(BR_NOOP, (<span class="hljs-type">uint32_t</span> __user *)ptr))
+			<span class="hljs-keyword">return</span> -EFAULT;
+		ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+	&#125;
+
+    <span class="hljs-comment">// 	!thread-&gt;transaction_stack &amp;&amp; </span>
+    <span class="hljs-comment">//      binder_worklist_empty_ilocked(&amp;thread-&gt;todo) &amp;&amp; </span>
+    <span class="hljs-comment">//      (thread-&gt;looper &amp; (BINDER_LOOPER_STATE_ENTERED | BINDER_LOOPER_STATE_REGISTERED))</span>
+    <span class="hljs-comment">// </span>
+    <span class="hljs-comment">// 如果线程的事务栈和 todo 列表都为空，表示线程没有任务要做，则去执行线程所在进程的 todo 列表上的任务</span>
+retry:
+	<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+	wait_for_proc_work = <span class="hljs-built_in">binder_available_for_proc_work_ilocked</span>(thread);
+	<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+
+	thread-&gt;looper |= BINDER_LOOPER_STATE_WAITING;
+
+	<span class="hljs-built_in">trace_binder_wait_for_work</span>(wait_for_proc_work,
+				   !!thread-&gt;transaction_stack,
+				   !<span class="hljs-built_in">binder_worklist_empty</span>(proc, &amp;thread-&gt;todo));
+	<span class="hljs-keyword">if</span> (wait_for_proc_work) &#123;
+		<span class="hljs-keyword">if</span> (!(thread-&gt;looper &amp; (BINDER_LOOPER_STATE_REGISTERED |
+					BINDER_LOOPER_STATE_ENTERED))) &#123;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d ERROR: Thread waiting for process work before calling BC_REGISTER_LOOPER or BC_ENTER_LOOPER (state %x)\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid, thread-&gt;looper);
+			<span class="hljs-built_in">wait_event_interruptible</span>(binder_user_error_wait,
+						 binder_stop_on_user_error &lt; <span class="hljs-number">2</span>);
+		&#125;
+		<span class="hljs-built_in">trace_android_vh_binder_restore_priority</span>(<span class="hljs-literal">NULL</span>, current);
+		<span class="hljs-built_in">binder_restore_priority</span>(thread, &amp;proc-&gt;default_priority);
+	&#125;
+
+    <span class="hljs-comment">// thread-&gt;process_todo ||</span>
+	<span class="hljs-comment">//     thread-&gt;looper_need_return ||</span>
+	<span class="hljs-comment">// 	   (do_proc_work &amp;&amp; !binder_worklist_empty_ilocked(&amp;thread-&gt;proc-&gt;todo))</span>
+    <span class="hljs-comment">//</span>
+    <span class="hljs-comment">// 如上面所说，线程自己的事务栈和 todo 为空，且进程的 todo 也为空，则线程没有任务要执行</span>
+    <span class="hljs-comment">// 非阻塞的情况下，返回 EAGAIN 让调用者重试</span>
+	<span class="hljs-keyword">if</span> (non_block) &#123;
+		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_has_work</span>(thread, wait_for_proc_work))
+			ret = -EAGAIN;
+	&#125; <span class="hljs-keyword">else</span> &#123;  <span class="hljs-comment">// 阻塞情况下，休眠当前线程直到别的线程 wake_up() 唤醒它</span>
+		ret = <span class="hljs-built_in">binder_wait_for_work</span>(thread, wait_for_proc_work);
+	&#125;
+	thread-&gt;looper &amp;= ~BINDER_LOOPER_STATE_WAITING;
+	<span class="hljs-keyword">if</span> (ret)
+		<span class="hljs-keyword">return</span> ret;
+
+	<span class="hljs-keyword">while</span> (<span class="hljs-number">1</span>) &#123;
+		<span class="hljs-type">uint32_t</span> cmd;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction_data_secctx</span> tr;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction_data</span> *trd = &amp;tr.transaction_data;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_work</span> *w = <span class="hljs-literal">NULL</span>;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">list_head</span> *list = <span class="hljs-literal">NULL</span>;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction</span> *t = <span class="hljs-literal">NULL</span>;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_thread</span> *t_from;
+		<span class="hljs-type">size_t</span> trsize = <span class="hljs-built_in">sizeof</span>(*trd);
+
+        <span class="hljs-comment">// 找到 todo 列表：优先处理本线程的 todo 列表，同时也处理进程的 todo 列表</span>
+		<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_worklist_empty_ilocked</span>(&amp;thread-&gt;todo))
+			list = &amp;thread-&gt;todo;
+		<span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_worklist_empty_ilocked</span>(&amp;proc-&gt;todo) &amp;&amp;
+			   wait_for_proc_work)
+			list = &amp;proc-&gt;todo;
+		<span class="hljs-keyword">else</span> &#123;
+			<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+
+			<span class="hljs-comment">/* no data added */</span>
+			<span class="hljs-keyword">if</span> (ptr - buffer == <span class="hljs-number">4</span> &amp;&amp; !thread-&gt;looper_need_return)
+				<span class="hljs-keyword">goto</span> retry;
+			<span class="hljs-keyword">break</span>;
+		&#125;
+
+		<span class="hljs-keyword">if</span> (end - ptr &lt; <span class="hljs-built_in">sizeof</span>(tr) + <span class="hljs-number">4</span>) &#123;
+			<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+			<span class="hljs-keyword">break</span>;
+		&#125;
+		w = <span class="hljs-built_in">binder_dequeue_work_head_ilocked</span>(list);
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">binder_worklist_empty_ilocked</span>(&amp;thread-&gt;todo))
+			thread-&gt;process_todo = <span class="hljs-literal">false</span>;
+
+        <span class="hljs-comment">// 上面 binder_thread_write 那里塞了个 BINDER_WORK_TRANSACTION_COMPLETE 到当前线程的 todo 列表里</span>
+        <span class="hljs-comment">// 这里回写个 BR_TRANSACTION_COMPLETE 到用户空间，然后跳转到 retry 休眠线程</span>
+		<span class="hljs-keyword">switch</span> (w-&gt;type) &#123;
+		<span class="hljs-keyword">case</span> BINDER_WORK_TRANSACTION_COMPLETE:
+		<span class="hljs-keyword">case</span> BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT: &#123;
+			<span class="hljs-keyword">if</span> (proc-&gt;oneway_spam_detection_enabled &amp;&amp;
+				   w-&gt;type == BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT)
+				cmd = BR_ONEWAY_SPAM_SUSPECT;
+			<span class="hljs-keyword">else</span>
+				cmd = BR_TRANSACTION_COMPLETE;
+			<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+			<span class="hljs-built_in">kfree</span>(w);
+			<span class="hljs-built_in">binder_stats_deleted</span>(BINDER_STAT_TRANSACTION_COMPLETE);
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(cmd, (<span class="hljs-type">uint32_t</span> __user *)ptr))
+				<span class="hljs-keyword">return</span> -EFAULT;
+			ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+
+			<span class="hljs-built_in">binder_stat_br</span>(proc, thread, cmd);
+			<span class="hljs-built_in">binder_debug</span>(BINDER_DEBUG_TRANSACTION_COMPLETE,
+				     <span class="hljs-string">&quot;%d:%d BR_TRANSACTION_COMPLETE\n&quot;</span>,
+				     proc-&gt;pid, thread-&gt;pid);
+		&#125; <span class="hljs-keyword">break</span>;
+
+        <span class="hljs-comment">// 在 retry 里休眠的线程，直到被 server 唤醒，当然不一定是刚才那个线程，可能是被别的线程抢到了</span>
+        <span class="hljs-comment">// server 进程在 binder_thread_write -&gt; binder_transaction 最后会通过 wake_up_interruptible</span>
+        <span class="hljs-comment">// 唤醒目标线程，也就是 client 发送 request 的那个线程</span>
+        <span class="hljs-keyword">case</span> BINDER_WORK_TRANSACTION: &#123;
+			<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+			t = <span class="hljs-built_in">container_of</span>(w, <span class="hljs-keyword">struct</span> binder_transaction, work);
+		&#125; <span class="hljs-keyword">break</span>;
+		<span class="hljs-comment">// ... </span>
+		&#125; <span class="hljs-comment">// switch-end</span>
+		<span class="hljs-keyword">if</span> (!t)
+			<span class="hljs-keyword">continue</span>;
+
+        <span class="hljs-comment">// 拿到 binder_transaction 后继续流程</span>
+		<span class="hljs-built_in">BUG_ON</span>(t-&gt;buffer == <span class="hljs-literal">NULL</span>);
+		<span class="hljs-keyword">if</span> (t-&gt;buffer-&gt;target_node) &#123;
+			<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_node</span> *target_node = t-&gt;buffer-&gt;target_node;
+
+			trd-&gt;target.ptr = target_node-&gt;ptr;
+			trd-&gt;cookie =  target_node-&gt;cookie;
+			<span class="hljs-built_in">binder_transaction_priority</span>(thread, t, target_node);
+			cmd = BR_TRANSACTION;
+		&#125; <span class="hljs-keyword">else</span> &#123;
+			trd-&gt;target.ptr = <span class="hljs-number">0</span>;
+			trd-&gt;cookie = <span class="hljs-number">0</span>;
+			cmd = BR_REPLY;
+		&#125;
+		trd-&gt;code = t-&gt;code;
+		trd-&gt;flags = t-&gt;flags;
+		trd-&gt;sender_euid = <span class="hljs-built_in">from_kuid</span>(<span class="hljs-built_in">current_user_ns</span>(), t-&gt;sender_euid);
+
+		t_from = <span class="hljs-built_in">binder_get_txn_from</span>(t);
+		<span class="hljs-keyword">if</span> (t_from) &#123;
+			<span class="hljs-keyword">struct</span> <span class="hljs-title class_">task_struct</span> *sender = t_from-&gt;proc-&gt;tsk;
+
+			trd-&gt;sender_pid =
+				<span class="hljs-built_in">task_tgid_nr_ns</span>(sender,
+						<span class="hljs-built_in">task_active_pid_ns</span>(current));
+			<span class="hljs-built_in">trace_android_vh_sync_txn_recvd</span>(thread-&gt;task, t_from-&gt;task);
+		&#125; <span class="hljs-keyword">else</span> &#123;
+			trd-&gt;sender_pid = <span class="hljs-number">0</span>;
+		&#125;
+
+		ret = <span class="hljs-built_in">binder_apply_fd_fixups</span>(proc, t);
+		<span class="hljs-keyword">if</span> (ret) &#123;
+			<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *buffer = t-&gt;buffer;
+			<span class="hljs-type">bool</span> oneway = !!(t-&gt;flags &amp; TF_ONE_WAY);
+			<span class="hljs-type">int</span> tid = t-&gt;debug_id;
+
+			<span class="hljs-keyword">if</span> (t_from)
+				<span class="hljs-built_in">binder_thread_dec_tmpref</span>(t_from);
+			buffer-&gt;transaction = <span class="hljs-literal">NULL</span>;
+			<span class="hljs-built_in">binder_cleanup_transaction</span>(t, <span class="hljs-string">&quot;fd fixups failed&quot;</span>,
+						   BR_FAILED_REPLY);
+			<span class="hljs-built_in">binder_free_buf</span>(proc, thread, buffer, <span class="hljs-literal">true</span>);
+			<span class="hljs-built_in">binder_debug</span>(BINDER_DEBUG_FAILED_TRANSACTION,
+				     <span class="hljs-string">&quot;%d:%d %stransaction %d fd fixups failed %d/%d, line %d\n&quot;</span>,
+				     proc-&gt;pid, thread-&gt;pid,
+				     oneway ? <span class="hljs-string">&quot;async &quot;</span> :
+					(cmd == BR_REPLY ? <span class="hljs-string">&quot;reply &quot;</span> : <span class="hljs-string">&quot;&quot;</span>),
+				     tid, BR_FAILED_REPLY, ret, __LINE__);
+			<span class="hljs-keyword">if</span> (cmd == BR_REPLY) &#123;
+				cmd = BR_FAILED_REPLY;
+				<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(cmd, (<span class="hljs-type">uint32_t</span> __user *)ptr))
+					<span class="hljs-keyword">return</span> -EFAULT;
+				ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+				<span class="hljs-built_in">binder_stat_br</span>(proc, thread, cmd);
+				<span class="hljs-keyword">break</span>;
+			&#125;
+			<span class="hljs-keyword">continue</span>;
+		&#125;
+		trd-&gt;data_size = t-&gt;buffer-&gt;data_size;
+		trd-&gt;offsets_size = t-&gt;buffer-&gt;offsets_size;
+		trd-&gt;data.ptr.buffer = (<span class="hljs-type">uintptr_t</span>)t-&gt;buffer-&gt;user_data;
+		trd-&gt;data.ptr.offsets = trd-&gt;data.ptr.buffer +
+					<span class="hljs-built_in">ALIGN</span>(t-&gt;buffer-&gt;data_size,
+					    <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *));
+
+		tr.secctx = t-&gt;security_ctx;
+		<span class="hljs-keyword">if</span> (t-&gt;security_ctx) &#123;
+			cmd = BR_TRANSACTION_SEC_CTX;
+			trsize = <span class="hljs-built_in">sizeof</span>(tr);
+		&#125;
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(cmd, (<span class="hljs-type">uint32_t</span> __user *)ptr)) &#123;
+			<span class="hljs-keyword">if</span> (t_from)
+				<span class="hljs-built_in">binder_thread_dec_tmpref</span>(t_from);
+
+			<span class="hljs-built_in">binder_cleanup_transaction</span>(t, <span class="hljs-string">&quot;put_user failed&quot;</span>,
+						   BR_FAILED_REPLY);
+
+			<span class="hljs-keyword">return</span> -EFAULT;
+		&#125;
+		ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ptr, &amp;tr, trsize)) &#123;
+			<span class="hljs-keyword">if</span> (t_from)
+				<span class="hljs-built_in">binder_thread_dec_tmpref</span>(t_from);
+
+			<span class="hljs-built_in">binder_cleanup_transaction</span>(t, <span class="hljs-string">&quot;copy_to_user failed&quot;</span>,
+						   BR_FAILED_REPLY);
+
+			<span class="hljs-keyword">return</span> -EFAULT;
+		&#125;
+		ptr += trsize;
+
+		<span class="hljs-built_in">trace_binder_transaction_received</span>(t);
+		<span class="hljs-built_in">binder_stat_br</span>(proc, thread, cmd);
+		<span class="hljs-built_in">binder_debug</span>(BINDER_DEBUG_TRANSACTION,
+			     <span class="hljs-string">&quot;%d:%d %s %d %d:%d, cmd %u size %zd-%zd ptr %016llx-%016llx\n&quot;</span>,
+			     proc-&gt;pid, thread-&gt;pid,
+			     (cmd == BR_TRANSACTION) ? <span class="hljs-string">&quot;BR_TRANSACTION&quot;</span> :
+				(cmd == BR_TRANSACTION_SEC_CTX) ?
+				     <span class="hljs-string">&quot;BR_TRANSACTION_SEC_CTX&quot;</span> : <span class="hljs-string">&quot;BR_REPLY&quot;</span>,
+			     t-&gt;debug_id, t_from ? t_from-&gt;proc-&gt;pid : <span class="hljs-number">0</span>,
+			     t_from ? t_from-&gt;pid : <span class="hljs-number">0</span>, cmd,
+			     t-&gt;buffer-&gt;data_size, t-&gt;buffer-&gt;offsets_size,
+			     (u64)trd-&gt;data.ptr.buffer,
+			     (u64)trd-&gt;data.ptr.offsets);
+
+		<span class="hljs-keyword">if</span> (t_from)
+			<span class="hljs-built_in">binder_thread_dec_tmpref</span>(t_from);
+		t-&gt;buffer-&gt;allow_user_free = <span class="hljs-number">1</span>;
+		<span class="hljs-keyword">if</span> (cmd != BR_REPLY &amp;&amp; !(t-&gt;flags &amp; TF_ONE_WAY)) &#123;
+			<span class="hljs-built_in">binder_inner_proc_lock</span>(thread-&gt;proc);
+			t-&gt;to_parent = thread-&gt;transaction_stack;
+			t-&gt;to_thread = thread;
+			thread-&gt;transaction_stack = t;
+			<span class="hljs-built_in">binder_inner_proc_unlock</span>(thread-&gt;proc);
+		&#125; <span class="hljs-keyword">else</span> &#123;
+			<span class="hljs-built_in">binder_free_transaction</span>(t);
+		&#125;
+		<span class="hljs-keyword">break</span>;
+	&#125; <span class="hljs-comment">// while-end</span>
+
+done:
+
+	*consumed = ptr - buffer;
+	<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+	<span class="hljs-keyword">if</span> (proc-&gt;requested_threads == <span class="hljs-number">0</span> &amp;&amp;
+	    <span class="hljs-built_in">list_empty</span>(&amp;thread-&gt;proc-&gt;waiting_threads) &amp;&amp;
+	    proc-&gt;requested_threads_started &lt; proc-&gt;max_threads &amp;&amp;
+	    (thread-&gt;looper &amp; (BINDER_LOOPER_STATE_REGISTERED |
+	     BINDER_LOOPER_STATE_ENTERED)) <span class="hljs-comment">/* the user-space code fails to */</span>
+	     <span class="hljs-comment">/*spawn a new thread if we leave this out */</span>) &#123;
+		proc-&gt;requested_threads++;
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+		<span class="hljs-built_in">binder_debug</span>(BINDER_DEBUG_THREADS,
+			     <span class="hljs-string">&quot;%d:%d BR_SPAWN_LOOPER\n&quot;</span>,
+			     proc-&gt;pid, thread-&gt;pid);
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(BR_SPAWN_LOOPER, (<span class="hljs-type">uint32_t</span> __user *)buffer))
+			<span class="hljs-keyword">return</span> -EFAULT;
+		<span class="hljs-built_in">binder_stat_br</span>(proc, thread, BR_SPAWN_LOOPER);
+	&#125; <span class="hljs-keyword">else</span>
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+&#125;
+
+<span class="hljs-comment">// prepare_to_wait + schedule + finish_wait 是一整套线程调度模板（休眠线程）</span>
+<span class="hljs-comment">// see https://github.com/cyrus-lin/bookmark/issues/45</span>
+<span class="hljs-comment">// 它使线程休眠在 binder_thread.wait 上直到别的线程通过 wake_up(head) 唤醒它</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_wait_for_work</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">				<span class="hljs-type">bool</span> do_proc_work)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-built_in">DEFINE_WAIT</span>(wait);
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *proc = thread-&gt;proc;
+	<span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+
+	<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+	<span class="hljs-keyword">for</span> (;;) &#123;
+		<span class="hljs-built_in">prepare_to_wait</span>(&amp;thread-&gt;wait, &amp;wait, TASK_INTERRUPTIBLE|TASK_FREEZABLE);
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">binder_has_work_ilocked</span>(thread, do_proc_work))
+			<span class="hljs-keyword">break</span>;
+		<span class="hljs-keyword">if</span> (do_proc_work)
+			<span class="hljs-built_in">list_add</span>(&amp;thread-&gt;waiting_thread_node,
+				 &amp;proc-&gt;waiting_threads);
+		<span class="hljs-built_in">trace_android_vh_binder_wait_for_work</span>(do_proc_work, thread, proc);
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+		<span class="hljs-built_in">schedule</span>();
+		<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+		<span class="hljs-built_in">list_del_init</span>(&amp;thread-&gt;waiting_thread_node);
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">signal_pending</span>(current)) &#123;
+			ret = -EINTR;
+			<span class="hljs-keyword">break</span>;
+		&#125;
+	&#125;
+	<span class="hljs-built_in">finish_wait</span>(&amp;thread-&gt;wait, &amp;wait);
+	<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+	<span class="hljs-keyword">return</span> ret;
+&#125;</code></pre></div>
+
+<h1 id="binder-线程主例程"><a href="#binder-线程主例程" class="headerlink" title="binder 线程主例程"></a>binder 线程主例程</h1><p>binder 线程（包括主线程和普通线程）的主循环是 <code>getAndExecuteCommand()</code>，它有两个关键方法：<code>talkWithDriver()</code> 和 <code>executeCommand(cmd)</code></p>
+<p><code>talkWithDriver()</code> 发送 <code>BINDER_WRITE_READ</code> 指令，write 是应用进程发送给 binder driver 处理的任务，可能是空的，read 是 binder driver 需要返回给应用进程的数据，此时如果任务队列（<code>binder_thread.todo</code> or <code>binder_proc.todo</code>）为空，会通过 <code>schedule()</code> 让渡出 CPU，也即是让 binder 线程阻塞在这里，所以在 anr 日志里经常看到下面的调用栈：</p>
+<div class="code-wrapper"><pre><code class="hljs dts"><span class="hljs-comment">// binder 线程因为任务队列为空，阻塞在 binder_thread_read 方法</span>
+
+<span class="hljs-string">&quot;Binder_1&quot;</span> <span class="hljs-attr">prio</span><span class="hljs-operator">=</span><span class="hljs-number">5</span> <span class="hljs-attr">tid</span><span class="hljs-operator">=</span><span class="hljs-number">12</span> Native
+  | <span class="hljs-attr">group</span><span class="hljs-operator">=</span><span class="hljs-string">&quot;main&quot;</span> sC<span class="hljs-attr">ount</span><span class="hljs-operator">=</span><span class="hljs-number">1</span> dsC<span class="hljs-attr">ount</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> <span class="hljs-attr">obj</span><span class="hljs-operator">=</span><span class="hljs-number">0x12c7c0a0</span> <span class="hljs-attr">self</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f96828800</span>
+  | sysT<span class="hljs-attr">id</span><span class="hljs-operator">=</span><span class="hljs-number">1144</span> <span class="hljs-attr">nice</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> <span class="hljs-attr">cgrp</span><span class="hljs-operator">=</span>default <span class="hljs-attr">sched</span><span class="hljs-operator">=</span><span class="hljs-number">0</span>/<span class="hljs-number">0</span> <span class="hljs-attr">handle</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f9be97000</span>
+  | <span class="hljs-attr">state</span><span class="hljs-operator">=</span>S <span class="hljs-attr">schedstat</span><span class="hljs-operator">=</span>( <span class="hljs-number">1577699930</span> <span class="hljs-number">1373220151</span> <span class="hljs-number">5401</span> ) <span class="hljs-attr">utm</span><span class="hljs-operator">=</span><span class="hljs-number">113</span> <span class="hljs-attr">stm</span><span class="hljs-operator">=</span><span class="hljs-number">44</span> <span class="hljs-attr">core</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> HZ=<span class="hljs-number">100</span>
+  | <span class="hljs-attr">stack</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f89c27000</span><span class="hljs-number">-0x7f89c29000</span> stackS<span class="hljs-attr">ize</span><span class="hljs-operator">=</span><span class="hljs-number">1008</span>KB
+  | held <span class="hljs-attr">mutexes</span><span class="hljs-operator">=</span>
+<span class="hljs-symbol">  kernel:</span> __switch_to+<span class="hljs-number">0x8c</span>/<span class="hljs-number">0x98</span>
+<span class="hljs-symbol">  kernel:</span> binder_thread_read+<span class="hljs-number">0xe5c</span>/<span class="hljs-number">0x117c</span>
+<span class="hljs-symbol">  kernel:</span> binder_ioctl_write_read+<span class="hljs-number">0x1a8</span>/<span class="hljs-number">0x3c8</span>
+<span class="hljs-symbol">  kernel:</span> binder_ioctl+<span class="hljs-number">0x3c0</span>/<span class="hljs-number">0x688</span>
+<span class="hljs-symbol">  kernel:</span> do_vfs_ioctl+<span class="hljs-number">0x368</span>/<span class="hljs-number">0x588</span>
+<span class="hljs-symbol">  kernel:</span> SyS_ioctl+<span class="hljs-number">0x80</span>/<span class="hljs-number">0x98</span>
+<span class="hljs-symbol">  kernel:</span> cpu_switch_to+<span class="hljs-number">0x48</span>/<span class="hljs-number">0x4c</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#00 pc 00062dc0  /system/lib64/libc.so (__ioctl+4)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#01 pc 000891e8  /system/lib64/libc.so (ioctl+96)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#02 pc 0002993c  /system/lib64/libbinder.so (android::IPCThreadState::talkWithDriver(bool)+164)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#03 pc 0002a174  /system/lib64/libbinder.so (android::IPCThreadState::getAndExecuteCommand()+24)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#04 pc 0002a22c  /system/lib64/libbinder.so (android::IPCThreadState::joinThreadPool(bool)+76)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#05 pc 00031bc8  /system/lib64/libbinder.so (???)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#06 pc 0001750c  /system/lib64/libutils.so (android::Thread::_threadLoop(void*)+208)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#07 pc 000947c4  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::javaThreadShell(void*)+96)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#08 pc 00016d4c  /system/lib64/libutils.so (???)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#09 pc 0001f000  /system/lib64/libc.so (__pthread_start(void*)+52)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#10 pc 0001b340  /system/lib64/libc.so (__start_thread+16)</span>
+  (no managed stack frames)
+
+<span class="hljs-string">&quot;Binder_2&quot;</span> <span class="hljs-attr">prio</span><span class="hljs-operator">=</span><span class="hljs-number">5</span> <span class="hljs-attr">tid</span><span class="hljs-operator">=</span><span class="hljs-number">13</span> Native
+  | <span class="hljs-attr">group</span><span class="hljs-operator">=</span><span class="hljs-string">&quot;main&quot;</span> sC<span class="hljs-attr">ount</span><span class="hljs-operator">=</span><span class="hljs-number">1</span> dsC<span class="hljs-attr">ount</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> <span class="hljs-attr">obj</span><span class="hljs-operator">=</span><span class="hljs-number">0x12c970a0</span> <span class="hljs-attr">self</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f9ccb5800</span>
+  | sysT<span class="hljs-attr">id</span><span class="hljs-operator">=</span><span class="hljs-number">1146</span> <span class="hljs-attr">nice</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> <span class="hljs-attr">cgrp</span><span class="hljs-operator">=</span>default <span class="hljs-attr">sched</span><span class="hljs-operator">=</span><span class="hljs-number">0</span>/<span class="hljs-number">0</span> <span class="hljs-attr">handle</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f9be7c000</span>
+  | <span class="hljs-attr">state</span><span class="hljs-operator">=</span>S <span class="hljs-attr">schedstat</span><span class="hljs-operator">=</span>( <span class="hljs-number">1579795734</span> <span class="hljs-number">1531888975</span> <span class="hljs-number">5458</span> ) <span class="hljs-attr">utm</span><span class="hljs-operator">=</span><span class="hljs-number">117</span> <span class="hljs-attr">stm</span><span class="hljs-operator">=</span><span class="hljs-number">40</span> <span class="hljs-attr">core</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> HZ=<span class="hljs-number">100</span>
+  | <span class="hljs-attr">stack</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f89b2a000</span><span class="hljs-number">-0x7f89b2c000</span> stackS<span class="hljs-attr">ize</span><span class="hljs-operator">=</span><span class="hljs-number">1008</span>KB
+  | held <span class="hljs-attr">mutexes</span><span class="hljs-operator">=</span>
+<span class="hljs-symbol">  kernel:</span> __switch_to+<span class="hljs-number">0x8c</span>/<span class="hljs-number">0x98</span>
+<span class="hljs-symbol">  kernel:</span> binder_thread_read+<span class="hljs-number">0xe5c</span>/<span class="hljs-number">0x117c</span>
+<span class="hljs-symbol">  kernel:</span> binder_ioctl_write_read+<span class="hljs-number">0x1a8</span>/<span class="hljs-number">0x3c8</span>
+<span class="hljs-symbol">  kernel:</span> binder_ioctl+<span class="hljs-number">0x3c0</span>/<span class="hljs-number">0x688</span>
+<span class="hljs-symbol">  kernel:</span> do_vfs_ioctl+<span class="hljs-number">0x368</span>/<span class="hljs-number">0x588</span>
+<span class="hljs-symbol">  kernel:</span> SyS_ioctl+<span class="hljs-number">0x80</span>/<span class="hljs-number">0x98</span>
+<span class="hljs-symbol">  kernel:</span> cpu_switch_to+<span class="hljs-number">0x48</span>/<span class="hljs-number">0x4c</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#00 pc 00062dc0  /system/lib64/libc.so (__ioctl+4)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#01 pc 000891e8  /system/lib64/libc.so (ioctl+96)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#02 pc 0002993c  /system/lib64/libbinder.so (android::IPCThreadState::talkWithDriver(bool)+164)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#03 pc 0002a174  /system/lib64/libbinder.so (android::IPCThreadState::getAndExecuteCommand()+24)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#04 pc 0002a22c  /system/lib64/libbinder.so (android::IPCThreadState::joinThreadPool(bool)+76)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#05 pc 00031bc8  /system/lib64/libbinder.so (???)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#06 pc 0001750c  /system/lib64/libutils.so (android::Thread::_threadLoop(void*)+208)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#07 pc 000947c4  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::javaThreadShell(void*)+96)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#08 pc 00016d4c  /system/lib64/libutils.so (???)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#09 pc 0001f000  /system/lib64/libc.so (__pthread_start(void*)+52)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#10 pc 0001b340  /system/lib64/libc.so (__start_thread+16)</span>
+  (no managed stack frames)
+
+<span class="hljs-string">&quot;Binder_5&quot;</span> <span class="hljs-attr">prio</span><span class="hljs-operator">=</span><span class="hljs-number">5</span> <span class="hljs-attr">tid</span><span class="hljs-operator">=</span><span class="hljs-number">65</span> Native
+  | <span class="hljs-attr">group</span><span class="hljs-operator">=</span><span class="hljs-string">&quot;main&quot;</span> sC<span class="hljs-attr">ount</span><span class="hljs-operator">=</span><span class="hljs-number">1</span> dsC<span class="hljs-attr">ount</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> <span class="hljs-attr">obj</span><span class="hljs-operator">=</span><span class="hljs-number">0x131ed100</span> <span class="hljs-attr">self</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f96834000</span>
+  | sysT<span class="hljs-attr">id</span><span class="hljs-operator">=</span><span class="hljs-number">2014</span> <span class="hljs-attr">nice</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> <span class="hljs-attr">cgrp</span><span class="hljs-operator">=</span>default <span class="hljs-attr">sched</span><span class="hljs-operator">=</span><span class="hljs-number">0</span>/<span class="hljs-number">0</span> <span class="hljs-attr">handle</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f86ceb000</span>
+  | <span class="hljs-attr">state</span><span class="hljs-operator">=</span>S <span class="hljs-attr">schedstat</span><span class="hljs-operator">=</span>( <span class="hljs-number">1519499135</span> <span class="hljs-number">1394211486</span> <span class="hljs-number">5073</span> ) <span class="hljs-attr">utm</span><span class="hljs-operator">=</span><span class="hljs-number">109</span> <span class="hljs-attr">stm</span><span class="hljs-operator">=</span><span class="hljs-number">42</span> <span class="hljs-attr">core</span><span class="hljs-operator">=</span><span class="hljs-number">0</span> HZ=<span class="hljs-number">100</span>
+  | <span class="hljs-attr">stack</span><span class="hljs-operator">=</span><span class="hljs-number">0x7f83adc000</span><span class="hljs-number">-0x7f83ade000</span> stackS<span class="hljs-attr">ize</span><span class="hljs-operator">=</span><span class="hljs-number">1008</span>KB
+  | held <span class="hljs-attr">mutexes</span><span class="hljs-operator">=</span>
+<span class="hljs-symbol">  kernel:</span> __switch_to+<span class="hljs-number">0x8c</span>/<span class="hljs-number">0x98</span>
+<span class="hljs-symbol">  kernel:</span> binder_thread_read+<span class="hljs-number">0xe5c</span>/<span class="hljs-number">0x117c</span>
+<span class="hljs-symbol">  kernel:</span> binder_ioctl_write_read+<span class="hljs-number">0x1a8</span>/<span class="hljs-number">0x3c8</span>
+<span class="hljs-symbol">  kernel:</span> binder_ioctl+<span class="hljs-number">0x3c0</span>/<span class="hljs-number">0x688</span>
+<span class="hljs-symbol">  kernel:</span> do_vfs_ioctl+<span class="hljs-number">0x368</span>/<span class="hljs-number">0x588</span>
+<span class="hljs-symbol">  kernel:</span> SyS_ioctl+<span class="hljs-number">0x80</span>/<span class="hljs-number">0x98</span>
+<span class="hljs-symbol">  kernel:</span> cpu_switch_to+<span class="hljs-number">0x48</span>/<span class="hljs-number">0x4c</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#00 pc 00062dc0  /system/lib64/libc.so (__ioctl+4)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#01 pc 000891e8  /system/lib64/libc.so (ioctl+96)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#02 pc 0002993c  /system/lib64/libbinder.so (android::IPCThreadState::talkWithDriver(bool)+164)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#03 pc 0002a174  /system/lib64/libbinder.so (android::IPCThreadState::getAndExecuteCommand()+24)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#04 pc 0002a22c  /system/lib64/libbinder.so (android::IPCThreadState::joinThreadPool(bool)+76)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#05 pc 00031bc8  /system/lib64/libbinder.so (???)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#06 pc 0001750c  /system/lib64/libutils.so (android::Thread::_threadLoop(void*)+208)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#07 pc 000947c4  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::javaThreadShell(void*)+96)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#08 pc 00016d4c  /system/lib64/libutils.so (???)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#09 pc 0001f000  /system/lib64/libc.so (__pthread_start(void*)+52)</span>
+<span class="hljs-symbol">  native:</span> <span class="hljs-meta">#10 pc 0001b340  /system/lib64/libc.so (__start_thread+16)</span>
+  (no managed stack frames)</code></pre></div>
+
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/IPCThreadState.cpp</span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">IPCThreadState::joinThreadPool</span><span class="hljs-params">(<span class="hljs-type">bool</span> isMain <span class="hljs-comment">/* true - 主线程*/</span> )</span></span>
+<span class="hljs-function"></span>&#123;
+    mOut.<span class="hljs-built_in">writeInt32</span>(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
+
+    <span class="hljs-type">status_t</span> result;
+    mIsLooper = <span class="hljs-literal">true</span>;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-built_in">processPendingDerefs</span>();
+        <span class="hljs-comment">// now get the next command to be processed, waiting if necessary</span>
+        result = <span class="hljs-built_in">getAndExecuteCommand</span>();
+
+        <span class="hljs-comment">// Let this thread exit the thread pool if it is no longer</span>
+        <span class="hljs-comment">// needed and it is not the main process thread.</span>
+        <span class="hljs-keyword">if</span>(result == TIMED_OUT &amp;&amp; !isMain) &#123;
+            <span class="hljs-keyword">break</span>;
+        &#125;
+    &#125; <span class="hljs-keyword">while</span> (result != -ECONNREFUSED &amp;&amp; result != -EBADF);
+
+    mOut.<span class="hljs-built_in">writeInt32</span>(BC_EXIT_LOOPER);
+    mIsLooper = <span class="hljs-literal">false</span>;
+    <span class="hljs-built_in">talkWithDriver</span>(<span class="hljs-literal">false</span>);
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::getAndExecuteCommand</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-type">status_t</span> result;
+    <span class="hljs-type">int32_t</span> cmd;
+
+    result = <span class="hljs-built_in">talkWithDriver</span>();
+    <span class="hljs-keyword">if</span> (result &gt;= NO_ERROR) &#123;
+        <span class="hljs-type">size_t</span> IN = mIn.<span class="hljs-built_in">dataAvail</span>();
+        <span class="hljs-keyword">if</span> (IN &lt; <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">int32_t</span>)) <span class="hljs-keyword">return</span> result;
+        cmd = mIn.<span class="hljs-built_in">readInt32</span>();
+        <span class="hljs-comment">// ...</span>
+        result = <span class="hljs-built_in">executeCommand</span>(cmd);
+		<span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// write 指 binder driver 需要处理的数据，read 指应用进程想要收到的数据</span>
+<span class="hljs-comment">// 发送 BINDER_WRITE_READ 给 binder driver</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::talkWithDriver</span><span class="hljs-params">(<span class="hljs-type">bool</span> doReceive <span class="hljs-comment">/* default true */</span>)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">return</span> -EBADF;
+    &#125;
+
+    binder_write_read bwr;
+
+    <span class="hljs-comment">// Is the read buffer empty?</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">bool</span> needRead = mIn.<span class="hljs-built_in">dataPosition</span>() &gt;= mIn.<span class="hljs-built_in">dataSize</span>();
+
+    <span class="hljs-comment">// We don&#x27;t want to write anything if we are still reading</span>
+    <span class="hljs-comment">// from data left in the input buffer and the caller</span>
+    <span class="hljs-comment">// has requested to read the next data.</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> outAvail = (!doReceive || needRead) ? mOut.<span class="hljs-built_in">dataSize</span>() : <span class="hljs-number">0</span>;
+
+    bwr.write_size = outAvail;
+    bwr.write_buffer = (<span class="hljs-type">uintptr_t</span>)mOut.<span class="hljs-built_in">data</span>();
+
+    <span class="hljs-comment">// This is what we&#x27;ll read.</span>
+    <span class="hljs-keyword">if</span> (doReceive &amp;&amp; needRead) &#123;
+        bwr.read_size = mIn.<span class="hljs-built_in">dataCapacity</span>();
+        bwr.read_buffer = (<span class="hljs-type">uintptr_t</span>)mIn.<span class="hljs-built_in">data</span>();
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        bwr.read_size = <span class="hljs-number">0</span>;
+        bwr.read_buffer = <span class="hljs-number">0</span>;
+    &#125;
+
+    <span class="hljs-comment">// Return immediately if there is nothing to do.</span>
+    <span class="hljs-keyword">if</span> ((bwr.write_size == <span class="hljs-number">0</span>) &amp;&amp; (bwr.read_size == <span class="hljs-number">0</span>)) <span class="hljs-keyword">return</span> NO_ERROR;
+
+    bwr.write_consumed = <span class="hljs-number">0</span>;
+    bwr.read_consumed = <span class="hljs-number">0</span>;
+    <span class="hljs-type">status_t</span> err;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ioctl</span>(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, &amp;bwr) &gt;= <span class="hljs-number">0</span>)
+            err = NO_ERROR;
+        <span class="hljs-keyword">else</span>
+            err = -errno;
+        <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+            err = -EBADF;
+        &#125;
+    &#125; <span class="hljs-keyword">while</span> (err == -EINTR);
+	<span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// 进入内核，具体是 binder driver</span>
+<span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">long</span> <span class="hljs-title">binder_ioctl</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> cmd <span class="hljs-comment">/* BINDER_WRITE_READ */</span>, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> arg)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">int</span> ret;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *proc = filp-&gt;private_data;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_thread</span> *thread;
+	<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> size = _IOC_SIZE(cmd);
+	<span class="hljs-type">void</span> __user *ubuf = (<span class="hljs-type">void</span> __user *)arg;
+
+	<span class="hljs-built_in">binder_selftest_alloc</span>(&amp;proc-&gt;alloc);
+
+	<span class="hljs-built_in">trace_binder_ioctl</span>(cmd, arg);
+
+	ret = <span class="hljs-built_in">wait_event_interruptible</span>(binder_user_error_wait, binder_stop_on_user_error &lt; <span class="hljs-number">2</span>);
+	<span class="hljs-keyword">if</span> (ret)
+		<span class="hljs-keyword">goto</span> err_unlocked;
+
+	thread = <span class="hljs-built_in">binder_get_thread</span>(proc);
+	<span class="hljs-keyword">if</span> (thread == <span class="hljs-literal">NULL</span>) &#123;
+		ret = -ENOMEM;
+		<span class="hljs-keyword">goto</span> err;
+	&#125;
+
+	<span class="hljs-keyword">switch</span> (cmd) &#123;
+	<span class="hljs-keyword">case</span> BINDER_WRITE_READ:
+		ret = <span class="hljs-built_in">binder_ioctl_write_read</span>(filp, cmd, arg, thread);
+		<span class="hljs-keyword">if</span> (ret)
+			<span class="hljs-keyword">goto</span> err;
+		<span class="hljs-keyword">break</span>;
+	<span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_ioctl_write_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp,</span></span>
+<span class="hljs-params"><span class="hljs-function">				<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> cmd, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> arg,</span></span>
+<span class="hljs-params"><span class="hljs-function">				<span class="hljs-keyword">struct</span> binder_thread *thread)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *proc = filp-&gt;private_data;
+	<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> size = _IOC_SIZE(cmd);
+	<span class="hljs-type">void</span> __user *ubuf = (<span class="hljs-type">void</span> __user *)arg;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_write_read</span> bwr;
+
+	<span class="hljs-keyword">if</span> (size != <span class="hljs-built_in">sizeof</span>(<span class="hljs-keyword">struct</span> binder_write_read)) &#123;
+		ret = -EINVAL;
+		<span class="hljs-keyword">goto</span> out;
+	&#125;
+	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_from_user</span>(&amp;bwr, ubuf, <span class="hljs-built_in">sizeof</span>(bwr))) &#123;
+		ret = -EFAULT;
+		<span class="hljs-keyword">goto</span> out;
+	&#125;
+
+    <span class="hljs-comment">// binder 首先处理应用进程发送过来的数据</span>
+	<span class="hljs-keyword">if</span> (bwr.write_size &gt; <span class="hljs-number">0</span>) &#123;
+		ret = <span class="hljs-built_in">binder_thread_write</span>(proc, thread,
+					  bwr.write_buffer,
+					  bwr.write_size,
+					  &amp;bwr.write_consumed);
+		<span class="hljs-built_in">trace_binder_write_done</span>(ret);
+		<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>) &#123;
+			bwr.read_consumed = <span class="hljs-number">0</span>;
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr)))
+				ret = -EFAULT;
+			<span class="hljs-keyword">goto</span> out;
+		&#125;
+	&#125;
+
+    <span class="hljs-comment">// 然后返回应用进程想要的数据</span>
+	<span class="hljs-keyword">if</span> (bwr.read_size &gt; <span class="hljs-number">0</span>) &#123;
+		ret = <span class="hljs-built_in">binder_thread_read</span>(proc, thread, bwr.read_buffer,
+					 bwr.read_size,
+					 &amp;bwr.read_consumed,
+					 filp-&gt;f_flags &amp; O_NONBLOCK);
+		<span class="hljs-built_in">trace_binder_read_done</span>(ret);
+		<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_worklist_empty_ilocked</span>(&amp;proc-&gt;todo))
+			<span class="hljs-built_in">binder_wakeup_proc_ilocked</span>(proc);
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+		<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>) &#123;
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr)))
+				ret = -EFAULT;
+			<span class="hljs-keyword">goto</span> out;
+		&#125;
+	&#125;
+	<span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_uintptr_t</span> binder_buffer, <span class="hljs-type">size_t</span> size,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_size_t</span> *consumed, <span class="hljs-type">int</span> non_block)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">void</span> __user *buffer = (<span class="hljs-type">void</span> __user *)(<span class="hljs-type">uintptr_t</span>)binder_buffer;
+	<span class="hljs-type">void</span> __user *ptr = buffer + *consumed;
+	<span class="hljs-type">void</span> __user *end = buffer + size;
+
+	<span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+	<span class="hljs-type">int</span> wait_for_proc_work;
+
+	<span class="hljs-keyword">if</span> (*consumed == <span class="hljs-number">0</span>) &#123;
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(BR_NOOP, (<span class="hljs-type">uint32_t</span> __user *)ptr))
+			<span class="hljs-keyword">return</span> -EFAULT;
+		ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+	&#125;
+
+retry:
+	<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+	wait_for_proc_work = <span class="hljs-built_in">binder_available_for_proc_work_ilocked</span>(thread);
+	<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+
+	thread-&gt;looper |= BINDER_LOOPER_STATE_WAITING;
+
+	<span class="hljs-built_in">trace_binder_wait_for_work</span>(wait_for_proc_work,
+				   !!thread-&gt;transaction_stack,
+				   !<span class="hljs-built_in">binder_worklist_empty</span>(proc, &amp;thread-&gt;todo));
+	<span class="hljs-keyword">if</span> (wait_for_proc_work) &#123;
+		<span class="hljs-comment">// 在章节【主线程与普通线程】里讲过，应用进程将 binder 线程起起来后会发送 BC_ENTER_LOOPER | BC_REGISTER_LOOPER 给 binder driver</span>
+		<span class="hljs-comment">// 从而打开 BINDER_LOOPER_STATE_ENTERED | BINDER_LOOPER_STATE_REGISTERED 标志位</span>
+		<span class="hljs-comment">// BINDER_LOOPER_STATE_ENTERED 表示主线程，BINDER_LOOPER_STATE_REGISTERED 表示普通线程</span>
+		<span class="hljs-keyword">if</span> (!(thread-&gt;looper &amp; (BINDER_LOOPER_STATE_REGISTERED |
+					BINDER_LOOPER_STATE_ENTERED))) &#123;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d ERROR: Thread waiting for process work before calling BC_REGISTER_LOOPER or BC_ENTER_LOOPER (state %x)\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid, thread-&gt;looper);
+			<span class="hljs-built_in">wait_event_interruptible</span>(binder_user_error_wait,
+						 binder_stop_on_user_error &lt; <span class="hljs-number">2</span>);
+		&#125;
+		<span class="hljs-built_in">trace_android_vh_binder_restore_priority</span>(<span class="hljs-literal">NULL</span>, current);
+		<span class="hljs-built_in">binder_restore_priority</span>(thread, &amp;proc-&gt;default_priority);
+	&#125;
+
+	<span class="hljs-keyword">if</span> (non_block) &#123;
+		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_has_work</span>(thread, wait_for_proc_work))
+			ret = -EAGAIN;
+	&#125; <span class="hljs-keyword">else</span> &#123;
+		<span class="hljs-comment">// 当前线程让渡出 CPU 直到 todo 列表里有任务，在章节【binder 线程主例程】里介绍过此函数以及对应的</span>
+		<span class="hljs-comment">// prepare_to_wait &amp; schedule &amp; finish_wait 进程/线程调度 API</span>
+		ret = <span class="hljs-built_in">binder_wait_for_work</span>(thread, wait_for_proc_work);
+	&#125;
+
+	thread-&gt;looper &amp;= ~BINDER_LOOPER_STATE_WAITING;
+	<span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
+
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/49830c3473b7">Binder驱动之设备控制 binder_ioctl – 一</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/12bec1b16a5b">Binder驱动之设备控制 binder_ioctl – 二</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/4be292a51388">Binder驱动之设备控制 binder_ioctl – 三</a></li>
+<li><a target="_blank" rel="noopener" href="http://gityuan.com/2016/10/29/binder-thread-pool/">进程的Binder线程池工作过程 - Gityuan</a></li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/12/06/binder-objects/" title="Binder IPC 过程中常用的对象和类">
+                        <span class="hidden-mobile">Binder IPC 过程中常用的对象和类</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

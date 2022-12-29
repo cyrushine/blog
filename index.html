@@ -206,6 +206,39 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2022/12/07/binder-threads/" target="_self">
+          Binder IPC 线程调度模型
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/12/07/binder-threads/" target="_self">
+        <div>
+          主线程与普通线程Binder 线程可以分为两类：主线程 和 普通线程，它们的区别是：  主线程名称为 Binder_1 or Binder:&lt;pid&gt;_1，普通线程则从 2 开始（ProcessState::makeBinderThreadName）  主线程在应用进程起来后立刻启动，且不会退出；普通线程由 BR_SPAWN_LOOPER 启动且会被 binder driver 命令
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-12-07 04:00" pubdate>
+              2022-12-07
+            </time>
+          </div>
+        
+        
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2022/12/06/binder-objects/" target="_self">
           Binder IPC 过程中常用的对象和类
         </a>
@@ -559,54 +592,6 @@
               <a href="/tags/%E6%A1%88%E4%BE%8B/">#案例</a>
             
               <a href="/tags/%E6%BA%90%E7%A0%81/">#源码</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
-          【转】今日头条 ANR 优化实践系列（5）- 告别 SharedPreference 等待
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/02/16/toutiao-anr-sharedpreference/" target="_self">
-        <div>
-          简述前面系列文章（详见文末）中介绍了安卓系统 ANR 设计原理以及我们在实际工作中对 ANR 进行监控得到的方案，基于常规的监控治理方案，ANR 问题得到了有效的抑制，但是有些系统组件的设计初衷与开发人员在实际使用过程中实际使用的背离，导致的冲突问题亟待解决，当前文章针对实际开发过程中滥用 sp 导致的 ANR 问题，如何从系统层面跳过 Google 设计缺陷，规避 ANR 问题。 Google
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-02-16 08:00" pubdate>
-              2022-02-16
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/ANR/">#ANR</a>
-            
-              <a href="/tags/bytedance/">#bytedance</a>
-            
-              <a href="/tags/toutiao/">#toutiao</a>
-            
-              <a href="/tags/%E5%AD%97%E8%8A%82/">#字节</a>
-            
-              <a href="/tags/%E5%A4%B4%E6%9D%A1/">#头条</a>
             
           </div>
         
