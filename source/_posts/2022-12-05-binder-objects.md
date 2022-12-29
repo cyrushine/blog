@@ -8,6 +8,8 @@ date: 2022-12-06 12:00:00 +0800
 ![Binder 类图](../../../../image/2022-12-05-binder-objects/objects.webp)
 
 ![Binder IPC 流程图](../../../../image/2022-12-05-binder-objects/ipc.webp)
+
+![Big Picture](/image/2022-12-05-binder-objects/all.webp)
 ## client 端
 
 `BpBinder`
