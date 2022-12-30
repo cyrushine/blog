@@ -3,6 +3,28 @@ title: Binder IPC 内存模型
 date: 2022-12-29 12:00:00 +0800
 ---
 
+# 指导思想
+
+进程 A 通过 `binder_transaction` 往进程 B 传输数据的过程，其中步骤 4、5、6 和 7 是一页一页地循环执行:
+
+1. 准备需要发送的数据, 数据存放在进程 A 的用户空间中
+
+2. 进程 A 通过系统调用进入 binder driver 的代码逻辑中
+
+3. 在 binder driver 代码中, 找到与所发送数据大小匹配的进程 B 的 `binder_buffer`, 该 buffer 此时只有虚拟地址尚未映射物理页（指向进程 B 的用户空间）
+
+4. 为此次数据传输分配物理页
+
+5. 建立进程 B 的 binder buffer 里虚拟页与刚分配物理页的映射关系
+
+6. 通过 `kmap` 为物理页映射一个内核空间的虚拟页
+
+7. `copy_ from_user` 将进程 A 用户空间的数据写入刚刚映射的内核空间虚拟页中
+
+8. 根据映射关系, 刚刚写入的数据现在可以通过进程 B 的 binder buffer 的虚拟地址读出
+
+# 
+
 ```cpp
 // https://cs.android.com/android/platform/superproject/+/master:system/libhwbinder/include/hwbinder/IPCThreadState.h
 class IPCThreadState
@@ -1107,4 +1129,377 @@ err_invalid_target_handle:
 	}
 }
 
+/**
+ * https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c
+ * 
+ * binder_alloc_new_buf() - Allocate a new binder buffer
+ * @alloc:              binder_alloc for this proc
+ * @data_size:          size of user data buffer
+ * @offsets_size:       user specified buffer offset
+ * @extra_buffers_size: size of extra space for meta-data (eg, security context)
+ * @is_async:           buffer for async transaction
+ * @pid:				pid to attribute allocation to (used for debugging)
+ *
+ * Allocate a new buffer given the requested sizes. Returns
+ * the kernel version of the buffer pointer. The size allocated
+ * is the sum of the three given sizes (each rounded up to
+ * pointer-sized boundary)
+ *
+ * Return:	The allocated buffer or %NULL if error
+ */
+struct binder_buffer *binder_alloc_new_buf(struct binder_alloc *alloc,
+					   size_t data_size,
+					   size_t offsets_size,
+					   size_t extra_buffers_size,
+					   int is_async,
+					   int pid)
+{
+	struct binder_buffer *buffer;
+
+	mutex_lock(&alloc->mutex);
+	buffer = binder_alloc_new_buf_locked(alloc, data_size, offsets_size,
+					     extra_buffers_size, is_async, pid);
+	mutex_unlock(&alloc->mutex);
+	return buffer;
+}
+
+static struct binder_buffer *binder_alloc_new_buf_locked(
+				struct binder_alloc *alloc,
+				size_t data_size,
+				size_t offsets_size,
+				size_t extra_buffers_size,
+				int is_async,
+				int pid)
+{
+	struct rb_node *n = alloc->free_buffers.rb_node;
+	struct binder_buffer *buffer;
+	size_t buffer_size;
+	struct rb_node *best_fit = NULL;
+	void __user *has_page_addr;
+	void __user *end_page_addr;
+	size_t size, data_offsets_size;
+	int ret;
+
+	mmap_read_lock(alloc->mm);
+	if (!binder_alloc_get_vma(alloc)) {
+		mmap_read_unlock(alloc->mm);
+		binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
+				   "%d: binder_alloc_buf, no vma\n",
+				   alloc->pid);
+		return ERR_PTR(-ESRCH);
+	}
+	mmap_read_unlock(alloc->mm);
+
+	data_offsets_size = ALIGN(data_size, sizeof(void *)) +
+		ALIGN(offsets_size, sizeof(void *));
+
+	if (data_offsets_size < data_size || data_offsets_size < offsets_size) {
+		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+				"%d: got transaction with invalid size %zd-%zd\n",
+				alloc->pid, data_size, offsets_size);
+		return ERR_PTR(-EINVAL);
+	}
+	size = data_offsets_size + ALIGN(extra_buffers_size, sizeof(void *));
+	if (size < data_offsets_size || size < extra_buffers_size) {
+		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+				"%d: got transaction with invalid extra_buffers_size %zd\n",
+				alloc->pid, extra_buffers_size);
+		return ERR_PTR(-EINVAL);
+	}
+	if (is_async &&
+	    alloc->free_async_space < size + sizeof(struct binder_buffer)) {
+		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+			     "%d: binder_alloc_buf size %zd failed, no async space left\n",
+			      alloc->pid, size);
+		return ERR_PTR(-ENOSPC);
+	}
+
+	/* Pad 0-size buffers so they get assigned unique addresses */
+	size = max(size, sizeof(void *));
+
+    // 从目标进程（server）的空闲虚拟地址区间集合里（binder_alloc->free_buffers.rb_node）找一块满足大小的（>= size）binder_buffer 出来
+	// 
+	// 空闲虚拟地址集合 binder_alloc->free_buffers 是一棵红黑树（平衡的二叉树），左孩子的地址空间比父亲小，右孩子比父亲大
+    // struct rb_node {
+    // 	unsigned long  __rb_parent_color;
+    // 	struct rb_node *rb_right;
+    // 	struct rb_node *rb_left;
+    // } __attribute__((aligned(sizeof(long))));
+	// 
+	// 搜索二叉树，找到最匹配 size 大小的 buffer
+	while (n) {
+		buffer = rb_entry(n, struct binder_buffer, rb_node);  // 从 rb_node 取出 binder_buffer 类型的 entry
+		BUG_ON(!buffer->free);
+		buffer_size = binder_alloc_buffer_size(alloc, buffer);
+
+		if (size < buffer_size) {  // 如果 buffer 大小满足 size 要求则选中（best_fit）然后继续往左下走寻找更接近 size 的 buffer
+			best_fit = n;
+			n = n->rb_left;
+		} else if (size > buffer_size)  // buffer 大小不满足 size 要求，得继续往右下走找更大的 buffer
+			n = n->rb_right;
+		else {                          // buffer 大小刚好匹配 size，完美，无需继续寻找了
+			best_fit = n;
+			break;
+		}
+	}
+
+	// 没有满足 size 大小要求的空闲 binder_buffer 则返回错误码
+	if (best_fit == NULL) {
+		size_t allocated_buffers = 0;
+		size_t largest_alloc_size = 0;
+		size_t total_alloc_size = 0;
+		size_t free_buffers = 0;
+		size_t largest_free_size = 0;
+		size_t total_free_size = 0;
+
+		for (n = rb_first(&alloc->allocated_buffers); n != NULL;
+		     n = rb_next(n)) {
+			buffer = rb_entry(n, struct binder_buffer, rb_node);
+			buffer_size = binder_alloc_buffer_size(alloc, buffer);
+			allocated_buffers++;
+			total_alloc_size += buffer_size;
+			if (buffer_size > largest_alloc_size)
+				largest_alloc_size = buffer_size;
+		}
+		for (n = rb_first(&alloc->free_buffers); n != NULL;
+		     n = rb_next(n)) {
+			buffer = rb_entry(n, struct binder_buffer, rb_node);
+			buffer_size = binder_alloc_buffer_size(alloc, buffer);
+			free_buffers++;
+			total_free_size += buffer_size;
+			if (buffer_size > largest_free_size)
+				largest_free_size = buffer_size;
+		}
+		binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
+				   "%d: binder_alloc_buf size %zd failed, no address space\n",
+				   alloc->pid, size);
+		binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
+				   "allocated: %zd (num: %zd largest: %zd), free: %zd (num: %zd largest: %zd)\n",
+				   total_alloc_size, allocated_buffers,
+				   largest_alloc_size, total_free_size,
+				   free_buffers, largest_free_size);
+		return ERR_PTR(-ENOSPC);
+	}
+	if (n == NULL) {
+		buffer = rb_entry(best_fit, struct binder_buffer, rb_node);
+		buffer_size = binder_alloc_buffer_size(alloc, buffer);
+	}
+
+	binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+		     "%d: binder_alloc_buf size %zd got buffer %pK size %zd\n",
+		      alloc->pid, size, buffer, buffer_size);
+
+	has_page_addr = (void __user *)
+		(((uintptr_t)buffer->user_data + buffer_size) & PAGE_MASK);
+	WARN_ON(n && buffer_size != size);
+	end_page_addr =
+		(void __user *)PAGE_ALIGN((uintptr_t)buffer->user_data + size);
+	if (end_page_addr > has_page_addr)
+		end_page_addr = has_page_addr;
+	ret = binder_update_page_range(alloc, 1, (void __user *)
+		PAGE_ALIGN((uintptr_t)buffer->user_data), end_page_addr);
+	if (ret)
+		return ERR_PTR(ret);
+
+	if (buffer_size != size) {
+		struct binder_buffer *new_buffer;
+
+		new_buffer = kzalloc(sizeof(*buffer), GFP_KERNEL);
+		if (!new_buffer) {
+			pr_err("%s: %d failed to alloc new buffer struct\n",
+			       __func__, alloc->pid);
+			goto err_alloc_buf_struct_failed;
+		}
+		new_buffer->user_data = (u8 __user *)buffer->user_data + size;
+		list_add(&new_buffer->entry, &buffer->entry);
+		new_buffer->free = 1;
+		binder_insert_free_buffer(alloc, new_buffer);
+	}
+
+	rb_erase(best_fit, &alloc->free_buffers);
+	buffer->free = 0;
+	buffer->allow_user_free = 0;
+	binder_insert_allocated_buffer_locked(alloc, buffer);
+	binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+		     "%d: binder_alloc_buf size %zd got %pK\n",
+		      alloc->pid, size, buffer);
+	buffer->data_size = data_size;
+	buffer->offsets_size = offsets_size;
+	buffer->async_transaction = is_async;
+	buffer->extra_buffers_size = extra_buffers_size;
+	buffer->pid = pid;
+	buffer->oneway_spam_suspect = false;
+	if (is_async) {
+		alloc->free_async_space -= size + sizeof(struct binder_buffer);
+		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC_ASYNC,
+			     "%d: binder_alloc_buf size %zd async free %zd\n",
+			      alloc->pid, size, alloc->free_async_space);
+		if (alloc->free_async_space < alloc->buffer_size / 10) {
+			/*
+			 * Start detecting spammers once we have less than 20%
+			 * of async space left (which is less than 10% of total
+			 * buffer size).
+			 */
+			buffer->oneway_spam_suspect = debug_low_async_space_locked(alloc, pid);
+		} else {
+			alloc->oneway_spam_detected = false;
+		}
+	}
+	return buffer;
+
+err_alloc_buf_struct_failed:
+	binder_update_page_range(alloc, 0, (void __user *)
+				 PAGE_ALIGN((uintptr_t)buffer->user_data),
+				 end_page_addr);
+	return ERR_PTR(-ENOMEM);
+}
 ```
+
+# binder_mmap
+
+```cpp
+// ProcessState 是进程内单例，负责初始化应用进程与 binder driver 的连接（fd）
+// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
+ProcessState::ProcessState(const char *driver)          // driver 参数是指 binder 的路径：/dev/binder
+    : mDriverName(String8(driver))                      // 记录 binder 路径
+    , mDriverFD(open_driver(driver))                    // 打开 binder 并记录下它的 fd
+    , mVMStart(MAP_FAILED)                              // mmap 分配的一块内存空间，后续会用到
+    , mThreadCountLock(PTHREAD_MUTEX_INITIALIZER)
+    , mThreadCountDecrement(PTHREAD_COND_INITIALIZER)
+    , mExecutingThreadsCount(0)
+    , mWaitingForThreads(0)
+    , mMaxThreads(DEFAULT_MAX_BINDER_THREADS)
+    , mStarvationStartTimeMs(0)
+    , mThreadPoolStarted(false)
+    , mThreadPoolSeq(1)
+    , mCallRestriction(CallRestriction::NONE)
+{
+    if (mDriverFD >= 0) {
+        // mmap the binder, providing a chunk of virtual address space to receive transactions.
+        mVMStart = mmap(nullptr, BINDER_VM_SIZE /* 1M */, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, mDriverFD, 0);
+        if (mVMStart == MAP_FAILED) {
+            ALOGE("Using %s failed: unable to mmap transaction memory.\n", mDriverName.c_str());
+            close(mDriverFD);
+            mDriverFD = -1;
+            mDriverName.clear();
+        }
+    }
+}
+
+// 大概 1M 左右
+#define BINDER_VM_SIZE ((1 * 1024 * 1024) - sysconf(_SC_PAGE_SIZE) * 2)
+
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c
+static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	struct binder_proc *proc = filp->private_data;
+
+	if (proc->tsk != current->group_leader)
+		return -EINVAL;
+
+	binder_debug(BINDER_DEBUG_OPEN_CLOSE,
+		     "%s: %d %lx-%lx (%ld K) vma %lx pagep %lx\n",
+		     __func__, proc->pid, vma->vm_start, vma->vm_end,
+		     (vma->vm_end - vma->vm_start) / SZ_1K, vma->vm_flags,
+		     (unsigned long)pgprot_val(vma->vm_page_prot));
+
+	if (vma->vm_flags & FORBIDDEN_MMAP_FLAGS) {
+		pr_err("%s: %d %lx-%lx %s failed %d\n", __func__,
+		       proc->pid, vma->vm_start, vma->vm_end, "bad vm_flags", -EPERM);
+		return -EPERM;
+	}
+	vma->vm_flags |= VM_DONTCOPY | VM_MIXEDMAP;
+	vma->vm_flags &= ~VM_MAYWRITE;
+
+	vma->vm_ops = &binder_vm_ops;
+	vma->vm_private_data = proc;
+
+	return binder_alloc_mmap_handler(&proc->alloc, vma);
+}
+
+/**
+ * binder_alloc_mmap_handler() - map virtual address space for proc
+ * @alloc:	alloc structure for this proc
+ * @vma:	vma passed to mmap()
+ *
+ * Called by binder_mmap() to initialize the space specified in
+ * vma for allocating binder buffers
+ *
+ * Return:
+ *      0 = success
+ *      -EBUSY = address space already mapped
+ *      -ENOMEM = failed to map memory to given address space
+ *
+ * https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c
+ */
+int binder_alloc_mmap_handler(struct binder_alloc *alloc,
+			      struct vm_area_struct *vma)
+{
+	int ret;
+	const char *failure_string;
+	struct binder_buffer *buffer;
+
+	if (unlikely(vma->vm_mm != alloc->mm)) {
+		ret = -EINVAL;
+		failure_string = "invalid vma->vm_mm";
+		goto err_invalid_mm;
+	}
+
+	mutex_lock(&binder_alloc_mmap_lock);
+	if (alloc->buffer_size) {
+		ret = -EBUSY;
+		failure_string = "already mapped";
+		goto err_already_mapped;
+	}
+	alloc->buffer_size = min_t(unsigned long, vma->vm_end - vma->vm_start,
+				   SZ_4M);
+	mutex_unlock(&binder_alloc_mmap_lock);
+
+	alloc->buffer = (void __user *)vma->vm_start;
+
+	alloc->pages = kcalloc(alloc->buffer_size / PAGE_SIZE,
+			       sizeof(alloc->pages[0]),
+			       GFP_KERNEL);
+	if (alloc->pages == NULL) {
+		ret = -ENOMEM;
+		failure_string = "alloc page array";
+		goto err_alloc_pages_failed;
+	}
+
+	buffer = kzalloc(sizeof(*buffer), GFP_KERNEL);
+	if (!buffer) {
+		ret = -ENOMEM;
+		failure_string = "alloc buffer struct";
+		goto err_alloc_buf_struct_failed;
+	}
+
+	buffer->user_data = alloc->buffer;
+	list_add(&buffer->entry, &alloc->buffers);
+	buffer->free = 1;
+	binder_insert_free_buffer(alloc, buffer);
+	alloc->free_async_space = alloc->buffer_size / 2;
+	alloc->vma_addr = vma->vm_start;
+
+	return 0;
+
+err_alloc_buf_struct_failed:
+	kfree(alloc->pages);
+	alloc->pages = NULL;
+err_alloc_pages_failed:
+	alloc->buffer = NULL;
+	mutex_lock(&binder_alloc_mmap_lock);
+	alloc->buffer_size = 0;
+err_already_mapped:
+	mutex_unlock(&binder_alloc_mmap_lock);
+err_invalid_mm:
+	binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
+			   "%s: %d %lx-%lx %s failed %d\n", __func__,
+			   alloc->pid, vma->vm_start, vma->vm_end,
+			   failure_string, ret);
+	return ret;
+}
+```
+
+# 参考
+
+- [Binder | 内存拷贝的本质和变迁 - 芦半山 - 稀土掘金](https://github.com/cyrus-lin/bookmark/issues/46)
