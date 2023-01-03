@@ -1556,6 +1556,142 @@ static size_t binder_alloc_buffer_size(struct binder_alloc *alloc,
 }
 ```
 
+# binder_update_page_range
+
+```cpp
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c
+static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
+				    void __user *start, void __user *end)
+{
+	void __user *page_addr;
+	unsigned long user_page_addr;
+	struct binder_lru_page *page;
+	struct vm_area_struct *vma = NULL;
+	struct mm_struct *mm = NULL;
+	bool need_mm = false;
+
+	binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+		     "%d: %s pages %pK-%pK\n", alloc->pid,
+		     allocate ? "allocate" : "free", start, end);
+
+	if (end <= start)
+		return 0;
+
+	trace_binder_update_page_range(alloc, allocate, start, end);
+
+	if (allocate == 0)
+		goto free_range;
+
+	for (page_addr = start; page_addr < end; page_addr += PAGE_SIZE) {
+		page = &alloc->pages[(page_addr - alloc->buffer) / PAGE_SIZE];
+		if (!page->page_ptr) {
+			need_mm = true;
+			break;
+		}
+	}
+
+	if (need_mm && mmget_not_zero(alloc->mm))
+		mm = alloc->mm;
+
+	if (mm) {
+		mmap_read_lock(mm);
+		vma = vma_lookup(mm, alloc->vma_addr);
+	}
+
+	if (!vma && need_mm) {
+		binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
+				   "%d: binder_alloc_buf failed to map pages in userspace, no vma\n",
+				   alloc->pid);
+		goto err_no_vma;
+	}
+
+	for (page_addr = start; page_addr < end; page_addr += PAGE_SIZE) {
+		int ret;
+		bool on_lru;
+		size_t index;
+
+		index = (page_addr - alloc->buffer) / PAGE_SIZE;
+		page = &alloc->pages[index];
+
+		if (page->page_ptr) {
+			trace_binder_alloc_lru_start(alloc, index);
+
+			on_lru = list_lru_del(&binder_alloc_lru, &page->lru);
+			WARN_ON(!on_lru);
+
+			trace_binder_alloc_lru_end(alloc, index);
+			continue;
+		}
+
+		if (WARN_ON(!vma))
+			goto err_page_ptr_cleared;
+
+		trace_binder_alloc_page_start(alloc, index);
+		page->page_ptr = alloc_page(GFP_KERNEL |
+					    __GFP_HIGHMEM |
+					    __GFP_ZERO);
+		if (!page->page_ptr) {
+			pr_err("%d: binder_alloc_buf failed for page at %pK\n",
+				alloc->pid, page_addr);
+			goto err_alloc_page_failed;
+		}
+		page->alloc = alloc;
+		INIT_LIST_HEAD(&page->lru);
+
+		user_page_addr = (uintptr_t)page_addr;
+		ret = vm_insert_page(vma, user_page_addr, page[0].page_ptr);
+		if (ret) {
+			pr_err("%d: binder_alloc_buf failed to map page at %lx in userspace\n",
+			       alloc->pid, user_page_addr);
+			goto err_vm_insert_page_failed;
+		}
+
+		if (index + 1 > alloc->pages_high)
+			alloc->pages_high = index + 1;
+
+		trace_binder_alloc_page_end(alloc, index);
+	}
+	if (mm) {
+		mmap_read_unlock(mm);
+		mmput(mm);
+	}
+	return 0;
+
+free_range:
+	for (page_addr = end - PAGE_SIZE; 1; page_addr -= PAGE_SIZE) {
+		bool ret;
+		size_t index;
+
+		index = (page_addr - alloc->buffer) / PAGE_SIZE;
+		page = &alloc->pages[index];
+
+		trace_binder_free_lru_start(alloc, index);
+
+		ret = list_lru_add(&binder_alloc_lru, &page->lru);
+		WARN_ON(!ret);
+
+		trace_binder_free_lru_end(alloc, index);
+		if (page_addr == start)
+			break;
+		continue;
+
+err_vm_insert_page_failed:
+		__free_page(page->page_ptr);
+		page->page_ptr = NULL;
+err_alloc_page_failed:
+err_page_ptr_cleared:
+		if (page_addr == start)
+			break;
+	}
+err_no_vma:
+	if (mm) {
+		mmap_read_unlock(mm);
+		mmput(mm);
+	}
+	return vma ? -ENOMEM : -ESRCH;
+}
+```
+
 # 参考
 
 - [Binder | 内存拷贝的本质和变迁 - 芦半山 - 稀土掘金](https://github.com/cyrus-lin/bookmark/issues/46)
