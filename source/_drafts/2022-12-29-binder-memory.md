@@ -1217,7 +1217,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	/* Pad 0-size buffers so they get assigned unique addresses */
 	size = max(size, sizeof(void *));
 
-    // 从目标进程（server）的空闲虚拟地址区间集合里（binder_alloc->free_buffers.rb_node）找一块满足大小的（>= size）binder_buffer 出来
+    // 从目标进程（server）的空闲虚拟地址区间集合里（binder_alloc->free_buffers）找一块满足大小的（>= size）binder_buffer 出来
 	// 
 	// 空闲虚拟地址集合 binder_alloc->free_buffers 是一棵红黑树（平衡的二叉树），左孩子的地址空间比父亲小，右孩子比父亲大
     // struct rb_node {
@@ -1227,6 +1227,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
     // } __attribute__((aligned(sizeof(long))));
 	// 
 	// 搜索二叉树，找到最匹配 size 大小的 buffer
+	// 从章节【binder_mmap】可知 binder_alloc->free_buffers 里默认会初始化一个 1M 大小的应用进程可用虚存
 	while (n) {
 		buffer = rb_entry(n, struct binder_buffer, rb_node);  // 从 rb_node 取出 binder_buffer 类型的 entry
 		BUG_ON(!buffer->free);
@@ -1244,6 +1245,8 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	}
 
 	// 没有满足 size 大小要求的空闲 binder_buffer 则返回错误码
+	// 此时说明 request or reponse 大小超过为 binder transaction 分配的虚存大小，会报以下错误：
+	// JavaBinder: !!! FAILED BINDER TRANSACTION !!! (parcel size = 2001452)
 	if (best_fit == NULL) {
 		size_t allocated_buffers = 0;
 		size_t largest_alloc_size = 0;
@@ -1289,6 +1292,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 		     "%d: binder_alloc_buf size %zd got buffer %pK size %zd\n",
 		      alloc->pid, size, buffer, buffer_size);
 
+    // 
 	has_page_addr = (void __user *)
 		(((uintptr_t)buffer->user_data + buffer_size) & PAGE_MASK);
 	WARN_ON(n && buffer_size != size);
@@ -1357,6 +1361,14 @@ err_alloc_buf_struct_failed:
 
 # binder_mmap
 
+`open_driver(driver)` 得到 binder fd 后会执行 `binder_mmap` 分配所需的内存空间：
+
+1. 应用进程分配 1M 的虚存至 `ProcessState.mVMStart`，这块虚存是还没有映射任何物理内存的
+
+2. binder driver 初始化 `binder_alloc->free_buffers`，它代表空闲可用的应用进程虚存块，也即上面第一步分配的这块虚存；它是一棵红黑树，`binder_buffer->user_data` 记录了起始地址，节点间的起始地址差表示此节点的空间大小，最后一个节点表示应用进程开辟的虚存空间还剩余的大小
+
+3. 此时 binder driver 并没有相应地为此应用进程分配虚存
+
 ```cpp
 // ProcessState 是进程内单例，负责初始化应用进程与 binder driver 的连接（fd）
 // https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp
@@ -1376,6 +1388,8 @@ ProcessState::ProcessState(const char *driver)          // driver 参数是指 b
 {
     if (mDriverFD >= 0) {
         // mmap the binder, providing a chunk of virtual address space to receive transactions.
+		// 应用进程开辟了 1M 的虚拟地址空间，用以 binder 间传输数据
+		// 注意此时只是在应用进程开辟了 1M 的虚拟内存，并没有映射物理内存
         mVMStart = mmap(nullptr, BINDER_VM_SIZE /* 1M */, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, mDriverFD, 0);
         if (mVMStart == MAP_FAILED) {
             ALOGE("Using %s failed: unable to mmap transaction memory.\n", mDriverName.c_str());
@@ -1389,6 +1403,7 @@ ProcessState::ProcessState(const char *driver)          // driver 参数是指 b
 // 大概 1M 左右
 #define BINDER_VM_SIZE ((1 * 1024 * 1024) - sysconf(_SC_PAGE_SIZE) * 2)
 
+// 来到内核 binder driver 的 mmap 处理函数
 // https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c
 static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
 {
@@ -1451,12 +1466,20 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
 		failure_string = "already mapped";
 		goto err_already_mapped;
 	}
+
+	// vm_start 是应用进程虚拟地址空间的起始地址，vm_end 是结束地址
+	// vma->vm_end - vma->vm_start 就是应用进程内这块虚拟地址的大小，上面说过是 1M
+	// alloc->buffer      是应用进程的虚拟地址
+	// alloc->buffer_size 是这块内存空间的大小
 	alloc->buffer_size = min_t(unsigned long, vma->vm_end - vma->vm_start,
 				   SZ_4M);
 	mutex_unlock(&binder_alloc_mmap_lock);
-
 	alloc->buffer = (void __user *)vma->vm_start;
 
+    // kcalloc — allocate memory for an array. The memory is set to zero.
+    // void* kcalloc (size_t n /* number of elements */, size_t size /* element size */, gfp_t flags);
+	// 
+	// struct binder_lru_page *pages;
 	alloc->pages = kcalloc(alloc->buffer_size / PAGE_SIZE,
 			       sizeof(alloc->pages[0]),
 			       GFP_KERNEL);
@@ -1466,6 +1489,7 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
 		goto err_alloc_pages_failed;
 	}
 
+    // 初始化 binder driver fd 时就已经放了一个 binder_buffer 至 alloc->free_buffers
 	buffer = kzalloc(sizeof(*buffer), GFP_KERNEL);
 	if (!buffer) {
 		ret = -ENOMEM;
@@ -1473,30 +1497,62 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
 		goto err_alloc_buf_struct_failed;
 	}
 
-	buffer->user_data = alloc->buffer;
-	list_add(&buffer->entry, &alloc->buffers);
+	buffer->user_data = alloc->buffer;          // binder_buffer 也记录了应用进程的虚存起始地址
+	list_add(&buffer->entry, &alloc->buffers);  // alloc->buffers, list of all buffers for this proc
 	buffer->free = 1;
-	binder_insert_free_buffer(alloc, buffer);
+	binder_insert_free_buffer(alloc, buffer);   // alloc->free_buffers, rb tree of buffers available for allocation sorted by size
 	alloc->free_async_space = alloc->buffer_size / 2;
-	alloc->vma_addr = vma->vm_start;
+	alloc->vma_addr = vma->vm_start;           // 应用进程的虚存起始地址
+	// ...
+}
 
-	return 0;
+// alloc->free_buffers 是一棵红黑树（平衡的二叉树）
+// 左孩子内存空间较小，右孩子内存空间较大，这里的内存是用户进程的虚存
+//
+// 但 binder_buffer->user_data 只记录了虚存起始地址，并没有字段记录大小
+// 这块地址的大小跟 binder_buffer 在红黑树上的位置有关，看 binder_alloc_buffer_size
+// 
+// 1，如果 binder_buffer 是最后一个节点，那么它表示应用进程开辟的虚存空间还剩余的大小
+// 2，否则此节点与下一节点的起始地址差（binder_buffer->user_data）就是此节点的空间大小
+static void binder_insert_free_buffer(struct binder_alloc *alloc,
+				      struct binder_buffer *new_buffer)
+{
+	struct rb_node **p = &alloc->free_buffers.rb_node;
+	struct rb_node *parent = NULL;
+	struct binder_buffer *buffer;
+	size_t buffer_size;
+	size_t new_buffer_size;
 
-err_alloc_buf_struct_failed:
-	kfree(alloc->pages);
-	alloc->pages = NULL;
-err_alloc_pages_failed:
-	alloc->buffer = NULL;
-	mutex_lock(&binder_alloc_mmap_lock);
-	alloc->buffer_size = 0;
-err_already_mapped:
-	mutex_unlock(&binder_alloc_mmap_lock);
-err_invalid_mm:
-	binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
-			   "%s: %d %lx-%lx %s failed %d\n", __func__,
-			   alloc->pid, vma->vm_start, vma->vm_end,
-			   failure_string, ret);
-	return ret;
+	BUG_ON(!new_buffer->free);
+
+	new_buffer_size = binder_alloc_buffer_size(alloc, new_buffer);
+
+	binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+		     "%d: add free buffer, size %zd, at %pK\n",
+		      alloc->pid, new_buffer_size, new_buffer);
+
+	while (*p) {
+		parent = *p;
+		buffer = rb_entry(parent, struct binder_buffer, rb_node);
+		BUG_ON(!buffer->free);
+
+		buffer_size = binder_alloc_buffer_size(alloc, buffer);
+
+		if (new_buffer_size < buffer_size)
+			p = &parent->rb_left;
+		else
+			p = &parent->rb_right;
+	}
+	rb_link_node(&new_buffer->rb_node, parent, p);
+	rb_insert_color(&new_buffer->rb_node, &alloc->free_buffers);
+}
+
+static size_t binder_alloc_buffer_size(struct binder_alloc *alloc,
+				       struct binder_buffer *buffer)
+{
+	if (list_is_last(&buffer->entry, &alloc->buffers))
+		return alloc->buffer + alloc->buffer_size - buffer->user_data;
+	return binder_buffer_next(buffer)->user_data - buffer->user_data;
 }
 ```
 
