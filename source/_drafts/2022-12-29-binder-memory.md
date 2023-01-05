@@ -23,7 +23,13 @@ date: 2022-12-29 12:00:00 +0800
 
 8. 根据映射关系, 刚刚写入的数据现在可以通过进程 B 的 binder buffer 的虚拟地址读出
 
-# 
+## 一次拷贝
+
+传统 IPC 一般是进程 A 执行系统调用陷入内核，将数据从进程 A 内存空间拷贝至内核，进程 B 为了读取数据需要执行系统调用陷入内核，将数据从内核拷贝至进程 B 内存空间，那么一共是两次内存拷贝和两次用户态内核态切换
+
+Binder IPC 的第一次内存拷贝同传统 IPC，也是将数据从从进程 A 内存空间拷贝至内核，但 Binder IPC 不需要第二次内存拷贝，因为它将进程 B 内存空间里指向数据的虚存映射至内核里保存数据的内核物理内存，这里进程 B 读取到的数据其实是第一次拷贝至内核的那份数据
+
+# client write request
 
 ```cpp
 // https://cs.android.com/android/platform/superproject/+/master:system/libhwbinder/include/hwbinder/IPCThreadState.h
@@ -79,6 +85,7 @@ status_t IPCThreadState::writeTransactionData(int32_t cmd /* BC_TRANSACTION */, 
     }
 
     // mOut 写入 [BC_TRANSACTION][binder_transaction_data]
+	// 对应章节【指导思想】里的步骤一
     mOut.writeInt32(cmd);
     mOut.write(&tr, sizeof(tr));
 
@@ -144,7 +151,7 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
     bwr.read_consumed = 0;
     status_t err;
     do {
-        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
+        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)  // 对应章节【指导思想】里的步骤二
             err = NO_ERROR;
         else
             err = -errno;
@@ -266,382 +273,25 @@ static void binder_transaction(struct binder_proc *proc,
 			       struct binder_transaction_data *tr, int reply,
 			       binder_size_t extra_buffers_size)
 {
-	int ret;
 	struct binder_transaction *t;
-	struct binder_work *w;
-	struct binder_work *tcomplete;
-	binder_size_t buffer_offset = 0;
-	binder_size_t off_start_offset, off_end_offset;
-	binder_size_t off_min;
-	binder_size_t sg_buf_offset, sg_buf_end_offset;
-	binder_size_t user_offset = 0;
-	struct binder_proc *target_proc = NULL;
-	struct binder_thread *target_thread = NULL;
-	struct binder_node *target_node = NULL;
-	struct binder_transaction *in_reply_to = NULL;
-	struct binder_transaction_log_entry *e;
-	uint32_t return_error = 0;
-	uint32_t return_error_param = 0;
-	uint32_t return_error_line = 0;
-	binder_size_t last_fixup_obj_off = 0;
-	binder_size_t last_fixup_min_off = 0;
-	struct binder_context *context = proc->context;
-	int t_debug_id = atomic_inc_return(&binder_last_id);
-	char *secctx = NULL;
-	u32 secctx_sz = 0;
-	struct list_head sgc_head;
-	struct list_head pf_head;
 	const void __user *user_buffer = (const void __user *)
 				(uintptr_t)tr->data.ptr.buffer;    // 用户空间的数据块地址
-	bool is_nested = false;
-	INIT_LIST_HEAD(&sgc_head);
-	INIT_LIST_HEAD(&pf_head);
+	// ...
 
-	e = binder_transaction_log_add(&binder_transaction_log);
-	e->debug_id = t_debug_id;
-	e->call_type = reply ? 2 : !!(tr->flags & TF_ONE_WAY);
-	e->from_proc = proc->pid;
-	e->from_thread = thread->pid;
-	e->target_handle = tr->target.handle;
-	e->data_size = tr->data_size;
-	e->offsets_size = tr->offsets_size;
-	strscpy(e->context_name, proc->context->name, BINDERFS_MAX_NAME);
-
-	binder_inner_proc_lock(proc);
-	binder_set_extended_error(&thread->ee, t_debug_id, BR_OK, 0);
-	binder_inner_proc_unlock(proc);
-
-	if (reply) {
-		binder_inner_proc_lock(proc);
-		in_reply_to = thread->transaction_stack;
-		if (in_reply_to == NULL) {
-			binder_inner_proc_unlock(proc);
-			binder_user_error("%d:%d got reply transaction with no transaction stack\n",
-					  proc->pid, thread->pid);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EPROTO;
-			return_error_line = __LINE__;
-			goto err_empty_call_stack;
-		}
-		if (in_reply_to->to_thread != thread) {
-			spin_lock(&in_reply_to->lock);
-			binder_user_error("%d:%d got reply transaction with bad transaction stack, transaction %d has target %d:%d\n",
-				proc->pid, thread->pid, in_reply_to->debug_id,
-				in_reply_to->to_proc ?
-				in_reply_to->to_proc->pid : 0,
-				in_reply_to->to_thread ?
-				in_reply_to->to_thread->pid : 0);
-			spin_unlock(&in_reply_to->lock);
-			binder_inner_proc_unlock(proc);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EPROTO;
-			return_error_line = __LINE__;
-			in_reply_to = NULL;
-			goto err_bad_call_stack;
-		}
-		thread->transaction_stack = in_reply_to->to_parent;
-		binder_inner_proc_unlock(proc);
-		target_thread = binder_get_txn_from_and_acq_inner(in_reply_to);
-		if (target_thread == NULL) {
-			/* annotation for sparse */
-			__release(&target_thread->proc->inner_lock);
-			binder_txn_error("%d:%d reply target not found\n",
-				thread->pid, proc->pid);
-			return_error = BR_DEAD_REPLY;
-			return_error_line = __LINE__;
-			goto err_dead_binder;
-		}
-		if (target_thread->transaction_stack != in_reply_to) {
-			binder_user_error("%d:%d got reply transaction with bad target transaction stack %d, expected %d\n",
-				proc->pid, thread->pid,
-				target_thread->transaction_stack ?
-				target_thread->transaction_stack->debug_id : 0,
-				in_reply_to->debug_id);
-			binder_inner_proc_unlock(target_thread->proc);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EPROTO;
-			return_error_line = __LINE__;
-			in_reply_to = NULL;
-			target_thread = NULL;
-			goto err_dead_binder;
-		}
-		target_proc = target_thread->proc;
-		target_proc->tmp_ref++;
-		binder_inner_proc_unlock(target_thread->proc);
-	} else {
-		if (tr->target.handle) {
-			struct binder_ref *ref;
-
-			/*
-			 * There must already be a strong ref
-			 * on this node. If so, do a strong
-			 * increment on the node to ensure it
-			 * stays alive until the transaction is
-			 * done.
-			 */
-			binder_proc_lock(proc);
-			ref = binder_get_ref_olocked(proc, tr->target.handle,
-						     true);
-			if (ref) {
-				target_node = binder_get_node_refs_for_txn(
-						ref->node, &target_proc,
-						&return_error);
-			} else {
-				binder_user_error("%d:%d got transaction to invalid handle, %u\n",
-						  proc->pid, thread->pid, tr->target.handle);
-				return_error = BR_FAILED_REPLY;
-			}
-			binder_proc_unlock(proc);
-		} else {
-			mutex_lock(&context->context_mgr_node_lock);
-			target_node = context->binder_context_mgr_node;
-			if (target_node)
-				target_node = binder_get_node_refs_for_txn(
-						target_node, &target_proc,
-						&return_error);
-			else
-				return_error = BR_DEAD_REPLY;
-			mutex_unlock(&context->context_mgr_node_lock);
-			if (target_node && target_proc->pid == proc->pid) {
-				binder_user_error("%d:%d got transaction to context manager from process owning it\n",
-						  proc->pid, thread->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = -EINVAL;
-				return_error_line = __LINE__;
-				goto err_invalid_target_handle;
-			}
-		}
-		if (!target_node) {
-			binder_txn_error("%d:%d cannot find target node\n",
-				thread->pid, proc->pid);
-			/*
-			 * return_error is set above
-			 */
-			return_error_param = -EINVAL;
-			return_error_line = __LINE__;
-			goto err_dead_binder;
-		}
-		e->to_node = target_node->debug_id;
-		if (WARN_ON(proc == target_proc)) {
-			binder_txn_error("%d:%d self transactions not allowed\n",
-				thread->pid, proc->pid);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EINVAL;
-			return_error_line = __LINE__;
-			goto err_invalid_target_handle;
-		}
-		if (security_binder_transaction(proc->cred,
-						target_proc->cred) < 0) {
-			binder_txn_error("%d:%d transaction credentials failed\n",
-				thread->pid, proc->pid);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EPERM;
-			return_error_line = __LINE__;
-			goto err_invalid_target_handle;
-		}
-		binder_inner_proc_lock(proc);
-
-		w = list_first_entry_or_null(&thread->todo,
-					     struct binder_work, entry);
-		if (!(tr->flags & TF_ONE_WAY) && w &&
-		    w->type == BINDER_WORK_TRANSACTION) {
-			/*
-			 * Do not allow new outgoing transaction from a
-			 * thread that has a transaction at the head of
-			 * its todo list. Only need to check the head
-			 * because binder_select_thread_ilocked picks a
-			 * thread from proc->waiting_threads to enqueue
-			 * the transaction, and nothing is queued to the
-			 * todo list while the thread is on waiting_threads.
-			 */
-			binder_user_error("%d:%d new transaction not allowed when there is a transaction on thread todo\n",
-					  proc->pid, thread->pid);
-			binder_inner_proc_unlock(proc);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EPROTO;
-			return_error_line = __LINE__;
-			goto err_bad_todo_list;
-		}
-
-		if (!(tr->flags & TF_ONE_WAY) && thread->transaction_stack) {
-			struct binder_transaction *tmp;
-
-			tmp = thread->transaction_stack;
-			if (tmp->to_thread != thread) {
-				spin_lock(&tmp->lock);
-				binder_user_error("%d:%d got new transaction with bad transaction stack, transaction %d has target %d:%d\n",
-					proc->pid, thread->pid, tmp->debug_id,
-					tmp->to_proc ? tmp->to_proc->pid : 0,
-					tmp->to_thread ?
-					tmp->to_thread->pid : 0);
-				spin_unlock(&tmp->lock);
-				binder_inner_proc_unlock(proc);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = -EPROTO;
-				return_error_line = __LINE__;
-				goto err_bad_call_stack;
-			}
-			while (tmp) {
-				struct binder_thread *from;
-
-				spin_lock(&tmp->lock);
-				from = tmp->from;
-				if (from && from->proc == target_proc) {
-					atomic_inc(&from->tmp_ref);
-					target_thread = from;
-					spin_unlock(&tmp->lock);
-					is_nested = true;
-					break;
-				}
-				spin_unlock(&tmp->lock);
-				tmp = tmp->from_parent;
-			}
-		}
-		binder_inner_proc_unlock(proc);
-	}
-	if (target_thread)
-		e->to_thread = target_thread->pid;
-	e->to_proc = target_proc->pid;
-
-	/* TODO: reuse incoming transaction for reply */
-	t = kzalloc(sizeof(*t), GFP_KERNEL);
-	if (t == NULL) {
-		binder_txn_error("%d:%d cannot allocate transaction\n",
-			thread->pid, proc->pid);
-		return_error = BR_FAILED_REPLY;
-		return_error_param = -ENOMEM;
-		return_error_line = __LINE__;
-		goto err_alloc_t_failed;
-	}
-	INIT_LIST_HEAD(&t->fd_fixups);
-	binder_stats_created(BINDER_STAT_TRANSACTION);
-	spin_lock_init(&t->lock);
-	trace_android_vh_binder_transaction_init(t);
-
-	tcomplete = kzalloc(sizeof(*tcomplete), GFP_KERNEL);
-	if (tcomplete == NULL) {
-		binder_txn_error("%d:%d cannot allocate work for transaction\n",
-			thread->pid, proc->pid);
-		return_error = BR_FAILED_REPLY;
-		return_error_param = -ENOMEM;
-		return_error_line = __LINE__;
-		goto err_alloc_tcomplete_failed;
-	}
-	binder_stats_created(BINDER_STAT_TRANSACTION_COMPLETE);
-
-	t->debug_id = t_debug_id;
-
-	if (reply)
-		binder_debug(BINDER_DEBUG_TRANSACTION,
-			     "%d:%d BC_REPLY %d -> %d:%d, data %016llx-%016llx size %lld-%lld-%lld\n",
-			     proc->pid, thread->pid, t->debug_id,
-			     target_proc->pid, target_thread->pid,
-			     (u64)tr->data.ptr.buffer,
-			     (u64)tr->data.ptr.offsets,
-			     (u64)tr->data_size, (u64)tr->offsets_size,
-			     (u64)extra_buffers_size);
-	else
-		binder_debug(BINDER_DEBUG_TRANSACTION,
-			     "%d:%d BC_TRANSACTION %d -> %d - node %d, data %016llx-%016llx size %lld-%lld-%lld\n",
-			     proc->pid, thread->pid, t->debug_id,
-			     target_proc->pid, target_node->debug_id,
-			     (u64)tr->data.ptr.buffer,
-			     (u64)tr->data.ptr.offsets,
-			     (u64)tr->data_size, (u64)tr->offsets_size,
-			     (u64)extra_buffers_size);
-
-	if (!reply && !(tr->flags & TF_ONE_WAY))
-		t->from = thread;
-	else
-		t->from = NULL;
-	t->sender_euid = task_euid(proc->tsk);
-	t->to_proc = target_proc;
-	t->to_thread = target_thread;
-	t->code = tr->code;
-	t->flags = tr->flags;
-	t->is_nested = is_nested;
-	if (!(t->flags & TF_ONE_WAY) &&
-	    binder_supported_policy(current->policy)) {
-		/* Inherit supported policies for synchronous transactions */
-		t->priority.sched_policy = current->policy;
-		t->priority.prio = current->normal_prio;
-	} else {
-		/* Otherwise, fall back to the default priority */
-		t->priority = target_proc->default_priority;
-	}
-
-	if (target_node && target_node->txn_security_ctx) {
-		u32 secid;
-		size_t added_size;
-
-		security_cred_getsecid(proc->cred, &secid);
-		ret = security_secid_to_secctx(secid, &secctx, &secctx_sz);
-		if (ret) {
-			binder_txn_error("%d:%d failed to get security context\n",
-				thread->pid, proc->pid);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = ret;
-			return_error_line = __LINE__;
-			goto err_get_secctx_failed;
-		}
-		added_size = ALIGN(secctx_sz, sizeof(u64));
-		extra_buffers_size += added_size;
-		if (extra_buffers_size < added_size) {
-			binder_txn_error("%d:%d integer overflow of extra_buffers_size\n",
-				thread->pid, proc->pid);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EINVAL;
-			return_error_line = __LINE__;
-			goto err_bad_extra_size;
-		}
-	}
-
-	trace_binder_transaction(reply, t, target_node);
-
+    // 从进程 B 的用以 binder 数据传输的虚存里找一块满足大小的虚存块 binder_buffer.user_data 用以存放 request
+	// 这里就会发生物理页的分配了，binder 在内核分配物理页，并将进程 B 的虚存会映射至内核物理页
+	// 这样进程 B 就可以直接读取 request 而无需进行一次内核态至用户态的内存拷贝
+	// 参看章节【映射进程虚存与内核内存】
+	// 这里对应章节【指导思想】里的步骤三、四、五和六
 	t->buffer = binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
 		tr->offsets_size, extra_buffers_size,
 		!reply && (t->flags & TF_ONE_WAY), current->tgid);
-	if (IS_ERR(t->buffer)) {
-		char *s;
+	// ...
 
-		ret = PTR_ERR(t->buffer);
-		s = (ret == -ESRCH) ? ": vma cleared, target dead or dying"
-			: (ret == -ENOSPC) ? ": no space left"
-			: (ret == -ENOMEM) ? ": memory allocation failed"
-			: "";
-		binder_txn_error("cannot allocate buffer%s", s);
-
-		return_error_param = PTR_ERR(t->buffer);
-		return_error = return_error_param == -ESRCH ?
-			BR_DEAD_REPLY : BR_FAILED_REPLY;
-		return_error_line = __LINE__;
-		t->buffer = NULL;
-		goto err_binder_alloc_buf_failed;
-	}
-	if (secctx) {
-		int err;
-		size_t buf_offset = ALIGN(tr->data_size, sizeof(void *)) +
-				    ALIGN(tr->offsets_size, sizeof(void *)) +
-				    ALIGN(extra_buffers_size, sizeof(void *)) -
-				    ALIGN(secctx_sz, sizeof(u64));
-
-		t->security_ctx = (uintptr_t)t->buffer->user_data + buf_offset;
-		err = binder_alloc_copy_to_buffer(&target_proc->alloc,
-						  t->buffer, buf_offset,
-						  secctx, secctx_sz);
-		if (err) {
-			t->security_ctx = 0;
-			WARN_ON(1);
-		}
-		security_release_secctx(secctx, secctx_sz);
-		secctx = NULL;
-	}
-	t->buffer->debug_id = t->debug_id;
-	t->buffer->transaction = t;
-	t->buffer->target_node = target_node;
-	t->buffer->clear_on_free = !!(t->flags & TF_CLEAR_BUF);
-	trace_binder_transaction_alloc_buf(t->buffer);
-
+    // 将 request 从进程 A （tr->data.ptr.offsets）拷贝至进程 B（t->buffer->user_data）
+	// 这里就是 binder ipc 中发生的唯一一次数据拷贝
+	// 因为进程 B 的虚存地址实际上是映射至内核物理内存，所以 request 实际上是从进程 A 拷贝至内核，进程 B 读取的是内核物理内存空间
+	// 对应章节【指导思想】里的步骤七
 	if (binder_alloc_copy_user_to_buffer(
 				&target_proc->alloc,
 				t->buffer,
@@ -656,23 +306,7 @@ static void binder_transaction(struct binder_proc *proc,
 		return_error_line = __LINE__;
 		goto err_copy_data_failed;
 	}
-	if (!IS_ALIGNED(tr->offsets_size, sizeof(binder_size_t))) {
-		binder_user_error("%d:%d got transaction with invalid offsets size, %lld\n",
-				proc->pid, thread->pid, (u64)tr->offsets_size);
-		return_error = BR_FAILED_REPLY;
-		return_error_param = -EINVAL;
-		return_error_line = __LINE__;
-		goto err_bad_offset;
-	}
-	if (!IS_ALIGNED(extra_buffers_size, sizeof(u64))) {
-		binder_user_error("%d:%d got transaction with unaligned buffers size, %lld\n",
-				  proc->pid, thread->pid,
-				  (u64)extra_buffers_size);
-		return_error = BR_FAILED_REPLY;
-		return_error_param = -EINVAL;
-		return_error_line = __LINE__;
-		goto err_bad_offset;
-	}
+	// ...
 	off_start_offset = ALIGN(tr->data_size, sizeof(void *));
 	buffer_offset = off_start_offset;
 	off_end_offset = off_start_offset + tr->offsets_size;
@@ -742,200 +376,10 @@ static void binder_transaction(struct binder_proc *proc,
 		off_min = object_offset + object_size;
 		switch (hdr->type) {
 		case BINDER_TYPE_BINDER:
-		case BINDER_TYPE_WEAK_BINDER: {
-			struct flat_binder_object *fp;
-
-			fp = to_flat_binder_object(hdr);
-			ret = binder_translate_binder(fp, t, thread);
-
-			if (ret < 0 ||
-			    binder_alloc_copy_to_buffer(&target_proc->alloc,
-							t->buffer,
-							object_offset,
-							fp, sizeof(*fp))) {
-				binder_txn_error("%d:%d translate binder failed\n",
-					thread->pid, proc->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = ret;
-				return_error_line = __LINE__;
-				goto err_translate_failed;
-			}
-		} break;
 		case BINDER_TYPE_HANDLE:
-		case BINDER_TYPE_WEAK_HANDLE: {
-			struct flat_binder_object *fp;
-
-			fp = to_flat_binder_object(hdr);
-			ret = binder_translate_handle(fp, t, thread);
-			if (ret < 0 ||
-			    binder_alloc_copy_to_buffer(&target_proc->alloc,
-							t->buffer,
-							object_offset,
-							fp, sizeof(*fp))) {
-				binder_txn_error("%d:%d translate handle failed\n",
-					thread->pid, proc->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = ret;
-				return_error_line = __LINE__;
-				goto err_translate_failed;
-			}
-		} break;
-
-		case BINDER_TYPE_FD: {
-			struct binder_fd_object *fp = to_binder_fd_object(hdr);
-			binder_size_t fd_offset = object_offset +
-				(uintptr_t)&fp->fd - (uintptr_t)fp;
-			int ret = binder_translate_fd(fp->fd, fd_offset, t,
-						      thread, in_reply_to);
-
-			fp->pad_binder = 0;
-			if (ret < 0 ||
-			    binder_alloc_copy_to_buffer(&target_proc->alloc,
-							t->buffer,
-							object_offset,
-							fp, sizeof(*fp))) {
-				binder_txn_error("%d:%d translate fd failed\n",
-					thread->pid, proc->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = ret;
-				return_error_line = __LINE__;
-				goto err_translate_failed;
-			}
-		} break;
-		case BINDER_TYPE_FDA: {
-			struct binder_object ptr_object;
-			binder_size_t parent_offset;
-			struct binder_object user_object;
-			size_t user_parent_size;
-			struct binder_fd_array_object *fda =
-				to_binder_fd_array_object(hdr);
-			size_t num_valid = (buffer_offset - off_start_offset) /
-						sizeof(binder_size_t);
-			struct binder_buffer_object *parent =
-				binder_validate_ptr(target_proc, t->buffer,
-						    &ptr_object, fda->parent,
-						    off_start_offset,
-						    &parent_offset,
-						    num_valid);
-			if (!parent) {
-				binder_user_error("%d:%d got transaction with invalid parent offset or type\n",
-						  proc->pid, thread->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = -EINVAL;
-				return_error_line = __LINE__;
-				goto err_bad_parent;
-			}
-			if (!binder_validate_fixup(target_proc, t->buffer,
-						   off_start_offset,
-						   parent_offset,
-						   fda->parent_offset,
-						   last_fixup_obj_off,
-						   last_fixup_min_off)) {
-				binder_user_error("%d:%d got transaction with out-of-order buffer fixup\n",
-						  proc->pid, thread->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = -EINVAL;
-				return_error_line = __LINE__;
-				goto err_bad_parent;
-			}
-			/*
-			 * We need to read the user version of the parent
-			 * object to get the original user offset
-			 */
-			user_parent_size =
-				binder_get_object(proc, user_buffer, t->buffer,
-						  parent_offset, &user_object);
-			if (user_parent_size != sizeof(user_object.bbo)) {
-				binder_user_error("%d:%d invalid ptr object size: %zd vs %zd\n",
-						  proc->pid, thread->pid,
-						  user_parent_size,
-						  sizeof(user_object.bbo));
-				return_error = BR_FAILED_REPLY;
-				return_error_param = -EINVAL;
-				return_error_line = __LINE__;
-				goto err_bad_parent;
-			}
-			ret = binder_translate_fd_array(&pf_head, fda,
-							user_buffer, parent,
-							&user_object.bbo, t,
-							thread, in_reply_to);
-			if (!ret)
-				ret = binder_alloc_copy_to_buffer(&target_proc->alloc,
-								  t->buffer,
-								  object_offset,
-								  fda, sizeof(*fda));
-			if (ret) {
-				binder_txn_error("%d:%d translate fd array failed\n",
-					thread->pid, proc->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = ret > 0 ? -EINVAL : ret;
-				return_error_line = __LINE__;
-				goto err_translate_failed;
-			}
-			last_fixup_obj_off = parent_offset;
-			last_fixup_min_off =
-				fda->parent_offset + sizeof(u32) * fda->num_fds;
-		} break;
-		case BINDER_TYPE_PTR: {
-			struct binder_buffer_object *bp =
-				to_binder_buffer_object(hdr);
-			size_t buf_left = sg_buf_end_offset - sg_buf_offset;
-			size_t num_valid;
-
-			if (bp->length > buf_left) {
-				binder_user_error("%d:%d got transaction with too large buffer\n",
-						  proc->pid, thread->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = -EINVAL;
-				return_error_line = __LINE__;
-				goto err_bad_offset;
-			}
-			ret = binder_defer_copy(&sgc_head, sg_buf_offset,
-				(const void __user *)(uintptr_t)bp->buffer,
-				bp->length);
-			if (ret) {
-				binder_txn_error("%d:%d deferred copy failed\n",
-					thread->pid, proc->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = ret;
-				return_error_line = __LINE__;
-				goto err_translate_failed;
-			}
-			/* Fixup buffer pointer to target proc address space */
-			bp->buffer = (uintptr_t)
-				t->buffer->user_data + sg_buf_offset;
-			sg_buf_offset += ALIGN(bp->length, sizeof(u64));
-
-			num_valid = (buffer_offset - off_start_offset) /
-					sizeof(binder_size_t);
-			ret = binder_fixup_parent(&pf_head, t,
-						  thread, bp,
-						  off_start_offset,
-						  num_valid,
-						  last_fixup_obj_off,
-						  last_fixup_min_off);
-			if (ret < 0 ||
-			    binder_alloc_copy_to_buffer(&target_proc->alloc,
-							t->buffer,
-							object_offset,
-							bp, sizeof(*bp))) {
-				binder_txn_error("%d:%d failed to fixup parent\n",
-					thread->pid, proc->pid);
-				return_error = BR_FAILED_REPLY;
-				return_error_param = ret;
-				return_error_line = __LINE__;
-				goto err_translate_failed;
-			}
-			last_fixup_obj_off = object_offset;
-			last_fixup_min_off = 0;
-		} break;
-		default:
-			binder_user_error("%d:%d got transaction with invalid object type, %x\n",
-				proc->pid, thread->pid, hdr->type);
-			return_error = BR_FAILED_REPLY;
-			return_error_param = -EINVAL;
-			return_error_line = __LINE__;
-			goto err_bad_object_type;
+		case BINDER_TYPE_FD:
+		case BINDER_TYPE_PTR:
+		// ...
 		}
 	}
 	/* Done processing objects, copy the rest of the buffer */
@@ -951,184 +395,460 @@ static void binder_transaction(struct binder_proc *proc,
 		return_error_line = __LINE__;
 		goto err_copy_data_failed;
 	}
+	// ...
+}
+```
 
-	ret = binder_do_deferred_txn_copies(&target_proc->alloc, t->buffer,
-					    &sgc_head, &pf_head);
-	if (ret) {
-		binder_user_error("%d:%d got transaction with invalid offsets ptr\n",
-				  proc->pid, thread->pid);
-		return_error = BR_FAILED_REPLY;
-		return_error_param = ret;
-		return_error_line = __LINE__;
-		goto err_copy_data_failed;
-	}
-	if (t->buffer->oneway_spam_suspect)
-		tcomplete->type = BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT;
-	else
-		tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
-	t->work.type = BINDER_WORK_TRANSACTION;
+# server read request
 
-	if (reply) {
-		binder_enqueue_thread_work(thread, tcomplete);
-		binder_inner_proc_lock(target_proc);
-		if (target_thread->is_dead) {
-			return_error = BR_DEAD_REPLY;
-			binder_inner_proc_unlock(target_proc);
-			goto err_dead_proc_or_thread;
-		}
-		BUG_ON(t->buffer->async_transaction != 0);
-		binder_pop_transaction_ilocked(target_thread, in_reply_to);
-		binder_enqueue_thread_work_ilocked(target_thread, &t->work);
-		target_proc->outstanding_txns++;
-		binder_inner_proc_unlock(target_proc);
-		if (in_reply_to->is_nested) {
-			spin_lock(&thread->prio_lock);
-			thread->prio_state = BINDER_PRIO_PENDING;
-			thread->prio_next = in_reply_to->saved_priority;
-			spin_unlock(&thread->prio_lock);
-		}
-		wake_up_interruptible_sync(&target_thread->wait);
-		trace_android_vh_binder_restore_priority(in_reply_to, current);
-		binder_restore_priority(thread, &in_reply_to->saved_priority);
-		binder_free_transaction(in_reply_to);
-	} else if (!(t->flags & TF_ONE_WAY)) {
-		BUG_ON(t->buffer->async_transaction != 0);
-		binder_inner_proc_lock(proc);
-		/*
-		 * Defer the TRANSACTION_COMPLETE, so we don't return to
-		 * userspace immediately; this allows the target process to
-		 * immediately start processing this transaction, reducing
-		 * latency. We will then return the TRANSACTION_COMPLETE when
-		 * the target replies (or there is an error).
-		 */
-		binder_enqueue_deferred_thread_work_ilocked(thread, tcomplete);
-		t->need_reply = 1;
-		t->from_parent = thread->transaction_stack;
-		thread->transaction_stack = t;
-		binder_inner_proc_unlock(proc);
-		return_error = binder_proc_transaction(t,
-				target_proc, target_thread);
-		if (return_error) {
-			binder_inner_proc_lock(proc);
-			binder_pop_transaction_ilocked(thread, t);
-			binder_inner_proc_unlock(proc);
-			goto err_dead_proc_or_thread;
-		}
-	} else {
-		BUG_ON(target_node == NULL);
-		BUG_ON(t->buffer->async_transaction != 1);
-		binder_enqueue_thread_work(thread, tcomplete);
-		return_error = binder_proc_transaction(t, target_proc, NULL);
-		if (return_error)
-			goto err_dead_proc_or_thread;
-	}
-	if (target_thread)
-		binder_thread_dec_tmpref(target_thread);
-	binder_proc_dec_tmpref(target_proc);
-	if (target_node)
-		binder_dec_node_tmpref(target_node);
-	/*
-	 * write barrier to synchronize with initialization
-	 * of log entry
-	 */
-	smp_wmb();
-	WRITE_ONCE(e->debug_id_done, t_debug_id);
-	return;
+在上一章节 [client write request](#client-write-request) 的 `binder_transaction` 里介绍过，request 将被拷贝至内核物理内存，然后将 server 进程的虚存 `binder_transaction->buffer->user_data` 映射至内核物理内存
 
-err_dead_proc_or_thread:
-	binder_txn_error("%d:%d dead process or thread\n",
-		thread->pid, proc->pid);
-	return_error_line = __LINE__;
-	binder_dequeue_work(proc, tcomplete);
-err_translate_failed:
-err_bad_object_type:
-err_bad_offset:
-err_bad_parent:
-err_copy_data_failed:
-	binder_cleanup_deferred_txn_lists(&sgc_head, &pf_head);
-	binder_free_txn_fixups(t);
-	trace_binder_transaction_failed_buffer_release(t->buffer);
-	binder_transaction_buffer_release(target_proc, NULL, t->buffer,
-					  buffer_offset, true);
-	if (target_node)
-		binder_dec_node_tmpref(target_node);
-	target_node = NULL;
-	t->buffer->transaction = NULL;
-	binder_alloc_free_buf(&target_proc->alloc, t->buffer);
-err_binder_alloc_buf_failed:
-err_bad_extra_size:
-	if (secctx)
-		security_release_secctx(secctx, secctx_sz);
-err_get_secctx_failed:
-	kfree(tcomplete);
-	binder_stats_deleted(BINDER_STAT_TRANSACTION_COMPLETE);
-err_alloc_tcomplete_failed:
-	if (trace_binder_txn_latency_free_enabled())
-		binder_txn_latency_free(t);
-	kfree(t);
-	binder_stats_deleted(BINDER_STAT_TRANSACTION);
-err_alloc_t_failed:
-err_bad_todo_list:
-err_bad_call_stack:
-err_empty_call_stack:
-err_dead_binder:
-err_invalid_target_handle:
-	if (target_node) {
-		binder_dec_node(target_node, 1, 0);
-		binder_dec_node_tmpref(target_node);
-	}
+```cpp
+status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
+{
+    uint32_t cmd;
+    int32_t err;
 
-	binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
-		     "%d:%d transaction %s to %d:%d failed %d/%d/%d, size %lld-%lld line %d\n",
-		     proc->pid, thread->pid, reply ? "reply" :
-		     (tr->flags & TF_ONE_WAY ? "async" : "call"),
-		     target_proc ? target_proc->pid : 0,
-		     target_thread ? target_thread->pid : 0,
-		     t_debug_id, return_error, return_error_param,
-		     (u64)tr->data_size, (u64)tr->offsets_size,
-		     return_error_line);
+    while (1) {
+        if ((err=talkWithDriver()) < NO_ERROR) break;
+        err = mIn.errorCheck();
+        if (err < NO_ERROR) break;
+        if (mIn.dataAvail() == 0) continue;
 
-	if (target_thread)
-		binder_thread_dec_tmpref(target_thread);
-	if (target_proc)
-		binder_proc_dec_tmpref(target_proc);
+        cmd = (uint32_t)mIn.readInt32();
 
-	{
-		struct binder_transaction_log_entry *fe;
+        IF_LOG_COMMANDS() {
+            std::ostringstream logStream;
+            logStream << "Processing waitForResponse Command: " << getReturnString(cmd) << "\n";
+            std::string message = logStream.str();
+            ALOGI("%s", message.c_str());
+        }
 
-		e->return_error = return_error;
-		e->return_error_param = return_error_param;
-		e->return_error_line = return_error_line;
-		fe = binder_transaction_log_add(&binder_transaction_log_failed);
-		*fe = *e;
-		/*
-		 * write barrier to synchronize with initialization
-		 * of log entry
-		 */
-		smp_wmb();
-		WRITE_ONCE(e->debug_id_done, t_debug_id);
-		WRITE_ONCE(fe->debug_id_done, t_debug_id);
-	}
+        switch (cmd) {
+        case BR_ONEWAY_SPAM_SUSPECT:
+            ALOGE("Process seems to be sending too many oneway calls.");
+            CallStack::logStack("oneway spamming", CallStack::getCurrent().get(),
+                    ANDROID_LOG_ERROR);
+            [[fallthrough]];
+        case BR_TRANSACTION_COMPLETE:
+            if (!reply && !acquireResult) goto finish;
+            break;
 
-	BUG_ON(thread->return_error.cmd != BR_OK);
-	if (in_reply_to) {
-		trace_android_vh_binder_restore_priority(in_reply_to, current);
-		binder_restore_priority(thread, &in_reply_to->saved_priority);
-		binder_set_txn_from_error(in_reply_to, t_debug_id,
-				return_error, return_error_param);
-		thread->return_error.cmd = BR_TRANSACTION_COMPLETE;
-		binder_enqueue_thread_work(thread, &thread->return_error.work);
-		binder_send_failed_reply(in_reply_to, return_error);
-	} else {
-		binder_inner_proc_lock(proc);
-		binder_set_extended_error(&thread->ee, t_debug_id,
-				return_error, return_error_param);
-		binder_inner_proc_unlock(proc);
-		thread->return_error.cmd = return_error;
-		binder_enqueue_thread_work(thread, &thread->return_error.work);
-	}
+        case BR_TRANSACTION_PENDING_FROZEN:
+            ALOGW("Sending oneway calls to frozen process.");
+            goto finish;
+
+        case BR_DEAD_REPLY:
+            err = DEAD_OBJECT;
+            goto finish;
+
+        case BR_FAILED_REPLY:
+            err = FAILED_TRANSACTION;
+            goto finish;
+
+        case BR_FROZEN_REPLY:
+            err = FAILED_TRANSACTION;
+            goto finish;
+
+        case BR_ACQUIRE_RESULT:
+            {
+                ALOG_ASSERT(acquireResult != NULL, "Unexpected brACQUIRE_RESULT");
+                const int32_t result = mIn.readInt32();
+                if (!acquireResult) continue;
+                *acquireResult = result ? NO_ERROR : INVALID_OPERATION;
+            }
+            goto finish;
+
+        case BR_REPLY:
+            {
+                binder_transaction_data tr;
+                err = mIn.read(&tr, sizeof(tr));
+                ALOG_ASSERT(err == NO_ERROR, "Not enough command data for brREPLY");
+                if (err != NO_ERROR) goto finish;
+
+                if (reply) {
+                    if ((tr.flags & TF_STATUS_CODE) == 0) {
+                        reply->ipcSetDataReference(
+                            reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                            tr.data_size,
+                            reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                            tr.offsets_size/sizeof(binder_size_t),
+                            freeBuffer);
+                    } else {
+                        err = *reinterpret_cast<const status_t*>(tr.data.ptr.buffer);
+                        freeBuffer(reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                                   tr.data_size,
+                                   reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                                   tr.offsets_size / sizeof(binder_size_t));
+                    }
+                } else {
+                    freeBuffer(reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer), tr.data_size,
+                               reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                               tr.offsets_size / sizeof(binder_size_t));
+                    continue;
+                }
+            }
+            goto finish;
+
+        default:
+            err = executeCommand(cmd);
+            if (err != NO_ERROR) goto finish;
+            break;
+        }
+    }
+
+finish:
+    if (err != NO_ERROR) {
+        if (acquireResult) *acquireResult = err;
+        if (reply) reply->setError(err);
+        mLastError = err;
+        logExtendedError();
+    }
+
+    return err;
 }
 
+status_t IPCThreadState::talkWithDriver(bool doReceive)
+{
+    if (mProcess->mDriverFD < 0) {
+        return -EBADF;
+    }
+
+    binder_write_read bwr;
+
+    // Is the read buffer empty?
+    const bool needRead = mIn.dataPosition() >= mIn.dataSize();
+
+    // We don't want to write anything if we are still reading
+    // from data left in the input buffer and the caller
+    // has requested to read the next data.
+    const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
+
+    bwr.write_size = outAvail;
+    bwr.write_buffer = (uintptr_t)mOut.data();
+
+    // This is what we'll read.
+    if (doReceive && needRead) {
+        bwr.read_size = mIn.dataCapacity();
+        bwr.read_buffer = (uintptr_t)mIn.data();
+    } else {
+        bwr.read_size = 0;
+        bwr.read_buffer = 0;
+    }
+
+    IF_LOG_COMMANDS() {
+        std::ostringstream logStream;
+        if (outAvail != 0) {
+            logStream << "Sending commands to driver: ";
+            const void* cmds = (const void*)bwr.write_buffer;
+            const void* end = ((const uint8_t*)cmds) + bwr.write_size;
+            logStream << "\t" << HexDump(cmds, bwr.write_size) << "\n";
+            while (cmds < end) cmds = printCommand(logStream, cmds);
+        }
+        logStream << "Size of receive buffer: " << bwr.read_size << ", needRead: " << needRead
+                  << ", doReceive: " << doReceive << "\n";
+
+        std::string message = logStream.str();
+        ALOGI("%s", message.c_str());
+    }
+
+    // Return immediately if there is nothing to do.
+    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
+
+    bwr.write_consumed = 0;
+    bwr.read_consumed = 0;
+    status_t err;
+    do {
+        IF_LOG_COMMANDS() {
+            std::ostringstream logStream;
+            logStream << "About to read/write, write size = " << mOut.dataSize() << "\n";
+            std::string message = logStream.str();
+            ALOGI("%s", message.c_str());
+        }
+#if defined(__ANDROID__)
+        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
+            err = NO_ERROR;
+        else
+            err = -errno;
+#else
+        err = INVALID_OPERATION;
+#endif
+        if (mProcess->mDriverFD < 0) {
+            err = -EBADF;
+        }
+        IF_LOG_COMMANDS() {
+            std::ostringstream logStream;
+            logStream << "Finished read/write, write size = " << mOut.dataSize() << "\n";
+            std::string message = logStream.str();
+            ALOGI("%s", message.c_str());
+        }
+    } while (err == -EINTR);
+
+    IF_LOG_COMMANDS() {
+        std::ostringstream logStream;
+        logStream << "Our err: " << (void*)(intptr_t)err
+                  << ", write consumed: " << bwr.write_consumed << " (of " << mOut.dataSize()
+                  << "), read consumed: " << bwr.read_consumed << "\n";
+        std::string message = logStream.str();
+        ALOGI("%s", message.c_str());
+    }
+
+    if (err >= NO_ERROR) {
+        if (bwr.write_consumed > 0) {
+            if (bwr.write_consumed < mOut.dataSize())
+                LOG_ALWAYS_FATAL("Driver did not consume write buffer. "
+                                 "err: %s consumed: %zu of %zu",
+                                 statusToString(err).c_str(),
+                                 (size_t)bwr.write_consumed,
+                                 mOut.dataSize());
+            else {
+                mOut.setDataSize(0);
+                processPostWriteDerefs();
+            }
+        }
+        if (bwr.read_consumed > 0) {
+            mIn.setDataSize(bwr.read_consumed);
+            mIn.setDataPosition(0);
+        }
+        IF_LOG_COMMANDS() {
+            std::ostringstream logStream;
+            logStream << "Remaining data size: " << mOut.dataSize() << "\n";
+            logStream << "Received commands from driver: ";
+            const void* cmds = mIn.data();
+            const void* end = mIn.data() + mIn.dataSize();
+            logStream << "\t" << HexDump(cmds, mIn.dataSize()) << "\n";
+            while (cmds < end) cmds = printReturnCommand(logStream, cmds);
+            std::string message = logStream.str();
+            ALOGI("%s", message.c_str());
+        }
+        return NO_ERROR;
+    }
+
+    return err;
+}
+
+static int binder_thread_read(struct binder_proc *proc,
+			      struct binder_thread *thread,
+			      binder_uintptr_t binder_buffer, size_t size,
+			      binder_size_t *consumed, int non_block)
+{
+	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
+	void __user *ptr = buffer + *consumed;
+	void __user *end = buffer + size;
+
+	int ret = 0;
+	int wait_for_proc_work;
+
+	if (*consumed == 0) {
+		if (put_user(BR_NOOP, (uint32_t __user *)ptr))
+			return -EFAULT;
+		ptr += sizeof(uint32_t);
+	}
+
+retry:
+	binder_inner_proc_lock(proc);
+	wait_for_proc_work = binder_available_for_proc_work_ilocked(thread);
+	binder_inner_proc_unlock(proc);
+
+	thread->looper |= BINDER_LOOPER_STATE_WAITING;
+
+	trace_binder_wait_for_work(wait_for_proc_work,
+				   !!thread->transaction_stack,
+				   !binder_worklist_empty(proc, &thread->todo));
+	if (wait_for_proc_work) {
+		if (!(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
+					BINDER_LOOPER_STATE_ENTERED))) {
+			binder_user_error("%d:%d ERROR: Thread waiting for process work before calling BC_REGISTER_LOOPER or BC_ENTER_LOOPER (state %x)\n",
+				proc->pid, thread->pid, thread->looper);
+			wait_event_interruptible(binder_user_error_wait,
+						 binder_stop_on_user_error < 2);
+		}
+		trace_android_vh_binder_restore_priority(NULL, current);
+		binder_restore_priority(thread, &proc->default_priority);
+	}
+
+	if (non_block) {
+		if (!binder_has_work(thread, wait_for_proc_work))
+			ret = -EAGAIN;
+	} else {
+		ret = binder_wait_for_work(thread, wait_for_proc_work);
+	}
+
+	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
+
+	if (ret)
+		return ret;
+
+	while (1) {
+		// ...
+		struct binder_transaction_data_secctx tr;
+		struct binder_transaction_data *trd = &tr.transaction_data;
+		struct binder_transaction *t = NULL;
+		struct binder_work *w = NULL;
+
+		w = binder_dequeue_work_head_ilocked(list);
+		switch (w->type) {
+		case BINDER_WORK_TRANSACTION: {
+			binder_inner_proc_unlock(proc);
+			t = container_of(w, struct binder_transaction, work);
+		} break;
+		// ...
+		}
+
+		if (!t)
+			continue;
+
+		BUG_ON(t->buffer == NULL);
+		if (t->buffer->target_node) {
+			struct binder_node *target_node = t->buffer->target_node;
+
+			trd->target.ptr = target_node->ptr;
+			trd->cookie =  target_node->cookie;
+			binder_transaction_priority(thread, t, target_node);
+			cmd = BR_TRANSACTION;
+		} else {
+			trd->target.ptr = 0;
+			trd->cookie = 0;
+			cmd = BR_REPLY;
+		}
+		trd->code = t->code;
+		trd->flags = t->flags;
+		trd->sender_euid = from_kuid(current_user_ns(), t->sender_euid);
+
+		t_from = binder_get_txn_from(t);
+		if (t_from) {
+			struct task_struct *sender = t_from->proc->tsk;
+
+			trd->sender_pid =
+				task_tgid_nr_ns(sender,
+						task_active_pid_ns(current));
+			trace_android_vh_sync_txn_recvd(thread->task, t_from->task);
+		} else {
+			trd->sender_pid = 0;
+		}
+
+		ret = binder_apply_fd_fixups(proc, t);
+		if (ret) {
+			struct binder_buffer *buffer = t->buffer;
+			bool oneway = !!(t->flags & TF_ONE_WAY);
+			int tid = t->debug_id;
+
+			if (t_from)
+				binder_thread_dec_tmpref(t_from);
+			buffer->transaction = NULL;
+			binder_cleanup_transaction(t, "fd fixups failed",
+						   BR_FAILED_REPLY);
+			binder_free_buf(proc, thread, buffer, true);
+			binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
+				     "%d:%d %stransaction %d fd fixups failed %d/%d, line %d\n",
+				     proc->pid, thread->pid,
+				     oneway ? "async " :
+					(cmd == BR_REPLY ? "reply " : ""),
+				     tid, BR_FAILED_REPLY, ret, __LINE__);
+			if (cmd == BR_REPLY) {
+				cmd = BR_FAILED_REPLY;
+				if (put_user(cmd, (uint32_t __user *)ptr))
+					return -EFAULT;
+				ptr += sizeof(uint32_t);
+				binder_stat_br(proc, thread, cmd);
+				break;
+			}
+			continue;
+		}
+		trd->data_size = t->buffer->data_size;
+		trd->offsets_size = t->buffer->offsets_size;
+		trd->data.ptr.buffer = (uintptr_t)t->buffer->user_data;
+		trd->data.ptr.offsets = trd->data.ptr.buffer +
+					ALIGN(t->buffer->data_size,
+					    sizeof(void *));
+
+		tr.secctx = t->security_ctx;
+		if (t->security_ctx) {
+			cmd = BR_TRANSACTION_SEC_CTX;
+			trsize = sizeof(tr);
+		}
+		if (put_user(cmd, (uint32_t __user *)ptr)) {
+			if (t_from)
+				binder_thread_dec_tmpref(t_from);
+
+			binder_cleanup_transaction(t, "put_user failed",
+						   BR_FAILED_REPLY);
+
+			return -EFAULT;
+		}
+		ptr += sizeof(uint32_t);
+		if (copy_to_user(ptr, &tr, trsize)) {
+			if (t_from)
+				binder_thread_dec_tmpref(t_from);
+
+			binder_cleanup_transaction(t, "copy_to_user failed",
+						   BR_FAILED_REPLY);
+
+			return -EFAULT;
+		}
+		ptr += trsize;
+
+		trace_binder_transaction_received(t);
+		binder_stat_br(proc, thread, cmd);
+		binder_debug(BINDER_DEBUG_TRANSACTION,
+			     "%d:%d %s %d %d:%d, cmd %u size %zd-%zd ptr %016llx-%016llx\n",
+			     proc->pid, thread->pid,
+			     (cmd == BR_TRANSACTION) ? "BR_TRANSACTION" :
+				(cmd == BR_TRANSACTION_SEC_CTX) ?
+				     "BR_TRANSACTION_SEC_CTX" : "BR_REPLY",
+			     t->debug_id, t_from ? t_from->proc->pid : 0,
+			     t_from ? t_from->pid : 0, cmd,
+			     t->buffer->data_size, t->buffer->offsets_size,
+			     (u64)trd->data.ptr.buffer,
+			     (u64)trd->data.ptr.offsets);
+
+		if (t_from)
+			binder_thread_dec_tmpref(t_from);
+		t->buffer->allow_user_free = 1;
+		if (cmd != BR_REPLY && !(t->flags & TF_ONE_WAY)) {
+			binder_inner_proc_lock(thread->proc);
+			t->to_parent = thread->transaction_stack;
+			t->to_thread = thread;
+			thread->transaction_stack = t;
+			binder_inner_proc_unlock(thread->proc);
+		} else {
+			binder_free_transaction(t);
+		}
+		break;
+	}
+
+done:
+
+	*consumed = ptr - buffer;
+	binder_inner_proc_lock(proc);
+	if (proc->requested_threads == 0 &&
+	    list_empty(&thread->proc->waiting_threads) &&
+	    proc->requested_threads_started < proc->max_threads &&
+	    (thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
+	     BINDER_LOOPER_STATE_ENTERED)) /* the user-space code fails to */
+	     /*spawn a new thread if we leave this out */) {
+		proc->requested_threads++;
+		binder_inner_proc_unlock(proc);
+		binder_debug(BINDER_DEBUG_THREADS,
+			     "%d:%d BR_SPAWN_LOOPER\n",
+			     proc->pid, thread->pid);
+		if (put_user(BR_SPAWN_LOOPER, (uint32_t __user *)buffer))
+			return -EFAULT;
+		binder_stat_br(proc, thread, BR_SPAWN_LOOPER);
+	} else
+		binder_inner_proc_unlock(proc);
+	return 0;
+}
+
+```
+
+# 映射进程虚存与内核内存
+
+`binder_alloc_new_buf` 寻找一块满足大小的进程虚存 `binder_buffer.user_data`，这块虚存是在进程在 mmap binder fd 时分配的，但当时并未给这块虚存映射物理页，参看 [binder_mmap](#binder_mmap)
+
+同时会将这块虚存[映射至内核物理内存](#分配内核物理页)，将 request 拷贝至这里，然后 server 可以直接读取而不用将 request 拷贝至进程 B
+
+```cpp
 /**
  * https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c
  * 
@@ -1217,6 +937,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	/* Pad 0-size buffers so they get assigned unique addresses */
 	size = max(size, sizeof(void *));
 
+    // 对应章节【指导思想】里的步骤三
     // 从目标进程（server）的空闲虚拟地址区间集合里（binder_alloc->free_buffers）找一块满足大小的（>= size）binder_buffer 出来
 	// 
 	// 空闲虚拟地址集合 binder_alloc->free_buffers 是一棵红黑树（平衡的二叉树），左孩子的地址空间比父亲小，右孩子比父亲大
@@ -1292,7 +1013,10 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 		     "%d: binder_alloc_buf size %zd got buffer %pK size %zd\n",
 		      alloc->pid, size, buffer, buffer_size);
 
-    // 
+    // 将应用进程虚存地址空间 [buffer->user_data, end_page_addr] 映射内核物理内存地址空间
+	// 这样应用进程写入此虚存空间的数据就有物理内存来存放了，并且是直接写入至 binder，无需从用户态拷贝至内核态
+	// 这里会真正进行内核物理页的分配，参看章节【分配内核物理页】
+	// 对应章节【指导思想】里的步骤四、五和六
 	has_page_addr = (void __user *)
 		(((uintptr_t)buffer->user_data + buffer_size) & PAGE_MASK);
 	WARN_ON(n && buffer_size != size);
@@ -1479,7 +1203,8 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
     // kcalloc — allocate memory for an array. The memory is set to zero.
     // void* kcalloc (size_t n /* number of elements */, size_t size /* element size */, gfp_t flags);
 	// 
-	// struct binder_lru_page *pages;
+	// binder_alloc.pages 表示内核物理页，此时只是初始化了这个数组（索引表示第几页），并没有分配物理页
+	// 应用进程与 binder 进行数据传输时，会分配物理页并将应用进程虚存映射至此物理页，参看章节【分配内核物理页】
 	alloc->pages = kcalloc(alloc->buffer_size / PAGE_SIZE,
 			       sizeof(alloc->pages[0]),
 			       GFP_KERNEL);
@@ -1556,11 +1281,29 @@ static size_t binder_alloc_buffer_size(struct binder_alloc *alloc,
 }
 ```
 
-# binder_update_page_range
+# 分配内核物理页
+
+> `struct vm_area_struct`
+> 
+> This struct describes a virtual memory area. There is one of these per VM-area/task. A VM area is any part of the process virtual memory space that has a special rule for the page-fault handlers (ie a shared library, the executable area etc).
+> 
+> 虚存管理的最基本的管理单元，描述了一段连续的、具有相同访问属性的虚存空间，该虚存空间的大小为物理内存页面的整数倍
+
+> `int vm_insert_page(struct vm_area_struct *vma, unsigned long addr, struct page *page)`
+> 
+> vma - user vma to map to, addr - target user address of this page, page - source kernel page
+>
+> This allows drivers to insert individual pages they've allocated into a user vma.
+> 
+> 一般用在驱动的 mmap 操作里，建立内核物理内存与用户虚拟地址空间的映射关系；驱动的常见套路是不会立即为用户虚拟地址空间分配物理内存，而是当访问虚拟地址空间时产生缺页中断，此时才真正地为缺页分配物理内存
+
+[binder_mmap](#binder_mmap) 应用进程已经开辟了一块虚存用以与 binder 进行数据传输，但并没有为它映射物理页，直到真正访问这块虚存时才会在内核分配物理页
 
 ```cpp
+// 为 [start, end] 映射内核物理页（binder_proc.pages）
+// [start, end] 是一块应用进程的虚拟地址空间，它是在初始化 binder driver fd 时分配的，参见【binder_mmap】章节
 // https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c
-static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
+static int binder_update_page_range(struct binder_alloc *alloc, int allocate /* true - 映射物理页，false - 取消映射 */,
 				    void __user *start, void __user *end)
 {
 	void __user *page_addr;
@@ -1582,6 +1325,10 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 	if (allocate == 0)
 		goto free_range;
 
+    // binder_alloc.pages 是 binder_lru_page 类型的数组，表示内核物理内存空间，用以在应用进程和 binder 之间传输数据
+	// binder 按页大小（PAGE_SIZE）管理这块物理内存空间，数组索引代表第几页，binder_lru_page.page_ptr 指向物理页的地址
+	// 早在 binder_alloc_mmap_handler() 时就已经按应用进程 mmap 的大小（1M）初始化了这个数组，参看章节【binder_mmap】
+	// 这里是看虚拟内存空间 [start, end] 有没映射至内核物理地址页，没有的话用 need_mm 标识需要映射
 	for (page_addr = start; page_addr < end; page_addr += PAGE_SIZE) {
 		page = &alloc->pages[(page_addr - alloc->buffer) / PAGE_SIZE];
 		if (!page->page_ptr) {
@@ -1593,6 +1340,7 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 	if (need_mm && mmget_not_zero(alloc->mm))
 		mm = alloc->mm;
 
+    // 通过应用进程虚拟内存起始地址找到这块虚存的描述 vm_area_struct
 	if (mm) {
 		mmap_read_lock(mm);
 		vma = vma_lookup(mm, alloc->vma_addr);
@@ -1605,15 +1353,18 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 		goto err_no_vma;
 	}
 
+    // 一页页地映射应用进程虚存地址空间 [start, end]
+	// 这块虚存是在 [alloc->buffer, alloc->buffer + alloc.buffer_size] 区间内的，参看章节【binder_mmap】
 	for (page_addr = start; page_addr < end; page_addr += PAGE_SIZE) {
 		int ret;
 		bool on_lru;
 		size_t index;
 
+        // 算出这页虚存对应哪页物理内存
 		index = (page_addr - alloc->buffer) / PAGE_SIZE;
 		page = &alloc->pages[index];
 
-		if (page->page_ptr) {
+		if (page->page_ptr) {  // 物理页已分配则跳过
 			trace_binder_alloc_lru_start(alloc, index);
 
 			on_lru = list_lru_del(&binder_alloc_lru, &page->lru);
@@ -1626,6 +1377,8 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 		if (WARN_ON(!vma))
 			goto err_page_ptr_cleared;
 
+        // 真正在内核物理内存空间分配一页物理页
+		// 对应章节【指导思想】里的步骤四
 		trace_binder_alloc_page_start(alloc, index);
 		page->page_ptr = alloc_page(GFP_KERNEL |
 					    __GFP_HIGHMEM |
@@ -1638,6 +1391,8 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 		page->alloc = alloc;
 		INIT_LIST_HEAD(&page->lru);
 
+        // 然后将应用进程虚存页映射到内核物理页 
+		// 对应章节【指导思想】里的步骤五
 		user_page_addr = (uintptr_t)page_addr;
 		ret = vm_insert_page(vma, user_page_addr, page[0].page_ptr);
 		if (ret) {
@@ -1657,6 +1412,8 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 	}
 	return 0;
 
+// 看下是如何取消映射的
+// 依然是按页大小（PAGE_SIZE）遍历应用进程虚存空间 [start, end]，这里是从高地址开始
 free_range:
 	for (page_addr = end - PAGE_SIZE; 1; page_addr -= PAGE_SIZE) {
 		bool ret;
@@ -1667,6 +1424,7 @@ free_range:
 
 		trace_binder_free_lru_start(alloc, index);
 
+        // list_lru_add 和 list_lru_del 是一套帮助内存 shrink 的 API，目前还没搞清楚它是怎么运行的
 		ret = list_lru_add(&binder_alloc_lru, &page->lru);
 		WARN_ON(!ret);
 
