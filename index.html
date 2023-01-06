@@ -206,6 +206,39 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2022/12/29/binder-memory/" target="_self">
+          Binder IPC 内存模型
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2022/12/29/binder-memory/" target="_self">
+        <div>
+          指导思想进程 A 通过 binder_transaction 往进程 B 传输数据的过程，其中步骤 4、5、6 和 7 是一页一页地循环执行:  准备需要发送的数据, 数据存放在进程 A 的用户空间中  进程 A 通过系统调用进入 binder driver 的代码逻辑中  在 binder driver 代码中, 找到与所发送数据大小匹配的进程 B 的 binder_buffer, 该 buff
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-12-29 04:00" pubdate>
+              2022-12-29
+            </time>
+          </div>
+        
+        
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2022/12/07/binder-threads/" target="_self">
           Binder IPC 线程调度模型
         </a>
@@ -548,50 +581,6 @@
               <a href="/tags/%E5%AD%97%E8%8A%82%E7%A0%81/">#字节码</a>
             
               <a href="/tags/%E6%8F%92%E6%A1%A9/">#插桩</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/03/14/case-testonly/" target="_self">
-          排查 Launcher AppStore 静默安装 App 失败的问题
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/03/14/case-testonly/" target="_self">
-        <div>
-          Launcher 里的 AppStore 模块会根据服务端的配置安装/卸载 APP，当然用户也可以手动安装 AppStore 里的 APP 某天收到反馈，一个要上线的 APP【食材管理】静默安装总是失败，以往都是正常的  静默安装是指 AppStore 自动在后台安装，无须用户手动点击安装 静默安装是通过广播 android.intent.action.SILENCE_INSTALL 实现的，由
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-03-14 05:00" pubdate>
-              2022-03-14
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/case/">#case</a>
-            
-              <a href="/tags/%E6%A1%88%E4%BE%8B/">#案例</a>
-            
-              <a href="/tags/%E6%BA%90%E7%A0%81/">#源码</a>
             
           </div>
         

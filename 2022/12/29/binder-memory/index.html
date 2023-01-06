@@ -1,0 +1,1789 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="指导思想进程 A 通过 binder_transaction 往进程 B 传输数据的过程，其中步骤 4、5、6 和 7 是一页一页地循环执行:  准备需要发送的数据, 数据存放在进程 A 的用户空间中  进程 A 通过系统调用进入 binder driver 的代码逻辑中  在 binder driver 代码中, 找到与所发送数据大小匹配的进程 B 的 binder_buffer, 该 buff">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Binder IPC 内存模型">
+<meta property="og:url" content="https://www.dalvik.work/2022/12/29/binder-memory/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="指导思想进程 A 通过 binder_transaction 往进程 B 传输数据的过程，其中步骤 4、5、6 和 7 是一页一页地循环执行:  准备需要发送的数据, 数据存放在进程 A 的用户空间中  进程 A 通过系统调用进入 binder driver 的代码逻辑中  在 binder driver 代码中, 找到与所发送数据大小匹配的进程 B 的 binder_buffer, 该 buff">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-12-29T04:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-06T09:28:43.191Z">
+<meta property="article:author" content="Cyrus">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Binder IPC 内存模型 - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.4","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">Binder IPC 内存模型</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-12-29 04:00" pubdate>
+          2022年12月29日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          36k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          297 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Binder IPC 内存模型</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="指导思想"><a href="#指导思想" class="headerlink" title="指导思想"></a>指导思想</h1><p>进程 A 通过 <code>binder_transaction</code> 往进程 B 传输数据的过程，其中步骤 4、5、6 和 7 是一页一页地循环执行:</p>
+<ol>
+<li><p>准备需要发送的数据, 数据存放在进程 A 的用户空间中</p>
+</li>
+<li><p>进程 A 通过系统调用进入 binder driver 的代码逻辑中</p>
+</li>
+<li><p>在 binder driver 代码中, 找到与所发送数据大小匹配的进程 B 的 <code>binder_buffer</code>, 该 buffer 此时只有虚拟地址尚未映射物理页（指向进程 B 的用户空间）</p>
+</li>
+<li><p>为此次数据传输分配物理页</p>
+</li>
+<li><p>建立进程 B 的 binder buffer 里虚拟页与刚分配物理页的映射关系</p>
+</li>
+<li><p>通过 <code>kmap</code> 为物理页映射一个内核空间的虚拟页</p>
+</li>
+<li><p><code>copy_ from_user</code> 将进程 A 用户空间的数据写入刚刚映射的内核空间虚拟页中</p>
+</li>
+<li><p>根据映射关系, 刚刚写入的数据现在可以通过进程 B 的 binder buffer 的虚拟地址读出</p>
+</li>
+</ol>
+<h2 id="一次拷贝"><a href="#一次拷贝" class="headerlink" title="一次拷贝"></a>一次拷贝</h2><p>传统 IPC 一般是进程 A 执行系统调用陷入内核，将数据从进程 A 内存空间拷贝至内核，进程 B 为了读取数据需要执行系统调用陷入内核，内核将数据拷贝至进程 B 内存空间，那么一共是两次内存拷贝和两次用户态内核态切换</p>
+<p>Binder IPC 的第一次内存拷贝同传统 IPC，也是将数据从从进程 A 内存空间拷贝至内核，但 Binder IPC 不需要第二次内存拷贝，因为它将进程 B 内存空间里指向数据的虚存映射至内核里保存数据的内核物理内存，这里进程 B 读取到的数据其实是第一次拷贝至内核的那份数据，所以是一次内存拷贝和两次用户态内核态切换</p>
+<p>注意这里说的只需 <em>一次拷贝</em> 指的是一次 Binder IPC，而一次 Binder 方法调用也即 Binder RPC 需要两次 IPC：发送请求和接收响应，所以一次 Binder RPC 其实包含了两次 IPC 也即两次内存拷贝（四次用户态内核态的切换）</p>
+<h1 id="client-write-request"><a href="#client-write-request" class="headerlink" title="client write request"></a>client write request</h1><div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:system/libhwbinder/include/hwbinder/IPCThreadState.h</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">IPCThreadState</span>
+&#123;
+           <span class="hljs-keyword">private</span>:
+            Parcel              mIn;   <span class="hljs-comment">// binder driver 写入，应用进程读取并处理的内存区域，对应 binder_thread_read</span>
+            Parcel              mOut;  <span class="hljs-comment">// 应用进程写入，binder driver 读取并处理的内存区域，对应 binder_thread_write</span>
+&#125;;
+
+<span class="hljs-comment">// http://www.aospxref.com/android-13.0.0_r3/xref/frameworks/native/libs/binder/IPCThreadState.cpp</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::transact</span><span class="hljs-params">(<span class="hljs-type">int32_t</span> handle,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                  <span class="hljs-type">uint32_t</span> code, <span class="hljs-type">const</span> Parcel&amp; data <span class="hljs-comment">/* 参数被打包进这里 */</span>,</span></span>
+<span class="hljs-params"><span class="hljs-function">                                  Parcel* reply <span class="hljs-comment">/* 用以接收响应数据 */</span>, <span class="hljs-type">uint32_t</span> flags)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-comment">// 将 [BC_TRANSACTION][binder_transaction_data] 写入 mOut</span>
+    <span class="hljs-comment">// mOut 是 client 进程内的一块内存区域</span>
+    err = <span class="hljs-built_in">writeTransactionData</span>(BC_TRANSACTION, flags, handle, code, data, <span class="hljs-literal">nullptr</span>);
+    <span class="hljs-comment">// 将 request 发送给 binder driver 并等待 response</span>
+    err = <span class="hljs-built_in">waitForResponse</span>(reply);
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">return</span> err;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::writeTransactionData</span><span class="hljs-params">(<span class="hljs-type">int32_t</span> cmd <span class="hljs-comment">/* BC_TRANSACTION */</span>, <span class="hljs-type">uint32_t</span> binderFlags,</span></span>
+<span class="hljs-params"><span class="hljs-function">    <span class="hljs-type">int32_t</span> handle, <span class="hljs-type">uint32_t</span> code, <span class="hljs-type">const</span> Parcel&amp; data, <span class="hljs-type">status_t</span>* statusBuffer)</span></span>
+<span class="hljs-function"></span>&#123;
+    binder_transaction_data tr;
+
+    tr.target.ptr = <span class="hljs-number">0</span>; <span class="hljs-comment">/* Don&#x27;t pass uninitialized stack data to a remote process */</span>
+    tr.target.handle = handle;
+    tr.code = code;
+    tr.flags = binderFlags;
+    tr.cookie = <span class="hljs-number">0</span>;
+    tr.sender_pid = <span class="hljs-number">0</span>;
+    tr.sender_euid = <span class="hljs-number">0</span>;
+
+    <span class="hljs-type">const</span> <span class="hljs-type">status_t</span> err = data.<span class="hljs-built_in">errorCheck</span>();
+    <span class="hljs-keyword">if</span> (err == NO_ERROR) &#123;
+        tr.data_size = data.<span class="hljs-built_in">ipcDataSize</span>();      <span class="hljs-comment">// 存放参数的内存区域大小</span>
+        tr.data.ptr.buffer = data.<span class="hljs-built_in">ipcData</span>();    <span class="hljs-comment">// 其实就是 Parcel 存放数据的内存块的起始地址</span>
+        tr.offsets_size = data.<span class="hljs-built_in">ipcObjectsCount</span>()*<span class="hljs-built_in">sizeof</span>(<span class="hljs-type">binder_size_t</span>);
+        tr.data.ptr.offsets = data.<span class="hljs-built_in">ipcObjects</span>();
+    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (statusBuffer) &#123;
+        tr.flags |= TF_STATUS_CODE;
+        *statusBuffer = err;
+        tr.data_size = <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">status_t</span>);
+        tr.data.ptr.buffer = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">uintptr_t</span>&gt;(statusBuffer);
+        tr.offsets_size = <span class="hljs-number">0</span>;
+        tr.data.ptr.offsets = <span class="hljs-number">0</span>;
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        <span class="hljs-built_in">return</span> (mLastError = err);
+    &#125;
+
+    <span class="hljs-comment">// mOut 写入 [BC_TRANSACTION][binder_transaction_data]</span>
+	<span class="hljs-comment">// 对应章节【指导思想】里的步骤一</span>
+    mOut.<span class="hljs-built_in">writeInt32</span>(cmd);
+    mOut.<span class="hljs-built_in">write</span>(&amp;tr, <span class="hljs-built_in">sizeof</span>(tr));
+
+    <span class="hljs-keyword">return</span> NO_ERROR;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::waitForResponse</span><span class="hljs-params">(Parcel *reply, <span class="hljs-type">status_t</span> *acquireResult)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-type">uint32_t</span> cmd;
+    <span class="hljs-type">int32_t</span> err;
+
+    <span class="hljs-keyword">while</span> (<span class="hljs-number">1</span>) &#123;
+        <span class="hljs-keyword">if</span> ((err=<span class="hljs-built_in">talkWithDriver</span>()) &lt; NO_ERROR) <span class="hljs-keyword">break</span>;
+        err = mIn.<span class="hljs-built_in">errorCheck</span>();
+        <span class="hljs-keyword">if</span> (err &lt; NO_ERROR) <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">if</span> (mIn.<span class="hljs-built_in">dataAvail</span>() == <span class="hljs-number">0</span>) <span class="hljs-keyword">continue</span>;
+
+        cmd = (<span class="hljs-type">uint32_t</span>)mIn.<span class="hljs-built_in">readInt32</span>();
+        <span class="hljs-keyword">switch</span> (cmd) &#123;
+        <span class="hljs-keyword">case</span> BR_FAILED_REPLY:
+        <span class="hljs-keyword">case</span> BR_FROZEN_REPLY:
+        <span class="hljs-keyword">case</span> BR_ACQUIRE_RESULT:
+        <span class="hljs-keyword">case</span> BR_REPLY:
+        <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// 将 request 发送给 binder driver 并接收 response</span>
+<span class="hljs-comment">// ioctl(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, binder_write_read)</span>
+<span class="hljs-comment">// [write_buffer, write_size] 是 request</span>
+<span class="hljs-comment">// [read_buffer, read_size] 是 response</span>
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::talkWithDriver</span><span class="hljs-params">(<span class="hljs-type">bool</span> doReceive)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">return</span> -EBADF;
+    &#125;
+
+    binder_write_read bwr;
+
+    <span class="hljs-comment">// Is the read buffer empty?</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">bool</span> needRead = mIn.<span class="hljs-built_in">dataPosition</span>() &gt;= mIn.<span class="hljs-built_in">dataSize</span>();
+
+    <span class="hljs-comment">// We don&#x27;t want to write anything if we are still reading</span>
+    <span class="hljs-comment">// from data left in the input buffer and the caller</span>
+    <span class="hljs-comment">// has requested to read the next data.</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> outAvail = (!doReceive || needRead) ? mOut.<span class="hljs-built_in">dataSize</span>() : <span class="hljs-number">0</span>;
+
+    bwr.write_size = outAvail;                    <span class="hljs-comment">// mOut 内存区域大小，也即参数包大小</span>
+    bwr.write_buffer = (<span class="hljs-type">uintptr_t</span>)mOut.<span class="hljs-built_in">data</span>();    <span class="hljs-comment">// mOut 地址，存放打包好的请求参数</span>
+
+    <span class="hljs-comment">// This is what we&#x27;ll read.</span>
+    <span class="hljs-keyword">if</span> (doReceive &amp;&amp; needRead) &#123;
+        bwr.read_size = mIn.<span class="hljs-built_in">dataCapacity</span>();
+        bwr.read_buffer = (<span class="hljs-type">uintptr_t</span>)mIn.<span class="hljs-built_in">data</span>();
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        bwr.read_size = <span class="hljs-number">0</span>;
+        bwr.read_buffer = <span class="hljs-number">0</span>;
+    &#125;
+
+    <span class="hljs-comment">// Return immediately if there is nothing to do.</span>
+    <span class="hljs-keyword">if</span> ((bwr.write_size == <span class="hljs-number">0</span>) &amp;&amp; (bwr.read_size == <span class="hljs-number">0</span>)) <span class="hljs-keyword">return</span> NO_ERROR;
+
+    bwr.write_consumed = <span class="hljs-number">0</span>;
+    bwr.read_consumed = <span class="hljs-number">0</span>;
+    <span class="hljs-type">status_t</span> err;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ioctl</span>(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, &amp;bwr) &gt;= <span class="hljs-number">0</span>)  <span class="hljs-comment">// 对应章节【指导思想】里的步骤二</span>
+            err = NO_ERROR;
+        <span class="hljs-keyword">else</span>
+            err = -errno;
+        <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+            err = -EBADF;
+        &#125;
+    &#125; <span class="hljs-keyword">while</span> (err == -EINTR);
+    <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">long</span> <span class="hljs-title">binder_ioctl</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> cmd, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> arg)</span> </span>&#123;...&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_ioctl_write_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp,</span></span>
+<span class="hljs-params"><span class="hljs-function">				<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> cmd, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> arg,</span></span>
+<span class="hljs-params"><span class="hljs-function">				<span class="hljs-keyword">struct</span> binder_thread *thread)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *proc = filp-&gt;private_data;
+	<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> size = _IOC_SIZE(cmd);
+	<span class="hljs-type">void</span> __user *ubuf = (<span class="hljs-type">void</span> __user *)arg;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_write_read</span> bwr;
+
+	<span class="hljs-keyword">if</span> (size != <span class="hljs-built_in">sizeof</span>(<span class="hljs-keyword">struct</span> binder_write_read)) &#123;
+		ret = -EINVAL;
+		<span class="hljs-keyword">goto</span> out;
+	&#125;
+
+    <span class="hljs-comment">// 将 binder_write_read 从用户空间拷贝一份至内核空间</span>
+	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_from_user</span>(&amp;bwr, ubuf, <span class="hljs-built_in">sizeof</span>(bwr))) &#123;
+		ret = -EFAULT;
+		<span class="hljs-keyword">goto</span> out;
+	&#125;
+
+    <span class="hljs-comment">// 先处理应用进程的请求 write_buffer</span>
+	<span class="hljs-keyword">if</span> (bwr.write_size &gt; <span class="hljs-number">0</span>) &#123;
+		ret = <span class="hljs-built_in">binder_thread_write</span>(proc, thread,
+					  bwr.write_buffer,
+					  bwr.write_size,
+					  &amp;bwr.write_consumed);
+		<span class="hljs-built_in">trace_binder_write_done</span>(ret);
+		<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>) &#123;
+			bwr.read_consumed = <span class="hljs-number">0</span>;
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr)))
+				ret = -EFAULT;
+			<span class="hljs-keyword">goto</span> out;
+		&#125;
+	&#125;
+	<span class="hljs-keyword">if</span> (bwr.read_size &gt; <span class="hljs-number">0</span>) &#123;
+		ret = <span class="hljs-built_in">binder_thread_read</span>(proc, thread, bwr.read_buffer,
+					 bwr.read_size,
+					 &amp;bwr.read_consumed,
+					 filp-&gt;f_flags &amp; O_NONBLOCK);
+		<span class="hljs-built_in">trace_binder_read_done</span>(ret);
+		<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_worklist_empty_ilocked</span>(&amp;proc-&gt;todo))
+			<span class="hljs-built_in">binder_wakeup_proc_ilocked</span>(proc);
+		<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+		<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>) &#123;
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr)))
+				ret = -EFAULT;
+			<span class="hljs-keyword">goto</span> out;
+		&#125;
+	&#125;
+	<span class="hljs-built_in">binder_debug</span>(BINDER_DEBUG_READ_WRITE,
+		     <span class="hljs-string">&quot;%d:%d wrote %lld of %lld, read return %lld of %lld\n&quot;</span>,
+		     proc-&gt;pid, thread-&gt;pid,
+		     (u64)bwr.write_consumed, (u64)bwr.write_size,
+		     (u64)bwr.read_consumed, (u64)bwr.read_size);
+	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ubuf, &amp;bwr, <span class="hljs-built_in">sizeof</span>(bwr))) &#123;
+		ret = -EFAULT;
+		<span class="hljs-keyword">goto</span> out;
+	&#125;
+out:
+	<span class="hljs-keyword">return</span> ret;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_write</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			<span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">			<span class="hljs-type">binder_uintptr_t</span> binder_buffer, <span class="hljs-type">size_t</span> size,</span></span>
+<span class="hljs-params"><span class="hljs-function">			<span class="hljs-type">binder_size_t</span> *consumed)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">uint32_t</span> cmd;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_context</span> *context = proc-&gt;context;
+	<span class="hljs-type">void</span> __user *buffer = (<span class="hljs-type">void</span> __user *)(<span class="hljs-type">uintptr_t</span>)binder_buffer;
+	<span class="hljs-type">void</span> __user *ptr = buffer + *consumed;
+	<span class="hljs-type">void</span> __user *end = buffer + size;
+
+	<span class="hljs-keyword">while</span> (ptr &lt; end &amp;&amp; thread-&gt;return_error.cmd == BR_OK) &#123;
+		<span class="hljs-type">int</span> ret;
+
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">get_user</span>(cmd, (<span class="hljs-type">uint32_t</span> __user *)ptr))
+			<span class="hljs-keyword">return</span> -EFAULT;
+		ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+		<span class="hljs-built_in">trace_binder_command</span>(cmd);
+		<span class="hljs-keyword">if</span> (_IOC_NR(cmd) &lt; <span class="hljs-built_in">ARRAY_SIZE</span>(binder_stats.bc)) &#123;
+			<span class="hljs-built_in">atomic_inc</span>(&amp;binder_stats.bc[_IOC_NR(cmd)]);
+			<span class="hljs-built_in">atomic_inc</span>(&amp;proc-&gt;stats.bc[_IOC_NR(cmd)]);
+			<span class="hljs-built_in">atomic_inc</span>(&amp;thread-&gt;stats.bc[_IOC_NR(cmd)]);
+		&#125;
+		<span class="hljs-keyword">switch</span> (cmd) &#123;
+		<span class="hljs-keyword">case</span> BC_TRANSACTION:
+		<span class="hljs-keyword">case</span> BC_REPLY: &#123;
+			<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction_data</span> tr;
+
+            <span class="hljs-comment">// 将 binder_transaction_data 从用户空间拷贝至内核空间</span>
+			<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_from_user</span>(&amp;tr, ptr, <span class="hljs-built_in">sizeof</span>(tr)))
+				<span class="hljs-keyword">return</span> -EFAULT;
+			ptr += <span class="hljs-built_in">sizeof</span>(tr);
+			<span class="hljs-built_in">binder_transaction</span>(proc, thread, &amp;tr,
+					   cmd == BC_REPLY, <span class="hljs-number">0</span>);
+			<span class="hljs-keyword">break</span>;
+		&#125;
+        <span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">binder_transaction</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			       <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">			       <span class="hljs-keyword">struct</span> binder_transaction_data *tr, <span class="hljs-type">int</span> reply,</span></span>
+<span class="hljs-params"><span class="hljs-function">			       <span class="hljs-type">binder_size_t</span> extra_buffers_size)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction</span> *t;
+	<span class="hljs-type">const</span> <span class="hljs-type">void</span> __user *user_buffer = (<span class="hljs-type">const</span> <span class="hljs-type">void</span> __user *)
+				(<span class="hljs-type">uintptr_t</span>)tr-&gt;data.ptr.buffer;    <span class="hljs-comment">// 用户空间的数据块地址</span>
+	<span class="hljs-comment">// ...</span>
+
+    <span class="hljs-comment">// 从进程 B 的用以 binder 数据传输的虚存里找一块满足大小的虚存块 binder_buffer.user_data 用以存放 request</span>
+	<span class="hljs-comment">// 这里就会发生物理页的分配了，binder 在内核分配物理页，并将进程 B 的虚存会映射至内核物理页</span>
+	<span class="hljs-comment">// 这样进程 B 就可以直接读取 request 而无需进行一次内核态至用户态的内存拷贝</span>
+	<span class="hljs-comment">// 参看章节【映射进程虚存与内核内存】</span>
+	<span class="hljs-comment">// 这里对应章节【指导思想】里的步骤三、四、五和六</span>
+	t-&gt;buffer = <span class="hljs-built_in">binder_alloc_new_buf</span>(&amp;target_proc-&gt;alloc, tr-&gt;data_size,
+		tr-&gt;offsets_size, extra_buffers_size,
+		!reply &amp;&amp; (t-&gt;flags &amp; TF_ONE_WAY), current-&gt;tgid);
+	<span class="hljs-comment">// ...</span>
+
+    <span class="hljs-comment">// 将 request 从进程 A （tr-&gt;data.ptr.offsets）拷贝至进程 B（t-&gt;buffer-&gt;user_data）</span>
+	<span class="hljs-comment">// 这里就是 binder ipc 中发生的唯一一次数据拷贝</span>
+	<span class="hljs-comment">// 因为进程 B 的虚存地址实际上是映射至内核物理内存，所以 request 实际上是从进程 A 拷贝至内核，进程 B 读取的是内核物理内存空间</span>
+	<span class="hljs-comment">// 对应章节【指导思想】里的步骤七</span>
+	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">binder_alloc_copy_user_to_buffer</span>(
+				&amp;target_proc-&gt;alloc,
+				t-&gt;buffer,
+				<span class="hljs-built_in">ALIGN</span>(tr-&gt;data_size, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *)),
+				(<span class="hljs-type">const</span> <span class="hljs-type">void</span> __user *)
+					(<span class="hljs-type">uintptr_t</span>)tr-&gt;data.ptr.offsets,
+				tr-&gt;offsets_size)) &#123;
+		<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d got transaction with invalid offsets ptr\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid);
+		return_error = BR_FAILED_REPLY;
+		return_error_param = -EFAULT;
+		return_error_line = __LINE__;
+		<span class="hljs-keyword">goto</span> err_copy_data_failed;
+	&#125;
+	<span class="hljs-comment">// ...</span>
+	off_start_offset = <span class="hljs-built_in">ALIGN</span>(tr-&gt;data_size, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *));
+	buffer_offset = off_start_offset;
+	off_end_offset = off_start_offset + tr-&gt;offsets_size;
+	sg_buf_offset = <span class="hljs-built_in">ALIGN</span>(off_end_offset, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *));
+	sg_buf_end_offset = sg_buf_offset + extra_buffers_size -
+		<span class="hljs-built_in">ALIGN</span>(secctx_sz, <span class="hljs-built_in">sizeof</span>(u64));
+	off_min = <span class="hljs-number">0</span>;
+	<span class="hljs-keyword">for</span> (buffer_offset = off_start_offset; buffer_offset &lt; off_end_offset;
+	     buffer_offset += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">binder_size_t</span>)) &#123;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_object_header</span> *hdr;
+		<span class="hljs-type">size_t</span> object_size;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_object</span> object;
+		<span class="hljs-type">binder_size_t</span> object_offset;
+		<span class="hljs-type">binder_size_t</span> copy_size;
+
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">binder_alloc_copy_from_buffer</span>(&amp;target_proc-&gt;alloc,
+						  &amp;object_offset,
+						  t-&gt;buffer,
+						  buffer_offset,
+						  <span class="hljs-built_in">sizeof</span>(object_offset))) &#123;
+			<span class="hljs-built_in">binder_txn_error</span>(<span class="hljs-string">&quot;%d:%d copy offset from buffer failed\n&quot;</span>,
+				thread-&gt;pid, proc-&gt;pid);
+			return_error = BR_FAILED_REPLY;
+			return_error_param = -EINVAL;
+			return_error_line = __LINE__;
+			<span class="hljs-keyword">goto</span> err_bad_offset;
+		&#125;
+
+		<span class="hljs-comment">/*</span>
+<span class="hljs-comment">		 * Copy the source user buffer up to the next object</span>
+<span class="hljs-comment">		 * that will be processed.</span>
+<span class="hljs-comment">		 */</span>
+		copy_size = object_offset - user_offset;
+		<span class="hljs-keyword">if</span> (copy_size &amp;&amp; (user_offset &gt; object_offset ||
+				<span class="hljs-built_in">binder_alloc_copy_user_to_buffer</span>(
+					&amp;target_proc-&gt;alloc,
+					t-&gt;buffer, user_offset,
+					user_buffer + user_offset,
+					copy_size))) &#123;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d got transaction with invalid data ptr\n&quot;</span>,
+					proc-&gt;pid, thread-&gt;pid);
+			return_error = BR_FAILED_REPLY;
+			return_error_param = -EFAULT;
+			return_error_line = __LINE__;
+			<span class="hljs-keyword">goto</span> err_copy_data_failed;
+		&#125;
+		object_size = <span class="hljs-built_in">binder_get_object</span>(target_proc, user_buffer,
+				t-&gt;buffer, object_offset, &amp;object);
+		<span class="hljs-keyword">if</span> (object_size == <span class="hljs-number">0</span> || object_offset &lt; off_min) &#123;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d got transaction with invalid offset (%lld, min %lld max %lld) or object.\n&quot;</span>,
+					  proc-&gt;pid, thread-&gt;pid,
+					  (u64)object_offset,
+					  (u64)off_min,
+					  (u64)t-&gt;buffer-&gt;data_size);
+			return_error = BR_FAILED_REPLY;
+			return_error_param = -EINVAL;
+			return_error_line = __LINE__;
+			<span class="hljs-keyword">goto</span> err_bad_offset;
+		&#125;
+		<span class="hljs-comment">/*</span>
+<span class="hljs-comment">		 * Set offset to the next buffer fragment to be</span>
+<span class="hljs-comment">		 * copied</span>
+<span class="hljs-comment">		 */</span>
+		user_offset = object_offset + object_size;
+
+		hdr = &amp;object.hdr;
+		off_min = object_offset + object_size;
+		<span class="hljs-keyword">switch</span> (hdr-&gt;type) &#123;
+		<span class="hljs-keyword">case</span> BINDER_TYPE_BINDER:
+		<span class="hljs-keyword">case</span> BINDER_TYPE_HANDLE:
+		<span class="hljs-keyword">case</span> BINDER_TYPE_FD:
+		<span class="hljs-keyword">case</span> BINDER_TYPE_PTR:
+		<span class="hljs-comment">// ...</span>
+		&#125;
+	&#125;
+	<span class="hljs-comment">/* Done processing objects, copy the rest of the buffer */</span>
+	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">binder_alloc_copy_user_to_buffer</span>(
+				&amp;target_proc-&gt;alloc,
+				t-&gt;buffer, user_offset,
+				user_buffer + user_offset,
+				tr-&gt;data_size - user_offset)) &#123;
+		<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d got transaction with invalid data ptr\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid);
+		return_error = BR_FAILED_REPLY;
+		return_error_param = -EFAULT;
+		return_error_line = __LINE__;
+		<span class="hljs-keyword">goto</span> err_copy_data_failed;
+	&#125;
+	<span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
+
+<h1 id="server-read-request"><a href="#server-read-request" class="headerlink" title="server read request"></a>server read request</h1><p>在上一章节 <a href="#client-write-request">client write request</a> 里，binder 已经把 request 从 client 进程拷贝至内核，并将 server 进程内的一块虚存映射至内核里的 request，下面看看 server 收到了什么、如何处理 request 数据</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 在【Binder IPC 线程调度模型】里讲过：</span>
+<span class="hljs-comment">// server binder 线程先往 binder 发送数据（binder_thread_write），如果有的话</span>
+<span class="hljs-comment">// 然后读取 binder 发送过来的数据（binder_thread_read），如果没有数据需要处理则 binder 线程会阻塞在 binder_wait_for_work（让渡 CPU）</span>
+<span class="hljs-comment">// 那么 binder 将 request（BINDER_WORK_TRANSACTION） 发送至 server 进程的 todo list，server binder 线程将被唤醒</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_thread_read</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_proc *proc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-keyword">struct</span> binder_thread *thread,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_uintptr_t</span> binder_buffer, <span class="hljs-comment">/* 应用进程内存地址，实际上是 IPCThreadState-&gt;mIn 这块内存空间，看 talkWithDriver */</span></span></span>
+<span class="hljs-params"><span class="hljs-function">				  <span class="hljs-type">size_t</span> size,                    <span class="hljs-comment">/* IPCThreadState-&gt;mIn 的大小 */</span></span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-type">binder_size_t</span> *consumed         <span class="hljs-comment">/* 输出，表示往 binder_buffer 里写入了多少内容 */</span>, </span></span>
+<span class="hljs-params"><span class="hljs-function">				  <span class="hljs-type">int</span> non_block)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">void</span> __user *buffer = (<span class="hljs-type">void</span> __user *)(<span class="hljs-type">uintptr_t</span>)binder_buffer;  <span class="hljs-comment">// 应用进程的 IPCThreadState-&gt;mIn 这块内存空间</span>
+	<span class="hljs-type">void</span> __user *ptr = buffer + *consumed;                          <span class="hljs-comment">// 应用进程的 IPCThreadState-&gt;mIn 这块内存空间</span>
+	<span class="hljs-type">void</span> __user *end = buffer + size;
+
+	<span class="hljs-type">int</span> ret = <span class="hljs-number">0</span>;
+	<span class="hljs-type">int</span> wait_for_proc_work;
+
+	<span class="hljs-keyword">if</span> (*consumed == <span class="hljs-number">0</span>) &#123;
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(BR_NOOP, (<span class="hljs-type">uint32_t</span> __user *)ptr))
+			<span class="hljs-keyword">return</span> -EFAULT;
+		ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+	&#125;
+
+retry:
+	<span class="hljs-built_in">binder_inner_proc_lock</span>(proc);
+	wait_for_proc_work = <span class="hljs-built_in">binder_available_for_proc_work_ilocked</span>(thread);
+	<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+
+	thread-&gt;looper |= BINDER_LOOPER_STATE_WAITING;
+
+	<span class="hljs-built_in">trace_binder_wait_for_work</span>(wait_for_proc_work,
+				   !!thread-&gt;transaction_stack,
+				   !<span class="hljs-built_in">binder_worklist_empty</span>(proc, &amp;thread-&gt;todo));
+	<span class="hljs-keyword">if</span> (wait_for_proc_work) &#123;
+		<span class="hljs-keyword">if</span> (!(thread-&gt;looper &amp; (BINDER_LOOPER_STATE_REGISTERED |
+					BINDER_LOOPER_STATE_ENTERED))) &#123;
+			<span class="hljs-built_in">binder_user_error</span>(<span class="hljs-string">&quot;%d:%d ERROR: Thread waiting for process work before calling BC_REGISTER_LOOPER or BC_ENTER_LOOPER (state %x)\n&quot;</span>,
+				proc-&gt;pid, thread-&gt;pid, thread-&gt;looper);
+			<span class="hljs-built_in">wait_event_interruptible</span>(binder_user_error_wait,
+						 binder_stop_on_user_error &lt; <span class="hljs-number">2</span>);
+		&#125;
+		<span class="hljs-built_in">trace_android_vh_binder_restore_priority</span>(<span class="hljs-literal">NULL</span>, current);
+		<span class="hljs-built_in">binder_restore_priority</span>(thread, &amp;proc-&gt;default_priority);
+	&#125;
+
+	<span class="hljs-keyword">if</span> (non_block) &#123;
+		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_has_work</span>(thread, wait_for_proc_work))
+			ret = -EAGAIN;
+	&#125; <span class="hljs-keyword">else</span> &#123;
+		ret = <span class="hljs-built_in">binder_wait_for_work</span>(thread, wait_for_proc_work);  <span class="hljs-comment">// binder thread 将在这里被唤醒并继续</span>
+	&#125;
+
+	thread-&gt;looper &amp;= ~BINDER_LOOPER_STATE_WAITING;
+
+	<span class="hljs-keyword">if</span> (ret)
+		<span class="hljs-keyword">return</span> ret;
+
+	<span class="hljs-keyword">while</span> (<span class="hljs-number">1</span>) &#123;
+		<span class="hljs-comment">// ...</span>
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction_data_secctx</span> tr;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction_data</span> *trd = &amp;tr.transaction_data;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_transaction</span> *t = <span class="hljs-literal">NULL</span>;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_work</span> *w = <span class="hljs-literal">NULL</span>;
+		<span class="hljs-type">size_t</span> trsize = <span class="hljs-built_in">sizeof</span>(*trd);
+
+		w = <span class="hljs-built_in">binder_dequeue_work_head_ilocked</span>(list);
+		<span class="hljs-keyword">switch</span> (w-&gt;type) &#123;
+		<span class="hljs-keyword">case</span> BINDER_WORK_TRANSACTION: &#123;    <span class="hljs-comment">// 收到 binder 给的 request</span>
+			<span class="hljs-built_in">binder_inner_proc_unlock</span>(proc);
+			t = <span class="hljs-built_in">container_of</span>(w, <span class="hljs-keyword">struct</span> binder_transaction, work);
+		&#125; <span class="hljs-keyword">break</span>;
+		<span class="hljs-comment">// ...</span>
+
+		trd-&gt;data_size = t-&gt;buffer-&gt;data_size;
+		trd-&gt;offsets_size = t-&gt;buffer-&gt;offsets_size;
+		<span class="hljs-comment">// 在章节【client write request】里的 binder_transaction 里说过</span>
+		<span class="hljs-comment">// binder_transaction-&gt;binder_buffer 是从进程 B 的空闲虚存空间里 binder_alloc-&gt;free_buffers 挑选的满足大小的一块虚存</span>
+		<span class="hljs-comment">// 也即 binder_transaction-&gt;binder_buffer-&gt;user_data 指向 server 进程内的虚存</span>
+		<span class="hljs-comment">// 而这块虚存映射到内核内存空间里的物理内存（request 拷贝了一次到内核）</span>
+		trd-&gt;data.ptr.buffer = (<span class="hljs-type">uintptr_t</span>)t-&gt;buffer-&gt;user_data;
+		trd-&gt;data.ptr.offsets = trd-&gt;data.ptr.buffer +
+					<span class="hljs-built_in">ALIGN</span>(t-&gt;buffer-&gt;data_size,
+					    <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *));
+
+		tr.secctx = t-&gt;security_ctx;
+		<span class="hljs-keyword">if</span> (t-&gt;security_ctx) &#123;
+			cmd = BR_TRANSACTION_SEC_CTX;
+			trsize = <span class="hljs-built_in">sizeof</span>(tr);
+		&#125;
+
+		<span class="hljs-comment">// 往应用进程内存地址 buffer 写入 BR_TRANSACTION，实际上是应用进程的 IPCThreadState-&gt;mIn 这块内存空间</span>
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">put_user</span>(cmd, (<span class="hljs-type">uint32_t</span> __user *)ptr)) &#123;
+			<span class="hljs-keyword">if</span> (t_from)
+				<span class="hljs-built_in">binder_thread_dec_tmpref</span>(t_from);
+
+			<span class="hljs-built_in">binder_cleanup_transaction</span>(t, <span class="hljs-string">&quot;put_user failed&quot;</span>,
+						   BR_FAILED_REPLY);
+
+			<span class="hljs-keyword">return</span> -EFAULT;
+		&#125;
+		ptr += <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uint32_t</span>);
+
+		<span class="hljs-comment">// 往应用进程内存地址 buffer 写入 binder_transaction_data</span>
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">copy_to_user</span>(ptr, &amp;tr, trsize)) &#123;
+			<span class="hljs-keyword">if</span> (t_from)
+				<span class="hljs-built_in">binder_thread_dec_tmpref</span>(t_from);
+
+			<span class="hljs-built_in">binder_cleanup_transaction</span>(t, <span class="hljs-string">&quot;copy_to_user failed&quot;</span>,
+						   BR_FAILED_REPLY);
+
+			<span class="hljs-keyword">return</span> -EFAULT;
+		&#125;
+		<span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::waitForResponse</span><span class="hljs-params">(Parcel *reply, <span class="hljs-type">status_t</span> *acquireResult)</span></span>
+<span class="hljs-function"></span>&#123;
+    <span class="hljs-type">uint32_t</span> cmd;
+    <span class="hljs-type">int32_t</span> err;
+
+    <span class="hljs-keyword">while</span> (<span class="hljs-number">1</span>) &#123;
+        <span class="hljs-keyword">if</span> ((err=<span class="hljs-built_in">talkWithDriver</span>()) &lt; NO_ERROR) <span class="hljs-keyword">break</span>;  <span class="hljs-comment">// binder 给过来的数据被写入至 IPCThreadState-&gt;mIn</span>
+        err = mIn.<span class="hljs-built_in">errorCheck</span>();
+        <span class="hljs-keyword">if</span> (err &lt; NO_ERROR) <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">if</span> (mIn.<span class="hljs-built_in">dataAvail</span>() == <span class="hljs-number">0</span>) <span class="hljs-keyword">continue</span>;
+
+        cmd = (<span class="hljs-type">uint32_t</span>)mIn.<span class="hljs-built_in">readInt32</span>();
+
+        <span class="hljs-keyword">switch</span> (cmd) &#123;
+        <span class="hljs-comment">// ...</span>
+        <span class="hljs-keyword">default</span>:
+            err = <span class="hljs-built_in">executeCommand</span>(cmd);
+            <span class="hljs-keyword">if</span> (err != NO_ERROR) <span class="hljs-keyword">goto</span> finish;
+            <span class="hljs-keyword">break</span>;
+        &#125;
+    &#125;
+
+finish:
+    <span class="hljs-keyword">if</span> (err != NO_ERROR) &#123;
+        <span class="hljs-keyword">if</span> (acquireResult) *acquireResult = err;
+        <span class="hljs-keyword">if</span> (reply) reply-&gt;<span class="hljs-built_in">setError</span>(err);
+        mLastError = err;
+        <span class="hljs-built_in">logExtendedError</span>();
+    &#125;
+
+    <span class="hljs-keyword">return</span> err;
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">status_t</span> <span class="hljs-title">IPCThreadState::executeCommand</span><span class="hljs-params">(<span class="hljs-type">int32_t</span> cmd)</span></span>
+<span class="hljs-function"></span>&#123;
+    BBinder* obj;
+    RefBase::weakref_type* refs;
+    <span class="hljs-type">status_t</span> result = NO_ERROR;
+
+    <span class="hljs-keyword">switch</span> ((<span class="hljs-type">uint32_t</span>)cmd) &#123;
+    <span class="hljs-comment">// ...</span>
+    <span class="hljs-keyword">case</span> BR_TRANSACTION_SEC_CTX:
+    <span class="hljs-keyword">case</span> BR_TRANSACTION:
+        &#123;
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data&amp; tr = tr_secctx.transaction_data;
+
+            <span class="hljs-keyword">if</span> (cmd == (<span class="hljs-type">int</span>) BR_TRANSACTION_SEC_CTX) &#123;
+                result = mIn.<span class="hljs-built_in">read</span>(&amp;tr_secctx, <span class="hljs-built_in">sizeof</span>(tr_secctx));
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                result = mIn.<span class="hljs-built_in">read</span>(&amp;tr, <span class="hljs-built_in">sizeof</span>(tr));
+                tr_secctx.secctx = <span class="hljs-number">0</span>;
+            &#125;
+
+            <span class="hljs-built_in">ALOG_ASSERT</span>(result == NO_ERROR,
+                <span class="hljs-string">&quot;Not enough command data for brTRANSACTION&quot;</span>);
+            <span class="hljs-keyword">if</span> (result != NO_ERROR) <span class="hljs-keyword">break</span>;
+
+            <span class="hljs-comment">// tr.data.ptr.buffer 是此应用进程的虚存地址，实际映射至内核物理内存里保存的 request 拷贝</span>
+			<span class="hljs-comment">// 用 Parcel 包装 tr.data.ptr.buffer 这块地址，然后交由 binder server impl 按照 aidl 协议逐个读取参数</span>
+            Parcel buffer;
+            buffer.<span class="hljs-built_in">ipcSetDataReference</span>(
+                <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">const</span> <span class="hljs-type">uint8_t</span>*&gt;(tr.data.ptr.buffer),
+                tr.data_size,
+                <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">const</span> <span class="hljs-type">binder_size_t</span>*&gt;(tr.data.ptr.offsets),
+                tr.offsets_size/<span class="hljs-built_in">sizeof</span>(<span class="hljs-type">binder_size_t</span>), freeBuffer);
+            <span class="hljs-comment">// ...</span>
+
+			<span class="hljs-comment">// 还记得 BBinder 吗？赶紧回顾下【Binder IPC 过程中常用的对象和类】</span>
+			Parcel reply;
+            <span class="hljs-keyword">if</span> (tr.target.ptr) &#123;
+                <span class="hljs-comment">// We only have a weak reference on the target object, so we must first try to</span>
+                <span class="hljs-comment">// safely acquire a strong reference before doing anything else with it.</span>
+                <span class="hljs-keyword">if</span> (<span class="hljs-built_in">reinterpret_cast</span>&lt;RefBase::weakref_type*&gt;(
+                        tr.target.ptr)-&gt;<span class="hljs-built_in">attemptIncStrong</span>(<span class="hljs-keyword">this</span>)) &#123;
+                    error = <span class="hljs-built_in">reinterpret_cast</span>&lt;BBinder*&gt;(tr.cookie)-&gt;<span class="hljs-built_in">transact</span>(tr.code, buffer,
+                            &amp;reply, tr.flags);
+                    <span class="hljs-built_in">reinterpret_cast</span>&lt;BBinder*&gt;(tr.cookie)-&gt;<span class="hljs-built_in">decStrong</span>(<span class="hljs-keyword">this</span>);
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    error = UNKNOWN_TRANSACTION;
+                &#125;
+
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                error = the_context_object-&gt;<span class="hljs-built_in">transact</span>(tr.code, buffer, &amp;reply, tr.flags);
+            &#125;
+
+            <span class="hljs-comment">// 如果不是 one way 还需要将 response/reply 发送给 client</span>
+            <span class="hljs-keyword">if</span> ((tr.flags &amp; TF_ONE_WAY) == <span class="hljs-number">0</span>) &#123;
+                <span class="hljs-built_in">LOG_ONEWAY</span>(<span class="hljs-string">&quot;Sending reply to %d!&quot;</span>, mCallingPid);
+                <span class="hljs-keyword">if</span> (error &lt; NO_ERROR) reply.<span class="hljs-built_in">setError</span>(error);
+
+                <span class="hljs-comment">// b/238777741: clear buffer before we send the reply.</span>
+                <span class="hljs-comment">// Otherwise, there is a race where the client may</span>
+                <span class="hljs-comment">// receive the reply and send another transaction</span>
+                <span class="hljs-comment">// here and the space used by this transaction won&#x27;t</span>
+                <span class="hljs-comment">// be freed for the client.</span>
+                buffer.<span class="hljs-built_in">setDataSize</span>(<span class="hljs-number">0</span>);
+
+                <span class="hljs-keyword">constexpr</span> <span class="hljs-type">uint32_t</span> kForwardReplyFlags = TF_CLEAR_BUF;
+                <span class="hljs-built_in">sendReply</span>(reply, (tr.flags &amp; kForwardReplyFlags));
+            &#125; <span class="hljs-keyword">else</span> &#123; <span class="hljs-comment">//...</span>
+&#125;
+
+<span class="hljs-type">status_t</span> IPCThreadState::<span class="hljs-built_in">talkWithDriver</span>(<span class="hljs-type">bool</span> doReceive)
+&#123;
+    <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-keyword">return</span> -EBADF;
+    &#125;
+
+    binder_write_read bwr;
+
+    <span class="hljs-comment">// Is the read buffer empty?</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">bool</span> needRead = mIn.<span class="hljs-built_in">dataPosition</span>() &gt;= mIn.<span class="hljs-built_in">dataSize</span>();
+
+    <span class="hljs-comment">// We don&#x27;t want to write anything if we are still reading</span>
+    <span class="hljs-comment">// from data left in the input buffer and the caller</span>
+    <span class="hljs-comment">// has requested to read the next data.</span>
+    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> outAvail = (!doReceive || needRead) ? mOut.<span class="hljs-built_in">dataSize</span>() : <span class="hljs-number">0</span>;
+
+    bwr.write_size = outAvail;
+    bwr.write_buffer = (<span class="hljs-type">uintptr_t</span>)mOut.<span class="hljs-built_in">data</span>();
+
+    <span class="hljs-comment">// binder_write_read.read_buffer 实际上指向 mIn</span>
+    <span class="hljs-keyword">if</span> (doReceive &amp;&amp; needRead) &#123;
+        bwr.read_size = mIn.<span class="hljs-built_in">dataCapacity</span>();
+        bwr.read_buffer = (<span class="hljs-type">uintptr_t</span>)mIn.<span class="hljs-built_in">data</span>();
+    &#125; <span class="hljs-keyword">else</span> &#123;
+        bwr.read_size = <span class="hljs-number">0</span>;
+        bwr.read_buffer = <span class="hljs-number">0</span>;
+    &#125;
+
+    <span class="hljs-comment">// Return immediately if there is nothing to do.</span>
+    <span class="hljs-keyword">if</span> ((bwr.write_size == <span class="hljs-number">0</span>) &amp;&amp; (bwr.read_size == <span class="hljs-number">0</span>)) <span class="hljs-keyword">return</span> NO_ERROR;
+
+    bwr.write_consumed = <span class="hljs-number">0</span>;
+    bwr.read_consumed = <span class="hljs-number">0</span>;
+    <span class="hljs-type">status_t</span> err;
+    <span class="hljs-keyword">do</span> &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">ioctl</span>(mProcess-&gt;mDriverFD, BINDER_WRITE_READ, &amp;bwr) &gt;= <span class="hljs-number">0</span>)
+            err = NO_ERROR;
+        <span class="hljs-keyword">else</span>
+            err = -errno;
+        <span class="hljs-keyword">if</span> (mProcess-&gt;mDriverFD &lt; <span class="hljs-number">0</span>) &#123;
+            err = -EBADF;
+        &#125;
+    &#125; <span class="hljs-keyword">while</span> (err == -EINTR);
+	<span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
+
+<h1 id="映射进程虚存与内核内存"><a href="#映射进程虚存与内核内存" class="headerlink" title="映射进程虚存与内核内存"></a>映射进程虚存与内核内存</h1><p><code>binder_alloc_new_buf</code> 寻找一块满足大小的进程虚存 <code>binder_buffer.user_data</code>，这块虚存是在进程在 mmap binder fd 时分配的，但当时并未给这块虚存映射物理页，参看 <a href="#binder_mmap">binder_mmap</a></p>
+<p>同时会将这块虚存<a href="#%E5%88%86%E9%85%8D%E5%86%85%E6%A0%B8%E7%89%A9%E7%90%86%E9%A1%B5">映射至内核物理内存</a>，将 request 拷贝至这里，然后 server 可以直接读取而不用将 request 拷贝至进程 B</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c</span>
+<span class="hljs-comment"> * </span>
+<span class="hljs-comment"> * binder_alloc_new_buf() - Allocate a new binder buffer</span>
+<span class="hljs-comment"> * @alloc:              binder_alloc for this proc</span>
+<span class="hljs-comment"> * @data_size:          size of user data buffer</span>
+<span class="hljs-comment"> * @offsets_size:       user specified buffer offset</span>
+<span class="hljs-comment"> * @extra_buffers_size: size of extra space for meta-data (eg, security context)</span>
+<span class="hljs-comment"> * @is_async:           buffer for async transaction</span>
+<span class="hljs-comment"> * @pid:				pid to attribute allocation to (used for debugging)</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * Allocate a new buffer given the requested sizes. Returns</span>
+<span class="hljs-comment"> * the kernel version of the buffer pointer. The size allocated</span>
+<span class="hljs-comment"> * is the sum of the three given sizes (each rounded up to</span>
+<span class="hljs-comment"> * pointer-sized boundary)</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * Return:	The allocated buffer or %NULL if error</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *<span class="hljs-built_in">binder_alloc_new_buf</span>(<span class="hljs-keyword">struct</span> binder_alloc *alloc,
+					   <span class="hljs-type">size_t</span> data_size,
+					   <span class="hljs-type">size_t</span> offsets_size,
+					   <span class="hljs-type">size_t</span> extra_buffers_size,
+					   <span class="hljs-type">int</span> is_async,
+					   <span class="hljs-type">int</span> pid)
+&#123;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *buffer;
+
+	<span class="hljs-built_in">mutex_lock</span>(&amp;alloc-&gt;mutex);
+	buffer = <span class="hljs-built_in">binder_alloc_new_buf_locked</span>(alloc, data_size, offsets_size,
+					     extra_buffers_size, is_async, pid);
+	<span class="hljs-built_in">mutex_unlock</span>(&amp;alloc-&gt;mutex);
+	<span class="hljs-keyword">return</span> buffer;
+&#125;
+
+<span class="hljs-type">static</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *<span class="hljs-built_in">binder_alloc_new_buf_locked</span>(
+				<span class="hljs-keyword">struct</span> binder_alloc *alloc,
+				<span class="hljs-type">size_t</span> data_size,
+				<span class="hljs-type">size_t</span> offsets_size,
+				<span class="hljs-type">size_t</span> extra_buffers_size,
+				<span class="hljs-type">int</span> is_async,
+				<span class="hljs-type">int</span> pid)
+&#123;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">rb_node</span> *n = alloc-&gt;free_buffers.rb_node;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *buffer;
+	<span class="hljs-type">size_t</span> buffer_size;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">rb_node</span> *best_fit = <span class="hljs-literal">NULL</span>;
+	<span class="hljs-type">void</span> __user *has_page_addr;
+	<span class="hljs-type">void</span> __user *end_page_addr;
+	<span class="hljs-type">size_t</span> size, data_offsets_size;
+	<span class="hljs-type">int</span> ret;
+
+	<span class="hljs-built_in">mmap_read_lock</span>(alloc-&gt;mm);
+	<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">binder_alloc_get_vma</span>(alloc)) &#123;
+		<span class="hljs-built_in">mmap_read_unlock</span>(alloc-&gt;mm);
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_USER_ERROR,
+				   <span class="hljs-string">&quot;%d: binder_alloc_buf, no vma\n&quot;</span>,
+				   alloc-&gt;pid);
+		<span class="hljs-keyword">return</span> <span class="hljs-built_in">ERR_PTR</span>(-ESRCH);
+	&#125;
+	<span class="hljs-built_in">mmap_read_unlock</span>(alloc-&gt;mm);
+
+	data_offsets_size = <span class="hljs-built_in">ALIGN</span>(data_size, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *)) +
+		<span class="hljs-built_in">ALIGN</span>(offsets_size, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *));
+
+	<span class="hljs-keyword">if</span> (data_offsets_size &lt; data_size || data_offsets_size &lt; offsets_size) &#123;
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC,
+				<span class="hljs-string">&quot;%d: got transaction with invalid size %zd-%zd\n&quot;</span>,
+				alloc-&gt;pid, data_size, offsets_size);
+		<span class="hljs-keyword">return</span> <span class="hljs-built_in">ERR_PTR</span>(-EINVAL);
+	&#125;
+	size = data_offsets_size + <span class="hljs-built_in">ALIGN</span>(extra_buffers_size, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *));
+	<span class="hljs-keyword">if</span> (size &lt; data_offsets_size || size &lt; extra_buffers_size) &#123;
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC,
+				<span class="hljs-string">&quot;%d: got transaction with invalid extra_buffers_size %zd\n&quot;</span>,
+				alloc-&gt;pid, extra_buffers_size);
+		<span class="hljs-keyword">return</span> <span class="hljs-built_in">ERR_PTR</span>(-EINVAL);
+	&#125;
+	<span class="hljs-keyword">if</span> (is_async &amp;&amp;
+	    alloc-&gt;free_async_space &lt; size + <span class="hljs-built_in">sizeof</span>(<span class="hljs-keyword">struct</span> binder_buffer)) &#123;
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC,
+			     <span class="hljs-string">&quot;%d: binder_alloc_buf size %zd failed, no async space left\n&quot;</span>,
+			      alloc-&gt;pid, size);
+		<span class="hljs-keyword">return</span> <span class="hljs-built_in">ERR_PTR</span>(-ENOSPC);
+	&#125;
+
+	<span class="hljs-comment">/* Pad 0-size buffers so they get assigned unique addresses */</span>
+	size = <span class="hljs-built_in">max</span>(size, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">void</span> *));
+
+    <span class="hljs-comment">// 对应章节【指导思想】里的步骤三</span>
+    <span class="hljs-comment">// 从目标进程（server）的空闲虚拟地址区间集合里（binder_alloc-&gt;free_buffers）找一块满足大小的（&gt;= size）binder_buffer 出来</span>
+	<span class="hljs-comment">// </span>
+	<span class="hljs-comment">// 空闲虚拟地址集合 binder_alloc-&gt;free_buffers 是一棵红黑树（平衡的二叉树），左孩子的地址空间比父亲小，右孩子比父亲大</span>
+    <span class="hljs-comment">// struct rb_node &#123;</span>
+    <span class="hljs-comment">// 	unsigned long  __rb_parent_color;</span>
+    <span class="hljs-comment">// 	struct rb_node *rb_right;</span>
+    <span class="hljs-comment">// 	struct rb_node *rb_left;</span>
+    <span class="hljs-comment">// &#125; __attribute__((aligned(sizeof(long))));</span>
+	<span class="hljs-comment">// </span>
+	<span class="hljs-comment">// 搜索二叉树，找到最匹配 size 大小的 buffer</span>
+	<span class="hljs-comment">// 从章节【binder_mmap】可知 binder_alloc-&gt;free_buffers 里默认会初始化一个 1M 大小的应用进程可用虚存</span>
+	<span class="hljs-keyword">while</span> (n) &#123;
+		buffer = <span class="hljs-built_in">rb_entry</span>(n, <span class="hljs-keyword">struct</span> binder_buffer, rb_node);  <span class="hljs-comment">// 从 rb_node 取出 binder_buffer 类型的 entry</span>
+		<span class="hljs-built_in">BUG_ON</span>(!buffer-&gt;free);
+		buffer_size = <span class="hljs-built_in">binder_alloc_buffer_size</span>(alloc, buffer);
+
+		<span class="hljs-keyword">if</span> (size &lt; buffer_size) &#123;  <span class="hljs-comment">// 如果 buffer 大小满足 size 要求则选中（best_fit）然后继续往左下走寻找更接近 size 的 buffer</span>
+			best_fit = n;
+			n = n-&gt;rb_left;
+		&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (size &gt; buffer_size)  <span class="hljs-comment">// buffer 大小不满足 size 要求，得继续往右下走找更大的 buffer</span>
+			n = n-&gt;rb_right;
+		<span class="hljs-keyword">else</span> &#123;                          <span class="hljs-comment">// buffer 大小刚好匹配 size，完美，无需继续寻找了</span>
+			best_fit = n;
+			<span class="hljs-keyword">break</span>;
+		&#125;
+	&#125;
+
+	<span class="hljs-comment">// 没有满足 size 大小要求的空闲 binder_buffer 则返回错误码</span>
+	<span class="hljs-comment">// 此时说明 request or reponse 大小超过为 binder transaction 分配的虚存大小，会报以下错误：</span>
+	<span class="hljs-comment">// JavaBinder: !!! FAILED BINDER TRANSACTION !!! (parcel size = 2001452)</span>
+	<span class="hljs-keyword">if</span> (best_fit == <span class="hljs-literal">NULL</span>) &#123;
+		<span class="hljs-type">size_t</span> allocated_buffers = <span class="hljs-number">0</span>;
+		<span class="hljs-type">size_t</span> largest_alloc_size = <span class="hljs-number">0</span>;
+		<span class="hljs-type">size_t</span> total_alloc_size = <span class="hljs-number">0</span>;
+		<span class="hljs-type">size_t</span> free_buffers = <span class="hljs-number">0</span>;
+		<span class="hljs-type">size_t</span> largest_free_size = <span class="hljs-number">0</span>;
+		<span class="hljs-type">size_t</span> total_free_size = <span class="hljs-number">0</span>;
+
+		<span class="hljs-keyword">for</span> (n = <span class="hljs-built_in">rb_first</span>(&amp;alloc-&gt;allocated_buffers); n != <span class="hljs-literal">NULL</span>;
+		     n = <span class="hljs-built_in">rb_next</span>(n)) &#123;
+			buffer = <span class="hljs-built_in">rb_entry</span>(n, <span class="hljs-keyword">struct</span> binder_buffer, rb_node);
+			buffer_size = <span class="hljs-built_in">binder_alloc_buffer_size</span>(alloc, buffer);
+			allocated_buffers++;
+			total_alloc_size += buffer_size;
+			<span class="hljs-keyword">if</span> (buffer_size &gt; largest_alloc_size)
+				largest_alloc_size = buffer_size;
+		&#125;
+		<span class="hljs-keyword">for</span> (n = <span class="hljs-built_in">rb_first</span>(&amp;alloc-&gt;free_buffers); n != <span class="hljs-literal">NULL</span>;
+		     n = <span class="hljs-built_in">rb_next</span>(n)) &#123;
+			buffer = <span class="hljs-built_in">rb_entry</span>(n, <span class="hljs-keyword">struct</span> binder_buffer, rb_node);
+			buffer_size = <span class="hljs-built_in">binder_alloc_buffer_size</span>(alloc, buffer);
+			free_buffers++;
+			total_free_size += buffer_size;
+			<span class="hljs-keyword">if</span> (buffer_size &gt; largest_free_size)
+				largest_free_size = buffer_size;
+		&#125;
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_USER_ERROR,
+				   <span class="hljs-string">&quot;%d: binder_alloc_buf size %zd failed, no address space\n&quot;</span>,
+				   alloc-&gt;pid, size);
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_USER_ERROR,
+				   <span class="hljs-string">&quot;allocated: %zd (num: %zd largest: %zd), free: %zd (num: %zd largest: %zd)\n&quot;</span>,
+				   total_alloc_size, allocated_buffers,
+				   largest_alloc_size, total_free_size,
+				   free_buffers, largest_free_size);
+		<span class="hljs-keyword">return</span> <span class="hljs-built_in">ERR_PTR</span>(-ENOSPC);
+	&#125;
+	<span class="hljs-keyword">if</span> (n == <span class="hljs-literal">NULL</span>) &#123;
+		buffer = <span class="hljs-built_in">rb_entry</span>(best_fit, <span class="hljs-keyword">struct</span> binder_buffer, rb_node);
+		buffer_size = <span class="hljs-built_in">binder_alloc_buffer_size</span>(alloc, buffer);
+	&#125;
+
+	<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC,
+		     <span class="hljs-string">&quot;%d: binder_alloc_buf size %zd got buffer %pK size %zd\n&quot;</span>,
+		      alloc-&gt;pid, size, buffer, buffer_size);
+
+    <span class="hljs-comment">// 将应用进程虚存地址空间 [buffer-&gt;user_data, end_page_addr] 映射内核物理内存地址空间</span>
+	<span class="hljs-comment">// 这样应用进程写入此虚存空间的数据就有物理内存来存放了，并且是直接写入至 binder，无需从用户态拷贝至内核态</span>
+	<span class="hljs-comment">// 这里会真正进行内核物理页的分配，参看章节【分配内核物理页】</span>
+	<span class="hljs-comment">// 对应章节【指导思想】里的步骤四、五和六</span>
+	has_page_addr = (<span class="hljs-type">void</span> __user *)
+		(((<span class="hljs-type">uintptr_t</span>)buffer-&gt;user_data + buffer_size) &amp; PAGE_MASK);
+	<span class="hljs-built_in">WARN_ON</span>(n &amp;&amp; buffer_size != size);
+	end_page_addr =
+		(<span class="hljs-type">void</span> __user *)<span class="hljs-built_in">PAGE_ALIGN</span>((<span class="hljs-type">uintptr_t</span>)buffer-&gt;user_data + size);
+	<span class="hljs-keyword">if</span> (end_page_addr &gt; has_page_addr)
+		end_page_addr = has_page_addr;
+	ret = <span class="hljs-built_in">binder_update_page_range</span>(alloc, <span class="hljs-number">1</span>, (<span class="hljs-type">void</span> __user *)
+		<span class="hljs-built_in">PAGE_ALIGN</span>((<span class="hljs-type">uintptr_t</span>)buffer-&gt;user_data), end_page_addr);
+	<span class="hljs-keyword">if</span> (ret)
+		<span class="hljs-keyword">return</span> <span class="hljs-built_in">ERR_PTR</span>(ret);
+
+	<span class="hljs-keyword">if</span> (buffer_size != size) &#123;
+		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *new_buffer;
+
+		new_buffer = <span class="hljs-built_in">kzalloc</span>(<span class="hljs-built_in">sizeof</span>(*buffer), GFP_KERNEL);
+		<span class="hljs-keyword">if</span> (!new_buffer) &#123;
+			<span class="hljs-built_in">pr_err</span>(<span class="hljs-string">&quot;%s: %d failed to alloc new buffer struct\n&quot;</span>,
+			       __func__, alloc-&gt;pid);
+			<span class="hljs-keyword">goto</span> err_alloc_buf_struct_failed;
+		&#125;
+		new_buffer-&gt;user_data = (u8 __user *)buffer-&gt;user_data + size;
+		<span class="hljs-built_in">list_add</span>(&amp;new_buffer-&gt;entry, &amp;buffer-&gt;entry);
+		new_buffer-&gt;free = <span class="hljs-number">1</span>;
+		<span class="hljs-built_in">binder_insert_free_buffer</span>(alloc, new_buffer);
+	&#125;
+
+	<span class="hljs-built_in">rb_erase</span>(best_fit, &amp;alloc-&gt;free_buffers);
+	buffer-&gt;free = <span class="hljs-number">0</span>;
+	buffer-&gt;allow_user_free = <span class="hljs-number">0</span>;
+	<span class="hljs-built_in">binder_insert_allocated_buffer_locked</span>(alloc, buffer);
+	<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC,
+		     <span class="hljs-string">&quot;%d: binder_alloc_buf size %zd got %pK\n&quot;</span>,
+		      alloc-&gt;pid, size, buffer);
+	buffer-&gt;data_size = data_size;
+	buffer-&gt;offsets_size = offsets_size;
+	buffer-&gt;async_transaction = is_async;
+	buffer-&gt;extra_buffers_size = extra_buffers_size;
+	buffer-&gt;pid = pid;
+	buffer-&gt;oneway_spam_suspect = <span class="hljs-literal">false</span>;
+	<span class="hljs-keyword">if</span> (is_async) &#123;
+		alloc-&gt;free_async_space -= size + <span class="hljs-built_in">sizeof</span>(<span class="hljs-keyword">struct</span> binder_buffer);
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC_ASYNC,
+			     <span class="hljs-string">&quot;%d: binder_alloc_buf size %zd async free %zd\n&quot;</span>,
+			      alloc-&gt;pid, size, alloc-&gt;free_async_space);
+		<span class="hljs-keyword">if</span> (alloc-&gt;free_async_space &lt; alloc-&gt;buffer_size / <span class="hljs-number">10</span>) &#123;
+			<span class="hljs-comment">/*</span>
+<span class="hljs-comment">			 * Start detecting spammers once we have less than 20%</span>
+<span class="hljs-comment">			 * of async space left (which is less than 10% of total</span>
+<span class="hljs-comment">			 * buffer size).</span>
+<span class="hljs-comment">			 */</span>
+			buffer-&gt;oneway_spam_suspect = <span class="hljs-built_in">debug_low_async_space_locked</span>(alloc, pid);
+		&#125; <span class="hljs-keyword">else</span> &#123;
+			alloc-&gt;oneway_spam_detected = <span class="hljs-literal">false</span>;
+		&#125;
+	&#125;
+	<span class="hljs-keyword">return</span> buffer;
+
+err_alloc_buf_struct_failed:
+	<span class="hljs-built_in">binder_update_page_range</span>(alloc, <span class="hljs-number">0</span>, (<span class="hljs-type">void</span> __user *)
+				 <span class="hljs-built_in">PAGE_ALIGN</span>((<span class="hljs-type">uintptr_t</span>)buffer-&gt;user_data),
+				 end_page_addr);
+	<span class="hljs-keyword">return</span> <span class="hljs-built_in">ERR_PTR</span>(-ENOMEM);
+&#125;</code></pre></div>
+
+<h1 id="binder-mmap"><a href="#binder-mmap" class="headerlink" title="binder_mmap"></a>binder_mmap</h1><p><code>open_driver(driver)</code> 得到 binder fd 后会执行 <code>binder_mmap</code> 分配所需的内存空间：</p>
+<ol>
+<li><p>应用进程分配 1M 的虚存至 <code>ProcessState.mVMStart</code>，这块虚存是还没有映射任何物理内存的</p>
+</li>
+<li><p>binder driver 初始化 <code>binder_alloc-&gt;free_buffers</code>，它代表空闲可用的应用进程虚存块，也即上面第一步分配的这块虚存；它是一棵红黑树，<code>binder_buffer-&gt;user_data</code> 记录了起始地址，节点间的起始地址差表示此节点的空间大小，最后一个节点表示应用进程开辟的虚存空间还剩余的大小</p>
+</li>
+<li><p>此时 binder driver 并没有相应地为此应用进程分配虚存</p>
+</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// ProcessState 是进程内单例，负责初始化应用进程与 binder driver 的连接（fd）</span>
+<span class="hljs-comment">// https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp</span>
+ProcessState::<span class="hljs-built_in">ProcessState</span>(<span class="hljs-type">const</span> <span class="hljs-type">char</span> *driver)          <span class="hljs-comment">// driver 参数是指 binder 的路径：/dev/binder</span>
+    : <span class="hljs-built_in">mDriverName</span>(<span class="hljs-built_in">String8</span>(driver))                      <span class="hljs-comment">// 记录 binder 路径</span>
+    , <span class="hljs-built_in">mDriverFD</span>(<span class="hljs-built_in">open_driver</span>(driver))                    <span class="hljs-comment">// 打开 binder 并记录下它的 fd</span>
+    , <span class="hljs-built_in">mVMStart</span>(MAP_FAILED)                              <span class="hljs-comment">// mmap 分配的一块内存空间，后续会用到</span>
+    , <span class="hljs-built_in">mThreadCountLock</span>(PTHREAD_MUTEX_INITIALIZER)
+    , <span class="hljs-built_in">mThreadCountDecrement</span>(PTHREAD_COND_INITIALIZER)
+    , <span class="hljs-built_in">mExecutingThreadsCount</span>(<span class="hljs-number">0</span>)
+    , <span class="hljs-built_in">mWaitingForThreads</span>(<span class="hljs-number">0</span>)
+    , <span class="hljs-built_in">mMaxThreads</span>(DEFAULT_MAX_BINDER_THREADS)
+    , <span class="hljs-built_in">mStarvationStartTimeMs</span>(<span class="hljs-number">0</span>)
+    , <span class="hljs-built_in">mThreadPoolStarted</span>(<span class="hljs-literal">false</span>)
+    , <span class="hljs-built_in">mThreadPoolSeq</span>(<span class="hljs-number">1</span>)
+    , <span class="hljs-built_in">mCallRestriction</span>(CallRestriction::NONE)
+&#123;
+    <span class="hljs-keyword">if</span> (mDriverFD &gt;= <span class="hljs-number">0</span>) &#123;
+        <span class="hljs-comment">// mmap the binder, providing a chunk of virtual address space to receive transactions.</span>
+		<span class="hljs-comment">// 应用进程开辟了 1M 的虚拟地址空间，用以 binder 间传输数据</span>
+		<span class="hljs-comment">// 注意此时只是在应用进程开辟了 1M 的虚拟内存，并没有映射物理内存</span>
+        mVMStart = <span class="hljs-built_in">mmap</span>(<span class="hljs-literal">nullptr</span>, BINDER_VM_SIZE <span class="hljs-comment">/* 1M */</span>, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, mDriverFD, <span class="hljs-number">0</span>);
+        <span class="hljs-keyword">if</span> (mVMStart == MAP_FAILED) &#123;
+            <span class="hljs-built_in">ALOGE</span>(<span class="hljs-string">&quot;Using %s failed: unable to mmap transaction memory.\n&quot;</span>, mDriverName.<span class="hljs-built_in">c_str</span>());
+            <span class="hljs-built_in">close</span>(mDriverFD);
+            mDriverFD = <span class="hljs-number">-1</span>;
+            mDriverName.<span class="hljs-built_in">clear</span>();
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-comment">// 大概 1M 左右</span>
+<span class="hljs-meta">#<span class="hljs-keyword">define</span> BINDER_VM_SIZE ((1 * 1024 * 1024) - sysconf(_SC_PAGE_SIZE) * 2)</span>
+
+<span class="hljs-comment">// 来到内核 binder driver 的 mmap 处理函数</span>
+<span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder.c</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_mmap</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *filp, <span class="hljs-keyword">struct</span> vm_area_struct *vma)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_proc</span> *proc = filp-&gt;private_data;
+
+	<span class="hljs-keyword">if</span> (proc-&gt;tsk != current-&gt;group_leader)
+		<span class="hljs-keyword">return</span> -EINVAL;
+
+	<span class="hljs-built_in">binder_debug</span>(BINDER_DEBUG_OPEN_CLOSE,
+		     <span class="hljs-string">&quot;%s: %d %lx-%lx (%ld K) vma %lx pagep %lx\n&quot;</span>,
+		     __func__, proc-&gt;pid, vma-&gt;vm_start, vma-&gt;vm_end,
+		     (vma-&gt;vm_end - vma-&gt;vm_start) / SZ_1K, vma-&gt;vm_flags,
+		     (<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>)<span class="hljs-built_in">pgprot_val</span>(vma-&gt;vm_page_prot));
+
+	<span class="hljs-keyword">if</span> (vma-&gt;vm_flags &amp; FORBIDDEN_MMAP_FLAGS) &#123;
+		<span class="hljs-built_in">pr_err</span>(<span class="hljs-string">&quot;%s: %d %lx-%lx %s failed %d\n&quot;</span>, __func__,
+		       proc-&gt;pid, vma-&gt;vm_start, vma-&gt;vm_end, <span class="hljs-string">&quot;bad vm_flags&quot;</span>, -EPERM);
+		<span class="hljs-keyword">return</span> -EPERM;
+	&#125;
+	vma-&gt;vm_flags |= VM_DONTCOPY | VM_MIXEDMAP;
+	vma-&gt;vm_flags &amp;= ~VM_MAYWRITE;
+
+	vma-&gt;vm_ops = &amp;binder_vm_ops;
+	vma-&gt;vm_private_data = proc;
+
+	<span class="hljs-keyword">return</span> <span class="hljs-built_in">binder_alloc_mmap_handler</span>(&amp;proc-&gt;alloc, vma);
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * binder_alloc_mmap_handler() - map virtual address space for proc</span>
+<span class="hljs-comment"> * @alloc:	alloc structure for this proc</span>
+<span class="hljs-comment"> * @vma:	vma passed to mmap()</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * Called by binder_mmap() to initialize the space specified in</span>
+<span class="hljs-comment"> * vma for allocating binder buffers</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * Return:</span>
+<span class="hljs-comment"> *      0 = success</span>
+<span class="hljs-comment"> *      -EBUSY = address space already mapped</span>
+<span class="hljs-comment"> *      -ENOMEM = failed to map memory to given address space</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">binder_alloc_mmap_handler</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_alloc *alloc,</span></span>
+<span class="hljs-params"><span class="hljs-function">			      <span class="hljs-keyword">struct</span> vm_area_struct *vma)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">int</span> ret;
+	<span class="hljs-type">const</span> <span class="hljs-type">char</span> *failure_string;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *buffer;
+
+	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">unlikely</span>(vma-&gt;vm_mm != alloc-&gt;mm)) &#123;
+		ret = -EINVAL;
+		failure_string = <span class="hljs-string">&quot;invalid vma-&gt;vm_mm&quot;</span>;
+		<span class="hljs-keyword">goto</span> err_invalid_mm;
+	&#125;
+
+	<span class="hljs-built_in">mutex_lock</span>(&amp;binder_alloc_mmap_lock);
+	<span class="hljs-keyword">if</span> (alloc-&gt;buffer_size) &#123;
+		ret = -EBUSY;
+		failure_string = <span class="hljs-string">&quot;already mapped&quot;</span>;
+		<span class="hljs-keyword">goto</span> err_already_mapped;
+	&#125;
+
+	<span class="hljs-comment">// vm_start 是应用进程虚拟地址空间的起始地址，vm_end 是结束地址</span>
+	<span class="hljs-comment">// vma-&gt;vm_end - vma-&gt;vm_start 就是应用进程内这块虚拟地址的大小，上面说过是 1M</span>
+	<span class="hljs-comment">// alloc-&gt;buffer      是应用进程的虚拟地址</span>
+	<span class="hljs-comment">// alloc-&gt;buffer_size 是这块内存空间的大小</span>
+	alloc-&gt;buffer_size = <span class="hljs-built_in">min_t</span>(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>, vma-&gt;vm_end - vma-&gt;vm_start,
+				   SZ_4M);
+	<span class="hljs-built_in">mutex_unlock</span>(&amp;binder_alloc_mmap_lock);
+	alloc-&gt;buffer = (<span class="hljs-type">void</span> __user *)vma-&gt;vm_start;
+
+    <span class="hljs-comment">// kcalloc — allocate memory for an array. The memory is set to zero.</span>
+    <span class="hljs-comment">// void* kcalloc (size_t n /* number of elements */, size_t size /* element size */, gfp_t flags);</span>
+	<span class="hljs-comment">// </span>
+	<span class="hljs-comment">// binder_alloc.pages 表示内核物理页，此时只是初始化了这个数组（索引表示第几页），并没有分配物理页</span>
+	<span class="hljs-comment">// 应用进程与 binder 进行数据传输时，会分配物理页并将应用进程虚存映射至此物理页，参看章节【分配内核物理页】</span>
+	alloc-&gt;pages = <span class="hljs-built_in">kcalloc</span>(alloc-&gt;buffer_size / PAGE_SIZE,
+			       <span class="hljs-built_in">sizeof</span>(alloc-&gt;pages[<span class="hljs-number">0</span>]),
+			       GFP_KERNEL);
+	<span class="hljs-keyword">if</span> (alloc-&gt;pages == <span class="hljs-literal">NULL</span>) &#123;
+		ret = -ENOMEM;
+		failure_string = <span class="hljs-string">&quot;alloc page array&quot;</span>;
+		<span class="hljs-keyword">goto</span> err_alloc_pages_failed;
+	&#125;
+
+    <span class="hljs-comment">// 初始化 binder driver fd 时就已经放了一个 binder_buffer 至 alloc-&gt;free_buffers</span>
+	buffer = <span class="hljs-built_in">kzalloc</span>(<span class="hljs-built_in">sizeof</span>(*buffer), GFP_KERNEL);
+	<span class="hljs-keyword">if</span> (!buffer) &#123;
+		ret = -ENOMEM;
+		failure_string = <span class="hljs-string">&quot;alloc buffer struct&quot;</span>;
+		<span class="hljs-keyword">goto</span> err_alloc_buf_struct_failed;
+	&#125;
+
+	buffer-&gt;user_data = alloc-&gt;buffer;          <span class="hljs-comment">// binder_buffer 也记录了应用进程的虚存起始地址</span>
+	<span class="hljs-built_in">list_add</span>(&amp;buffer-&gt;entry, &amp;alloc-&gt;buffers);  <span class="hljs-comment">// alloc-&gt;buffers, list of all buffers for this proc</span>
+	buffer-&gt;free = <span class="hljs-number">1</span>;
+	<span class="hljs-built_in">binder_insert_free_buffer</span>(alloc, buffer);   <span class="hljs-comment">// alloc-&gt;free_buffers, rb tree of buffers available for allocation sorted by size</span>
+	alloc-&gt;free_async_space = alloc-&gt;buffer_size / <span class="hljs-number">2</span>;
+	alloc-&gt;vma_addr = vma-&gt;vm_start;           <span class="hljs-comment">// 应用进程的虚存起始地址</span>
+	<span class="hljs-comment">// ...</span>
+&#125;
+
+<span class="hljs-comment">// alloc-&gt;free_buffers 是一棵红黑树（平衡的二叉树）</span>
+<span class="hljs-comment">// 左孩子内存空间较小，右孩子内存空间较大，这里的内存是用户进程的虚存</span>
+<span class="hljs-comment">//</span>
+<span class="hljs-comment">// 但 binder_buffer-&gt;user_data 只记录了虚存起始地址，并没有字段记录大小</span>
+<span class="hljs-comment">// 这块地址的大小跟 binder_buffer 在红黑树上的位置有关，看 binder_alloc_buffer_size</span>
+<span class="hljs-comment">// </span>
+<span class="hljs-comment">// 1，如果 binder_buffer 是最后一个节点，那么它表示应用进程开辟的虚存空间还剩余的大小</span>
+<span class="hljs-comment">// 2，否则此节点与下一节点的起始地址差（binder_buffer-&gt;user_data）就是此节点的空间大小</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title">binder_insert_free_buffer</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_alloc *alloc,</span></span>
+<span class="hljs-params"><span class="hljs-function">				      <span class="hljs-keyword">struct</span> binder_buffer *new_buffer)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">rb_node</span> **p = &amp;alloc-&gt;free_buffers.rb_node;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">rb_node</span> *parent = <span class="hljs-literal">NULL</span>;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_buffer</span> *buffer;
+	<span class="hljs-type">size_t</span> buffer_size;
+	<span class="hljs-type">size_t</span> new_buffer_size;
+
+	<span class="hljs-built_in">BUG_ON</span>(!new_buffer-&gt;free);
+
+	new_buffer_size = <span class="hljs-built_in">binder_alloc_buffer_size</span>(alloc, new_buffer);
+
+	<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC,
+		     <span class="hljs-string">&quot;%d: add free buffer, size %zd, at %pK\n&quot;</span>,
+		      alloc-&gt;pid, new_buffer_size, new_buffer);
+
+	<span class="hljs-keyword">while</span> (*p) &#123;
+		parent = *p;
+		buffer = <span class="hljs-built_in">rb_entry</span>(parent, <span class="hljs-keyword">struct</span> binder_buffer, rb_node);
+		<span class="hljs-built_in">BUG_ON</span>(!buffer-&gt;free);
+
+		buffer_size = <span class="hljs-built_in">binder_alloc_buffer_size</span>(alloc, buffer);
+
+		<span class="hljs-keyword">if</span> (new_buffer_size &lt; buffer_size)
+			p = &amp;parent-&gt;rb_left;
+		<span class="hljs-keyword">else</span>
+			p = &amp;parent-&gt;rb_right;
+	&#125;
+	<span class="hljs-built_in">rb_link_node</span>(&amp;new_buffer-&gt;rb_node, parent, p);
+	<span class="hljs-built_in">rb_insert_color</span>(&amp;new_buffer-&gt;rb_node, &amp;alloc-&gt;free_buffers);
+&#125;
+
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">size_t</span> <span class="hljs-title">binder_alloc_buffer_size</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_alloc *alloc,</span></span>
+<span class="hljs-params"><span class="hljs-function">				       <span class="hljs-keyword">struct</span> binder_buffer *buffer)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">list_is_last</span>(&amp;buffer-&gt;entry, &amp;alloc-&gt;buffers))
+		<span class="hljs-keyword">return</span> alloc-&gt;buffer + alloc-&gt;buffer_size - buffer-&gt;user_data;
+	<span class="hljs-keyword">return</span> <span class="hljs-built_in">binder_buffer_next</span>(buffer)-&gt;user_data - buffer-&gt;user_data;
+&#125;</code></pre></div>
+
+<h1 id="分配内核物理页"><a href="#分配内核物理页" class="headerlink" title="分配内核物理页"></a>分配内核物理页</h1><blockquote>
+<p><code>struct vm_area_struct</code></p>
+<p>This struct describes a virtual memory area. There is one of these per VM-area/task. A VM area is any part of the process virtual memory space that has a special rule for the page-fault handlers (ie a shared library, the executable area etc).</p>
+<p>虚存管理的最基本的管理单元，描述了一段连续的、具有相同访问属性的虚存空间，该虚存空间的大小为物理内存页面的整数倍</p>
+</blockquote>
+<blockquote>
+<p><code>int vm_insert_page(struct vm_area_struct *vma, unsigned long addr, struct page *page)</code></p>
+<p>vma - user vma to map to, addr - target user address of this page, page - source kernel page</p>
+<p>This allows drivers to insert individual pages they’ve allocated into a user vma.</p>
+<p>一般用在驱动的 mmap 操作里，建立内核物理内存与用户虚拟地址空间的映射关系；驱动的常见套路是不会立即为用户虚拟地址空间分配物理内存，而是当访问虚拟地址空间时产生缺页中断，此时才真正地为缺页分配物理内存</p>
+</blockquote>
+<p><a href="#binder_mmap">binder_mmap</a> 应用进程已经开辟了一块虚存用以与 binder 进行数据传输，但并没有为它映射物理页，直到真正访问这块虚存时才会在内核分配物理页</p>
+<div class="code-wrapper"><pre><code class="hljs cpp"><span class="hljs-comment">// 为 [start, end] 映射内核物理页（binder_proc.pages）</span>
+<span class="hljs-comment">// [start, end] 是一块应用进程的虚拟地址空间，它是在初始化 binder driver fd 时分配的，参见【binder_mmap】章节</span>
+<span class="hljs-comment">// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/drivers/android/binder_alloc.c</span>
+<span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">binder_update_page_range</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> binder_alloc *alloc, <span class="hljs-type">int</span> allocate <span class="hljs-comment">/* true - 映射物理页，false - 取消映射 */</span>,</span></span>
+<span class="hljs-params"><span class="hljs-function">				    <span class="hljs-type">void</span> __user *start, <span class="hljs-type">void</span> __user *end)</span></span>
+<span class="hljs-function"></span>&#123;
+	<span class="hljs-type">void</span> __user *page_addr;
+	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> user_page_addr;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">binder_lru_page</span> *page;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">vm_area_struct</span> *vma = <span class="hljs-literal">NULL</span>;
+	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">mm_struct</span> *mm = <span class="hljs-literal">NULL</span>;
+	<span class="hljs-type">bool</span> need_mm = <span class="hljs-literal">false</span>;
+
+	<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_BUFFER_ALLOC,
+		     <span class="hljs-string">&quot;%d: %s pages %pK-%pK\n&quot;</span>, alloc-&gt;pid,
+		     allocate ? <span class="hljs-string">&quot;allocate&quot;</span> : <span class="hljs-string">&quot;free&quot;</span>, start, end);
+
+	<span class="hljs-keyword">if</span> (end &lt;= start)
+		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+
+	<span class="hljs-built_in">trace_binder_update_page_range</span>(alloc, allocate, start, end);
+
+	<span class="hljs-keyword">if</span> (allocate == <span class="hljs-number">0</span>)
+		<span class="hljs-keyword">goto</span> free_range;
+
+    <span class="hljs-comment">// binder_alloc.pages 是 binder_lru_page 类型的数组，表示内核物理内存空间，用以在应用进程和 binder 之间传输数据</span>
+	<span class="hljs-comment">// binder 按页大小（PAGE_SIZE）管理这块物理内存空间，数组索引代表第几页，binder_lru_page.page_ptr 指向物理页的地址</span>
+	<span class="hljs-comment">// 早在 binder_alloc_mmap_handler() 时就已经按应用进程 mmap 的大小（1M）初始化了这个数组，参看章节【binder_mmap】</span>
+	<span class="hljs-comment">// 这里是看虚拟内存空间 [start, end] 有没映射至内核物理地址页，没有的话用 need_mm 标识需要映射</span>
+	<span class="hljs-keyword">for</span> (page_addr = start; page_addr &lt; end; page_addr += PAGE_SIZE) &#123;
+		page = &amp;alloc-&gt;pages[(page_addr - alloc-&gt;buffer) / PAGE_SIZE];
+		<span class="hljs-keyword">if</span> (!page-&gt;page_ptr) &#123;
+			need_mm = <span class="hljs-literal">true</span>;
+			<span class="hljs-keyword">break</span>;
+		&#125;
+	&#125;
+
+	<span class="hljs-keyword">if</span> (need_mm &amp;&amp; <span class="hljs-built_in">mmget_not_zero</span>(alloc-&gt;mm))
+		mm = alloc-&gt;mm;
+
+    <span class="hljs-comment">// 通过应用进程虚拟内存起始地址找到这块虚存的描述 vm_area_struct</span>
+	<span class="hljs-keyword">if</span> (mm) &#123;
+		<span class="hljs-built_in">mmap_read_lock</span>(mm);
+		vma = <span class="hljs-built_in">vma_lookup</span>(mm, alloc-&gt;vma_addr);
+	&#125;
+
+	<span class="hljs-keyword">if</span> (!vma &amp;&amp; need_mm) &#123;
+		<span class="hljs-built_in">binder_alloc_debug</span>(BINDER_DEBUG_USER_ERROR,
+				   <span class="hljs-string">&quot;%d: binder_alloc_buf failed to map pages in userspace, no vma\n&quot;</span>,
+				   alloc-&gt;pid);
+		<span class="hljs-keyword">goto</span> err_no_vma;
+	&#125;
+
+    <span class="hljs-comment">// 一页页地映射应用进程虚存地址空间 [start, end]</span>
+	<span class="hljs-comment">// 这块虚存是在 [alloc-&gt;buffer, alloc-&gt;buffer + alloc.buffer_size] 区间内的，参看章节【binder_mmap】</span>
+	<span class="hljs-keyword">for</span> (page_addr = start; page_addr &lt; end; page_addr += PAGE_SIZE) &#123;
+		<span class="hljs-type">int</span> ret;
+		<span class="hljs-type">bool</span> on_lru;
+		<span class="hljs-type">size_t</span> index;
+
+        <span class="hljs-comment">// 算出这页虚存对应哪页物理内存</span>
+		index = (page_addr - alloc-&gt;buffer) / PAGE_SIZE;
+		page = &amp;alloc-&gt;pages[index];
+
+		<span class="hljs-keyword">if</span> (page-&gt;page_ptr) &#123;  <span class="hljs-comment">// 物理页已分配则跳过</span>
+			<span class="hljs-built_in">trace_binder_alloc_lru_start</span>(alloc, index);
+
+			on_lru = <span class="hljs-built_in">list_lru_del</span>(&amp;binder_alloc_lru, &amp;page-&gt;lru);
+			<span class="hljs-built_in">WARN_ON</span>(!on_lru);
+
+			<span class="hljs-built_in">trace_binder_alloc_lru_end</span>(alloc, index);
+			<span class="hljs-keyword">continue</span>;
+		&#125;
+
+		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">WARN_ON</span>(!vma))
+			<span class="hljs-keyword">goto</span> err_page_ptr_cleared;
+
+        <span class="hljs-comment">// 真正在内核物理内存空间分配一页物理页</span>
+		<span class="hljs-comment">// 对应章节【指导思想】里的步骤四</span>
+		<span class="hljs-built_in">trace_binder_alloc_page_start</span>(alloc, index);
+		page-&gt;page_ptr = <span class="hljs-built_in">alloc_page</span>(GFP_KERNEL |
+					    __GFP_HIGHMEM |
+					    __GFP_ZERO);
+		<span class="hljs-keyword">if</span> (!page-&gt;page_ptr) &#123;
+			<span class="hljs-built_in">pr_err</span>(<span class="hljs-string">&quot;%d: binder_alloc_buf failed for page at %pK\n&quot;</span>,
+				alloc-&gt;pid, page_addr);
+			<span class="hljs-keyword">goto</span> err_alloc_page_failed;
+		&#125;
+		page-&gt;alloc = alloc;
+		<span class="hljs-built_in">INIT_LIST_HEAD</span>(&amp;page-&gt;lru);
+
+        <span class="hljs-comment">// 然后将应用进程虚存页映射到内核物理页 </span>
+		<span class="hljs-comment">// 对应章节【指导思想】里的步骤五</span>
+		user_page_addr = (<span class="hljs-type">uintptr_t</span>)page_addr;
+		ret = <span class="hljs-built_in">vm_insert_page</span>(vma, user_page_addr, page[<span class="hljs-number">0</span>].page_ptr);
+		<span class="hljs-keyword">if</span> (ret) &#123;
+			<span class="hljs-built_in">pr_err</span>(<span class="hljs-string">&quot;%d: binder_alloc_buf failed to map page at %lx in userspace\n&quot;</span>,
+			       alloc-&gt;pid, user_page_addr);
+			<span class="hljs-keyword">goto</span> err_vm_insert_page_failed;
+		&#125;
+
+		<span class="hljs-keyword">if</span> (index + <span class="hljs-number">1</span> &gt; alloc-&gt;pages_high)
+			alloc-&gt;pages_high = index + <span class="hljs-number">1</span>;
+
+		<span class="hljs-built_in">trace_binder_alloc_page_end</span>(alloc, index);
+	&#125;
+	<span class="hljs-keyword">if</span> (mm) &#123;
+		<span class="hljs-built_in">mmap_read_unlock</span>(mm);
+		<span class="hljs-built_in">mmput</span>(mm);
+	&#125;
+	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+
+<span class="hljs-comment">// 看下是如何取消映射的</span>
+<span class="hljs-comment">// 依然是按页大小（PAGE_SIZE）遍历应用进程虚存空间 [start, end]，这里是从高地址开始</span>
+free_range:
+	<span class="hljs-keyword">for</span> (page_addr = end - PAGE_SIZE; <span class="hljs-number">1</span>; page_addr -= PAGE_SIZE) &#123;
+		<span class="hljs-type">bool</span> ret;
+		<span class="hljs-type">size_t</span> index;
+
+		index = (page_addr - alloc-&gt;buffer) / PAGE_SIZE;
+		page = &amp;alloc-&gt;pages[index];
+
+		<span class="hljs-built_in">trace_binder_free_lru_start</span>(alloc, index);
+
+        <span class="hljs-comment">// list_lru_add 和 list_lru_del 是一套帮助内存 shrink 的 API，目前还没搞清楚它是怎么运行的</span>
+		ret = <span class="hljs-built_in">list_lru_add</span>(&amp;binder_alloc_lru, &amp;page-&gt;lru);
+		<span class="hljs-built_in">WARN_ON</span>(!ret);
+
+		<span class="hljs-built_in">trace_binder_free_lru_end</span>(alloc, index);
+		<span class="hljs-keyword">if</span> (page_addr == start)
+			<span class="hljs-keyword">break</span>;
+		<span class="hljs-keyword">continue</span>;
+
+err_vm_insert_page_failed:
+		__free_page(page-&gt;page_ptr);
+		page-&gt;page_ptr = <span class="hljs-literal">NULL</span>;
+err_alloc_page_failed:
+err_page_ptr_cleared:
+		<span class="hljs-keyword">if</span> (page_addr == start)
+			<span class="hljs-keyword">break</span>;
+	&#125;
+err_no_vma:
+	<span class="hljs-keyword">if</span> (mm) &#123;
+		<span class="hljs-built_in">mmap_read_unlock</span>(mm);
+		<span class="hljs-built_in">mmput</span>(mm);
+	&#125;
+	<span class="hljs-keyword">return</span> vma ? -ENOMEM : -ESRCH;
+&#125;</code></pre></div>
+
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/cyrus-lin/bookmark/issues/46">Binder | 内存拷贝的本质和变迁 - 芦半山 - 稀土掘金</a></li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/12/07/binder-threads/" title="Binder IPC 线程调度模型">
+                        <span class="hidden-mobile">Binder IPC 线程调度模型</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

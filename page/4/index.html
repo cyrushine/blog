@@ -206,6 +206,48 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/2021/06/05/io-and-nio/" target="_self">
+          深入探索 java.io 和 nio
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2021/06/05/io-and-nio/" target="_self">
+        <div>
+          FileInputStream/FileOutputStreamFileInputStream 和 FileOutputStream 都属于“流式” API，就像流水（Stream）一样只能朝着一个方向读写，不能后退 FileInputStream 相当于以只读模式读文件：open(O_RDONLY) -&gt; read -&gt; close(fd) FileOutputStream 相当于以
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-06-05 04:00" pubdate>
+              2021-06-05
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/ART/">#ART</a>
+            
+              <a href="/tags/nio/">#nio</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/2021/05/28/dalvik-art-heap-gc/" target="_self">
           老罗的 Android 之旅阅读笔记（Dalvik/ART 虚拟机篇）
         </a>
@@ -577,48 +619,6 @@
               <a href="/tags/LeakCanary/">#LeakCanary</a>
             
               <a href="/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%EF%BC%8COOM/">#内存优化，OOM</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2021/04/05/hashmap/" target="_self">
-          HashMap 的一些知识点
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2021/04/05/hashmap/" target="_self">
-        <div>
-          HashMap 的桶由链表变为红黑树（树化）的过程红黑树的特性 节点为红色或者黑色 根节点必须是黑的 红色节点的左右子节点必须为黑色 一个节点到叶子节点的每条路径必须包含相同数目的黑色节点  颜色变换和两种选择添加新节点后，因为新节点总是红色的，那么会有几种情况出现：  新节点是根节点，也就是说树是空的，根据规则二，把新节点设为黑色即可 新节点的父节点是黑色，或者父节点是根，满足规则 父节点是红色
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2021-04-05 04:00" pubdate>
-              2021-04-05
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/HashMap/">#HashMap</a>
-            
-              <a href="/tags/%E7%BA%A2%E9%BB%91%E6%A0%91/">#红黑树</a>
             
           </div>
         
