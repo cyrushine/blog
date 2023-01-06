@@ -25,9 +25,11 @@ date: 2022-12-29 12:00:00 +0800
 
 ## 一次拷贝
 
-传统 IPC 一般是进程 A 执行系统调用陷入内核，将数据从进程 A 内存空间拷贝至内核，进程 B 为了读取数据需要执行系统调用陷入内核，将数据从内核拷贝至进程 B 内存空间，那么一共是两次内存拷贝和两次用户态内核态切换
+传统 IPC 一般是进程 A 执行系统调用陷入内核，将数据从进程 A 内存空间拷贝至内核，进程 B 为了读取数据需要执行系统调用陷入内核，内核将数据拷贝至进程 B 内存空间，那么一共是两次内存拷贝和两次用户态内核态切换
 
-Binder IPC 的第一次内存拷贝同传统 IPC，也是将数据从从进程 A 内存空间拷贝至内核，但 Binder IPC 不需要第二次内存拷贝，因为它将进程 B 内存空间里指向数据的虚存映射至内核里保存数据的内核物理内存，这里进程 B 读取到的数据其实是第一次拷贝至内核的那份数据
+Binder IPC 的第一次内存拷贝同传统 IPC，也是将数据从从进程 A 内存空间拷贝至内核，但 Binder IPC 不需要第二次内存拷贝，因为它将进程 B 内存空间里指向数据的虚存映射至内核里保存数据的内核物理内存，这里进程 B 读取到的数据其实是第一次拷贝至内核的那份数据，所以是一次内存拷贝和两次用户态内核态切换
+
+注意这里说的只需 *一次拷贝* 指的是一次 Binder IPC，而一次 Binder 方法调用也即 Binder RPC 需要两次 IPC：发送请求和接收响应，所以一次 Binder RPC 其实包含了两次 IPC 也即两次内存拷贝（四次用户态内核态的切换）
 
 # client write request
 
@@ -401,239 +403,22 @@ static void binder_transaction(struct binder_proc *proc,
 
 # server read request
 
-在上一章节 [client write request](#client-write-request) 的 `binder_transaction` 里介绍过，request 将被拷贝至内核物理内存，然后将 server 进程的虚存 `binder_transaction->buffer->user_data` 映射至内核物理内存
+在上一章节 [client write request](#client-write-request) 里，binder 已经把 request 从 client 进程拷贝至内核，并将 server 进程内的一块虚存映射至内核里的 request，下面看看 server 收到了什么、如何处理 request 数据
 
 ```cpp
-status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
-{
-    uint32_t cmd;
-    int32_t err;
-
-    while (1) {
-        if ((err=talkWithDriver()) < NO_ERROR) break;
-        err = mIn.errorCheck();
-        if (err < NO_ERROR) break;
-        if (mIn.dataAvail() == 0) continue;
-
-        cmd = (uint32_t)mIn.readInt32();
-
-        IF_LOG_COMMANDS() {
-            std::ostringstream logStream;
-            logStream << "Processing waitForResponse Command: " << getReturnString(cmd) << "\n";
-            std::string message = logStream.str();
-            ALOGI("%s", message.c_str());
-        }
-
-        switch (cmd) {
-        case BR_ONEWAY_SPAM_SUSPECT:
-            ALOGE("Process seems to be sending too many oneway calls.");
-            CallStack::logStack("oneway spamming", CallStack::getCurrent().get(),
-                    ANDROID_LOG_ERROR);
-            [[fallthrough]];
-        case BR_TRANSACTION_COMPLETE:
-            if (!reply && !acquireResult) goto finish;
-            break;
-
-        case BR_TRANSACTION_PENDING_FROZEN:
-            ALOGW("Sending oneway calls to frozen process.");
-            goto finish;
-
-        case BR_DEAD_REPLY:
-            err = DEAD_OBJECT;
-            goto finish;
-
-        case BR_FAILED_REPLY:
-            err = FAILED_TRANSACTION;
-            goto finish;
-
-        case BR_FROZEN_REPLY:
-            err = FAILED_TRANSACTION;
-            goto finish;
-
-        case BR_ACQUIRE_RESULT:
-            {
-                ALOG_ASSERT(acquireResult != NULL, "Unexpected brACQUIRE_RESULT");
-                const int32_t result = mIn.readInt32();
-                if (!acquireResult) continue;
-                *acquireResult = result ? NO_ERROR : INVALID_OPERATION;
-            }
-            goto finish;
-
-        case BR_REPLY:
-            {
-                binder_transaction_data tr;
-                err = mIn.read(&tr, sizeof(tr));
-                ALOG_ASSERT(err == NO_ERROR, "Not enough command data for brREPLY");
-                if (err != NO_ERROR) goto finish;
-
-                if (reply) {
-                    if ((tr.flags & TF_STATUS_CODE) == 0) {
-                        reply->ipcSetDataReference(
-                            reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
-                            tr.data_size,
-                            reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
-                            tr.offsets_size/sizeof(binder_size_t),
-                            freeBuffer);
-                    } else {
-                        err = *reinterpret_cast<const status_t*>(tr.data.ptr.buffer);
-                        freeBuffer(reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
-                                   tr.data_size,
-                                   reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
-                                   tr.offsets_size / sizeof(binder_size_t));
-                    }
-                } else {
-                    freeBuffer(reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer), tr.data_size,
-                               reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
-                               tr.offsets_size / sizeof(binder_size_t));
-                    continue;
-                }
-            }
-            goto finish;
-
-        default:
-            err = executeCommand(cmd);
-            if (err != NO_ERROR) goto finish;
-            break;
-        }
-    }
-
-finish:
-    if (err != NO_ERROR) {
-        if (acquireResult) *acquireResult = err;
-        if (reply) reply->setError(err);
-        mLastError = err;
-        logExtendedError();
-    }
-
-    return err;
-}
-
-status_t IPCThreadState::talkWithDriver(bool doReceive)
-{
-    if (mProcess->mDriverFD < 0) {
-        return -EBADF;
-    }
-
-    binder_write_read bwr;
-
-    // Is the read buffer empty?
-    const bool needRead = mIn.dataPosition() >= mIn.dataSize();
-
-    // We don't want to write anything if we are still reading
-    // from data left in the input buffer and the caller
-    // has requested to read the next data.
-    const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
-
-    bwr.write_size = outAvail;
-    bwr.write_buffer = (uintptr_t)mOut.data();
-
-    // This is what we'll read.
-    if (doReceive && needRead) {
-        bwr.read_size = mIn.dataCapacity();
-        bwr.read_buffer = (uintptr_t)mIn.data();
-    } else {
-        bwr.read_size = 0;
-        bwr.read_buffer = 0;
-    }
-
-    IF_LOG_COMMANDS() {
-        std::ostringstream logStream;
-        if (outAvail != 0) {
-            logStream << "Sending commands to driver: ";
-            const void* cmds = (const void*)bwr.write_buffer;
-            const void* end = ((const uint8_t*)cmds) + bwr.write_size;
-            logStream << "\t" << HexDump(cmds, bwr.write_size) << "\n";
-            while (cmds < end) cmds = printCommand(logStream, cmds);
-        }
-        logStream << "Size of receive buffer: " << bwr.read_size << ", needRead: " << needRead
-                  << ", doReceive: " << doReceive << "\n";
-
-        std::string message = logStream.str();
-        ALOGI("%s", message.c_str());
-    }
-
-    // Return immediately if there is nothing to do.
-    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
-
-    bwr.write_consumed = 0;
-    bwr.read_consumed = 0;
-    status_t err;
-    do {
-        IF_LOG_COMMANDS() {
-            std::ostringstream logStream;
-            logStream << "About to read/write, write size = " << mOut.dataSize() << "\n";
-            std::string message = logStream.str();
-            ALOGI("%s", message.c_str());
-        }
-#if defined(__ANDROID__)
-        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
-            err = NO_ERROR;
-        else
-            err = -errno;
-#else
-        err = INVALID_OPERATION;
-#endif
-        if (mProcess->mDriverFD < 0) {
-            err = -EBADF;
-        }
-        IF_LOG_COMMANDS() {
-            std::ostringstream logStream;
-            logStream << "Finished read/write, write size = " << mOut.dataSize() << "\n";
-            std::string message = logStream.str();
-            ALOGI("%s", message.c_str());
-        }
-    } while (err == -EINTR);
-
-    IF_LOG_COMMANDS() {
-        std::ostringstream logStream;
-        logStream << "Our err: " << (void*)(intptr_t)err
-                  << ", write consumed: " << bwr.write_consumed << " (of " << mOut.dataSize()
-                  << "), read consumed: " << bwr.read_consumed << "\n";
-        std::string message = logStream.str();
-        ALOGI("%s", message.c_str());
-    }
-
-    if (err >= NO_ERROR) {
-        if (bwr.write_consumed > 0) {
-            if (bwr.write_consumed < mOut.dataSize())
-                LOG_ALWAYS_FATAL("Driver did not consume write buffer. "
-                                 "err: %s consumed: %zu of %zu",
-                                 statusToString(err).c_str(),
-                                 (size_t)bwr.write_consumed,
-                                 mOut.dataSize());
-            else {
-                mOut.setDataSize(0);
-                processPostWriteDerefs();
-            }
-        }
-        if (bwr.read_consumed > 0) {
-            mIn.setDataSize(bwr.read_consumed);
-            mIn.setDataPosition(0);
-        }
-        IF_LOG_COMMANDS() {
-            std::ostringstream logStream;
-            logStream << "Remaining data size: " << mOut.dataSize() << "\n";
-            logStream << "Received commands from driver: ";
-            const void* cmds = mIn.data();
-            const void* end = mIn.data() + mIn.dataSize();
-            logStream << "\t" << HexDump(cmds, mIn.dataSize()) << "\n";
-            while (cmds < end) cmds = printReturnCommand(logStream, cmds);
-            std::string message = logStream.str();
-            ALOGI("%s", message.c_str());
-        }
-        return NO_ERROR;
-    }
-
-    return err;
-}
-
+// 在【Binder IPC 线程调度模型】里讲过：
+// server binder 线程先往 binder 发送数据（binder_thread_write），如果有的话
+// 然后读取 binder 发送过来的数据（binder_thread_read），如果没有数据需要处理则 binder 线程会阻塞在 binder_wait_for_work（让渡 CPU）
+// 那么 binder 将 request（BINDER_WORK_TRANSACTION） 发送至 server 进程的 todo list，server binder 线程将被唤醒
 static int binder_thread_read(struct binder_proc *proc,
 			      struct binder_thread *thread,
-			      binder_uintptr_t binder_buffer, size_t size,
-			      binder_size_t *consumed, int non_block)
+			      binder_uintptr_t binder_buffer, /* 应用进程内存地址，实际上是 IPCThreadState->mIn 这块内存空间，看 talkWithDriver */
+				  size_t size,                    /* IPCThreadState->mIn 的大小 */
+			      binder_size_t *consumed         /* 输出，表示往 binder_buffer 里写入了多少内容 */, 
+				  int non_block)
 {
-	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
-	void __user *ptr = buffer + *consumed;
+	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;  // 应用进程的 IPCThreadState->mIn 这块内存空间
+	void __user *ptr = buffer + *consumed;                          // 应用进程的 IPCThreadState->mIn 这块内存空间
 	void __user *end = buffer + size;
 
 	int ret = 0;
@@ -671,7 +456,7 @@ retry:
 		if (!binder_has_work(thread, wait_for_proc_work))
 			ret = -EAGAIN;
 	} else {
-		ret = binder_wait_for_work(thread, wait_for_proc_work);
+		ret = binder_wait_for_work(thread, wait_for_proc_work);  // binder thread 将在这里被唤醒并继续
 	}
 
 	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
@@ -685,78 +470,22 @@ retry:
 		struct binder_transaction_data *trd = &tr.transaction_data;
 		struct binder_transaction *t = NULL;
 		struct binder_work *w = NULL;
+		size_t trsize = sizeof(*trd);
 
 		w = binder_dequeue_work_head_ilocked(list);
 		switch (w->type) {
-		case BINDER_WORK_TRANSACTION: {
+		case BINDER_WORK_TRANSACTION: {    // 收到 binder 给的 request
 			binder_inner_proc_unlock(proc);
 			t = container_of(w, struct binder_transaction, work);
 		} break;
 		// ...
-		}
 
-		if (!t)
-			continue;
-
-		BUG_ON(t->buffer == NULL);
-		if (t->buffer->target_node) {
-			struct binder_node *target_node = t->buffer->target_node;
-
-			trd->target.ptr = target_node->ptr;
-			trd->cookie =  target_node->cookie;
-			binder_transaction_priority(thread, t, target_node);
-			cmd = BR_TRANSACTION;
-		} else {
-			trd->target.ptr = 0;
-			trd->cookie = 0;
-			cmd = BR_REPLY;
-		}
-		trd->code = t->code;
-		trd->flags = t->flags;
-		trd->sender_euid = from_kuid(current_user_ns(), t->sender_euid);
-
-		t_from = binder_get_txn_from(t);
-		if (t_from) {
-			struct task_struct *sender = t_from->proc->tsk;
-
-			trd->sender_pid =
-				task_tgid_nr_ns(sender,
-						task_active_pid_ns(current));
-			trace_android_vh_sync_txn_recvd(thread->task, t_from->task);
-		} else {
-			trd->sender_pid = 0;
-		}
-
-		ret = binder_apply_fd_fixups(proc, t);
-		if (ret) {
-			struct binder_buffer *buffer = t->buffer;
-			bool oneway = !!(t->flags & TF_ONE_WAY);
-			int tid = t->debug_id;
-
-			if (t_from)
-				binder_thread_dec_tmpref(t_from);
-			buffer->transaction = NULL;
-			binder_cleanup_transaction(t, "fd fixups failed",
-						   BR_FAILED_REPLY);
-			binder_free_buf(proc, thread, buffer, true);
-			binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
-				     "%d:%d %stransaction %d fd fixups failed %d/%d, line %d\n",
-				     proc->pid, thread->pid,
-				     oneway ? "async " :
-					(cmd == BR_REPLY ? "reply " : ""),
-				     tid, BR_FAILED_REPLY, ret, __LINE__);
-			if (cmd == BR_REPLY) {
-				cmd = BR_FAILED_REPLY;
-				if (put_user(cmd, (uint32_t __user *)ptr))
-					return -EFAULT;
-				ptr += sizeof(uint32_t);
-				binder_stat_br(proc, thread, cmd);
-				break;
-			}
-			continue;
-		}
 		trd->data_size = t->buffer->data_size;
 		trd->offsets_size = t->buffer->offsets_size;
+		// 在章节【client write request】里的 binder_transaction 里说过
+		// binder_transaction->binder_buffer 是从进程 B 的空闲虚存空间里 binder_alloc->free_buffers 挑选的满足大小的一块虚存
+		// 也即 binder_transaction->binder_buffer->user_data 指向 server 进程内的虚存
+		// 而这块虚存映射到内核内存空间里的物理内存（request 拷贝了一次到内核）
 		trd->data.ptr.buffer = (uintptr_t)t->buffer->user_data;
 		trd->data.ptr.offsets = trd->data.ptr.buffer +
 					ALIGN(t->buffer->data_size,
@@ -767,6 +496,8 @@ retry:
 			cmd = BR_TRANSACTION_SEC_CTX;
 			trsize = sizeof(tr);
 		}
+
+		// 往应用进程内存地址 buffer 写入 BR_TRANSACTION，实际上是应用进程的 IPCThreadState->mIn 这块内存空间
 		if (put_user(cmd, (uint32_t __user *)ptr)) {
 			if (t_from)
 				binder_thread_dec_tmpref(t_from);
@@ -777,6 +508,8 @@ retry:
 			return -EFAULT;
 		}
 		ptr += sizeof(uint32_t);
+
+		// 往应用进程内存地址 buffer 写入 binder_transaction_data
 		if (copy_to_user(ptr, &tr, trsize)) {
 			if (t_from)
 				binder_thread_dec_tmpref(t_from);
@@ -786,60 +519,157 @@ retry:
 
 			return -EFAULT;
 		}
-		ptr += trsize;
-
-		trace_binder_transaction_received(t);
-		binder_stat_br(proc, thread, cmd);
-		binder_debug(BINDER_DEBUG_TRANSACTION,
-			     "%d:%d %s %d %d:%d, cmd %u size %zd-%zd ptr %016llx-%016llx\n",
-			     proc->pid, thread->pid,
-			     (cmd == BR_TRANSACTION) ? "BR_TRANSACTION" :
-				(cmd == BR_TRANSACTION_SEC_CTX) ?
-				     "BR_TRANSACTION_SEC_CTX" : "BR_REPLY",
-			     t->debug_id, t_from ? t_from->proc->pid : 0,
-			     t_from ? t_from->pid : 0, cmd,
-			     t->buffer->data_size, t->buffer->offsets_size,
-			     (u64)trd->data.ptr.buffer,
-			     (u64)trd->data.ptr.offsets);
-
-		if (t_from)
-			binder_thread_dec_tmpref(t_from);
-		t->buffer->allow_user_free = 1;
-		if (cmd != BR_REPLY && !(t->flags & TF_ONE_WAY)) {
-			binder_inner_proc_lock(thread->proc);
-			t->to_parent = thread->transaction_stack;
-			t->to_thread = thread;
-			thread->transaction_stack = t;
-			binder_inner_proc_unlock(thread->proc);
-		} else {
-			binder_free_transaction(t);
-		}
-		break;
-	}
-
-done:
-
-	*consumed = ptr - buffer;
-	binder_inner_proc_lock(proc);
-	if (proc->requested_threads == 0 &&
-	    list_empty(&thread->proc->waiting_threads) &&
-	    proc->requested_threads_started < proc->max_threads &&
-	    (thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
-	     BINDER_LOOPER_STATE_ENTERED)) /* the user-space code fails to */
-	     /*spawn a new thread if we leave this out */) {
-		proc->requested_threads++;
-		binder_inner_proc_unlock(proc);
-		binder_debug(BINDER_DEBUG_THREADS,
-			     "%d:%d BR_SPAWN_LOOPER\n",
-			     proc->pid, thread->pid);
-		if (put_user(BR_SPAWN_LOOPER, (uint32_t __user *)buffer))
-			return -EFAULT;
-		binder_stat_br(proc, thread, BR_SPAWN_LOOPER);
-	} else
-		binder_inner_proc_unlock(proc);
-	return 0;
+		// ...
 }
 
+status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
+{
+    uint32_t cmd;
+    int32_t err;
+
+    while (1) {
+        if ((err=talkWithDriver()) < NO_ERROR) break;  // binder 给过来的数据被写入至 IPCThreadState->mIn
+        err = mIn.errorCheck();
+        if (err < NO_ERROR) break;
+        if (mIn.dataAvail() == 0) continue;
+
+        cmd = (uint32_t)mIn.readInt32();
+
+        switch (cmd) {
+        // ...
+        default:
+            err = executeCommand(cmd);
+            if (err != NO_ERROR) goto finish;
+            break;
+        }
+    }
+
+finish:
+    if (err != NO_ERROR) {
+        if (acquireResult) *acquireResult = err;
+        if (reply) reply->setError(err);
+        mLastError = err;
+        logExtendedError();
+    }
+
+    return err;
+}
+
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    BBinder* obj;
+    RefBase::weakref_type* refs;
+    status_t result = NO_ERROR;
+
+    switch ((uint32_t)cmd) {
+    // ...
+    case BR_TRANSACTION_SEC_CTX:
+    case BR_TRANSACTION:
+        {
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data& tr = tr_secctx.transaction_data;
+
+            if (cmd == (int) BR_TRANSACTION_SEC_CTX) {
+                result = mIn.read(&tr_secctx, sizeof(tr_secctx));
+            } else {
+                result = mIn.read(&tr, sizeof(tr));
+                tr_secctx.secctx = 0;
+            }
+
+            ALOG_ASSERT(result == NO_ERROR,
+                "Not enough command data for brTRANSACTION");
+            if (result != NO_ERROR) break;
+
+            // tr.data.ptr.buffer 是此应用进程的虚存地址，实际映射至内核物理内存里保存的 request 拷贝
+			// 用 Parcel 包装 tr.data.ptr.buffer 这块地址，然后交由 binder server impl 按照 aidl 协议逐个读取参数
+            Parcel buffer;
+            buffer.ipcSetDataReference(
+                reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                tr.data_size,
+                reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                tr.offsets_size/sizeof(binder_size_t), freeBuffer);
+            // ...
+
+			// 还记得 BBinder 吗？赶紧回顾下【Binder IPC 过程中常用的对象和类】
+			Parcel reply;
+            if (tr.target.ptr) {
+                // We only have a weak reference on the target object, so we must first try to
+                // safely acquire a strong reference before doing anything else with it.
+                if (reinterpret_cast<RefBase::weakref_type*>(
+                        tr.target.ptr)->attemptIncStrong(this)) {
+                    error = reinterpret_cast<BBinder*>(tr.cookie)->transact(tr.code, buffer,
+                            &reply, tr.flags);
+                    reinterpret_cast<BBinder*>(tr.cookie)->decStrong(this);
+                } else {
+                    error = UNKNOWN_TRANSACTION;
+                }
+
+            } else {
+                error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
+            }
+
+            // 如果不是 one way 还需要将 response/reply 发送给 client
+            if ((tr.flags & TF_ONE_WAY) == 0) {
+                LOG_ONEWAY("Sending reply to %d!", mCallingPid);
+                if (error < NO_ERROR) reply.setError(error);
+
+                // b/238777741: clear buffer before we send the reply.
+                // Otherwise, there is a race where the client may
+                // receive the reply and send another transaction
+                // here and the space used by this transaction won't
+                // be freed for the client.
+                buffer.setDataSize(0);
+
+                constexpr uint32_t kForwardReplyFlags = TF_CLEAR_BUF;
+                sendReply(reply, (tr.flags & kForwardReplyFlags));
+            } else { //...
+}
+
+status_t IPCThreadState::talkWithDriver(bool doReceive)
+{
+    if (mProcess->mDriverFD < 0) {
+        return -EBADF;
+    }
+
+    binder_write_read bwr;
+
+    // Is the read buffer empty?
+    const bool needRead = mIn.dataPosition() >= mIn.dataSize();
+
+    // We don't want to write anything if we are still reading
+    // from data left in the input buffer and the caller
+    // has requested to read the next data.
+    const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
+
+    bwr.write_size = outAvail;
+    bwr.write_buffer = (uintptr_t)mOut.data();
+
+    // binder_write_read.read_buffer 实际上指向 mIn
+    if (doReceive && needRead) {
+        bwr.read_size = mIn.dataCapacity();
+        bwr.read_buffer = (uintptr_t)mIn.data();
+    } else {
+        bwr.read_size = 0;
+        bwr.read_buffer = 0;
+    }
+
+    // Return immediately if there is nothing to do.
+    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
+
+    bwr.write_consumed = 0;
+    bwr.read_consumed = 0;
+    status_t err;
+    do {
+        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
+            err = NO_ERROR;
+        else
+            err = -errno;
+        if (mProcess->mDriverFD < 0) {
+            err = -EBADF;
+        }
+    } while (err == -EINTR);
+	// ...
+}
 ```
 
 # 映射进程虚存与内核内存
