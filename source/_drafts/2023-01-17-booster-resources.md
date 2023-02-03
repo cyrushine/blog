@@ -123,11 +123,11 @@ apply plugin: 'com.didiglobal.booster'
 
 # webp 格式化
 
+## 注册 cwebp gradle task
+
 [variant](https://developer.android.com/studio/build/build-variants) 指代构建的一个输出：apk or jar，它是 build type 和 product flavor 的组合，比如 demoDebug、productRelease 等等 
 
 `VariantProcessor` 是 booster API，本模块入口 `CwebpCompressionVariantProcessor` 通过 [AutoService](#google-autoservice) 注册为它的一个实现，然后 booster-gradle-plugin 在运行时通过 [ServiceLoader](#spi) 发现并执行 cwebp 模块
-
-## 注册 cwebp gradle task
 
 实现类是 `CwebpCompressOpaqueFlatImages`、`CwebpCompressFlatImages`、`CwebpCompressOpaqueImages` or `CwebpCompressImages`（根据 aapt2 和 alpha 的支持情况四选一）
 
@@ -325,6 +325,16 @@ open class Command(
 
 ## cwebp task
 
+- 找到数据源：resource 文件集
+
+在 merge resource 之后
+
+- 过滤出待处理的图片资源集
+
+- cwebp 转换图片格式
+
+- aapt2 编译
+
 ```kotlin
 // 继承关系
 CwebpCompressOpaqueFlatImages
@@ -377,6 +387,9 @@ internal abstract class CwebpCompressOpaqueFlatImages {
             }
         }
 
+        // images() == variant.mergedRes.search(if (project.isAapt2Enabled) ::isFlatPngExceptRaw else ::isPngExceptRaw)
+        // variant.mergedRes 是数据源
+        // if (project.isAapt2Enabled) ::isFlatPngExceptRaw else ::isPngExceptRaw 是主要的过滤器
         images().parallelStream().map {
             it to it.metadata
         }.filter(this::includes).filter(isNotLauncherIcon).filter {
@@ -391,6 +404,7 @@ internal abstract class CwebpCompressOpaqueFlatImages {
             it.output.parentFile.mkdirs()  // 为目标文件创建必须的目录
             val s0 = File(it.metadata.sourcePath).length()
 
+            // cwebp 进行格式转换
             // Executes an external command.
             // The given action configures a {@link org.gradle.process.ExecSpec}, which is used to launch the process.
             // This method blocks until the process terminates, with its result being returned.
@@ -410,6 +424,8 @@ internal abstract class CwebpCompressOpaqueFlatImages {
                         results.add(CompressionResult(it.input, s0, s0, File(it.metadata.sourcePath)))
                         it.output.delete()
                     } else {
+
+                        // aapt2 编译
                         val rcAapt2 = project.exec { spec ->
                             spec.isIgnoreExitValue = true
                             spec.commandLine = it.aapt2
@@ -424,7 +440,7 @@ internal abstract class CwebpCompressOpaqueFlatImages {
                         }
                     }
                 }
-                else -> {  // 失败
+                else -> {  // 格式转换失败
                     logger.error("${CSI_RED}Command `${it.cmdline.joinToString(" ")}` exited with non-zero value ${rc.exitValue}$CSI_RESET")
                     results.add(CompressionResult(it.input, s0, s0, File(it.metadata.sourcePath)))
                     it.output.delete()
