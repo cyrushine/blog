@@ -25,11 +25,16 @@
 <meta property="og:site_name" content="Cyrus Blog">
 <meta property="og:description" content="https &#x3D; http + tls tcp 三次握手建立连接后，再进行 tls 握手&#x2F;协商得到一个秘钥，然后双方使用这个秘钥加密（对称加密）明文的 http 为密文后再发送，同样双方收到密文后也用这个秘钥解密得到明文 对称加密 使用同一秘钥加密和解密，性能高，http 明文就是通过对称加密后才进行传输的，对称加密算法有：DES、3DES、AES 等；但秘钥交换是个问题，所以需要非对称加密的帮助">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-03-30-https/dh.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-03-30-https/cert_chain.png">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-03-30-https/cert_structure.awebp">
+<meta property="og:image" content="https://www.dalvik.work/image/2021-03-30-https/ssl_handshake.awebp">
 <meta property="article:published_time" content="2021-03-30T04:00:00.000Z">
-<meta property="article:modified_time" content="2023-02-03T10:16:53.199Z">
+<meta property="article:modified_time" content="2023-02-08T09:08:22.717Z">
 <meta property="article:author" content="Cyrus">
 <meta property="article:tag" content="https">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.dalvik.work/image/2021-03-30-https/dh.png">
   
   
   
@@ -207,7 +212,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          1.6k 字
+          11k 字
         
       </span>
     
@@ -219,7 +224,7 @@
         
         
           <!-- compatible with older versions-->
-          14 分钟
+          96 分钟
         
       </span>
     
@@ -266,30 +271,350 @@
 <p><code>tcp</code> 三次握手建立连接后，再进行 <code>tls</code> 握手/协商得到一个秘钥，然后双方使用这个秘钥加密（对称加密）明文的 http 为密文后再发送，同样双方收到密文后也用这个秘钥解密得到明文</p>
 <p><strong>对称加密</strong> 使用同一秘钥加密和解密，性能高，http 明文就是通过对称加密后才进行传输的，对称加密算法有：<code>DES</code>、<code>3DES</code>、<code>AES</code> 等；但秘钥交换是个问题，所以需要非对称加密的帮助</p>
 <p><strong>非对称加密</strong> 公钥加密则私钥解密，私钥加密则公钥解密，性能比对称加密要差，不适合加解密大量的数据，但很适合于解决秘钥交换的问题，常用的有：<code>RSA</code>、<code>DSA</code> 等</p>
-<h2 id="tls-协商的过程"><a href="#tls-协商的过程" class="headerlink" title="tls 协商的过程"></a>tls 协商的过程</h2><h3 id="Client-Hello"><a href="#Client-Hello" class="headerlink" title="Client Hello"></a>Client Hello</h3><p>客户端发送：<strong>客户端随机数</strong>（client random）和客户端支持的 <strong>加密套件列表</strong></p>
-<h3 id="Server-Hello"><a href="#Server-Hello" class="headerlink" title="Server Hello"></a>Server Hello</h3><p>服务端从客户端支持的加密套件中选择一个，然后发送：<strong>服务端随机数</strong>（server random）和 <strong>选用的套件</strong>，比如 <code>TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384</code> 就是：</p>
+<h1 id="tls-协商-握手"><a href="#tls-协商-握手" class="headerlink" title="tls 协商/握手"></a>tls 协商/握手</h1><ol>
+<li>Client Hello</li>
+</ol>
+<p>客户端发送：<strong>客户端随机数</strong>（client random）和客户端支持的 <strong>加密套件列表</strong></p>
+<ol start="2">
+<li>Server Hello</li>
+</ol>
+<p>服务端从客户端支持的加密套件中选择一个，然后发送：<strong>服务端随机数</strong>（server random）和 <strong>选用的套件</strong>，比如 <code>TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384</code> 就是：</p>
 <ul>
 <li>密钥协商使用 <code>ECDHE</code></li>
 <li>签名算法使用 <code>RSA</code></li>
 <li>加密 http 明文所使用的对称加密算法是 <code>AES</code>，密钥长度 256，分组模式 <code>GCM</code></li>
 <li>摘要算法使用 <code>SHA384</code></li>
 </ul>
-<h3 id="Server-Certificate"><a href="#Server-Certificate" class="headerlink" title="Server Certificate"></a>Server Certificate</h3><p>服务端发送 <strong>CA 证书</strong></p>
-<h3 id="Server-Key-Exchange"><a href="#Server-Key-Exchange" class="headerlink" title="Server Key Exchange"></a>Server Key Exchange</h3><p>服务端生成一个随机数作为 <strong>服务端椭圆曲线私钥</strong>，选择一个 <strong>椭圆曲线</strong>（比如 named_curve）和 <strong>椭圆曲线基点 G</strong>，根据 G 和服务端椭圆曲线私钥生成 <strong>服务端椭圆曲线公钥</strong></p>
+<ol start="3">
+<li>Server Certificate</li>
+</ol>
+<p>服务端发送 <strong>CA 证书</strong></p>
+<ol start="4">
+<li>Server Key Exchange</li>
+</ol>
+<p>服务端生成一个随机数作为 <strong>服务端椭圆曲线私钥</strong>，选择一个 <strong>椭圆曲线</strong>（比如 named_curve）和 <strong>椭圆曲线基点 G</strong>，根据 G 和服务端椭圆曲线私钥生成 <strong>服务端椭圆曲线公钥</strong></p>
 <p>为了确保服务端椭圆曲线公钥不被篡改，服务端用 RSA + 服务端 CA 私钥给服务端椭圆曲线公钥做个签名 <strong>signature</strong></p>
 <p>最后发送椭圆曲线、G、服务端椭圆曲线公钥和 signature 给客户端</p>
-<h3 id="Server-Hello-Done"><a href="#Server-Hello-Done" class="headerlink" title="Server Hello Done"></a>Server Hello Done</h3><p>服务端告诉客户端我这边的信息已经发送完毕</p>
-<h3 id="Client-Key-Exchange"><a href="#Client-Key-Exchange" class="headerlink" title="Client Key Exchange"></a>Client Key Exchange</h3><p>客户端进行 CA 证书校验；同样生成一个随机数作为 <strong>客户端椭圆曲线私钥</strong>，根据服务端给的 G 和客户端椭圆曲线私钥生成 <strong>客户端椭圆曲线公钥</strong> 发给服务端（服务端 CA 公钥加密签名防篡改）</p>
+<ol start="5">
+<li>Server Hello Done</li>
+</ol>
+<p>服务端告诉客户端我这边的信息已经发送完毕</p>
+<ol start="6">
+<li>Client Key Exchange</li>
+</ol>
+<p>客户端进行 CA 证书校验；同样生成一个随机数作为 <strong>客户端椭圆曲线私钥</strong>，根据服务端给的 G 和客户端椭圆曲线私钥生成 <strong>客户端椭圆曲线公钥</strong> 发给服务端（服务端 CA 公钥加密签名防篡改）</p>
 <p>此时客户端算出椭圆曲线秘钥 = f(客户端椭圆曲线私钥，服务端椭圆曲线公钥)，服务端也算出椭圆曲线秘钥 = f(服务端椭圆曲线私钥，客户端椭圆曲线公钥)</p>
 <p>而两端算出的 <strong>椭圆曲线秘钥</strong> 是一致的，但这还没有结束，对 http 明文进行加密的 <strong>主秘钥</strong> = server random + client random + 椭圆曲线秘钥</p>
-<h3 id="Change-Cipher-Spec"><a href="#Change-Cipher-Spec" class="headerlink" title="Change Cipher Spec"></a>Change Cipher Spec</h3><p>服务端和客户端都通知对方，后续的数据传输将使用 RSA + 主秘钥加密了</p>
-<h3 id="Finish"><a href="#Finish" class="headerlink" title="Finish"></a>Finish</h3><p>第一个由 tls 记录层协议进行加密保护的信息，双方需要验证对方发送的 Finished 信息，保证协商的密钥是可用的，保证协商过程中，没有被篡改</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>https 使用对称加密（比如 <code>RSA</code>）对 http 明文进行加密传输，这个秘钥叫 <strong>主秘钥</strong>，但要确保 <strong>秘钥交换</strong> 过程是安全的；那怎样的交换过程是安全的呢？当然不交换，服务端和客户端各自按照一定的规则生成相同秘钥最安全！</p>
-<p>上面说到主秘钥 = server random + client random + 椭圆曲线秘钥，server random 和 client random 都是公开的不安全的（引入它俩的目的是增加随机性），那么主秘钥的安全性全靠椭圆曲线秘钥了</p>
-<p>客户端椭圆曲线秘钥 = f(客户端椭圆曲线私钥，服务端椭圆曲线公钥)，服务端椭圆曲线秘钥 = f(服务端椭圆曲线私钥，客户端椭圆曲线公钥)，公钥都是公开的所以由私钥确保安全性，而私钥都是随机产生且不经过网络传输的，所以椭圆曲线秘钥是安全的（椭圆曲线的数学特性确保其客户端和服务端算出的是一致的）</p>
-<p>总的来说 <code>ECDHE</code> 靠本地计算替代网络传输保证了秘钥的安全</p>
-<h2 id="提问时间"><a href="#提问时间" class="headerlink" title="提问时间"></a>提问时间</h2><h3 id="怎么证明CA机构的公钥是可信的"><a href="#怎么证明CA机构的公钥是可信的" class="headerlink" title="怎么证明CA机构的公钥是可信的"></a>怎么证明CA机构的公钥是可信的</h3><p>CA 证书是从上到下一级一级地签发下来的，操作系统内置 root CA，可以从下到上逐级确认</p>
-<h3 id="如何防范中间人攻击"><a href="#如何防范中间人攻击" class="headerlink" title="如何防范中间人攻击"></a>如何防范中间人攻击</h3><p>计算报文的 hash，并用服务器的私钥加密生成数字签名；客户端用服务器的公钥解密数字签名得到报文 hash 并与实际计算出的报文 hash 值比对，即可判断出报文有没被修改过</p>
+<ol start="7">
+<li>Change Cipher Spec</li>
+</ol>
+<p>服务端和客户端都通知对方，后续的数据传输将使用 RSA + 主秘钥加密了</p>
+<ol start="8">
+<li>Finish</li>
+</ol>
+<p>第一个由 tls 记录层协议进行加密保护的信息，双方需要验证对方发送的 Finished 信息，保证协商的密钥是可用的，保证协商过程中，没有被篡改</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>https 使用对称加密（比如 <code>RSA</code>）对 http 明文进行加密传输，这个秘钥叫主秘钥，但要确保秘钥交换过程是安全的；那怎样的交换过程是安全的呢？当然不交换，服务端和客户端各自按照一定的规则生成相同秘钥最安全！这个规则就是 <code>密钥协商协议</code></p>
+<blockquote>
+<p>DH（Diffie-Hellman）算法是 Whitfield Diffie 和 Martin Hellman 在 1976 年公布的一种密钥交换算法，它是一种建立密钥的方法而不是加密方法，所以密钥必须和其他一种加密算法结合使用。这种密钥交换技术的目的在于使两个用户安全的协商一个会话密码。Diffie-Hellman 密钥交换算法的有效性依赖于计算离散对数的难度。</p>
+</blockquote>
+<p>总的来说 <code>DH</code> 靠本地计算替代网络传输保证了秘钥的安全</p>
+<p><img src="/image/2021-03-30-https/dh.png" srcset="/image/loading.gif" lazyload alt="秘钥协商协议"></p>
+<h1 id="证书"><a href="#证书" class="headerlink" title="证书"></a>证书</h1><h2 id="分类"><a href="#分类" class="headerlink" title="分类"></a>分类</h2><p>SSL 证书包括 <strong>CA 证书</strong> 和 <strong>用户证书</strong> 两种</p>
+<p>CA 全称 <code>Certification Authority</code>（证书颁发机构），顾名思义是专门给别人颁发证书的机构，它的证书叫做 CA 证书，大部分 CA 证书会被内置到 Android、iOS、Chrome、Firefox 等软件里面并受到信任</p>
+<p>CA 颁发的证书包括 <strong>根证书</strong> 和 <strong>中间证书</strong> 两种：</p>
+<ul>
+<li><p>根证书是根 CA 的证书，是公开密钥基础建设中信任链的起点，一般客户端会内置</p>
+</li>
+<li><p>中间证书，因为根证书太宝贵了，直接颁发风险太大，为了保护根证书，CA 通常会颁发所谓的中间证书。CA 使用它的私钥对中间证书签名使它受到信任。然后 CA 使用中间证书的私钥签署和颁发终端用户 SSL 证书。这个过程可以执行多次，其中一个中间根对另一个中间根进行签名，这样就形成了证书链：根证书 - 中间证书… - 用户证书</p>
+</li>
+</ul>
+<p>用户证书是由 CA 中间证书签发给用户的证书，包含服务器证书和客户端证书</p>
+<ul>
+<li><p>服务器证书，组成 Web 服务器的 SSL 安全功能的唯一的数字标识，通过 CA 签发并为用户提供验证您 Web 站点身份的手段。服务器证书包含详细的身份验证信息如：服务器内容附属的组织、颁发证书的组织以及称为公开密钥的唯一的身份验证文件</p>
+</li>
+<li><p>客户端证书，在双向 https 验证中必须有客户端证书，生成方式同服务器证书一样，单向认证则不需要用到</p>
+</li>
+</ul>
+<p><img src="/image/2021-03-30-https/cert_chain.png" srcset="/image/loading.gif" lazyload alt="证书链"></p>
+<h2 id="文件格式"><a href="#文件格式" class="headerlink" title="文件格式"></a>文件格式</h2><ul>
+<li><p>key：密钥文件，SSL 证书的私钥就包含在其中</p>
+</li>
+<li><p>csr：这个文件里面包含着证书的公钥和其他一些公司信息，通过请求签名之后就可以直接生出证书</p>
+</li>
+<li><p>crt / cert：该文件中也包含了证书的公钥、签名信息以及根据不同类型证书携带不同的认证信息如 IP、域名等</p>
+</li>
+<li><p>pem：该文件相对比较少见，里面包含着证书的私钥以及部分证书信息</p>
+</li>
+</ul>
+<h2 id="结构"><a href="#结构" class="headerlink" title="结构"></a>结构</h2><p><code>Issuer</code> 是颁发机构也即 CA，<code>Subject</code> 是主体也即 CA 认证的对象，一般是域名：mail.google.com、*.cnblogs.com，它们有几个描述字段：</p>
+<ul>
+<li>CN，公用名称（Common Name），一般为域名、ip 地址、单位/组织/公司名</li>
+<li>O，单位名称（Organization Name）</li>
+<li>C，所在国家（Country）</li>
+<li>L，所在城市（Locality）</li>
+<li>S，所在省份（State/Provice）</li>
+<li>E，电子邮件（Email）</li>
+<li>…</li>
+</ul>
+<p><code>Validity</code> 是证书有效期：<code>[Not Before, Not After]</code></p>
+<p>证书中还包含主体的公钥信息 <code>Subject Public Key Info</code>，包括公钥算法和公钥，这样服务器下发证书给客户端时，客户端也就拿到了服务端的公钥</p>
+<p>还有非常重要的、确保证书未被篡改的签名信息 <code>Signature Algorithm</code>，包括签名算法和签名，这是由颁发机构用它的私钥签发的，客户端可以通过 CA 证书里的公钥校验</p>
+<div class="code-wrapper"><pre><code class="hljs shell">// 谷歌邮箱的证书
+<span class="hljs-meta prompt_">$ </span><span class="language-bash">openssl x509 -<span class="hljs-keyword">in</span> ./mail.google.com -noout -text</span>
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            5c:48:a5:bd:db:83:49:69:12:a9:54:9f:08:5d:b1:d5
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = US, O = Google Trust Services LLC, CN = GTS CA 1C3
+        Validity
+            Not Before: Nov  2 13:45:40 2022 GMT
+            Not After : Jan 25 13:45:39 2023 GMT
+        Subject: CN = mail.google.com
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:48:6e:8d:70:27:fd:14:77:98:20:c4:71:c2:18:
+                    83:fe:f7:fe:3d:20:2e:b7:5b:87:31:5d:69:ca:2f:
+                    07:3a:cb:cc:5a:2a:9b:18:26:43:a1:76:5f:92:42:
+                    5e:4e:bf:2e:8c:89:3e:6e:cf:6e:21:74:38:94:d0:
+                    5e:08:bc:ad:0f
+                ASN1 OID: prime256v1
+                NIST CURVE: P-256
+        X509v3 extensions:
+            X509v3 Key Usage: critical
+                Digital Signature
+            X509v3 Extended Key Usage:
+                TLS Web Server Authentication
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 Subject Key Identifier:
+                E1:AF:FF:77:26:9C:2D:37:42:00:C5:30:3A:81:A2:01:90:A8:2C:1F
+            X509v3 Authority Key Identifier:
+                keyid:8A:74:7F:AF:85:CD:EE:95:CD:3D:9C:D0:E2:46:14:F3:71:35:1D:27
+
+            Authority Information Access:
+                OCSP - URI:http://ocsp.pki.goog/gts1c3
+                CA Issuers - URI:http://pki.goog/repo/certs/gts1c3.der
+
+            X509v3 Subject Alternative Name:
+                DNS:mail.google.com, DNS:inbox.google.com
+            X509v3 Certificate Policies:
+                Policy: 2.23.140.1.2.1
+                Policy: 1.3.6.1.4.1.11129.2.5.3
+
+            X509v3 CRL Distribution Points:
+
+                Full Name:
+                  URI:http://crls.pki.goog/gts1c3/QOvJ0N1sT2A.crl
+
+            CT Precertificate SCTs:
+                Signed Certificate Timestamp:
+                    Version   : v1 (0x0)
+                    Log ID    : E8:3E:D0:DA:3E:F5:06:35:32:E7:57:28:BC:89:6B:C9:
+                                03:D3:CB:D1:11:6B:EC:EB:69:E1:77:7D:6D:06:BD:6E
+                    Timestamp : Nov  2 14:45:42.034 2022 GMT
+                    Extensions: none
+                    Signature : ecdsa-with-SHA256
+                                30:45:02:20:55:B9:3F:3A:67:2C:6D:51:09:80:E1:BB:
+                                8D:5B:EF:19:7C:37:B8:4A:A9:D3:A8:D0:0C:07:A5:AE:
+                                F7:15:F3:D2:02:21:00:FB:4E:96:FE:38:FE:27:AF:7E:
+                                63:41:F6:30:9B:66:4E:43:D0:D6:6B:4F:C1:43:68:14:
+                                5D:B6:58:B8:37:28:B4
+                Signed Certificate Timestamp:
+                    Version   : v1 (0x0)
+                    Log ID    : B3:73:77:07:E1:84:50:F8:63:86:D6:05:A9:DC:11:09:
+                                4A:79:2D:B1:67:0C:0B:87:DC:F0:03:0E:79:36:A5:9A
+                    Timestamp : Nov  2 14:45:42.195 2022 GMT
+                    Extensions: none
+                    Signature : ecdsa-with-SHA256
+                                30:46:02:21:00:ED:AB:D5:12:61:88:24:CF:40:C6:45:
+                                9B:C0:29:4D:50:CE:E3:54:4D:05:63:06:CE:46:38:A9:
+                                03:17:5C:11:44:02:21:00:9E:57:54:CE:BC:25:CA:8B:
+                                6C:26:98:52:DF:03:0C:CE:43:46:E9:AA:9B:83:20:F2:
+                                1B:94:FD:52:EB:E1:C1:4B
+    Signature Algorithm: sha256WithRSAEncryption
+         9d:04:e6:b9:2c:a9:77:0a:11:54:28:3e:6f:83:50:a5:87:14:
+         03:ba:cc:85:0f:cb:c8:1f:a9:e8:d0:44:b7:a9:c8:86:98:6c:
+         9a:8e:89:2f:cd:bb:36:82:52:29:2e:28:a8:d3:76:31:5a:71:
+         e5:91:6d:4c:b6:ad:79:d7:a8:c8:a6:ed:ec:09:4b:e0:a4:e4:
+         07:b5:5e:d0:c4:a8:50:92:01:df:53:4d:fd:e5:d0:ac:5f:43:
+         b5:64:d2:a8:f9:1c:2c:aa:f1:0a:d3:69:d4:6d:03:60:63:b0:
+         f2:0b:5a:74:35:73:72:b6:86:2c:93:08:e9:92:69:68:78:90:
+         16:b7:fe:b7:ab:72:46:f8:30:21:8b:6d:86:a1:99:6a:fa:be:
+         0e:c6:f4:d3:c7:d6:80:4f:b1:36:d3:b5:34:cd:f6:12:d6:55:
+         c5:a7:7d:bb:84:81:f0:34:87:17:11:a9:42:a9:d0:8b:cf:05:
+         28:3b:fb:89:f9:0f:af:c4:32:3f:31:60:19:70:b9:10:6e:6a:
+         64:40:28:5f:ba:d5:6e:8d:8c:40:b7:a0:d7:2c:68:41:50:af:
+         f7:bf:e9:f1:a0:03:98:c1:66:ee:31:97:54:66:e8:ed:4f:67:
+         c0:70:f7:12:32:9f:c3:50:b6:4a:7e:0b:f9:73:86:de:34:df:
+         94:e5:bb:9b
+
+// Charles 代理软件的自签名证书
+<span class="hljs-meta prompt_">$ </span><span class="language-bash">openssl x509 -<span class="hljs-keyword">in</span> ./charles.pem -noout -text</span>
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1648018041505 (0x17fb587aaa1)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN = &quot;Charles Proxy CA (23 Mar 2022, \E4\BA\92\E8\81\94\E7\BD\91\E5\BC\80\E5\8F\91\E9\83\A8-\E6\9E\97\E5\A8\81)&quot;, OU = https://charlesproxy.com/ssl, O = XK72 Ltd, L = Auckland, ST = Auckland, C = NZ
+        Validity
+            Not Before: Mar 22 06:47:21 2022 GMT
+            Not After : Mar 22 06:47:21 2023 GMT
+        Subject: CN = &quot;Charles Proxy CA (23 Mar 2022, \E4\BA\92\E8\81\94\E7\BD\91\E5\BC\80\E5\8F\91\E9\83\A8-\E6\9E\97\E5\A8\81)&quot;, OU = https://charlesproxy.com/ssl, O = XK72 Ltd, L = Auckland, ST = Auckland, C = NZ
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (2048 bit)
+                Modulus:
+                    00:b8:ca:61:56:ee:b3:ae:94:0d:2b:5d:da:c0:a1:
+                    cb:e3:3e:d2:19:22:03:88:57:0d:a6:96:7e:4f:2e:
+                    11:9e:8d:45:c6:ef:e8:d7:86:dc:eb:a6:94:56:d9:
+                    25:0e:63:4a:1d:37:22:1d:e5:83:19:c7:1b:a3:c8:
+                    d7:69:29:82:dc:e7:a7:04:66:73:f1:1e:1c:16:6f:
+                    fd:e5:79:97:c5:b5:29:d3:a9:27:3a:f3:88:c0:6a:
+                    ef:e9:e4:5f:c4:5d:68:80:f2:bf:65:75:25:24:c3:
+                    e6:44:74:1c:e8:5d:c3:06:45:13:cc:7c:fd:b2:70:
+                    ed:d1:41:9c:ae:33:b7:5e:84:c6:4b:67:86:41:d1:
+                    75:2b:79:6c:52:e5:8b:58:05:68:3b:42:1b:a0:35:
+                    85:bf:3f:25:05:b4:a5:60:68:d0:6d:42:63:37:e1:
+                    67:82:e3:3d:2e:d6:9f:9a:8a:ff:2f:14:df:df:cc:
+                    cf:67:a9:4f:68:19:18:a2:f6:6d:95:46:79:e7:4d:
+                    93:58:25:f5:fb:21:f0:40:59:38:0b:4c:a3:c8:7f:
+                    9d:2f:12:87:fc:0a:20:08:75:e8:29:a7:d0:44:48:
+                    d1:d8:36:f5:6a:53:eb:e0:6f:5a:41:ce:f8:1b:f2:
+                    e3:35:d3:c1:03:86:30:17:0c:0b:d5:f4:59:90:81:
+                    6c:79
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+            Netscape Comment:
+                ....This Root certificate was generated by Charles Proxy for SSL Proxying. If this certificate is part of a certificate chain, this means that you&#x27;re browsing through Charles Proxy with SSL Proxying enabled for this website. Please see http://charlesproxy.com/ssl for more information.
+            X509v3 Key Usage: critical
+                Certificate Sign
+            X509v3 Subject Key Identifier:
+                4D:45:D9:BF:C6:09:B5:13:ED:13:C0:39:AF:21:8A:FF:48:F2:F8:D0
+    Signature Algorithm: sha256WithRSAEncryption
+         8c:7b:ed:c6:f9:1b:ed:ba:e9:ed:6c:07:a8:0d:ff:7b:05:30:
+         1c:cd:cf:78:17:21:14:74:f7:f3:91:ba:12:2d:ef:98:91:94:
+         a3:d8:13:62:0f:05:31:57:86:54:48:02:7f:96:91:5a:d5:95:
+         10:78:ab:ba:f5:9f:18:1f:d1:23:b2:74:01:87:d7:d2:9b:ec:
+         94:b6:c7:4b:d6:28:d0:b7:07:17:65:e2:8a:5e:36:cd:93:5a:
+         cd:e9:bc:8e:00:ca:5d:f6:14:2a:ac:b8:de:38:91:3c:8d:14:
+         27:32:0b:5b:72:de:ee:7c:a6:81:bf:d8:b5:ba:67:e2:f6:9e:
+         35:5d:ef:c8:77:f1:ef:8d:b2:54:b7:70:12:29:39:3d:b8:12:
+         a0:22:4a:b1:d5:62:ba:35:a2:9d:4d:54:5d:c5:e7:ab:0a:54:
+         28:f9:b0:8d:8f:ec:48:ef:27:38:a6:6e:ba:62:28:ba:ca:60:
+         92:09:f2:cd:2b:23:85:1c:c5:93:2d:96:e6:30:69:f8:d0:cf:
+         6d:3f:e3:6e:52:c2:b1:af:be:75:d3:ba:35:58:b6:de:21:a3:
+         33:ea:fc:11:ed:08:87:a2:95:e8:3b:06:d4:c0:5f:a5:7e:a4:
+         39:52:d1:40:18:6a:38:22:07:fc:c9:78:8f:a7:dc:9b:7b:13:
+         71:a9:6c:53</code></pre></div>
+
+<p><img src="/image/2021-03-30-https/cert_structure.awebp" srcset="/image/loading.gif" lazyload alt="证书结构"></p>
+<h2 id="校验流程"><a href="#校验流程" class="headerlink" title="校验流程"></a>校验流程</h2><ol>
+<li><p>证书的下发与校验发生在 SSL 握手期间，服务端在第三步下发证书给客户端，客户端在第六步进行证书的校验</p>
+</li>
+<li><p>校验证书链</p>
+</li>
+</ol>
+<p>CA 会给颁发的证书签名，所谓签名就是用 CA 私钥对证书摘要进行加密操作得到输出：<code>encrypt(digest(cert), privKey) = signature</code>，那么校验签名就是：<code>digest(cert) == decrypt(signature, pubKey)</code></p>
+<p>客户端可以通过服务端证书的 <code>Issuer</code> 字段得知 CA，然后在内置/配置的受信任 CA 列表里找到对应的 CA 证书，从 CA 证书的 <code>Subject Public Key Info</code> 找到 CA 公钥 <code>pubKey</code></p>
+<p>用服务端证书签名字段 <code>Signature Algorithm</code> 里的加密算法 <code>decrypt</code>，和上面找到的 CA 公钥 <code>pubKey</code>，解密签名得到正确的证书摘要 <code>signed digest = decrypt(signature, pubKey)</code>，这个摘要是受到 CA 私钥加密保护的所以无法被篡改</p>
+<p>客户端计算服务端证书的摘要 <code>digest = digest(cert)</code>，如果与 <code>signed digest</code> 一致说明证书未篡改</p>
+<p>重复以上过程直到最终构建出一条完整的证书链，这个证书链的顶端必须是受信任的根 CA，这条证书链才算校验通过</p>
+<p><img src="/image/2021-03-30-https/ssl_handshake.awebp" srcset="/image/loading.gif" lazyload alt="SSL握手"></p>
+<ol start="3">
+<li>是否在上级证书的吊销列表里</li>
+</ol>
+<p>有两种方式：</p>
+<ul>
+<li><p>证书吊销列表校验：CRL（Certificate Revocation List），它是一个单独的文件，该文件包含了 CA 已经吊销的证书序列号与吊销日期；证书中一般会包含一个 URL 地址（CRL Distribution Point），通知使用者去哪里下载对应的 CRL 以校验证书是否吊销。该吊销方式的优点是不需要频繁更新，但是不能及时吊销证书，这期间可能已经造成了极大损失</p>
+</li>
+<li><p>证书状态在线查询：OCSP（Online Certificate Status Protocol），一个实时查询证书是否吊销的方式。请求者发送证书的信息并请求查询，服务器返回正常、吊销或未知中的任何一个状态。证书中一般也会包含一个 OCSP 的 URL 地址，要求查询服务器具有良好的性能。部分 CA 或大部分的自签 CA 都是未提供 CRL 或 OCSP 地址的，对于吊销证书会是一件非常麻烦的事情</p>
+</li>
+</ul>
+<ol start="4">
+<li>证书是否过期</li>
+</ol>
+<p><code>Validity</code> 字段，证书有效期在 <code>[Not Before, Not After]</code> 之间</p>
+<ol start="5">
+<li>服务器域名是否与证书主体匹配</li>
+</ol>
+<p>比如访问谷歌邮箱 <code>https://mail.google.com/mail/u/0/#inbox</code>，服务端下发的证书里的主体是 <code>Subject: CN = mail.google.com</code></p>
+<p>主体名还可以用通配符，比如博客园 <code>https://www.cnblogs.com/blogs-of-lxl/p/10136582.html</code> 里证书主体是 <code>Subject: CN = *.cnblogs.com</code></p>
+<h2 id="自定义-CA"><a href="#自定义-CA" class="headerlink" title="自定义 CA"></a>自定义 CA</h2><p>然而现实情况往往来得更加复杂：</p>
+<ul>
+<li><p>终端设备没有及时更新 CA 列表，导致某些 CA 在此设备上失效了</p>
+</li>
+<li><p>终端设备不可信，导入了一些不可信/失效的 CA 证书，导致 app 流量被捕获（比如 Charles 等各种代理工具）</p>
+</li>
+<li><p>证书链上的某些中间 CA 证书是不公开的，只在公司网络/产品内使用</p>
+</li>
+<li><p>测试环境需要信任自签 CA 证书以捕获流量</p>
+</li>
+<li><p>…</p>
+</li>
+</ul>
+<p>所以 android 有两种自定义 CA 的基于配置文件的方式（都有对应的代码方式）：</p>
+<ol>
+<li>只信任指定 CA 而不是系统默认 CA</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs xml"><span class="hljs-meta">&lt;?xml version=<span class="hljs-string">&quot;1.0&quot;</span> encoding=<span class="hljs-string">&quot;utf-8&quot;</span>?&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">network-security-config</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">domain-config</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">domain</span> <span class="hljs-attr">includeSubdomains</span>=<span class="hljs-string">&quot;true&quot;</span>&gt;</span>secure.example.com<span class="hljs-tag">&lt;/<span class="hljs-name">domain</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">domain</span> <span class="hljs-attr">includeSubdomains</span>=<span class="hljs-string">&quot;true&quot;</span>&gt;</span>cdn.example.com<span class="hljs-tag">&lt;/<span class="hljs-name">domain</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">trust-anchors</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">certificates</span> <span class="hljs-attr">src</span>=<span class="hljs-string">&quot;@raw/trusted_roots&quot;</span>/&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">certificates</span> <span class="hljs-attr">src</span>=<span class="hljs-string">&quot;@raw/my_ca&quot;</span>/&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">trust-anchors</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">domain-config</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">network-security-config</span>&gt;</span></code></pre></div>
+
+<ol start="2">
+<li>信任所有公钥哈希匹配的证书</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs xml"><span class="hljs-meta">&lt;?xml version=<span class="hljs-string">&quot;1.0&quot;</span> encoding=<span class="hljs-string">&quot;utf-8&quot;</span>?&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">network-security-config</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">domain-config</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">domain</span> <span class="hljs-attr">includeSubdomains</span>=<span class="hljs-string">&quot;true&quot;</span>&gt;</span>example.com<span class="hljs-tag">&lt;/<span class="hljs-name">domain</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">pin-set</span> <span class="hljs-attr">expiration</span>=<span class="hljs-string">&quot;2018-01-01&quot;</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">pin</span> <span class="hljs-attr">digest</span>=<span class="hljs-string">&quot;SHA-256&quot;</span>&gt;</span>7HIpactkIAq2Y49orFOOQKurWxmmSFZhBCoQYcRhJ3Y=<span class="hljs-tag">&lt;/<span class="hljs-name">pin</span>&gt;</span>
+            <span class="hljs-comment">&lt;!-- backup pin --&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">pin</span> <span class="hljs-attr">digest</span>=<span class="hljs-string">&quot;SHA-256&quot;</span>&gt;</span>fwza0LRMXouZHRC8Ei+4PyuldPDcf3UKgO/04cDM1oE=<span class="hljs-tag">&lt;/<span class="hljs-name">pin</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">pin-set</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">domain-config</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">network-security-config</span>&gt;</span></code></pre></div>
+
+<h1 id="提问时间"><a href="#提问时间" class="headerlink" title="提问时间"></a>提问时间</h1><ol>
+<li>怎么证明CA机构的公钥是可信的</li>
+</ol>
+<p>CA 证书是从上到下一级一级地签发下来的（证书链），操作系统内置根 CA 证书（证书里包含 CA 公钥），可以从下到上逐级确认</p>
+<ol start="2">
+<li>如何防范中间人攻击</li>
+</ol>
+<p>这个可以采用从下至上的方式递推：</p>
+<ul>
+<li><p>client 与 server 之间传输数据经过对称加密，中间人不知道秘钥 primaryKey 所以无法偷听和篡改</p>
+</li>
+<li><p>主密钥 primaryKey 是通过秘钥协商协议在 client 和 server 各自的本地计算出来的：<code>primaryKey = f(clientLocal, serverPublics) = f(serverLocal, clientPublics)</code>，local 都各自存在于 client 和 server 本地，只有 publics 才需要传输，中间人只能拿到 publics 缺失 local 是不能计算出 primaryKey 的</p>
+</li>
+<li><p>server 把 serverPublics 用 server 私钥加密发送给 client，client 从证书里拿到 server 公钥解密，并用 server 公钥加密 clientPublics 发送给 server，server 通过自己私钥解密</p>
+</li>
+<li><p>中间人可以从 server 证书拿到 server 公钥，从而偷听到 serverPublics，但它没有 server 私钥，也无法篡改 server 证书里的 server 公钥，所以无法篡改 serverPublics</p>
+</li>
+<li><p>同样中间人没有 server 私钥所以无法篡改经过 server 公钥加密发送给 server 的 clientPublics</p>
+</li>
+<li><p>server 证书由受信任的 CA 签发（用 CA 私钥加密证书摘要），server 没有 CA 私钥所以无法篡改 server 证书，同时受信任 CA 证书列表内置于 client，证书内包含 CA 公钥，于是中间人也无法用假的 CA 密钥对伪造 server 证书</p>
+</li>
+</ul>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://juejin.cn/post/7186837003026038843">货拉拉SSL证书踩坑之旅 - 货拉拉技术 - 掘金</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.android.com/training/articles/security-config">Network security configuration</a></li>
+</ul>
 
                 
               </div>
