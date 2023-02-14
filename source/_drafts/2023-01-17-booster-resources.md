@@ -552,3 +552,48 @@ public @interface Internal {
 public @interface OutputDirectory {
 }
 ```
+
+# aapt2
+
+[aapt2](https://developer.android.com/studio/command-line/aapt2) 全称 Android Asset Packaging Tool，是一个专门处理资源文件的命令行工具，主要有以下功能：
+
+1. compile 
+
+输入原始的资源文件，输出编译后的中间产物（intermediate file）：`aapt2 compile path-to-input-files [options] -o output-directory/`
+
+    1. `res/values` 目录下的 xml 文件，比如字符串 strings.xml、颜色 colors.xml、数组 arrays.xml 等，被 aapt2 编译为 `*.arsc.flat` 中间产物，最后被链接为一个单独的 `resources.arsc` 打包进 apk，也就是说项目源码里会存在 `app/src/main/res/values` 目录但 apk 里是没有 `res/values` 目录的
+
+    2. 其余的 xml 文件被编译为紧凑的、二进制的 `*.flat` 中间产物，最后被链接打包进 apk
+
+    3. png 图片被压缩为 `*.png.flat` 中间产物（其实就是 png 格式图片，但被压缩过了所以 size 会变小一些），最后以 png 后缀被链接打包进 apk  
+
+    4. 其余资源文件直接链接打包进 apk
+
+2. link
+
+将编译阶段产生的中间产物（intermediate files）如资源表文件（resources.arsc）、二进制的 xml 文件、压缩后的 png 图片等，打包进一个单独的 apk 文件，此 apk 是不包含字节码文件 dex 的，也没有经过签名
+
+```shell
+ aapt2 link -o output.apk
+ -I android_sdk/platforms/android_version/android.jar
+    compiled/res/values_values.arsc.flat
+    compiled/res/drawable_Image.flat --manifest /path/to/AndroidManifest.xml -v
+```
+
+3. dump
+
+打印 apk 文件里资源相关信息如：清单文件（badging，被编译为二进制了）、用到的资源限定符（configurations）、字符串池（strings）、整个资源表（resources）等等
+
+```shell
+aapt2 dump [sub-command] filename.apk [options]
+
+sub-command: apc, badging, configurations, overlayable, packagename, permissions, strings, styleparents, resources, xmlstrings, xmltree
+```
+
+4. diff
+
+找出两个 apk 文件间的差异
+
+```shell
+aapt2 diff first.apk second.apk
+```
