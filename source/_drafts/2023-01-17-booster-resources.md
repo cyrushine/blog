@@ -125,8 +125,6 @@ apply plugin: 'com.didiglobal.booster'
 
 ## 注册 cwebp gradle task
 
-[variant](https://developer.android.com/studio/build/build-variants) 指代构建的一个输出：apk or jar，它是 build type 和 product flavor 的组合，比如 demoDebug、productRelease 等等 
-
 `VariantProcessor` 是 booster API，本模块入口 `CwebpCompressionVariantProcessor` 通过 [AutoService](#google-autoservice) 注册为它的一个实现，然后 booster-gradle-plugin 在运行时通过 [ServiceLoader](#spi) 发现并执行 cwebp 模块
 
 实现类是 `CwebpCompressOpaqueFlatImages`、`CwebpCompressFlatImages`、`CwebpCompressOpaqueImages` or `CwebpCompressImages`（根据 aapt2 和 alpha 的支持情况四选一）
@@ -325,15 +323,58 @@ open class Command(
 
 ## cwebp task
 
-- 找到数据源：resource 文件集
+- 第一步，找到数据源：resource merger 后 aapt2 编译前的资源文件集合
 
-在 merge resource 之后
+```kotlin
+// gradle api
+Project.objects.fileCollection().from(     // 创建一个空的文件集合，用以承载下面的文件
+    Component.artifacts.get(               // Access to the variant's buildable artifacts for build customization.
+        InternalArtifactType.MERGED_RES))  // 它是一个目录，包含了所有合并后的模块资源文件，下一步将会用 aapt2 编译它们
 
-- 过滤出待处理的图片资源集
+// booster 为了兼容各个版本的 gradle：v3.6、v4.2、v7.3 等等，抽象出一个统一的接口：AGPInterface
+// 针对不同的 gradle 版本，实现可能不一样，这里是针对 gradle 7.3 的实现
+internal object V73 : AGPInterface {
 
-- cwebp 转换图片格式
+    private val BaseVariant.component: ComponentImpl
+        get() = BaseVariantImpl::class.java.getDeclaredField("component").apply {
+            isAccessible = true
+        }.get(this) as ComponentImpl
 
-- aapt2 编译
+    override val BaseVariant.project: Project
+        get() = component.variantDependencies.run {
+            javaClass.getDeclaredField("project").apply {
+                isAccessible = true
+            }.get(this) as Project
+        }
+}                
+```
+
+- 第二步，过滤出 *.png.flat 图片（只考虑 aapt2 的情况）
+
+`*.png.flat` 是经过 aapt2 compile 后的 png 格式图片资源
+
+resources merger 将所有资源放至同一目录，并以资源限定符为前缀如 `app\build\intermediates\res\merged\release\drawable-ldpi-v4_exo_icon_next.png.flat`，`raw_` 开头的是 `res/raw` 目录下的资源文件，它们有资源 ID `R.raw.[id]` 但是不压缩，直接将原始数据包进 apk（Arbitrary files to save in their raw form），所以这里也要遵循规范排除这些 raw 资源
+
+排除 nine patch 图片资源
+
+```kotlin
+fun isFlatPngExceptRaw(file: File) : Boolean = isFlatPng(file) && !file.name.startsWith("raw_")
+
+fun isFlatPng(file: File): Boolean = file.name.endsWith(".png.flat", true)
+        && (file.name.length < 11 || !file.name.regionMatches(file.name.length - 11, ".9", 0, 2, true))
+```
+
+- 第三步，cwebp 转换图片格式
+
+[cwebp](https://developers.google.com/speed/webp/docs/cwebp) 可以将 PNG, JPEG, TIFF, WebP or raw Y'CbCr 转换为 webp 格式
+
+```shell
+cwebp -mt -quiet -q [quality] [*.png.flat] -o [*.webp]
+```
+
+- 第四步，aapt2 编译
+
+整体流程如下：
 
 ```kotlin
 // 继承关系
@@ -452,7 +493,221 @@ internal abstract class CwebpCompressOpaqueFlatImages {
 }
 ```
 
-## 用到的 gradle 注解
+# aapt2
+
+[aapt2](https://developer.android.com/studio/command-line/aapt2) 全称 Android Asset Packaging Tool，是一个专门处理资源文件的命令行工具，主要有以下功能：
+
+1. compile 
+
+输入原始的资源文件，输出编译后的中间产物（intermediate file）：`aapt2 compile path-to-input-files [options] -o output-directory/`
+
+    1. `res/values` 目录下的 xml 文件，比如字符串 strings.xml、颜色 colors.xml、数组 arrays.xml 等，被 aapt2 编译为 `*.arsc.flat` 中间产物，最后被链接为一个单独的 `resources.arsc` 打包进 apk，也就是说项目源码里会存在 `app/src/main/res/values` 目录但 apk 里是没有 `res/values` 目录的
+
+    2. 其余的 xml 文件被编译为紧凑的、二进制的 `*.flat` 中间产物，最后被链接打包进 apk
+
+    3. png 图片被压缩为 `*.png.flat` 中间产物（不是 png 格式的图片了），size 会变小很多
+
+    4. 其余资源文件直接链接打包进 apk
+
+`*.flat` 文件是 aapt2 编译的产物，也叫做 aapt2 容器，由文件头和资源项两大部分组成
+
+
+
+2. link
+
+将编译阶段产生的中间产物（intermediate files）如资源表文件（resources.arsc）、二进制的 xml 文件、压缩后的 png 图片等，打包进一个单独的 apk 文件，此 apk 是不包含字节码文件 dex 的，也没有经过签名
+
+```shell
+ aapt2 link -o output.apk
+ -I android_sdk/platforms/android_version/android.jar
+    compiled/res/values_values.arsc.flat
+    compiled/res/drawable_Image.flat --manifest /path/to/AndroidManifest.xml -v
+```
+
+3. dump
+
+打印 apk 文件里资源相关信息如：清单文件（badging，被编译为二进制了）、用到的资源限定符（configurations）、字符串池（strings）、整个资源表（resources）等等
+
+```shell
+aapt2 dump [sub-command] filename.apk [options]
+
+sub-command: apc, badging, configurations, overlayable, packagename, permissions, strings, styleparents, resources, xmlstrings, xmltree
+```
+
+4. diff
+
+找出两个 apk 文件间的差异
+
+```shell
+aapt2 diff first.apk second.apk
+```
+
+# 远程调试 gradle
+
+这里分享一种较为简单的远程调试 gradle build script 的方法：
+
+[debug 模式开启 gradle build](https://docs.gradle.org/6.5/userguide/troubleshooting.html#sec:troubleshooting_build_logic)，注意 Windows 下要这么写：`.\gradlew :app:assembleRelease '-Dorg.gradle.debug=true'`
+
+git clone booster & checkout version，用 Android Studio 打开 booster project，运行以下远程调试任务
+
+[remote_debug.png](/image/2023-01-17-booster-resources/remote_debug.png)
+
+# 一些 gradle 名词和概念
+
+[variant](https://developer.android.com/studio/build/build-variants) 指代构建的一个输出：apk or jar，它是 build type 和 product flavor 的组合，比如 demoDebug、productRelease 等等 
+
+`artifacts` 指代构建过程用到的、产生的各种文件、目录，比如：
+
+```kotlin
+
+/**
+ * Public [Artifact] for Android Gradle plugin.
+ */
+sealed class SingleArtifact<T : FileSystemLocation>(
+    kind: ArtifactKind<T>,
+    category: Category = Category.INTERMEDIATES,
+    private val fileName: String? = null
+)
+    : Artifact.Single<T>(kind, category) {
+
+    override fun getFileSystemLocationName(): String {
+        return fileName ?: ""
+    }
+
+    /**
+     * 存放 apk 的目录
+     * Directory where APK files will be located. Some builds can be optimized for testing when
+     * invoked from Android Studio. In such cases, the APKs are not suitable for deployment to
+     * Play Store.
+     */
+    object APK:
+        SingleArtifact<Directory>(DIRECTORY),
+        Transformable,
+        Replaceable,
+        ContainsMany
+
+    /**
+     * 合并后的清单文件
+     * Merged manifest file that will be used in the APK, Bundle and InstantApp packages.
+     * This will only be available on modules applying one of the following plugins :
+     *      com.android.application
+     *      com.android.dynamic-feature
+     *      com.android.library
+     *      com.android.test
+     *
+     * For each module, unit test and android test variants will not have a manifest file
+     * available.
+     */
+    object MERGED_MANIFEST:
+        SingleArtifact<RegularFile>(FILE, Category.INTERMEDIATES, "AndroidManifest.xml"),
+        Replaceable,
+        Transformable
+
+    object OBFUSCATION_MAPPING_FILE:
+        SingleArtifact<RegularFile>(FILE, Category.OUTPUTS, "mapping.txt") {
+            override fun getFolderName(): String = "mapping"
+        }
+
+    /**
+     * 
+     * The final Bundle ready for consumption at Play Store.
+     * This is only valid for the base module.
+     */
+    object BUNDLE:
+        SingleArtifact<RegularFile>(FILE, Category.OUTPUTS),
+        Transformable
+
+    /**
+     * The final AAR file as it would be published.
+     */
+    object AAR:
+        SingleArtifact<RegularFile>(FILE, Category.OUTPUTS),
+        Transformable
+
+    /**
+     * 存放资源的目录
+     * Assets that will be packaged in the resulting APK or Bundle.
+     *
+     * When used as an input, the content will be the merged assets.
+     * For the APK, the assets will be compressed before packaging.
+     *
+     * To add new folders to [ASSETS], you must use [com.android.build.api.variant.Sources.assets]
+     */
+    @Incubating
+    object ASSETS:
+        SingleArtifact<Directory>(DIRECTORY),
+        Transformable,
+        Replaceable
+}
+
+/**
+ *  A type of output generated by a task.
+ */
+sealed class
+InternalArtifactType<T : FileSystemLocation>(
+    kind: ArtifactKind<T>,
+    category: Category = Category.INTERMEDIATES,
+    private val folderName: String? = null,
+    val finalizingArtifact: List<Artifact<*>> = listOf(),
+) : Artifact.Single<T>(kind, category) {
+
+    // --- classes ---
+    // Javac task output.
+    object JAVAC: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+
+    // --- Published classes ---
+    // Class-type task output for tasks that generate published classes.
+
+    // Packaged classes for library intermediate publishing
+    // This is for external usage. For usage inside a module use ALL_CLASSES
+    object RUNTIME_LIBRARY_CLASSES_JAR: InternalArtifactType<RegularFile>(FILE), Replaceable
+    /**
+     * A directory containing runtime classes. NOTE: It may contain either class files only
+     * (preferred) or a single jar only, see {@link AndroidArtifacts.ClassesDirFormat}.
+     */
+    object RUNTIME_LIBRARY_CLASSES_DIR: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+
+    // Packaged library classes published only to compile configuration. This is to allow other
+    // projects to compile again classes that were not additionally processed e.g. classes with
+    // Jacoco instrumentation (b/109771903).
+    object COMPILE_LIBRARY_CLASSES_JAR: InternalArtifactType<RegularFile>(FILE), Replaceable
+
+    // Jar generated by the code shrinker
+    object SHRUNK_CLASSES: InternalArtifactType<RegularFile>(FILE), Replaceable
+
+    // Dex archive artifacts for project.
+    object PROJECT_DEX_ARCHIVE: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+    // Dex archive artifacts for sub projects.
+    object SUB_PROJECT_DEX_ARCHIVE: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+    // Dex archive artifacts for external (Maven) libraries.
+    object EXTERNAL_LIBS_DEX_ARCHIVE: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+    // Dex archive artifacts for external (Maven) libraries processed using aritfact transforms.
+    object EXTERNAL_LIBS_DEX_ARCHIVE_WITH_ARTIFACT_TRANSFORMS: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+
+    // --- android res ---
+    // generated res
+    object GENERATED_RES: InternalArtifactType<Directory>(DIRECTORY, Category.GENERATED,), Replaceable
+
+    // output of the resource merger ready for aapt.
+    object MERGED_RES: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+
+    // output of the resource merger for unit tests and the resource shrinker.
+    object MERGED_NOT_COMPILED_RES: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+
+    // compiled resources (output of aapt)
+    object PROCESSED_RES: InternalArtifactType<Directory>(DIRECTORY), Replaceable, ContainsMany
+
+    // Processed res after an AAPT2 optimize operation
+    object OPTIMIZED_PROCESSED_RES: InternalArtifactType<Directory>(DIRECTORY), Replaceable, ContainsMany
+
+    // package resources for aar publishing.
+    object PACKAGED_RES: InternalArtifactType<Directory>(DIRECTORY), Replaceable
+
+    // ...
+}
+```
+
+gradle 相关注解
 
 ```kotlin
 
@@ -551,49 +806,4 @@ public @interface Internal {
 @Target({ElementType.METHOD, ElementType.FIELD})
 public @interface OutputDirectory {
 }
-```
-
-# aapt2
-
-[aapt2](https://developer.android.com/studio/command-line/aapt2) 全称 Android Asset Packaging Tool，是一个专门处理资源文件的命令行工具，主要有以下功能：
-
-1. compile 
-
-输入原始的资源文件，输出编译后的中间产物（intermediate file）：`aapt2 compile path-to-input-files [options] -o output-directory/`
-
-    1. `res/values` 目录下的 xml 文件，比如字符串 strings.xml、颜色 colors.xml、数组 arrays.xml 等，被 aapt2 编译为 `*.arsc.flat` 中间产物，最后被链接为一个单独的 `resources.arsc` 打包进 apk，也就是说项目源码里会存在 `app/src/main/res/values` 目录但 apk 里是没有 `res/values` 目录的
-
-    2. 其余的 xml 文件被编译为紧凑的、二进制的 `*.flat` 中间产物，最后被链接打包进 apk
-
-    3. png 图片被压缩为 `*.png.flat` 中间产物（其实就是 png 格式图片，但被压缩过了所以 size 会变小一些），最后以 png 后缀被链接打包进 apk  
-
-    4. 其余资源文件直接链接打包进 apk
-
-2. link
-
-将编译阶段产生的中间产物（intermediate files）如资源表文件（resources.arsc）、二进制的 xml 文件、压缩后的 png 图片等，打包进一个单独的 apk 文件，此 apk 是不包含字节码文件 dex 的，也没有经过签名
-
-```shell
- aapt2 link -o output.apk
- -I android_sdk/platforms/android_version/android.jar
-    compiled/res/values_values.arsc.flat
-    compiled/res/drawable_Image.flat --manifest /path/to/AndroidManifest.xml -v
-```
-
-3. dump
-
-打印 apk 文件里资源相关信息如：清单文件（badging，被编译为二进制了）、用到的资源限定符（configurations）、字符串池（strings）、整个资源表（resources）等等
-
-```shell
-aapt2 dump [sub-command] filename.apk [options]
-
-sub-command: apc, badging, configurations, overlayable, packagename, permissions, strings, styleparents, resources, xmlstrings, xmltree
-```
-
-4. diff
-
-找出两个 apk 文件间的差异
-
-```shell
-aapt2 diff first.apk second.apk
 ```
