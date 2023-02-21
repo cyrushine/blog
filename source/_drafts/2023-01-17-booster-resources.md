@@ -509,9 +509,52 @@ internal abstract class CwebpCompressOpaqueFlatImages {
 
     4. 其余资源文件直接链接打包进 apk
 
-`*.flat` 文件是 aapt2 编译的产物，也叫做 aapt2 容器，由文件头和资源项两大部分组成
+`*.flat` 文件是 aapt2 编译的产物，也叫做 aapt2 容器，由文件头（header）和资源项（entry）两大部分组成
 
+| Category | Size in bytes | Field Name | Description |
+|----------|---------------|------------|-------------|
+| header | 4 | magic        | AAPT2 容器文件标识：AAPT 或者 0x54504141 |
+|        | 4 | version      | AAPT2 容器版本 |
+|        | 4 | entry_count  | 容器中包含的条目数量（一个 flat 文件可以包含多个资源项） |
+| entry  | 4 | entry_type   | 资源类型，目前仅支持两种：RES_TABLE(0x00000000) 和 RES_FILE(0x00000001) |
+|        | 8 | entry_length | 资源的长度 |
+|        | entry_length | data | 资源内容 |
 
+```java
+// RES_TABLE 是 protobuf 格式的 ResourceTable 结构
+
+message ResourceTable {
+    // 字符串常量池是为了把资源文件中的 string 复用起来，从而减少体积，资源文件中对应的字符串会被替换为字符串池中的索引
+    StringPool source_pool = 1;
+    repeated Package package = 2;                   // 用来生成资源 ID
+    repeated Overlayable overlayable = 3;           // 资源叠加层相关
+    repeated ToolFingerprint tool_fingerprint = 4;  // 工具版本
+}
+
+// 资源 ID 的命名方式遵循 0xPPTTEEEE 的规则
+// 1. [PP] 对应 PackageId，一般应用使用的资源为 0x7f
+// 2. [TT] 对应的是资源类型（文件夹的名称）
+// 3. [EEEE] 为资源的 id，从 0 开始
+message Package {
+  PackageId package_id = 1;  // 包 ID
+  string package_name = 2;   // 包名
+  repeated Type type = 3;    // 资源类型：string, layout, xml 等，其对应的资源 ID 区间为 [0x01, 0xff]
+}
+
+// 资源 ID 的包 ID 部分，在 [0x00, 0xff] 范围内
+// 1. [0x02, 0x7f) 由系统使用
+// 2. 0x7f 应用使用
+// 3. (0x7f, 0xff] 预留Id
+message PackageId {
+  uint32 id = 1;
+}
+```
+
+RES_FILE 类型的结构如下：
+
+| Size in bytes | Field | Description |
+|---------------|-------|-------------|
+|  |  |  |
 
 2. link
 
