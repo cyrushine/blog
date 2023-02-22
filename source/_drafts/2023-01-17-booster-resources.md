@@ -323,13 +323,13 @@ open class Command(
 
 ## cwebp task
 
-- 第一步，找到数据源：resource merger 后 aapt2 编译前的资源文件集合
+- 第一步，找到数据源：resource merger 处理后且 aapt2 编译后的资源文件集合
 
 ```kotlin
 // gradle api
 Project.objects.fileCollection().from(     // 创建一个空的文件集合，用以承载下面的文件
     Component.artifacts.get(               // Access to the variant's buildable artifacts for build customization.
-        InternalArtifactType.MERGED_RES))  // 它是一个目录，包含了所有合并后的模块资源文件，下一步将会用 aapt2 编译它们
+        InternalArtifactType.MERGED_RES))  // 它是一个目录，包含了所有 resource merger 处理后的模块资源文件，且经过 aapt2 编译
 
 // booster 为了兼容各个版本的 gradle：v3.6、v4.2、v7.3 等等，抽象出一个统一的接口：AGPInterface
 // 针对不同的 gradle 版本，实现可能不一样，这里是针对 gradle 7.3 的实现
@@ -366,13 +366,13 @@ fun isFlatPng(file: File): Boolean = file.name.endsWith(".png.flat", true)
 
 - 第三步，cwebp 转换图片格式
 
-[cwebp](https://developers.google.com/speed/webp/docs/cwebp) 可以将 PNG, JPEG, TIFF, WebP or raw Y'CbCr 转换为 webp 格式
+[cwebp](https://developers.google.com/speed/webp/docs/cwebp) 可以将 PNG, JPEG, TIFF, WebP or raw Y'CbCr 转换为 webp 格式（flat ?）
 
 ```shell
 cwebp -mt -quiet -q [quality] [*.png.flat] -o [*.webp]
 ```
 
-- 第四步，aapt2 编译
+- 第四步，将格式转换后的 webp 图片交给 aapt2 编译成 flat 格式：`aapt2 compile`
 
 整体流程如下：
 
@@ -436,8 +436,9 @@ internal abstract class CwebpCompressOpaqueFlatImages {
         }.filter(this::includes).filter(isNotLauncherIcon).filter {
             filter(File(it.second.sourcePath))
         }.map {
-            // 放到输出目录，文件名不变，后缀改为 webp
+            // 指定输出文件：文件名不变，后缀改为 webp，放到输出目录
             val output = compressedRes.file("${it.second.resourcePath.substringBeforeLast('.')}.webp")
+            // 先用 cwebp 转格式，再用 aapt2 compile 编译为 flat 格式，因为这些 png 资源文件之前是 flat 格式的
             Aapt2ActionData(it.first, it.second, output,
                     listOf(cwebp, "-mt", "-quiet", "-q", options.quality.toString(), it.second.sourcePath, "-o", output.canonicalPath),
                     listOf(aapt2, "compile", "-o", it.first.parent, output.canonicalPath))
@@ -505,7 +506,7 @@ internal abstract class CwebpCompressOpaqueFlatImages {
 
     2. 其余的 xml 文件被编译为紧凑的、二进制的 `*.flat` 中间产物，最后被链接打包进 apk
 
-    3. png 图片被压缩为 `*.png.flat` 中间产物（不是 png 格式的图片了），size 会变小很多
+    3. png 图片被压缩为 `*.png.flat` 中间产物（不是 png 格式的图片了），size 会因为压缩变小很多
 
     4. 其余资源文件直接链接打包进 apk
 
@@ -513,12 +514,23 @@ internal abstract class CwebpCompressOpaqueFlatImages {
 
 | Category | Size in bytes | Field Name | Description |
 |----------|---------------|------------|-------------|
-| header | 4 | magic        | AAPT2 容器文件标识：AAPT 或者 0x54504141 |
-|        | 4 | version      | AAPT2 容器版本 |
-|        | 4 | entry_count  | 容器中包含的条目数量（一个 flat 文件可以包含多个资源项） |
-| entry  | 4 | entry_type   | 资源类型，目前仅支持两种：RES_TABLE(0x00000000) 和 RES_FILE(0x00000001) |
-|        | 8 | entry_length | 资源的长度 |
-|        | entry_length | data | 资源内容 |
+| header | 4            | magic        | AAPT2 容器文件标识：AAPT 或者 0x54504141 |
+|        | 4            | version      | AAPT2 容器版本 |
+|        | 4            | entry_count  | 容器中包含的条目数量（一个 flat 文件可以包含多个资源项） |
+| entry  | 4            | entry_type   | 资源类型，目前仅支持两种：RES_TABLE(0x00000000) 和 RES_FILE(0x00000001) |
+|        | 8            | entry_length | 资源的长度 |
+|        | entry_length | data         | 资源内容 |
+
+RES_FILE 类型的结构如下：
+
+| Size in bytes | Field | Description |
+|---------------|-------|-------------|
+| 4           | header_size    | header 的长度 |
+| 8           | data_size      | data 的长度 |
+| header_size | header         | protobuf 序列化的 CompiledFile 结构，保存了文件名、文件路径、文件配置和文件类型等信息 |
+| x           | header_padding | 0 - 3 个填充字节，用以 data 32 位对齐 |
+| data_size   | data           | 资源文件的内容：png、二进制的 XML 或者 protobuf 序列化的 XmlNode 结构 |
+| x           | data_padding   | 0 - 3 个填充字节，用以 data 32 位对齐 |
 
 ```java
 // RES_TABLE 是 protobuf 格式的 ResourceTable 结构
@@ -549,12 +561,6 @@ message PackageId {
   uint32 id = 1;
 }
 ```
-
-RES_FILE 类型的结构如下：
-
-| Size in bytes | Field | Description |
-|---------------|-------|-------------|
-|  |  |  |
 
 2. link
 
