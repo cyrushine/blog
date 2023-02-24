@@ -502,7 +502,7 @@ internal abstract class CwebpCompressOpaqueFlatImages {
 
 输入原始的资源文件，输出编译后的中间产物（intermediate file）：`aapt2 compile path-to-input-files [options] -o output-directory/`
 
-    1. `res/values` 目录下的 xml 文件，比如字符串 strings.xml、颜色 colors.xml、数组 arrays.xml 等，被 aapt2 编译为 `*.arsc.flat` 中间产物，最后被链接为一个单独的 `resources.arsc` 打包进 apk，也就是说项目源码里会存在 `app/src/main/res/values` 目录但 apk 里是没有 `res/values` 目录的
+    1. `res/values` 目录下的 xml 文件，比如字符串 strings.xml、颜色 colors.xml、数组 arrays.xml 等，被 aapt2 编译为 `*.arsc.flat` 中间产物，最后被链接为一个单独的 `resources.arsc` 打进 apk，也就是说项目源码里会存在 `app/src/main/res/values` 目录但 apk 里是没有 `res/values` 目录的
 
     2. 其余的 xml 文件被编译为紧凑的、二进制的 `*.flat` 中间产物，最后被链接打包进 apk
 
