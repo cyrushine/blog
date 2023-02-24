@@ -1,0 +1,1403 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="SPISPI 全称 Service Provider Interface，是 Java&#x2F;Android 内置于标准库里的一个 服务发现 机制 ServiceLoader &#x2F;&#x2F; 1）准备接口及相关实现  package work.dalvik.binder.myapplication  interface ISimpleInterface &amp;#123;     val name: String &amp;#">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Cyrus Blog">
+<meta property="og:url" content="https://www.dalvik.work/2023/01/17/booster-resources/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="SPISPI 全称 Service Provider Interface，是 Java&#x2F;Android 内置于标准库里的一个 服务发现 机制 ServiceLoader &#x2F;&#x2F; 1）准备接口及相关实现  package work.dalvik.binder.myapplication  interface ISimpleInterface &amp;#123;     val name: String &amp;#">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-01-17T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-02-24T01:35:01.326Z">
+<meta property="article:author" content="Cyrus">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.4","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-01-17 00:00" pubdate>
+          2023年1月17日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          26k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          217 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none"></h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="SPI"><a href="#SPI" class="headerlink" title="SPI"></a>SPI</h1><p>SPI 全称 <code>Service Provider Interface</code>，是 Java/Android 内置于标准库里的一个 <code>服务发现</code> 机制 <code>ServiceLoader</code></p>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 1）准备接口及相关实现</span>
+
+<span class="hljs-keyword">package</span> work.dalvik.binder.myapplication
+
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">val</span> name: String
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SimplePlan</span>: <span class="hljs-type">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> name: String
+        <span class="hljs-keyword">get</span>() = <span class="hljs-string">&quot;Plan&quot;</span>
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SimpleProject</span>: <span class="hljs-type">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> name: String
+        <span class="hljs-keyword">get</span>() = <span class="hljs-string">&quot;Project&quot;</span>
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SimpleRobot</span>: <span class="hljs-type">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> name: String
+        <span class="hljs-keyword">get</span>() = <span class="hljs-string">&quot;Robot&quot;</span>
+&#125;
+
+<span class="hljs-comment">// 2）在对应的文件里手动注册接口和实现</span>
+<span class="hljs-comment">// 项目路径：app/src/main/resources/META-INF/services/work.dalvik.binder.myapplication.ISimpleInterface</span>
+<span class="hljs-comment">// 打包后：/META-INF/services/work.dalvik.binder.myapplication.ISimpleInterface</span>
+
+work.dalvik.binder.myapplication.SimpleRobot
+work.dalvik.binder.myapplication.SimpleProject
+work.dalvik.binder.myapplication.SimplePlan
+
+<span class="hljs-comment">// 3）运行时发现服务</span>
+
+<span class="hljs-keyword">val</span> services = ServiceLoader.load(ISimpleInterface::<span class="hljs-keyword">class</span>.java)
+<span class="hljs-keyword">for</span> (service <span class="hljs-keyword">in</span> services) &#123;
+    Log.d(<span class="hljs-string">&quot;cyrus&quot;</span>, <span class="hljs-string">&quot;<span class="hljs-subst">$&#123;service.name&#125;</span> from <span class="hljs-subst">$&#123;service::class.java&#125;</span>&quot;</span>)
+&#125;
+
+<span class="hljs-comment">// 11:23:39.785  5764-5764  cyrus D  Robot from class work.dalvik.binder.myapplication.SimpleRobot</span>
+<span class="hljs-comment">// 11:23:39.785  5764-5764  cyrus D  Project from class work.dalvik.binder.myapplication.SimpleProject</span>
+<span class="hljs-comment">// 11:23:39.786  5764-5764  cyrus D  Plan from class work.dalvik.binder.myapplication.SimplePlan</span></code></pre></div>
+
+<h1 id="Google-AutoService"><a href="#Google-AutoService" class="headerlink" title="Google AutoService"></a>Google AutoService</h1><p>简化 <a href="#spi">SPI</a> 的使用：使用注解 <code>@AutoService</code> 替换手动的 SPI 配置文件管理</p>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 1）加入依赖</span>
+
+dependencies &#123;
+    kapt <span class="hljs-string">&#x27;com.google.auto.service:auto-service:1.0.1&#x27;</span>
+    implementation <span class="hljs-string">&#x27;com.google.auto.service:auto-service-annotations:1.0.1&#x27;</span>
+&#125;
+
+<span class="hljs-comment">// 2）加上注解 @AutoService</span>
+
+<span class="hljs-keyword">package</span> work.dalvik.binder.myapplication
+
+<span class="hljs-keyword">import</span> com.google.auto.service.AutoService
+
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">val</span> name: String
+&#125;
+
+<span class="hljs-meta">@AutoService(ISimpleInterface::class)</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SimplePlan</span>: <span class="hljs-type">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> name: String
+        <span class="hljs-keyword">get</span>() = <span class="hljs-string">&quot;Plan&quot;</span>
+&#125;
+
+<span class="hljs-meta">@AutoService(ISimpleInterface::class)</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SimpleProject</span>: <span class="hljs-type">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> name: String
+        <span class="hljs-keyword">get</span>() = <span class="hljs-string">&quot;Project&quot;</span>
+&#125;
+
+<span class="hljs-meta">@AutoService(ISimpleInterface::class)</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SimpleRobot</span>: <span class="hljs-type">ISimpleInterface</span> &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> name: String
+        <span class="hljs-keyword">get</span>() = <span class="hljs-string">&quot;Robot&quot;</span>
+&#125;
+
+<span class="hljs-comment">// 3）不再需要手动增加/删除 SPI 配置文件里的内容</span>
+
+<span class="hljs-comment">// 4）运行时发现服务</span>
+
+<span class="hljs-keyword">val</span> services = ServiceLoader.load(ISimpleInterface::<span class="hljs-keyword">class</span>.java)
+<span class="hljs-keyword">for</span> (service <span class="hljs-keyword">in</span> services) &#123;
+    Log.d(<span class="hljs-string">&quot;cyrus&quot;</span>, <span class="hljs-string">&quot;<span class="hljs-subst">$&#123;service.name&#125;</span> from <span class="hljs-subst">$&#123;service::class.java&#125;</span>&quot;</span>)
+&#125;
+
+<span class="hljs-comment">// 11:34:01.747  6141-6141  cyrus D  Plan from class work.dalvik.binder.myapplication.SimplePlan</span>
+<span class="hljs-comment">// 11:34:01.748  6141-6141  cyrus D  Project from class work.dalvik.binder.myapplication.SimpleProject</span>
+<span class="hljs-comment">// 11:34:01.749  6141-6141  cyrus D  Robot from class work.dalvik.binder.myapplication.SimpleRobot</span></code></pre></div>
+
+<h1 id="引入-booster-框架"><a href="#引入-booster-框架" class="headerlink" title="引入 booster 框架"></a>引入 booster 框架</h1><div class="code-wrapper"><pre><code class="hljs groovy">buildscript &#123;
+
+    dependencies &#123;
+
+        classpath <span class="hljs-string">&quot;com.didiglobal.booster:booster-gradle-plugin:$booster_version&quot;</span>
+        
+        <span class="hljs-comment">// booster 是模块化的，每个功能 / 特性都是一个单独的依赖项，需要哪项特性把对应的依赖项加入进来即可</span>
+        <span class="hljs-comment">// booster-gradle-plugin 通过 SPI / AutoService 发现并执行这些服务</span>
+        classpath <span class="hljs-string">&quot;com.didiglobal.booster:booster-task-compression-cwebp:$booster_version&quot;</span>
+        classpath <span class="hljs-string">&quot;com.didiglobal.booster:booster-transform-shared-preferences:$booster_version&quot;</span>
+        classpath <span class="hljs-string">&quot;com.didiglobal.booster:booster-task-analyser:$booster_version&quot;</span>
+        <span class="hljs-comment">// ...</span>
+    &#125;
+&#125;
+
+apply <span class="hljs-attr">plugin:</span> <span class="hljs-string">&#x27;com.didiglobal.booster&#x27;</span></code></pre></div>
+
+<h1 id="webp-格式化"><a href="#webp-格式化" class="headerlink" title="webp 格式化"></a>webp 格式化</h1><h2 id="注册-cwebp-gradle-task"><a href="#注册-cwebp-gradle-task" class="headerlink" title="注册 cwebp gradle task"></a>注册 cwebp gradle task</h2><p><code>VariantProcessor</code> 是 booster API，本模块入口 <code>CwebpCompressionVariantProcessor</code> 通过 <a href="#google-autoservice">AutoService</a> 注册为它的一个实现，然后 booster-gradle-plugin 在运行时通过 <a href="#spi">ServiceLoader</a> 发现并执行 cwebp 模块</p>
+<p>实现类是 <code>CwebpCompressOpaqueFlatImages</code>、<code>CwebpCompressFlatImages</code>、<code>CwebpCompressOpaqueImages</code> or <code>CwebpCompressImages</code>（根据 aapt2 和 alpha 的支持情况四选一）</p>
+<p>依赖图：</p>
+<ul>
+<li><p>在这些 task 后执行</p>
+<ul>
+<li><code>pre-build tasks</code></li>
+<li><code>merge[XXX]Resources task</code></li>
+<li><code>install cwebp executable</code></li>
+</ul>
+</li>
+<li><p>在这些 task 前执行</p>
+<ul>
+<li><code>process[XXX]Resources tasks</code></li>
+<li><code>bundle[XXX]Resources tasks</code></li>
+</ul>
+</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// https://github.com/didi/booster/blob/master/booster-task-compression-cwebp/src/main/kotlin/com/didiglobal/booster/task/compression/cwebp/CwebpCompressionVariantProcessor.kt</span>
+<span class="hljs-meta">@AutoService(VariantProcessor::class)</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">CwebpCompressionVariantProcessor</span> : <span class="hljs-type">VariantProcessor</span> &#123;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">process</span><span class="hljs-params">(variant: <span class="hljs-type">BaseVariant</span>)</span></span> &#123;  <span class="hljs-comment">// 处理各种变体（构建任务）</span>
+        <span class="hljs-keyword">val</span> project = variant.project
+        <span class="hljs-keyword">val</span> results = CompressionResults()
+        <span class="hljs-keyword">val</span> ignores = project.findProperty(PROPERTY_IGNORES)?.toString()?.trim()?.split(<span class="hljs-string">&#x27;,&#x27;</span>)?.map &#123;
+            Wildcard(it)
+        &#125;?.toSet() ?: emptySet()
+
+        Cwebp.<span class="hljs-keyword">get</span>(variant)?.newCompressionTaskCreator()?.createCompressionTask(variant, results, <span class="hljs-string">&quot;resources&quot;</span>, &#123;
+            variant.mergedRes.search(<span class="hljs-keyword">if</span> (project.isAapt2Enabled) ::isFlatPngExceptRaw <span class="hljs-keyword">else</span> ::isPngExceptRaw)
+        &#125;, ignores, variant.mergeResourcesTaskProvider)?.configure &#123;
+            it.doLast &#123;
+                results.generateReport(variant, Build.ARTIFACT)
+            &#125;
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">SimpleCompressionTaskCreator</span>(
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> tool: CompressionTool,  <span class="hljs-comment">/* Cwebp */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> compressor: (<span class="hljs-built_in">Boolean</span>) -&gt; KClass&lt;<span class="hljs-keyword">out</span> CompressImages&lt;<span class="hljs-keyword">out</span> CompressionOptions&gt;&gt;
+) : CompressionTaskCreator &#123;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">createCompressionTask</span><span class="hljs-params">(</span></span>
+<span class="hljs-params"><span class="hljs-function">            variant: <span class="hljs-type">BaseVariant</span>,</span></span>
+<span class="hljs-params"><span class="hljs-function">            results: <span class="hljs-type">CompressionResults</span>,</span></span>
+<span class="hljs-params"><span class="hljs-function">            name: <span class="hljs-type">String</span>,                       <span class="hljs-comment">// resources</span></span></span>
+<span class="hljs-params"><span class="hljs-function">            supplier: () -&gt; <span class="hljs-type">Collection</span>&lt;<span class="hljs-type">File</span>&gt;,   <span class="hljs-comment">// variant.mergedRes.search(if (project.isAapt2Enabled) ::isFlatPngExceptRaw else ::isPngExceptRaw)</span></span></span>
+<span class="hljs-params"><span class="hljs-function">            ignores: <span class="hljs-type">Set</span>&lt;<span class="hljs-type">Wildcard</span>&gt;,             <span class="hljs-comment">// emptySet()</span></span></span>
+<span class="hljs-params"><span class="hljs-function">            <span class="hljs-keyword">vararg</span> deps: <span class="hljs-type">TaskProvider</span>&lt;<span class="hljs-type">out</span> <span class="hljs-type">Task</span>&gt; <span class="hljs-comment">// variant.mergeResourcesTaskProvider</span></span></span>
+<span class="hljs-params"><span class="hljs-function">    )</span></span>: TaskProvider&lt;<span class="hljs-keyword">out</span> CompressImages&lt;<span class="hljs-keyword">out</span> CompressionOptions&gt;&gt; &#123;
+
+        <span class="hljs-keyword">val</span> project = variant.project
+        <span class="hljs-keyword">val</span> aapt2 = project.isAapt2Enabled
+        <span class="hljs-keyword">val</span> install = getCommandInstaller(variant)
+
+        <span class="hljs-comment">// TaskContainer.register(String name, Class&lt;T&gt; type, Action&lt;? super T&gt; configurationAction)</span>
+        <span class="hljs-comment">// 往 project 注册了一个 cwebp task</span>
+        <span class="hljs-comment">// 名称是 compress[DemoRelease]ResourcesWith[CwebpCompressOpaqueFlatImages]（显示在 Android Studio 的 Build 窗口里）</span>
+        <span class="hljs-comment">// 实现类是 CwebpCompressOpaqueFlatImages</span>
+        <span class="hljs-keyword">return</span> project.tasks.register(
+            <span class="hljs-string">&quot;compress<span class="hljs-subst">$&#123;variant.name.capitalize()&#125;</span><span class="hljs-subst">$&#123;name.capitalize()&#125;</span>With<span class="hljs-subst">$&#123;tool.command.name.substringBefore(<span class="hljs-string">&#x27;.&#x27;</span>).capitalize()&#125;</span>&quot;</span>, 
+            getCompressionTaskClass(aapt2).java
+
+        <span class="hljs-comment">// 配置 cwebp task 的依赖图，确定它的执行次序</span>
+        ) &#123; task -&gt;
+            task.group = BOOSTER
+            task.description = <span class="hljs-string">&quot;Compress image resources by <span class="hljs-subst">$&#123;tool.command.name&#125;</span> for <span class="hljs-subst">$&#123;variant.name&#125;</span>&quot;</span>
+            task.dependsOn(variant.preBuildTaskProvider.<span class="hljs-keyword">get</span>())    <span class="hljs-comment">// 在所有的 pre-build tasks 之后执行</span>
+            task.tool = tool
+            task.variant = variant
+            task.results = results
+            task.filter = <span class="hljs-keyword">if</span> (ignores.isNotEmpty()) excludes(ignores) <span class="hljs-keyword">else</span> MATCH_ALL_RESOURCES
+            task.images = lazy(supplier)::value
+        &#125;.apply &#123;
+            dependsOn(install)                                      <span class="hljs-comment">// 在安装 cwebp 可执行文件之后执行</span>
+            deps.forEach &#123; dependsOn(it) &#125;                          <span class="hljs-comment">// 在所有 merge[XXX]Resources task 之后执行</span>
+            variant.processResTaskProvider?.dependsOn(<span class="hljs-keyword">this</span>)         <span class="hljs-comment">// 在所有 process[XXX]Resources task 前执行</span>
+            variant.bundleResourcesTaskProvider?.dependsOn(<span class="hljs-keyword">this</span>)    <span class="hljs-comment">// 在所有 bundle[XXX]Resources task 前执行</span>
+        &#125;
+    &#125;
+
+    <span class="hljs-comment">// 注册一个 install cwebp task</span>
+    <span class="hljs-comment">// 名称是 install[DemoRelease]Cwebp</span>
+    <span class="hljs-comment">// 实现类是 CommandInstaller</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getCommandInstaller</span><span class="hljs-params">(variant: <span class="hljs-type">BaseVariant</span>)</span></span>: TaskProvider&lt;<span class="hljs-keyword">out</span> Task&gt; &#123;
+        <span class="hljs-keyword">return</span> variant.project.tasks.register(getInstallTaskName(variant.name)) &#123;
+            it.group = BOOSTER
+            it.description = <span class="hljs-string">&quot;Install <span class="hljs-subst">$&#123;tool.command.name&#125;</span> for <span class="hljs-subst">$&#123;variant.name&#125;</span>&quot;</span>
+        &#125;.apply &#123;
+            dependsOn(getCommandInstaller(variant.project))
+            dependsOn(variant.mergeResourcesTaskProvider)    <span class="hljs-comment">// 在所有 merge[XXX]Resources task 之后执行</span>
+        &#125;
+    &#125;
+
+    <span class="hljs-comment">// cwebp 可执行文件每次构建只释放一次即可</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getCommandInstaller</span><span class="hljs-params">(project: <span class="hljs-type">Project</span>)</span></span>: TaskProvider&lt;<span class="hljs-keyword">out</span> Task&gt; &#123;
+        <span class="hljs-keyword">val</span> name = getInstallTaskName()
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">try</span> &#123;
+            project.tasks.named(name)
+        &#125; <span class="hljs-keyword">catch</span> (e: UnknownTaskException) &#123;
+            <span class="hljs-literal">null</span>
+        &#125; ?: project.tasks.register(name, CommandInstaller::<span class="hljs-keyword">class</span>.java) &#123;
+            it.group = BOOSTER
+            it.description = <span class="hljs-string">&quot;Install <span class="hljs-subst">$&#123;tool.command.name&#125;</span>&quot;</span>
+            it.command = tool.command
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getInstallTaskName</span><span class="hljs-params">(variant: <span class="hljs-type">String</span> = <span class="hljs-string">&quot;&quot;</span>)</span></span>: String &#123;
+        <span class="hljs-meta">@Suppress(<span class="hljs-string">&quot;DEPRECATION&quot;</span>)</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;install<span class="hljs-subst">$&#123;variant.capitalize()&#125;</span><span class="hljs-subst">$&#123;tool.command.name.substringBefore(<span class="hljs-string">&#x27;.&#x27;</span>).capitalize()&#125;</span>&quot;</span>
+    &#125;    
+&#125;
+
+<span class="hljs-comment">// 根据是否支持 aapt2、是否支持 alpha 等情况有四种核心实现，这里选取支持 aapt2 和 alpha 的 CwebpCompressOpaqueFlatImages 为例</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Cwebp</span> <span class="hljs-keyword">internal</span> <span class="hljs-keyword">constructor</span>(<span class="hljs-keyword">val</span> supportAlpha: <span class="hljs-built_in">Boolean</span>) : CompressionTool(CommandService.<span class="hljs-keyword">get</span>(CWEBP)) &#123;
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">newCompressionTaskCreator</span><span class="hljs-params">()</span></span> = SimpleCompressionTaskCreator(<span class="hljs-keyword">this</span>) &#123; aapt2 -&gt;
+        <span class="hljs-keyword">when</span> (aapt2) &#123;
+            <span class="hljs-literal">true</span> -&gt; <span class="hljs-keyword">when</span> (supportAlpha) &#123;
+                <span class="hljs-literal">true</span> -&gt; CwebpCompressOpaqueFlatImages::<span class="hljs-keyword">class</span>
+                <span class="hljs-title class_">else</span> -&gt; <span class="hljs-title">CwebpCompressFlatImages</span>:<span class="hljs-type">:class</span>
+            &#125;
+            <span class="hljs-keyword">else</span> -&gt; <span class="hljs-keyword">when</span> (supportAlpha) &#123;
+                <span class="hljs-literal">true</span> -&gt; CwebpCompressOpaqueImages::<span class="hljs-keyword">class</span>
+                <span class="hljs-title class_">else</span> -&gt; <span class="hljs-title">CwebpCompressImages</span>:<span class="hljs-type">:class</span>
+            &#125;
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h2 id="install-cwebp-executable-task"><a href="#install-cwebp-executable-task" class="headerlink" title="install cwebp executable task"></a>install cwebp executable task</h2><p>cwebp 可执行文件被打包进 aar，然后在 gradle task 期间被释放到 build dir 使用</p>
+<p><a href="/image/2023-01-17-booster-resources/cwebp_executable.png">cwebp_executable.png</a></p>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 此 task 在上一章节的 getCommandInstaller 方法里被注册进去</span>
+<span class="hljs-meta">@CacheableTask</span>
+<span class="hljs-keyword">open</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CommandInstaller</span> : <span class="hljs-type">DefaultTask</span>() &#123;
+
+    <span class="hljs-meta">@get:Input</span>
+    <span class="hljs-keyword">lateinit</span> <span class="hljs-keyword">var</span> command: Command
+
+    <span class="hljs-meta">@get:OutputFile</span>
+    <span class="hljs-keyword">val</span> location: File
+        <span class="hljs-keyword">get</span>() = project.buildDir.file(<span class="hljs-string">&quot;bin&quot;</span>, command.name)
+
+    <span class="hljs-meta">@TaskAction</span>
+    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">install</span><span class="hljs-params">()</span></span> &#123;
+        logger.info(<span class="hljs-string">&quot;Installing <span class="hljs-variable">$command</span> =&gt; <span class="hljs-variable">$location</span>&quot;</span>)
+
+        <span class="hljs-keyword">this</span>.command.location.openStream().buffered().use &#123; input -&gt;
+            FileUtils.copyInputStreamToFile(input, location)  <span class="hljs-comment">// 将 cwebp 拷贝一份到 build dir</span>
+            project.exec &#123;                                    <span class="hljs-comment">// 然后给 cwebp 增加 executable 权限</span>
+                it.commandLine = <span class="hljs-keyword">when</span> &#123;
+                    OS.isLinux() || OS.isMac() -&gt; listOf(<span class="hljs-string">&quot;chmod&quot;</span>, <span class="hljs-string">&quot;+x&quot;</span>, location.canonicalPath)
+                    OS.isWindows() -&gt; listOf(<span class="hljs-string">&quot;cmd&quot;</span>, <span class="hljs-string">&quot;/c echo Y|cacls <span class="hljs-subst">$&#123;location.canonicalPath&#125;</span> /t /p everyone:f&quot;</span>)
+                    <span class="hljs-keyword">else</span> -&gt; TODO(<span class="hljs-string">&quot;Unsupported OS <span class="hljs-subst">$&#123;OS.name&#125;</span>&quot;</span>)
+                &#125;
+            &#125;
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">open</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Command</span>(
+    <span class="hljs-keyword">val</span> name: String,  <span class="hljs-comment">// 可执行文件的名称：cwebp or cwebp.exe(windows)</span>
+    <span class="hljs-keyword">val</span> location: URL  <span class="hljs-comment">// 可执行文件的相对位置（如上图）：ClassLoader.getResource(&quot;bin/linux/x64 | bin/macosx/[10.1x] | windows/x64&quot;)</span>
+) : Serializable &#123;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">equals</span><span class="hljs-params">(other: <span class="hljs-type">Any</span>?)</span></span> = <span class="hljs-keyword">when</span> &#123;
+        <span class="hljs-keyword">this</span> === other -&gt; <span class="hljs-literal">true</span>
+        other <span class="hljs-keyword">is</span> Command -&gt; name == other.name &amp;&amp; location == other.location
+        <span class="hljs-keyword">else</span> -&gt; <span class="hljs-literal">false</span>
+    &#125;
+
+    <span class="hljs-meta">@Throws(IOException::class)</span>
+    <span class="hljs-keyword">open</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">execute</span><span class="hljs-params">(<span class="hljs-keyword">vararg</span> args: <span class="hljs-type">String</span>)</span></span> &#123;
+        Runtime.getRuntime().exec(arrayOf(location.file.let(::File).canonicalPath) + args).let &#123; p -&gt;
+            p.waitFor()
+            <span class="hljs-keyword">if</span> (p.exitValue() != <span class="hljs-number">0</span>) &#123;
+                <span class="hljs-keyword">throw</span> IOException(p.stderr)
+            &#125;
+        &#125;
+    &#125;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">hashCode</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Int</span> &#123;
+        <span class="hljs-keyword">return</span> arrayOf(name, location).contentHashCode()
+    &#125;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">toString</span><span class="hljs-params">()</span></span> = <span class="hljs-string">&quot;<span class="hljs-variable">$name</span>:<span class="hljs-variable">$location</span>&quot;</span>
+
+&#125;</code></pre></div>
+
+<h2 id="cwebp-task"><a href="#cwebp-task" class="headerlink" title="cwebp task"></a>cwebp task</h2><ul>
+<li>第一步，找到数据源：resource merger 处理后且 aapt2 编译后的资源文件集合</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// gradle api</span>
+Project.objects.fileCollection().from(     <span class="hljs-comment">// 创建一个空的文件集合，用以承载下面的文件</span>
+    Component.artifacts.<span class="hljs-keyword">get</span>(               <span class="hljs-comment">// Access to the variant&#x27;s buildable artifacts for build customization.</span>
+        InternalArtifactType.MERGED_RES))  <span class="hljs-comment">// 它是一个目录，包含了所有 resource merger 处理后的模块资源文件，且经过 aapt2 编译</span>
+
+<span class="hljs-comment">// booster 为了兼容各个版本的 gradle：v3.6、v4.2、v7.3 等等，抽象出一个统一的接口：AGPInterface</span>
+<span class="hljs-comment">// 针对不同的 gradle 版本，实现可能不一样，这里是针对 gradle 7.3 的实现</span>
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">object</span> V73 : AGPInterface &#123;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> BaseVariant.component: ComponentImpl
+        <span class="hljs-keyword">get</span>() = BaseVariantImpl::<span class="hljs-keyword">class</span>.java.getDeclaredField(<span class="hljs-string">&quot;component&quot;</span>).apply &#123;
+            isAccessible = <span class="hljs-literal">true</span>
+        &#125;.<span class="hljs-keyword">get</span>(<span class="hljs-keyword">this</span>) <span class="hljs-keyword">as</span> ComponentImpl
+
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">val</span> BaseVariant.project: Project
+        <span class="hljs-keyword">get</span>() = component.variantDependencies.run &#123;
+            javaClass.getDeclaredField(<span class="hljs-string">&quot;project&quot;</span>).apply &#123;
+                isAccessible = <span class="hljs-literal">true</span>
+            &#125;.<span class="hljs-keyword">get</span>(<span class="hljs-keyword">this</span>) <span class="hljs-keyword">as</span> Project
+        &#125;
+&#125;</code></pre></div>
+
+<ul>
+<li>第二步，过滤出 *.png.flat 图片（只考虑 aapt2 的情况）</li>
+</ul>
+<p><code>*.png.flat</code> 是经过 aapt2 compile 后的 png 格式图片资源</p>
+<p>resources merger 将所有资源放至同一目录，并以资源限定符为前缀如 <code>app\build\intermediates\res\merged\release\drawable-ldpi-v4_exo_icon_next.png.flat</code>，<code>raw_</code> 开头的是 <code>res/raw</code> 目录下的资源文件，它们有资源 ID <code>R.raw.[id]</code> 但是不压缩，直接将原始数据包进 apk（Arbitrary files to save in their raw form），所以这里也要遵循规范排除这些 raw 资源</p>
+<p>排除 nine patch 图片资源</p>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">isFlatPngExceptRaw</span><span class="hljs-params">(file: <span class="hljs-type">File</span>)</span></span> : <span class="hljs-built_in">Boolean</span> = isFlatPng(file) &amp;&amp; !file.name.startsWith(<span class="hljs-string">&quot;raw_&quot;</span>)
+
+<span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">isFlatPng</span><span class="hljs-params">(file: <span class="hljs-type">File</span>)</span></span>: <span class="hljs-built_in">Boolean</span> = file.name.endsWith(<span class="hljs-string">&quot;.png.flat&quot;</span>, <span class="hljs-literal">true</span>)
+        &amp;&amp; (file.name.length &lt; <span class="hljs-number">11</span> || !file.name.regionMatches(file.name.length - <span class="hljs-number">11</span>, <span class="hljs-string">&quot;.9&quot;</span>, <span class="hljs-number">0</span>, <span class="hljs-number">2</span>, <span class="hljs-literal">true</span>))</code></pre></div>
+
+<ul>
+<li>第三步，cwebp 转换图片格式</li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://developers.google.com/speed/webp/docs/cwebp">cwebp</a> 可以将 PNG, JPEG, TIFF, WebP or raw Y’CbCr 转换为 webp 格式（flat ?）</p>
+<div class="code-wrapper"><pre><code class="hljs shell">cwebp -mt -quiet -q [quality] [*.png.flat] -o [*.webp]</code></pre></div>
+
+<ul>
+<li>第四步，将格式转换后的 webp 图片交给 aapt2 编译成 flat 格式：<code>aapt2 compile</code></li>
+</ul>
+<p>整体流程如下：</p>
+<div class="code-wrapper"><pre><code class="hljs kotlin"><span class="hljs-comment">// 继承关系</span>
+CwebpCompressOpaqueFlatImages
+  - CwebpCompressFlatImages
+    - AbstractCwebpCompressImages
+      - CompressImages&lt;CompressionOptions&gt;
+        - org.gradle.api.DefaultTask
+
+<span class="hljs-meta">@CacheableTask</span>
+<span class="hljs-keyword">internal</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CwebpCompressOpaqueFlatImages</span> &#123;
+
+    <span class="hljs-comment">// 格式化后的 webp 文件的输出目录：</span>
+    <span class="hljs-comment">// build/intermediates/compressed_res_cwebp/release/demo/compressDemoReleaseResourcesWithCwebpCompressOpaqueFlatImages</span>
+    <span class="hljs-meta">@get:OutputDirectory</span>
+    <span class="hljs-keyword">val</span> compressedRes: File
+        <span class="hljs-keyword">get</span>() = variant.project.buildDir.file(FD_INTERMEDIATES).file(<span class="hljs-string">&quot;compressed_<span class="hljs-subst">$&#123;FD_RES&#125;</span>_cwebp&quot;</span>, variant.dirName, <span class="hljs-keyword">this</span>.name)
+
+    <span class="hljs-meta">@get:Internal</span>
+    <span class="hljs-keyword">val</span> compressor: File
+        <span class="hljs-keyword">get</span>() = project.tasks.withType(CommandInstaller::<span class="hljs-keyword">class</span>.java).find &#123;
+            it.command == tool.command
+        &#125;!!.location        
+
+    <span class="hljs-meta">@TaskAction</span>
+    <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">run</span><span class="hljs-params">()</span></span> &#123;
+        <span class="hljs-keyword">this</span>.options = CompressionOptions(project.getProperty(PROPERTY_OPTION_QUALITY, <span class="hljs-number">80</span>))
+        compress(File::hasNotAlpha)
+    &#125;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">compress</span><span class="hljs-params">(filter: (<span class="hljs-type">File</span>) -&gt; <span class="hljs-type">Boolean</span> <span class="hljs-comment">/* always true for CwebpCompressOpaqueFlatImages */</span>)</span></span> &#123;
+        <span class="hljs-keyword">val</span> cwebp = <span class="hljs-keyword">this</span>.compressor.canonicalPath  <span class="hljs-comment">// cwebp 可执行文件的位置</span>
+        <span class="hljs-keyword">val</span> aapt2 = variant.buildTools.getPath(BuildToolInfo.PathId.AAPT2)
+        <span class="hljs-keyword">val</span> parser = SAXParserFactory.newInstance().newSAXParser()
+        <span class="hljs-keyword">val</span> icons = variant.mergedManifests.search &#123;
+            it.name == SdkConstants.ANDROID_MANIFEST_XML
+        &#125;.parallelStream().map &#123; manifest -&gt;
+            LauncherIconHandler().let &#123;
+                parser.parse(manifest, it)
+                it.icons
+            &#125;
+        &#125;.flatMap &#123;
+            it.parallelStream()
+        &#125;.collect(Collectors.toSet())
+
+        <span class="hljs-comment">// Google Play only accept APK with PNG format launcher icon</span>
+        <span class="hljs-comment">// https://developer.android.com/topic/performance/reduce-apk-size#use-webp</span>
+        <span class="hljs-keyword">val</span> isNotLauncherIcon: (Pair&lt;File, Aapt2Container.Metadata&gt;) -&gt; <span class="hljs-built_in">Boolean</span> = &#123; (input, metadata) -&gt;
+            <span class="hljs-keyword">if</span> (!icons.contains(metadata.resourceName)) <span class="hljs-literal">true</span> <span class="hljs-keyword">else</span> <span class="hljs-literal">false</span>.also &#123;
+                ignore(metadata.resourceName, input, File(metadata.sourcePath))
+            &#125;
+        &#125;
+
+        <span class="hljs-comment">// images() == variant.mergedRes.search(if (project.isAapt2Enabled) ::isFlatPngExceptRaw else ::isPngExceptRaw)</span>
+        <span class="hljs-comment">// variant.mergedRes 是数据源</span>
+        <span class="hljs-comment">// if (project.isAapt2Enabled) ::isFlatPngExceptRaw else ::isPngExceptRaw 是主要的过滤器</span>
+        images().parallelStream().map &#123;
+            it to it.metadata
+        &#125;.filter(<span class="hljs-keyword">this</span>::includes).filter(isNotLauncherIcon).filter &#123;
+            filter(File(it.second.sourcePath))
+        &#125;.map &#123;
+            <span class="hljs-comment">// 指定输出文件：文件名不变，后缀改为 webp，放到输出目录</span>
+            <span class="hljs-keyword">val</span> output = compressedRes.file(<span class="hljs-string">&quot;<span class="hljs-subst">$&#123;it.second.resourcePath.substringBeforeLast(<span class="hljs-string">&#x27;.&#x27;</span>)&#125;</span>.webp&quot;</span>)
+            <span class="hljs-comment">// 先用 cwebp 转格式，再用 aapt2 compile 编译为 flat 格式，因为这些 png 资源文件之前是 flat 格式的</span>
+            Aapt2ActionData(it.first, it.second, output,
+                    listOf(cwebp, <span class="hljs-string">&quot;-mt&quot;</span>, <span class="hljs-string">&quot;-quiet&quot;</span>, <span class="hljs-string">&quot;-q&quot;</span>, options.quality.toString(), it.second.sourcePath, <span class="hljs-string">&quot;-o&quot;</span>, output.canonicalPath),
+                    listOf(aapt2, <span class="hljs-string">&quot;compile&quot;</span>, <span class="hljs-string">&quot;-o&quot;</span>, it.first.parent, output.canonicalPath))
+        &#125;.forEach &#123;
+            it.output.parentFile.mkdirs()  <span class="hljs-comment">// 为目标文件创建必须的目录</span>
+            <span class="hljs-keyword">val</span> s0 = File(it.metadata.sourcePath).length()
+
+            <span class="hljs-comment">// cwebp 进行格式转换</span>
+            <span class="hljs-comment">// Executes an external command.</span>
+            <span class="hljs-comment">// The given action configures a &#123;@link org.gradle.process.ExecSpec&#125;, which is used to launch the process.</span>
+            <span class="hljs-comment">// This method blocks until the process terminates, with its result being returned.</span>
+            <span class="hljs-comment">// Params:</span>
+            <span class="hljs-comment">//   action – The action for configuring the execution.</span>
+            <span class="hljs-comment">// Returns:</span>
+            <span class="hljs-comment">//   the result of the execution</span>
+            <span class="hljs-comment">// ExecResult Project.exec(Action&lt;? super ExecSpec&gt; action);</span>
+            <span class="hljs-keyword">val</span> rc = project.exec &#123; spec -&gt;
+                spec.isIgnoreExitValue = <span class="hljs-literal">true</span>
+                spec.commandLine = it.cmdline  <span class="hljs-comment">// build/bin/cwebp -mt -quiet -q 80 [src] -o [output]</span>
+            &#125;
+            <span class="hljs-keyword">when</span> (rc.exitValue) &#123;
+                <span class="hljs-number">0</span> -&gt; &#123;  <span class="hljs-comment">// webp 格式转换成功</span>
+                    <span class="hljs-keyword">val</span> s1 = it.output.length()
+                    <span class="hljs-keyword">if</span> (s1 &gt; s0) &#123;
+                        results.add(CompressionResult(it.input, s0, s0, File(it.metadata.sourcePath)))
+                        it.output.delete()
+                    &#125; <span class="hljs-keyword">else</span> &#123;
+
+                        <span class="hljs-comment">// aapt2 编译</span>
+                        <span class="hljs-keyword">val</span> rcAapt2 = project.exec &#123; spec -&gt;
+                            spec.isIgnoreExitValue = <span class="hljs-literal">true</span>
+                            spec.commandLine = it.aapt2
+                        &#125;
+                        <span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> == rcAapt2.exitValue) &#123;
+                            results.add(CompressionResult(it.input, s0, s1, File(it.metadata.sourcePath)))
+                            it.input.delete()
+                        &#125; <span class="hljs-keyword">else</span> &#123;
+                            logger.error(<span class="hljs-string">&quot;<span class="hljs-subst">$&#123;CSI_RED&#125;</span>Command `<span class="hljs-subst">$&#123;it.aapt2.joinToString(<span class="hljs-string">&quot; &quot;</span>)&#125;</span>` exited with non-zero value <span class="hljs-subst">$&#123;rc.exitValue&#125;</span><span class="hljs-variable">$CSI_RESET</span>&quot;</span>)
+                            results.add(CompressionResult(it.input, s0, s0, File(it.metadata.sourcePath)))
+                            rcAapt2.assertNormalExitValue()
+                        &#125;
+                    &#125;
+                &#125;
+                <span class="hljs-keyword">else</span> -&gt; &#123;  <span class="hljs-comment">// 格式转换失败</span>
+                    logger.error(<span class="hljs-string">&quot;<span class="hljs-subst">$&#123;CSI_RED&#125;</span>Command `<span class="hljs-subst">$&#123;it.cmdline.joinToString(<span class="hljs-string">&quot; &quot;</span>)&#125;</span>` exited with non-zero value <span class="hljs-subst">$&#123;rc.exitValue&#125;</span><span class="hljs-variable">$CSI_RESET</span>&quot;</span>)
+                    results.add(CompressionResult(it.input, s0, s0, File(it.metadata.sourcePath)))
+                    it.output.delete()
+                &#125;
+            &#125;
+        &#125;
+    &#125;
+
+&#125;</code></pre></div>
+
+<h1 id="aapt2"><a href="#aapt2" class="headerlink" title="aapt2"></a>aapt2</h1><p><a target="_blank" rel="noopener" href="https://developer.android.com/studio/command-line/aapt2">aapt2</a> 全称 Android Asset Packaging Tool，是一个专门处理资源文件的命令行工具，主要有以下功能：</p>
+<ol>
+<li>compile </li>
+</ol>
+<p>输入原始的资源文件，输出编译后的中间产物（intermediate file）：<code>aapt2 compile path-to-input-files [options] -o output-directory/</code></p>
+<div class="code-wrapper"><pre><code class="hljs">1. `res/values` 目录下的 xml 文件，比如字符串 strings.xml、颜色 colors.xml、数组 arrays.xml 等，被 aapt2 编译为 `*.arsc.flat` 中间产物，最后被链接为一个单独的 `resources.arsc` 打进 apk，也就是说项目源码里会存在 `app/src/main/res/values` 目录但 apk 里是没有 `res/values` 目录的
+
+2. 其余的 xml 文件被编译为紧凑的、二进制的 `*.flat` 中间产物，最后被链接打包进 apk
+
+3. png 图片被压缩为 `*.png.flat` 中间产物（不是 png 格式的图片了），size 会因为压缩变小很多
+
+4. 其余资源文件直接链接打包进 apk
+</code></pre></div>
+<p><code>*.flat</code> 文件是 aapt2 编译的产物，也叫做 aapt2 容器，由文件头（header）和资源项（entry）两大部分组成</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Size in bytes</th>
+<th>Field Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>header</td>
+<td>4</td>
+<td>magic</td>
+<td>AAPT2 容器文件标识：AAPT 或者 0x54504141</td>
+</tr>
+<tr>
+<td></td>
+<td>4</td>
+<td>version</td>
+<td>AAPT2 容器版本</td>
+</tr>
+<tr>
+<td></td>
+<td>4</td>
+<td>entry_count</td>
+<td>容器中包含的条目数量（一个 flat 文件可以包含多个资源项）</td>
+</tr>
+<tr>
+<td>entry</td>
+<td>4</td>
+<td>entry_type</td>
+<td>资源类型，目前仅支持两种：RES_TABLE(0x00000000) 和 RES_FILE(0x00000001)</td>
+</tr>
+<tr>
+<td></td>
+<td>8</td>
+<td>entry_length</td>
+<td>资源的长度</td>
+</tr>
+<tr>
+<td></td>
+<td>entry_length</td>
+<td>data</td>
+<td>资源内容</td>
+</tr>
+</tbody></table>
+<p>RES_FILE 类型的结构如下：</p>
+<table>
+<thead>
+<tr>
+<th>Size in bytes</th>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4</td>
+<td>header_size</td>
+<td>header 的长度</td>
+</tr>
+<tr>
+<td>8</td>
+<td>data_size</td>
+<td>data 的长度</td>
+</tr>
+<tr>
+<td>header_size</td>
+<td>header</td>
+<td>protobuf 序列化的 CompiledFile 结构，保存了文件名、文件路径、文件配置和文件类型等信息</td>
+</tr>
+<tr>
+<td>x</td>
+<td>header_padding</td>
+<td>0 - 3 个填充字节，用以 data 32 位对齐</td>
+</tr>
+<tr>
+<td>data_size</td>
+<td>data</td>
+<td>资源文件的内容：png、二进制的 XML 或者 protobuf 序列化的 XmlNode 结构</td>
+</tr>
+<tr>
+<td>x</td>
+<td>data_padding</td>
+<td>0 - 3 个填充字节，用以 data 32 位对齐</td>
+</tr>
+</tbody></table>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// RES_TABLE 是 protobuf 格式的 ResourceTable 结构</span>
+
+message ResourceTable &#123;
+    <span class="hljs-comment">// 字符串常量池是为了把资源文件中的 string 复用起来，从而减少体积，资源文件中对应的字符串会被替换为字符串池中的索引</span>
+    <span class="hljs-type">StringPool</span> <span class="hljs-variable">source_pool</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+    repeated <span class="hljs-type">Package</span> <span class="hljs-variable">package</span> <span class="hljs-operator">=</span> <span class="hljs-number">2</span>;                   <span class="hljs-comment">// 用来生成资源 ID</span>
+    repeated <span class="hljs-type">Overlayable</span> <span class="hljs-variable">overlayable</span> <span class="hljs-operator">=</span> <span class="hljs-number">3</span>;           <span class="hljs-comment">// 资源叠加层相关</span>
+    repeated <span class="hljs-type">ToolFingerprint</span> <span class="hljs-variable">tool_fingerprint</span> <span class="hljs-operator">=</span> <span class="hljs-number">4</span>;  <span class="hljs-comment">// 工具版本</span>
+&#125;
+
+<span class="hljs-comment">// 资源 ID 的命名方式遵循 0xPPTTEEEE 的规则</span>
+<span class="hljs-comment">// 1. [PP] 对应 PackageId，一般应用使用的资源为 0x7f</span>
+<span class="hljs-comment">// 2. [TT] 对应的是资源类型（文件夹的名称）</span>
+<span class="hljs-comment">// 3. [EEEE] 为资源的 id，从 0 开始</span>
+message Package &#123;
+  <span class="hljs-type">PackageId</span> <span class="hljs-variable">package_id</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;  <span class="hljs-comment">// 包 ID</span>
+  <span class="hljs-type">string</span> <span class="hljs-variable">package_name</span> <span class="hljs-operator">=</span> <span class="hljs-number">2</span>;   <span class="hljs-comment">// 包名</span>
+  repeated <span class="hljs-type">Type</span> <span class="hljs-variable">type</span> <span class="hljs-operator">=</span> <span class="hljs-number">3</span>;    <span class="hljs-comment">// 资源类型：string, layout, xml 等，其对应的资源 ID 区间为 [0x01, 0xff]</span>
+&#125;
+
+<span class="hljs-comment">// 资源 ID 的包 ID 部分，在 [0x00, 0xff] 范围内</span>
+<span class="hljs-comment">// 1. [0x02, 0x7f) 由系统使用</span>
+<span class="hljs-comment">// 2. 0x7f 应用使用</span>
+<span class="hljs-comment">// 3. (0x7f, 0xff] 预留Id</span>
+message PackageId &#123;
+  <span class="hljs-type">uint32</span> <span class="hljs-variable">id</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+&#125;</code></pre></div>
+
+<ol start="2">
+<li>link</li>
+</ol>
+<p>将编译阶段产生的中间产物（intermediate files）如资源表文件（resources.arsc）、二进制的 xml 文件、压缩后的 png 图片等，打包进一个单独的 apk 文件，此 apk 是不包含字节码文件 dex 的，也没有经过签名</p>
+<div class="code-wrapper"><pre><code class="hljs shell">aapt2 link -o output.apk
+-I android_sdk/platforms/android_version/android.jar
+   compiled/res/values_values.arsc.flat
+   compiled/res/drawable_Image.flat --manifest /path/to/AndroidManifest.xml -v</code></pre></div>
+
+<ol start="3">
+<li>dump</li>
+</ol>
+<p>打印 apk 文件里资源相关信息如：清单文件（badging，被编译为二进制了）、用到的资源限定符（configurations）、字符串池（strings）、整个资源表（resources）等等</p>
+<div class="code-wrapper"><pre><code class="hljs shell">aapt2 dump [sub-command] filename.apk [options]
+
+sub-command: apc, badging, configurations, overlayable, packagename, permissions, strings, styleparents, resources, xmlstrings, xmltree</code></pre></div>
+
+<ol start="4">
+<li>diff</li>
+</ol>
+<p>找出两个 apk 文件间的差异</p>
+<div class="code-wrapper"><pre><code class="hljs shell">aapt2 diff first.apk second.apk</code></pre></div>
+
+<h1 id="远程调试-gradle"><a href="#远程调试-gradle" class="headerlink" title="远程调试 gradle"></a>远程调试 gradle</h1><p>这里分享一种较为简单的远程调试 gradle build script 的方法：</p>
+<p><a target="_blank" rel="noopener" href="https://docs.gradle.org/6.5/userguide/troubleshooting.html#sec:troubleshooting_build_logic">debug 模式开启 gradle build</a>，注意 Windows 下要这么写：<code>.\gradlew :app:assembleRelease &#39;-Dorg.gradle.debug=true&#39;</code></p>
+<p>git clone booster &amp; checkout version，用 Android Studio 打开 booster project，运行以下远程调试任务</p>
+<p><a href="/image/2023-01-17-booster-resources/remote_debug.png">remote_debug.png</a></p>
+<h1 id="一些-gradle-名词和概念"><a href="#一些-gradle-名词和概念" class="headerlink" title="一些 gradle 名词和概念"></a>一些 gradle 名词和概念</h1><p><a target="_blank" rel="noopener" href="https://developer.android.com/studio/build/build-variants">variant</a> 指代构建的一个输出：apk or jar，它是 build type 和 product flavor 的组合，比如 demoDebug、productRelease 等等 </p>
+<p><code>artifacts</code> 指代构建过程用到的、产生的各种文件、目录，比如：</p>
+<div class="code-wrapper"><pre><code class="hljs kotlin">
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * Public [Artifact] for Android Gradle plugin.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">sealed</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SingleArtifact</span>&lt;<span class="hljs-type">T : FileSystemLocation</span>&gt;(
+    kind: ArtifactKind&lt;T&gt;,
+    category: Category = Category.INTERMEDIATES,
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> fileName: String? = <span class="hljs-literal">null</span>
+)
+    : Artifact.Single&lt;T&gt;(kind, category) &#123;
+
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getFileSystemLocationName</span><span class="hljs-params">()</span></span>: String &#123;
+        <span class="hljs-keyword">return</span> fileName ?: <span class="hljs-string">&quot;&quot;</span>
+    &#125;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 存放 apk 的目录</span>
+<span class="hljs-comment">     * Directory where APK files will be located. Some builds can be optimized for testing when</span>
+<span class="hljs-comment">     * invoked from Android Studio. In such cases, the APKs are not suitable for deployment to</span>
+<span class="hljs-comment">     * Play Store.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">object</span> APK:
+        SingleArtifact&lt;Directory&gt;(DIRECTORY),
+        Transformable,
+        Replaceable,
+        ContainsMany
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 合并后的清单文件</span>
+<span class="hljs-comment">     * Merged manifest file that will be used in the APK, Bundle and InstantApp packages.</span>
+<span class="hljs-comment">     * This will only be available on modules applying one of the following plugins :</span>
+<span class="hljs-comment">     *      com.android.application</span>
+<span class="hljs-comment">     *      com.android.dynamic-feature</span>
+<span class="hljs-comment">     *      com.android.library</span>
+<span class="hljs-comment">     *      com.android.test</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * For each module, unit test and android test variants will not have a manifest file</span>
+<span class="hljs-comment">     * available.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">object</span> MERGED_MANIFEST:
+        SingleArtifact&lt;RegularFile&gt;(FILE, Category.INTERMEDIATES, <span class="hljs-string">&quot;AndroidManifest.xml&quot;</span>),
+        Replaceable,
+        Transformable
+
+    <span class="hljs-keyword">object</span> OBFUSCATION_MAPPING_FILE:
+        SingleArtifact&lt;RegularFile&gt;(FILE, Category.OUTPUTS, <span class="hljs-string">&quot;mapping.txt&quot;</span>) &#123;
+            <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">getFolderName</span><span class="hljs-params">()</span></span>: String = <span class="hljs-string">&quot;mapping&quot;</span>
+        &#125;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * </span>
+<span class="hljs-comment">     * The final Bundle ready for consumption at Play Store.</span>
+<span class="hljs-comment">     * This is only valid for the base module.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">object</span> BUNDLE:
+        SingleArtifact&lt;RegularFile&gt;(FILE, Category.OUTPUTS),
+        Transformable
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * The final AAR file as it would be published.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">object</span> AAR:
+        SingleArtifact&lt;RegularFile&gt;(FILE, Category.OUTPUTS),
+        Transformable
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 存放资源的目录</span>
+<span class="hljs-comment">     * Assets that will be packaged in the resulting APK or Bundle.</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * When used as an input, the content will be the merged assets.</span>
+<span class="hljs-comment">     * For the APK, the assets will be compressed before packaging.</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * To add new folders to [ASSETS], you must use [com.android.build.api.variant.Sources.assets]</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-meta">@Incubating</span>
+    <span class="hljs-keyword">object</span> ASSETS:
+        SingleArtifact&lt;Directory&gt;(DIRECTORY),
+        Transformable,
+        Replaceable
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> *  A type of output generated by a task.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">sealed</span> <span class="hljs-keyword">class</span>
+<span class="hljs-title class_">InternalArtifactType</span>&lt;<span class="hljs-type">T : FileSystemLocation</span>&gt;(
+    kind: ArtifactKind&lt;T&gt;,
+    category: Category = Category.INTERMEDIATES,
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">val</span> folderName: String? = <span class="hljs-literal">null</span>,
+    <span class="hljs-keyword">val</span> finalizingArtifact: List&lt;Artifact&lt;*&gt;&gt; = listOf(),
+) : Artifact.Single&lt;T&gt;(kind, category) &#123;
+
+    <span class="hljs-comment">// --- classes ---</span>
+    <span class="hljs-comment">// Javac task output.</span>
+    <span class="hljs-keyword">object</span> JAVAC: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+
+    <span class="hljs-comment">// --- Published classes ---</span>
+    <span class="hljs-comment">// Class-type task output for tasks that generate published classes.</span>
+
+    <span class="hljs-comment">// Packaged classes for library intermediate publishing</span>
+    <span class="hljs-comment">// This is for external usage. For usage inside a module use ALL_CLASSES</span>
+    <span class="hljs-keyword">object</span> RUNTIME_LIBRARY_CLASSES_JAR: InternalArtifactType&lt;RegularFile&gt;(FILE), Replaceable
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * A directory containing runtime classes. <span class="hljs-doctag">NOTE:</span> It may contain either class files only</span>
+<span class="hljs-comment">     * (preferred) or a single jar only, see &#123;<span class="hljs-doctag">@link</span> AndroidArtifacts.ClassesDirFormat&#125;.</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">object</span> RUNTIME_LIBRARY_CLASSES_DIR: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+
+    <span class="hljs-comment">// Packaged library classes published only to compile configuration. This is to allow other</span>
+    <span class="hljs-comment">// projects to compile again classes that were not additionally processed e.g. classes with</span>
+    <span class="hljs-comment">// Jacoco instrumentation (b/109771903).</span>
+    <span class="hljs-keyword">object</span> COMPILE_LIBRARY_CLASSES_JAR: InternalArtifactType&lt;RegularFile&gt;(FILE), Replaceable
+
+    <span class="hljs-comment">// Jar generated by the code shrinker</span>
+    <span class="hljs-keyword">object</span> SHRUNK_CLASSES: InternalArtifactType&lt;RegularFile&gt;(FILE), Replaceable
+
+    <span class="hljs-comment">// Dex archive artifacts for project.</span>
+    <span class="hljs-keyword">object</span> PROJECT_DEX_ARCHIVE: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+    <span class="hljs-comment">// Dex archive artifacts for sub projects.</span>
+    <span class="hljs-keyword">object</span> SUB_PROJECT_DEX_ARCHIVE: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+    <span class="hljs-comment">// Dex archive artifacts for external (Maven) libraries.</span>
+    <span class="hljs-keyword">object</span> EXTERNAL_LIBS_DEX_ARCHIVE: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+    <span class="hljs-comment">// Dex archive artifacts for external (Maven) libraries processed using aritfact transforms.</span>
+    <span class="hljs-keyword">object</span> EXTERNAL_LIBS_DEX_ARCHIVE_WITH_ARTIFACT_TRANSFORMS: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+
+    <span class="hljs-comment">// --- android res ---</span>
+    <span class="hljs-comment">// generated res</span>
+    <span class="hljs-keyword">object</span> GENERATED_RES: InternalArtifactType&lt;Directory&gt;(DIRECTORY, Category.GENERATED,), Replaceable
+
+    <span class="hljs-comment">// output of the resource merger ready for aapt.</span>
+    <span class="hljs-keyword">object</span> MERGED_RES: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+
+    <span class="hljs-comment">// output of the resource merger for unit tests and the resource shrinker.</span>
+    <span class="hljs-keyword">object</span> MERGED_NOT_COMPILED_RES: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+
+    <span class="hljs-comment">// compiled resources (output of aapt)</span>
+    <span class="hljs-keyword">object</span> PROCESSED_RES: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable, ContainsMany
+
+    <span class="hljs-comment">// Processed res after an AAPT2 optimize operation</span>
+    <span class="hljs-keyword">object</span> OPTIMIZED_PROCESSED_RES: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable, ContainsMany
+
+    <span class="hljs-comment">// package resources for aar publishing.</span>
+    <span class="hljs-keyword">object</span> PACKAGED_RES: InternalArtifactType&lt;Directory&gt;(DIRECTORY), Replaceable
+
+    <span class="hljs-comment">// ...</span>
+&#125;</code></pre></div>
+
+<p>gradle 相关注解</p>
+<div class="code-wrapper"><pre><code class="hljs kotlin">
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * &lt;p&gt;Attached to a task type to indicate that task output caching should be enabled by default for tasks of this type.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;Only tasks that produce reproducible and relocatable output should be marked with &#123;<span class="hljs-doctag">@code</span> CacheableTask&#125;.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;Caching for individual task instances can be enabled and disabled via &#123;<span class="hljs-doctag">@link</span> TaskOutputs#cacheIf(String, Spec)&#125; or disabled via &#123;<span class="hljs-doctag">@link</span> TaskOutputs#doNotCacheIf(String, Spec)&#125;.</span>
+<span class="hljs-comment"> * Using these APIs takes precedence over the presence (or absence) of &#123;<span class="hljs-doctag">@code</span> <span class="hljs-doctag">@CacheableTask</span>&#125;.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * <span class="hljs-doctag">@see</span> DisableCachingByDefault</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * <span class="hljs-doctag">@since</span> 3.0</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(&#123;ElementType.TYPE&#125;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> CacheableTask &#123;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * &lt;p&gt;Attached to a task property to indicate that the property specifies some input value for the task.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This annotation should be attached to the getter method in Java or the property in Groovy.</span>
+<span class="hljs-comment"> * Annotations on setters or just the field in Java are ignored.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This will cause the task to be considered out-of-date when the property has changed.</span>
+<span class="hljs-comment"> * This annotation cannot be used on a &#123;<span class="hljs-doctag">@link</span> java.io.File&#125; object. If you want to refer to the file path,</span>
+<span class="hljs-comment"> * independently of its contents, return a &#123;<span class="hljs-doctag">@link</span> java.lang.String String&#125; instead which returns the absolute</span>
+<span class="hljs-comment"> * path.</span>
+<span class="hljs-comment"> * If, instead, you want to refer to the contents and path of a file or a directory, use</span>
+<span class="hljs-comment"> * &#123;<span class="hljs-doctag">@link</span> org.gradle.api.tasks.InputFile&#125; or &#123;<span class="hljs-doctag">@link</span> org.gradle.api.tasks.InputDirectory&#125; respectively.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(&#123;ElementType.METHOD, ElementType.FIELD&#125;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> Input &#123;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * &lt;p&gt;Marks a property as specifying an output file for a task.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This annotation should be attached to the getter method in Java or the property in Groovy.</span>
+<span class="hljs-comment"> * Annotations on setters or just the field in Java are ignored.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This will cause the task to be considered out-of-date when the file path or contents</span>
+<span class="hljs-comment"> * are different to when the task was last run.&lt;/p&gt;</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(&#123;ElementType.METHOD, ElementType.FIELD&#125;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> OutputFile &#123;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * Marks a method as the action to run when the task is executed.</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(ElementType.METHOD)</span>
+<span class="hljs-meta">@Inherited</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> TaskAction &#123;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * &lt;p&gt;Attached to a task property to indicate that the property is not to be taken into account for up-to-date checking.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This annotation should be attached to the getter method in Java or the property in Groovy.</span>
+<span class="hljs-comment"> * Annotations on setters or just the field in Java are ignored.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This will cause the task &lt;em&gt;not&lt;/em&gt; to be considered out-of-date when the property has changed.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * <span class="hljs-doctag">@since</span> 3.0</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(&#123;ElementType.METHOD, ElementType.FIELD&#125;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> Internal &#123;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * The reason for ignoring this element.</span>
+<span class="hljs-comment">     */</span>
+    String value() default <span class="hljs-string">&quot;&quot;</span>;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * &lt;p&gt;Marks a property as specifying an output directory for a task.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This annotation should be attached to the getter method in Java or the property in Groovy.</span>
+<span class="hljs-comment"> * Annotations on setters or just the field in Java are ignored.&lt;/p&gt;</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * &lt;p&gt;This will cause the task to be considered out-of-date when the directory path or task</span>
+<span class="hljs-comment"> * output to that directory has been modified since the task was last run.&lt;/p&gt;</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(&#123;ElementType.METHOD, ElementType.FIELD&#125;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> OutputDirectory &#123;
+&#125;</code></pre></div>
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/12/29/binder-memory/" title="Binder IPC 内存模型">
+                        <span class="hidden-mobile">Binder IPC 内存模型</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
