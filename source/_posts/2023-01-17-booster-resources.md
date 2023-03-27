@@ -1,3 +1,8 @@
+---
+title: gradle/booster 在编译器处理资源文件
+date: 2023-01-17 12:00:00 +0800
+---
+
 # SPI
 
 SPI 全称 `Service Provider Interface`，是 Java/Android 内置于标准库里的一个 `服务发现` 机制 `ServiceLoader`
