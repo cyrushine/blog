@@ -1,0 +1,2118 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" >
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#141414">
+  <meta name="author" content="Cyrus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Overview假设我手上现在有猫眼、外卖、打车、买菜等好几个垂直领域的 APP，现在呢要开发一个集所有功能于一身的超级 APP 叫做美团，用 Shadow 该如何改造已有的垂直 APP 并集成到 meituan-app 这个新的 APP 内呢？ 将猫眼 app project 拆分为 library project 和 app project  library project 实际上就是原来的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="插件化之 Shadow">
+<meta property="og:url" content="https://www.dalvik.work/2021/07/02/shadow/index.html">
+<meta property="og:site_name" content="Cyrus Blog">
+<meta property="og:description" content="Overview假设我手上现在有猫眼、外卖、打车、买菜等好几个垂直领域的 APP，现在呢要开发一个集所有功能于一身的超级 APP 叫做美团，用 Shadow 该如何改造已有的垂直 APP 并集成到 meituan-app 这个新的 APP 内呢？ 将猫眼 app project 拆分为 library project 和 app project  library project 实际上就是原来的">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-02T04:00:00.000Z">
+<meta property="article:modified_time" content="2023-03-28T08:48:41.505Z">
+<meta property="article:author" content="Cyrus">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>插件化之 Shadow - Cyrus Blog</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"www.dalvik.work","root":"/","version":"1.9.4","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#91cb3e","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":99},"lazyload":{"enable":true,"loading_img":"/image/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":"7d0c9146781b5fb9ae68cfc826d0be54","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cyrus Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/image/sunset_sea.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">插件化之 Shadow</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-07-02 04:00" pubdate>
+          2021年7月2日
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          49k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          407 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">插件化之 Shadow</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h1><p>假设我手上现在有猫眼、外卖、打车、买菜等好几个垂直领域的 APP，现在呢要开发一个集所有功能于一身的超级 APP 叫做美团，用 Shadow 该如何改造已有的垂直 APP 并集成到 meituan-app 这个新的 APP 内呢？</p>
+<p>将猫眼 app project 拆分为 library project 和 app project</p>
+<ul>
+<li>library project 实际上就是原来的 app project 将 gradle plugin 从 com.android.application 改为 com.android.library</li>
+<li>新的 app project 不包含任何业务代码，就是一个空的 gradle project 用来打包出 apk，后续想要构建猫眼时就从这里打包</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs asciidoc"><span class="hljs-bullet">- </span>maoyan-lib
+<span class="hljs-bullet">- </span>maoyan-app</code></pre></div>
+
+<p>为了将猫眼 APP 集成到 meituan-app 里，需要将猫眼打包为一个 Shadow 插件，相关的项目有三个：</p>
+<ul>
+<li>maoyan-runtime 和 maoyan-loader，它们都是 com.android.application 并且是有业务代码的（并不是空项目），先不用管它们有什么用，现在只需要知道每个 plugin 都需要这两个 project </li>
+<li>maoyan-plugin，它是一个空项目没有业务代码，是为了打包出 plugin；它与 maoyan-app 共用构建脚本，并在此基础上加上了 Shadow Gradle Plugin 及其配置，任务 packagePlugin 可以构建出插件包（zip）</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs asciidoc"><span class="hljs-bullet">- </span>maoyan-lib
+<span class="hljs-bullet">- </span>maoyan-app
+
+<span class="hljs-bullet">- </span>maoyan-runtime
+<span class="hljs-bullet">- </span>maoyan-loader
+<span class="hljs-bullet">- </span>maoyan-plugin</code></pre></div>
+
+<p>plugin 打包后是一个 zip 文件，不能直接使用，需要解压、加载、初始化等各种前置操作，为了将这些 plugin 相关的业务与 meituan-app 业务代码隔离，以便 meituan-app 能透明地使用 plugin，还需要添加一个项目 meituan-manager；它作为桥梁连接主 APP 和各个 plugin，承担 plugin 的管理工作，虽然它是一个 com.android.application 但不会也不能作为 APP 独立运行</p>
+<p>其实我们能够很容易地想到，meituan-manager 不应该就是 Shadow Library 吗？它不是应该作为 dependency 打包进主 APP 吗？</p>
+<p>对！Shadow 作为一个普通的 dependency 确实是可以这样做，但这样的话 Shadow 一旦需要升级只能升级同时主 APP；那能不能把框架本身也像 plugin 那样动态加载随时升级呢？真是个大胆的想法，不过确实可以做到，就是把框架代码 meituan-manager 独立在主 APP 之外，单独打包并动态加载</p>
+<blockquote>
+<p>一次性实现完美的插件框架很难，但 Shadow 将这些实现全部动态化起来，使插件框架的代码成为了插件的一部分。插件的迭代不再受宿主打包了旧版本插件框架所限制</p>
+</blockquote>
+<div class="code-wrapper"><pre><code class="hljs asciidoc"><span class="hljs-bullet">- </span>maoyan-lib
+<span class="hljs-bullet">- </span>maoyan-app
+
+<span class="hljs-bullet">- </span>maoyan-runtime
+<span class="hljs-bullet">- </span>maoyan-loader
+<span class="hljs-bullet">- </span>maoyan-plugin
+
+<span class="hljs-bullet">- </span>meituan-manager</code></pre></div>
+
+<p>最后就是构建主 APP：meituan-app，它是一个普通的 com.android.application，可以有自己的源码依赖、第三方依赖、业务代码（比如 Slash Page、主页）以及自定义构建脚本，assemble 打包出来的安装包即使没有 plugins 也是可以正常运行的，只不过 plugins 提供的功能就无法使用了</p>
+<p>meituan-app 与各个 plugins 之间通过一个方法进行通讯：</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">PluginManager</span> &#123;
+    <span class="hljs-keyword">void</span> <span class="hljs-title function_">enter</span><span class="hljs-params">(Context context, <span class="hljs-type">long</span> formId, Bundle bundle, EnterCallback callback)</span>;
+&#125;</code></pre></div>
+
+<p>meituan-app 除了业务代码之外需要添加的改动有几处：</p>
+<ol>
+<li>meituan-manager 和 plugin 的下载/更新逻辑（plugin 是个 zip 文件，manager 是个 apk 文件）</li>
+<li>注册 PluginProcessService 子类，有几个 plugin 就添加几个，用来 fork 出 plugin 所在的子进程</li>
+<li>注册 PluginDefaultProxyActivity 等几个桩 Activity</li>
+</ol>
+<p>最后项目结构如下：</p>
+<div class="code-wrapper"><pre><code class="hljs markdown"><span class="hljs-section"># maoyan 就是个正常可运行的 APP，可以是独立项目组开发，它完全不需要知道 meituan-app 的存在</span>
+<span class="hljs-bullet">-</span> maoyan-lib
+<span class="hljs-bullet">-</span> maoyan-app
+
+<span class="hljs-section"># 把 maoyan 打包为 plugin 所需，业务代码都在 maoyan-lib 里，这里仅仅作为中间层/胶水层，打包出 plugin zip</span>
+<span class="hljs-bullet">-</span> maoyan-runtime
+<span class="hljs-bullet">-</span> maoyan-loader
+<span class="hljs-bullet">-</span> maoyan-plugin
+
+<span class="hljs-section"># 框架代码</span>
+<span class="hljs-bullet">-</span> meituan-manager
+
+<span class="hljs-section"># 主 APP，有自己的业务和页面可独立运行</span>
+<span class="hljs-bullet">-</span> meituan-app</code></pre></div>
+
+<h1 id="PluginManager"><a href="#PluginManager" class="headerlink" title="PluginManager"></a>PluginManager</h1><p>APP 与 plugin 之间通过 PluginManager 通讯，默认实现是 DynamicPluginManager，它需要一个 PluginManagerUpdater</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * PluginManager文件升级器</span>
+<span class="hljs-comment"> * &lt;p&gt;</span>
+<span class="hljs-comment"> * 注意这个类不负责什么时候该升级PluginManager，</span>
+<span class="hljs-comment"> * 它只提供需要升级时的功能，如下载和向远端查询文件是否还可用。</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">PluginManagerUpdater</span> &#123;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@return</span> &lt;code&gt;true&lt;/code&gt;表示之前更新过程中意外中断了</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-type">boolean</span> <span class="hljs-title function_">wasUpdating</span><span class="hljs-params">()</span>;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 更新</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@return</span> 当前最新的PluginManager，可能是之前已经返回过的文件，但它是最新的了。</span>
+<span class="hljs-comment">     */</span>
+    Future&lt;File&gt; <span class="hljs-title function_">update</span><span class="hljs-params">()</span>;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 获取本地最新可用的</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@return</span> &lt;code&gt;null&lt;/code&gt;表示本地没有可用的</span>
+<span class="hljs-comment">     */</span>
+    File <span class="hljs-title function_">getLatest</span><span class="hljs-params">()</span>;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 查询是否可用</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@param</span> file PluginManagerUpdater返回的file</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@return</span> &lt;code&gt;true&lt;/code&gt;表示可用，&lt;code&gt;false&lt;/code&gt;表示不可用</span>
+<span class="hljs-comment">     */</span>
+    Future&lt;Boolean&gt; <span class="hljs-title function_">isAvailable</span><span class="hljs-params">(File file)</span>;
+&#125;</code></pre></div>
+
+<p>PluginManagerUpdater 提供了动态更新 manager 的机制比如修复线上的框架缺陷（hotfix），注意这里 hotfix 不是针对 plugin 的而是针对框架的（也就是 manager）</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DynamicPluginManager</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">PluginManager</span> &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">updateManagerImpl</span><span class="hljs-params">(Context context)</span> &#123;
+        <span class="hljs-type">File</span> <span class="hljs-variable">latestManagerImplApk</span> <span class="hljs-operator">=</span> mUpdater.getLatest();
+        <span class="hljs-type">String</span> <span class="hljs-variable">md5</span> <span class="hljs-operator">=</span> md5File(latestManagerImplApk);
+        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+            mLogger.info(<span class="hljs-string">&quot;TextUtils.equals(mCurrentImplMd5, md5) : &quot;</span> + (TextUtils.equals(mCurrentImplMd5, md5)));
+        &#125;
+        <span class="hljs-keyword">if</span> (!TextUtils.equals(mCurrentImplMd5, md5)) &#123;
+            <span class="hljs-type">ManagerImplLoader</span> <span class="hljs-variable">implLoader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ManagerImplLoader</span>(context, latestManagerImplApk);
+            <span class="hljs-type">PluginManagerImpl</span> <span class="hljs-variable">newImpl</span> <span class="hljs-operator">=</span> implLoader.load();
+            Bundle state;
+            <span class="hljs-keyword">if</span> (mManagerImpl != <span class="hljs-literal">null</span>) &#123;
+                state = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Bundle</span>();
+                mManagerImpl.onSaveInstanceState(state);
+                mManagerImpl.onDestroy();
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                state = <span class="hljs-literal">null</span>;
+            &#125;
+            newImpl.onCreate(state);
+            mManagerImpl = newImpl;
+            mCurrentImplMd5 = md5;
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<p>PluginManagerUpdater 要返回一个包含 manager 代码的文件（manager.apk），里面必须包含 com.tencent.shadow.dynamic.impl.ManagerFactoryImpl</p>
+<p>可以看到 manager.apk 并不会污染 APP ClassLoader，确保了 APP 和 manager 之间的独立性</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ManagerImplLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ImplLoader</span> &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">MANAGER_FACTORY_CLASS_NAME</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;com.tencent.shadow.dynamic.impl.ManagerFactoryImpl&quot;</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String[] REMOTE_PLUGIN_MANAGER_INTERFACES = <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>[]
+            &#123;
+                    <span class="hljs-string">&quot;com.tencent.shadow.core.common&quot;</span>,
+                    <span class="hljs-string">&quot;com.tencent.shadow.dynamic.host&quot;</span>
+            &#125;;
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">private</span> Context applicationContext;
+    <span class="hljs-keyword">final</span> <span class="hljs-keyword">private</span> InstalledApk installedApk;
+
+    ManagerImplLoader(Context context, File apk) &#123;
+        applicationContext = context.getApplicationContext();
+        <span class="hljs-type">File</span> <span class="hljs-variable">root</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(applicationContext.getFilesDir(), <span class="hljs-string">&quot;ManagerImplLoader&quot;</span>);
+        <span class="hljs-type">File</span> <span class="hljs-variable">odexDir</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(root, Long.toString(apk.lastModified(), Character.MAX_RADIX));
+        odexDir.mkdirs();
+        installedApk = <span class="hljs-keyword">new</span> <span class="hljs-title class_">InstalledApk</span>(apk.getAbsolutePath(), odexDir.getAbsolutePath(), <span class="hljs-literal">null</span>);
+    &#125;
+
+    PluginManagerImpl <span class="hljs-title function_">load</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-type">ApkClassLoader</span> <span class="hljs-variable">apkClassLoader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ApkClassLoader</span>(
+                installedApk,
+                getClass().getClassLoader(),
+                loadWhiteList(installedApk),
+                <span class="hljs-number">1</span>
+        );
+
+        <span class="hljs-type">Context</span> <span class="hljs-variable">pluginManagerContext</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ChangeApkContextWrapper</span>(
+                applicationContext,
+                installedApk.apkFilePath,
+                apkClassLoader
+        );
+
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-type">ManagerFactory</span> <span class="hljs-variable">managerFactory</span> <span class="hljs-operator">=</span> apkClassLoader.getInterface(
+                    ManagerFactory.class,
+                    MANAGER_FACTORY_CLASS_NAME
+            );
+            <span class="hljs-keyword">return</span> managerFactory.buildManager(pluginManagerContext);
+        &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(e);
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="contract"><a href="#contract" class="headerlink" title="contract"></a>contract</h1><p>meituan-contract 契约</p>
+<p>enter(context, fromId, bundle, callback) 是 APP 与 plugin 通讯的唯一渠道，实现在 manager 里，看下官方例子：</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SamplePluginManager</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">FastPluginManager</span> &#123;
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">enter</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Context context, <span class="hljs-type">long</span> fromId, Bundle bundle, <span class="hljs-keyword">final</span> EnterCallback callback)</span> &#123;
+        <span class="hljs-keyword">if</span> (fromId == Constant.FROM_ID_NOOP) &#123;
+            <span class="hljs-comment">//do nothing.</span>
+        &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (fromId == Constant.FROM_ID_START_ACTIVITY) &#123;
+            onStartActivity(context, bundle, callback);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;不认识的fromId==&quot;</span> + fromId);
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<p>可以这么理解：</p>
+<ul>
+<li>fromId: 用一个 long 值标识 plugin 要执行的方法（startActivity、startService 等等），相当于 method id</li>
+<li>bundle: 作为容器存放 method 所需的参数</li>
+<li>callback: 接受 method complete 消息，执行时间较长的方法还可以用它来显示 loading</li>
+</ul>
+<p>虽然上面说过 APP 和 manager 之间是相互独立的（plugin 才是真正独立的，manager 作为胶水层粘合了 APP 和 plugin），但 method id 和 method params 最好还是得有个规范才不容易写错，于是就有了 meituan-contract，manager 和 APP 都引用它</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">final</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Constant</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">KEY_PLUGIN_ZIP_PATH</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;pluginZipPath&quot;</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">KEY_ACTIVITY_CLASSNAME</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;KEY_ACTIVITY_CLASSNAME&quot;</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">KEY_EXTRAS</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;KEY_EXTRAS&quot;</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">KEY_PLUGIN_PART_KEY</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;KEY_PLUGIN_PART_KEY&quot;</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">PART_KEY_PLUGIN_MAIN_APP</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;sample-plugin-app&quot;</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">PART_KEY_PLUGIN_ANOTHER_APP</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;sample-plugin-app2&quot;</span>;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">FROM_ID_NOOP</span> <span class="hljs-operator">=</span> <span class="hljs-number">1000</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">FROM_ID_START_ACTIVITY</span> <span class="hljs-operator">=</span> <span class="hljs-number">1002</span>;
+&#125;</code></pre></div>
+
+<p>这样项目架构就变为：</p>
+<div class="code-wrapper"><pre><code class="hljs markdown"><span class="hljs-section"># maoyan 就是个正常可运行的 APP，可以是独立项目组开发，它完全不需要知道 meituan-app 的存在</span>
+<span class="hljs-bullet">-</span> maoyan-lib
+<span class="hljs-bullet">-</span> maoyan-app
+
+<span class="hljs-section"># 把 maoyan 打包为 plugin 所需，业务代码都在 maoyan-lib 里，这里仅仅作为中间层/胶水层，打包出 plugin zip</span>
+<span class="hljs-bullet">-</span> maoyan-runtime
+<span class="hljs-bullet">-</span> maoyan-loader
+<span class="hljs-bullet">-</span> maoyan-plugin
+
+<span class="hljs-section"># 框架代码</span>
+<span class="hljs-bullet">-</span> meituan-manager
+<span class="hljs-bullet">-</span> meituan-contract
+
+<span class="hljs-section"># 主 APP，有自己的业务和页面可独立运行</span>
+<span class="hljs-bullet">-</span> meituan-app
+<span class="hljs-bullet">-</span> meituan-contract</code></pre></div>
+
+<h1 id="plugin-zip"><a href="#plugin-zip" class="headerlink" title="plugin.zip"></a>plugin.zip</h1><p>安装 plugin</p>
+<p>plugin.zip 文件结构如下，一个 plugin.zip 实际上可以包含多个 plugin apk（maoyan.apk、maoyan2.apk 等等），每个 apk 都相当于一个 plugin app，运行在各自独立的子进程内，不同于多个 plugin.zip 的是它们会共享 runtime 和 loader</p>
+<p>注意虽然文件名是 apk 但是它们是不能独立运行的，缺少 Shadow 相关的一些类</p>
+<div class="code-wrapper"><pre><code class="hljs markdown"><span class="hljs-bullet">-</span> plugin.zip
+<span class="hljs-bullet">  -</span> config.json
+<span class="hljs-bullet">  -</span> runtime.apk
+<span class="hljs-bullet">  -</span> loader.apk
+<span class="hljs-bullet">  -</span> maoyan.apk
+<span class="hljs-bullet">  -</span> maoyan2.apk
+<span class="hljs-bullet">  -</span> ...</code></pre></div>
+
+<p>将 plugin.zip 解压后，可以得到如下有关 plugin 的信息</p>
+<ul>
+<li>UUID 标识唯一的 plugin</li>
+<li>version 可以用来动态下发 plugin 并热更新</li>
+<li>loader 和 runtime 都是可选的</li>
+<li>plugins 用 string key 标识 plugin 内的多个 apk</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PluginConfig</span> &#123;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 配置json文件的格式版本号</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">int</span> version;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 配置json文件的格式兼容版本号</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">int</span>[] compact_version;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 标识一次插件发布的id</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> String UUID;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 标识一次插件发布的id，可以使用自定义格式描述版本信息</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> String UUID_NickName;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * pluginLoaderAPk 文件信息</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> FileInfo pluginLoader;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * runtime 文件信息</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> FileInfo runTime;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 业务插件 key: partKey value:文件信息</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> Map&lt;String, PluginFileInfo&gt; plugins = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 插件的存储目录</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> File storageDir;
+&#125;</code></pre></div>
+
+<p>安装过程如下：</p>
+<ol>
+<li>利用 DexClassLoader 生成 loader、runtime 和 plugin apk 的 odex</li>
+<li>将 so 解压出来</li>
+<li>将 plugin 信息保存/更新到数据库</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FastPluginManager</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">PluginManagerThatUseDynamicLoader</span> &#123;
+
+    <span class="hljs-keyword">public</span> InstalledPlugin <span class="hljs-title function_">installPlugin</span><span class="hljs-params">(String zip, String hash , <span class="hljs-type">boolean</span> odex)</span> <span class="hljs-keyword">throws</span> IOException, JSONException, InterruptedException, ExecutionException &#123;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">PluginConfig</span> <span class="hljs-variable">pluginConfig</span> <span class="hljs-operator">=</span> installPluginFromZip(<span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(zip), hash);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">uuid</span> <span class="hljs-operator">=</span> pluginConfig.UUID;
+        List&lt;Future&gt; futures = <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedList</span>&lt;&gt;();
+        <span class="hljs-keyword">if</span> (pluginConfig.runTime != <span class="hljs-literal">null</span> &amp;&amp; pluginConfig.pluginLoader != <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-type">Future</span> <span class="hljs-variable">odexRuntime</span> <span class="hljs-operator">=</span> mFixedPool.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Callable</span>() &#123;
+                <span class="hljs-meta">@Override</span>
+                <span class="hljs-keyword">public</span> Object <span class="hljs-title function_">call</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception &#123;
+                    oDexPluginLoaderOrRunTime(uuid, InstalledType.TYPE_PLUGIN_RUNTIME,
+                            pluginConfig.runTime.file);
+                    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+                &#125;
+            &#125;);
+            futures.add(odexRuntime);
+            <span class="hljs-type">Future</span> <span class="hljs-variable">odexLoader</span> <span class="hljs-operator">=</span> mFixedPool.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Callable</span>() &#123;
+                <span class="hljs-meta">@Override</span>
+                <span class="hljs-keyword">public</span> Object <span class="hljs-title function_">call</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception &#123;
+                    oDexPluginLoaderOrRunTime(uuid, InstalledType.TYPE_PLUGIN_LOADER,
+                            pluginConfig.pluginLoader.file);
+                    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+                &#125;
+            &#125;);
+            futures.add(odexLoader);
+        &#125;
+        <span class="hljs-keyword">for</span> (Map.Entry&lt;String, PluginConfig.PluginFileInfo&gt; plugin : pluginConfig.plugins.entrySet()) &#123;
+            <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">partKey</span> <span class="hljs-operator">=</span> plugin.getKey();
+            <span class="hljs-keyword">final</span> <span class="hljs-type">File</span> <span class="hljs-variable">apkFile</span> <span class="hljs-operator">=</span> plugin.getValue().file;
+            <span class="hljs-type">Future</span> <span class="hljs-variable">extractSo</span> <span class="hljs-operator">=</span> mFixedPool.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Callable</span>() &#123;
+                <span class="hljs-meta">@Override</span>
+                <span class="hljs-keyword">public</span> Object <span class="hljs-title function_">call</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception &#123;
+                    extractSo(uuid, partKey, apkFile);
+                    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+                &#125;
+            &#125;);
+            futures.add(extractSo);
+            <span class="hljs-keyword">if</span> (odex) &#123;
+                <span class="hljs-type">Future</span> <span class="hljs-variable">odexPlugin</span> <span class="hljs-operator">=</span> mFixedPool.submit(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Callable</span>() &#123;
+                    <span class="hljs-meta">@Override</span>
+                    <span class="hljs-keyword">public</span> Object <span class="hljs-title function_">call</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception &#123;
+                        oDexPlugin(uuid, partKey, apkFile);
+                        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+                    &#125;
+                &#125;);
+                futures.add(odexPlugin);
+            &#125;
+        &#125;
+
+        <span class="hljs-keyword">for</span> (Future future : futures) &#123;
+            future.get();
+        &#125;
+        onInstallCompleted(pluginConfig);
+
+        <span class="hljs-keyword">return</span> getInstalledPlugins(<span class="hljs-number">1</span>).get(<span class="hljs-number">0</span>);
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="Binder-amp-ClassLoader"><a href="#Binder-amp-ClassLoader" class="headerlink" title="Binder &amp; ClassLoader"></a>Binder &amp; ClassLoader</h1><p>plugin app 是运行在子进程里的，这样即使插件崩溃了也不会影响主 APP 的运行</p>
+<p>由于 plugin process 是一个完整的 APP 进程，所以不能 fork，只能通过四大组件的 android:process 属性创建；上面也说过了有几个 plugin app 就需要在主 APP 的 AndroidManifest.xml 里配置几个 PluginProcessService</p>
+<p>plugin process 起来后，APP process 就需要通过 Binder 与 plugin 通讯，主 APP 端的叫 PpsController，plugin 端的叫 PpsBinder，从下面的 PpsBinder.TRANSACTION_ 可以看出 PPS 主要提供以下功能：</p>
+<ul>
+<li>加载 runtime</li>
+<li>加载/获取 loader</li>
+<li>设置 UUIDManager（它用来操作数据库）</li>
+<li>退出 plugin process</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FastPluginManager</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">PluginManagerThatUseDynamicLoader</span> &#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadPlugin</span><span class="hljs-params">(String uuid, String partKey)</span> <span class="hljs-keyword">throws</span> RemoteException, TimeoutException, FailedException &#123;
+        loadPluginLoaderAndRuntime(uuid, partKey);
+        <span class="hljs-type">Map</span> <span class="hljs-variable">map</span> <span class="hljs-operator">=</span> mPluginLoader.getLoadedPlugin();
+        <span class="hljs-keyword">if</span> (!map.containsKey(partKey)) &#123;
+            mPluginLoader.loadPlugin(partKey);
+        &#125;
+    &#125;   
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadPluginLoaderAndRuntime</span><span class="hljs-params">(String uuid, String partKey)</span> <span class="hljs-keyword">throws</span> RemoteException, TimeoutException, FailedException &#123;
+        <span class="hljs-keyword">if</span> (mPpsController == <span class="hljs-literal">null</span>) &#123;
+            bindPluginProcessService(getPluginProcessServiceName(partKey));
+            waitServiceConnected(<span class="hljs-number">10</span>, TimeUnit.SECONDS);
+        &#125;
+        loadRunTime(uuid);
+        loadPluginLoader(uuid);
+    &#125;     
+&#125;
+
+<span class="hljs-keyword">abstract</span> <span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">BaseDynamicPluginManager</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">BasePluginManager</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">UuidManagerImpl</span> &#123;
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 启动PluginProcessService</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@param</span> serviceName 注册在宿主中的插件进程管理service完整名字</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">bindPluginProcessService</span><span class="hljs-params">(<span class="hljs-keyword">final</span> String serviceName)</span> &#123;
+        <span class="hljs-keyword">if</span> (mServiceConnecting.get()) &#123;
+            <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                mLogger.info(<span class="hljs-string">&quot;pps service connecting&quot;</span>);
+            &#125;
+            <span class="hljs-keyword">return</span>;
+        &#125;
+        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+            mLogger.info(<span class="hljs-string">&quot;bindPluginProcessService &quot;</span> + serviceName);
+        &#125;
+
+        mConnectCountDownLatch.set(<span class="hljs-keyword">new</span> <span class="hljs-title class_">CountDownLatch</span>(<span class="hljs-number">1</span>));
+
+        mServiceConnecting.set(<span class="hljs-literal">true</span>);
+
+        <span class="hljs-keyword">final</span> <span class="hljs-type">CountDownLatch</span> <span class="hljs-variable">startBindingLatch</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">CountDownLatch</span>(<span class="hljs-number">1</span>);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span>[] asyncResult = <span class="hljs-keyword">new</span> <span class="hljs-title class_">boolean</span>[<span class="hljs-number">1</span>];
+        mUiHandler.post(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;
+            <span class="hljs-meta">@Override</span>
+            <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;
+                <span class="hljs-type">Intent</span> <span class="hljs-variable">intent</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Intent</span>();
+                intent.setComponent(<span class="hljs-keyword">new</span> <span class="hljs-title class_">ComponentName</span>(mHostContext, serviceName));
+                <span class="hljs-type">boolean</span> <span class="hljs-variable">binding</span> <span class="hljs-operator">=</span> mHostContext.bindService(intent, <span class="hljs-keyword">new</span> <span class="hljs-title class_">ServiceConnection</span>() &#123;
+                    <span class="hljs-meta">@Override</span>
+                    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onServiceConnected</span><span class="hljs-params">(ComponentName name, IBinder service)</span> &#123;
+                        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                            mLogger.info(<span class="hljs-string">&quot;onServiceConnected connectCountDownLatch:&quot;</span> + mConnectCountDownLatch);
+                        &#125;
+                        mServiceConnecting.set(<span class="hljs-literal">false</span>);
+
+                        <span class="hljs-comment">// service connect 后处理逻辑</span>
+                        onPluginServiceConnected(name, service);
+
+                        mConnectCountDownLatch.get().countDown();
+
+                        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                            mLogger.info(<span class="hljs-string">&quot;onServiceConnected countDown:&quot;</span> + mConnectCountDownLatch);
+                        &#125;
+                    &#125;
+
+                    <span class="hljs-meta">@Override</span>
+                    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onServiceDisconnected</span><span class="hljs-params">(ComponentName name)</span> &#123;
+                        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                            mLogger.info(<span class="hljs-string">&quot;onServiceDisconnected&quot;</span>);
+                        &#125;
+                        mServiceConnecting.set(<span class="hljs-literal">false</span>);
+                        onPluginServiceDisconnected(name);
+                    &#125;
+                &#125;, BIND_AUTO_CREATE);
+                asyncResult[<span class="hljs-number">0</span>] = binding;
+                startBindingLatch.countDown();
+            &#125;
+        &#125;);
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-comment">//等待bindService真正开始</span>
+            startBindingLatch.await(<span class="hljs-number">10</span>, TimeUnit.SECONDS);
+            <span class="hljs-keyword">if</span> (!asyncResult[<span class="hljs-number">0</span>]) &#123;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;无法绑定PPS:&quot;</span> + serviceName);
+            &#125;
+        &#125; <span class="hljs-keyword">catch</span> (InterruptedException e) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(e);
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">PpsBinder</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">android</span>.os.Binder &#123;
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_loadRuntime</span> <span class="hljs-operator">=</span> (FIRST_CALL_TRANSACTION);
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_loadPluginLoader</span> <span class="hljs-operator">=</span> (FIRST_CALL_TRANSACTION + <span class="hljs-number">1</span>);
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_setUuidManager</span> <span class="hljs-operator">=</span> (FIRST_CALL_TRANSACTION + <span class="hljs-number">2</span>);
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_exit</span> <span class="hljs-operator">=</span> (FIRST_CALL_TRANSACTION + <span class="hljs-number">3</span>);
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_getPpsStatus</span> <span class="hljs-operator">=</span> (FIRST_CALL_TRANSACTION + <span class="hljs-number">4</span>);
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_getPluginLoader</span> <span class="hljs-operator">=</span> (FIRST_CALL_TRANSACTION + <span class="hljs-number">5</span>);
+&#125;</code></pre></div>
+
+
+<p>plugin runtime</p>
+<p>把 runtime.apk 插入 ClassLoader 树，注意这是 IPC，在主 APP 端是 PpsController.loadRuntime</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PluginManagerThatUseDynamicLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">BaseDynamicPluginManager</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">PluginManagerImpl</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadRunTime</span><span class="hljs-params">(String uuid)</span> <span class="hljs-keyword">throws</span> RemoteException, FailedException &#123;
+        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+            mLogger.info(<span class="hljs-string">&quot;loadRunTime mPpsController:&quot;</span> + mPpsController);
+        &#125;
+        <span class="hljs-type">PpsStatus</span> <span class="hljs-variable">ppsStatus</span> <span class="hljs-operator">=</span> mPpsController.getPpsStatus();
+        <span class="hljs-keyword">if</span> (!ppsStatus.runtimeLoaded) &#123;
+            mPpsController.loadRuntime(uuid);
+        &#125;
+    &#125;    
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PpsController</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadRuntime</span><span class="hljs-params">(String uuid)</span> <span class="hljs-keyword">throws</span> RemoteException, FailedException &#123;
+        <span class="hljs-type">Parcel</span> <span class="hljs-variable">_data</span> <span class="hljs-operator">=</span> Parcel.obtain();
+        <span class="hljs-type">Parcel</span> <span class="hljs-variable">_reply</span> <span class="hljs-operator">=</span> Parcel.obtain();
+        <span class="hljs-keyword">try</span> &#123;
+            _data.writeInterfaceToken(PpsBinder.DESCRIPTOR);
+            _data.writeString(uuid);
+            mRemote.transact(PpsBinder.TRANSACTION_loadRuntime, _data, _reply, <span class="hljs-number">0</span>);
+            <span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> _reply.readInt();
+            <span class="hljs-keyword">if</span> (i == TRANSACTION_CODE_FAILED_EXCEPTION) &#123;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(_reply);
+            &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i != TRANSACTION_CODE_NO_EXCEPTION) &#123;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;不认识的Code==&quot;</span> + i);
+            &#125;
+        &#125; <span class="hljs-keyword">finally</span> &#123;
+            _reply.recycle();
+            _data.recycle();
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<p>plugin 端是 PpsBinder，实际代码在 PluginProcessService.loadRuntime，基本逻辑如下：</p>
+<ol>
+<li>根据 Plugin ID 从数据库里查出 plugin 信息，从而拿到 runtime 的 apk 和 odex，这一步是 IPC 因为 plugin 信息是保存在主 APP 的数据库里</li>
+<li>往 plugin process 的 ClassLoader 树里插入 runtime 形成这么一个结构：</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs isbl"><span class="hljs-variable">BootClassLoader</span>
+ - <span class="hljs-function"><span class="hljs-title">RuntimeClassLoader</span>(包含 <span class="hljs-variable">runtime</span> 代码)</span>
+   - <span class="hljs-function"><span class="hljs-title">PathClassLoader</span>(包含主 <span class="hljs-variable">APP</span> 代码)</span></code></pre></div>
+
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">PpsBinder</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">android</span>.os.Binder &#123;
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">onTransact</span><span class="hljs-params">(<span class="hljs-type">int</span> code, Parcel data, Parcel reply, <span class="hljs-type">int</span> flags)</span> &#123;
+        <span class="hljs-keyword">switch</span> (code) &#123;
+            <span class="hljs-keyword">case</span> TRANSACTION_loadRuntime: &#123;
+                data.enforceInterface(DESCRIPTOR);
+                String _arg0;
+                _arg0 = data.readString();
+                <span class="hljs-keyword">try</span> &#123;
+                    mPps.loadRuntime(_arg0);
+                    reply.writeInt(TRANSACTION_CODE_NO_EXCEPTION);
+                &#125; <span class="hljs-keyword">catch</span> (FailedException e) &#123;
+                    reply.writeInt(TRANSACTION_CODE_FAILED_EXCEPTION);
+                    e.writeToParcel(reply, <span class="hljs-number">0</span>);
+                &#125;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+            &#125;
+            <span class="hljs-comment">// ...</span>
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PluginProcessService</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">BasePluginProcessService</span> &#123;
+    <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadRuntime</span><span class="hljs-params">(String uuid)</span> <span class="hljs-keyword">throws</span> FailedException &#123;
+        checkUuidManagerNotNull();
+        setUuid(uuid);
+        <span class="hljs-keyword">if</span> (mRuntimeLoaded) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_RELOAD_RUNTIME_EXCEPTION
+                    , <span class="hljs-string">&quot;重复调用loadRuntime&quot;</span>);
+        &#125;
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                mLogger.info(<span class="hljs-string">&quot;loadRuntime uuid:&quot;</span> + uuid);
+            &#125;
+            InstalledApk installedApk;
+            <span class="hljs-keyword">try</span> &#123;
+                installedApk = mUuidManager.getRuntime(uuid);
+            &#125; <span class="hljs-keyword">catch</span> (RemoteException e) &#123;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_UUID_MANAGER_DEAD_EXCEPTION, e.getMessage());
+            &#125; <span class="hljs-keyword">catch</span> (NotFoundException e) &#123;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_FILE_NOT_FOUND_EXCEPTION, <span class="hljs-string">&quot;uuid==&quot;</span> + uuid + <span class="hljs-string">&quot;的Runtime没有找到。cause:&quot;</span> + e.getMessage());
+            &#125;
+
+            <span class="hljs-type">InstalledApk</span> <span class="hljs-variable">installedRuntimeApk</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">InstalledApk</span>(installedApk.apkFilePath, installedApk.oDexPath, installedApk.libraryPath);
+            <span class="hljs-type">boolean</span> <span class="hljs-variable">loaded</span> <span class="hljs-operator">=</span> DynamicRuntime.loadRuntime(installedRuntimeApk);
+            <span class="hljs-keyword">if</span> (loaded) &#123;
+                DynamicRuntime.saveLastRuntimeInfo(<span class="hljs-built_in">this</span>, installedRuntimeApk);
+            &#125;
+            mRuntimeLoaded = <span class="hljs-literal">true</span>;
+        &#125; <span class="hljs-keyword">catch</span> (RuntimeException e) &#123;
+            <span class="hljs-keyword">if</span> (mLogger.isErrorEnabled()) &#123;
+                mLogger.error(<span class="hljs-string">&quot;loadRuntime发生RuntimeException&quot;</span>, e);
+            &#125;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(e);
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * 将runtime apk加载到DexPathClassLoader，形成如下结构的classLoader树结构</span>
+<span class="hljs-comment"> * ---BootClassLoader</span>
+<span class="hljs-comment"> * ----RuntimeClassLoader</span>
+<span class="hljs-comment"> * ------PathClassLoader</span>
+<span class="hljs-comment"> */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DynamicRuntime</span> &#123;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 加载runtime apk</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@return</span> true 加载了新的runtime</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">loadRuntime</span><span class="hljs-params">(InstalledApk installedRuntimeApk)</span> &#123;
+        <span class="hljs-type">ClassLoader</span> <span class="hljs-variable">contextClassLoader</span> <span class="hljs-operator">=</span> DynamicRuntime.class.getClassLoader();
+        <span class="hljs-type">RuntimeClassLoader</span> <span class="hljs-variable">runtimeClassLoader</span> <span class="hljs-operator">=</span> getRuntimeClassLoader();
+        <span class="hljs-keyword">if</span> (runtimeClassLoader != <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-type">String</span> <span class="hljs-variable">apkPath</span> <span class="hljs-operator">=</span> runtimeClassLoader.apkPath;
+            <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                mLogger.info(<span class="hljs-string">&quot;last apkPath:&quot;</span> + apkPath + <span class="hljs-string">&quot; new apkPath:&quot;</span> + installedRuntimeApk.apkFilePath);
+            &#125;
+            <span class="hljs-keyword">if</span> (TextUtils.equals(apkPath, installedRuntimeApk.apkFilePath)) &#123;
+                <span class="hljs-comment">//已经加载相同版本的runtime了,不需要加载</span>
+                <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                    mLogger.info(<span class="hljs-string">&quot;已经加载相同apkPath的runtime了,不需要加载&quot;</span>);
+                &#125;
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-comment">//版本不一样，说明要更新runtime，先恢复正常的classLoader结构</span>
+                <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                    mLogger.info(<span class="hljs-string">&quot;加载不相同apkPath的runtime了,先恢复classLoader树结构&quot;</span>);
+                &#125;
+                <span class="hljs-keyword">try</span> &#123;
+                    recoveryClassLoader();
+                &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(e);
+                &#125;
+            &#125;
+        &#125;
+        <span class="hljs-comment">//正常处理，将runtime 挂到pathclassLoader之上</span>
+        <span class="hljs-keyword">try</span> &#123;
+            hackParentToRuntime(installedRuntimeApk, contextClassLoader);
+        &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(e);
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    &#125;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">hackParentToRuntime</span><span class="hljs-params">(InstalledApk installedRuntimeApk, ClassLoader contextClassLoader)</span> <span class="hljs-keyword">throws</span> Exception &#123;
+        <span class="hljs-type">RuntimeClassLoader</span> <span class="hljs-variable">runtimeClassLoader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeClassLoader</span>(installedRuntimeApk.apkFilePath, installedRuntimeApk.oDexPath,
+                installedRuntimeApk.libraryPath, contextClassLoader.getParent());
+        hackParentClassLoader(contextClassLoader, runtimeClassLoader);
+    &#125;
+
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 修改ClassLoader的parent</span>
+<span class="hljs-comment">     *</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@param</span> classLoader          需要修改的ClassLoader</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@param</span> newParentClassLoader classLoader的新的parent</span>
+<span class="hljs-comment">     * <span class="hljs-doctag">@throws</span> Exception 失败时抛出</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">hackParentClassLoader</span><span class="hljs-params">(ClassLoader classLoader,</span>
+<span class="hljs-params">                                              ClassLoader newParentClassLoader)</span> <span class="hljs-keyword">throws</span> Exception &#123;
+        <span class="hljs-type">Field</span> <span class="hljs-variable">field</span> <span class="hljs-operator">=</span> getParentField();
+        <span class="hljs-keyword">if</span> (field == <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;在ClassLoader.class中没找到类型为ClassLoader的parent域&quot;</span>);
+        &#125;
+        field.setAccessible(<span class="hljs-literal">true</span>);
+        field.set(classLoader, newParentClassLoader);
+    &#125;    
+&#125;</code></pre></div>
+
+
+<h1 id="plugin-loader"><a href="#plugin-loader" class="headerlink" title="plugin loader"></a>plugin loader</h1><p>APP 端发起 IPC PpsController.loadPluginLoader</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PluginManagerThatUseDynamicLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">BaseDynamicPluginManager</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">PluginManagerImpl</span> &#123;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadPluginLoader</span><span class="hljs-params">(String uuid)</span> <span class="hljs-keyword">throws</span> RemoteException, FailedException &#123;
+        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+            mLogger.info(<span class="hljs-string">&quot;loadPluginLoader mPluginLoader:&quot;</span> + mPluginLoader);
+        &#125;
+        <span class="hljs-keyword">if</span> (mPluginLoader == <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-type">PpsStatus</span> <span class="hljs-variable">ppsStatus</span> <span class="hljs-operator">=</span> mPpsController.getPpsStatus();
+            <span class="hljs-keyword">if</span> (!ppsStatus.loaderLoaded) &#123;
+                mPpsController.loadPluginLoader(uuid);
+            &#125;
+            <span class="hljs-type">IBinder</span> <span class="hljs-variable">iBinder</span> <span class="hljs-operator">=</span> mPpsController.getPluginLoader();
+            mPluginLoader = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BinderPluginLoader</span>(iBinder);
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<p>plugin 端最终执行 PluginProcessService.loadPluginLoader，基本逻辑如下：</p>
+<ol>
+<li>从数据库里根据 Plugin ID 查询得到 loader 信息，这一步是 IPC</li>
+<li>从 loader.apk 里加载 com.tencent.shadow.dynamic.loader.impl.LoaderFactoryImpl，从工厂里获取 DynamicPluginLoader，这一步的代码是 Shadow 库 dynamic-loader-impl 里的，它作为依赖打包进 loader.apk</li>
+<li>从 loader.apk 里加载 com.tencent.shadow.dynamic.loader.impl.CoreLoaderFactoryImpl，从工厂里获取 ShadowPluginLoader，这一步的代码才是 loader.apk 里自定义的实现</li>
+<li>最后 APP 端持有的 PluginLoader 是 BinderPluginLoader，plugin 端持有的是 PluginLoaderBinder（实际逻辑由 DynamicPluginLoader 实现）</li>
+</ol>
+<p>从 PluginLoader.TRANSACTION_ 可以看出 loader 主要提供以下功能：</p>
+<ul>
+<li>加载 plugin apk</li>
+<li>执行 plugin apk 的 Application.onCreate</li>
+<li>start/stop/bind/unbind service</li>
+<li>startActivity</li>
+</ul>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PluginProcessService</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">BasePluginProcessService</span> &#123;
+
+    <span class="hljs-keyword">void</span> <span class="hljs-title function_">loadPluginLoader</span><span class="hljs-params">(String uuid)</span> <span class="hljs-keyword">throws</span> FailedException &#123;
+        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+            mLogger.info(<span class="hljs-string">&quot;loadPluginLoader uuid:&quot;</span> + uuid + <span class="hljs-string">&quot; mPluginLoader:&quot;</span> + mPluginLoader);
+        &#125;
+        checkUuidManagerNotNull();
+        setUuid(uuid);
+        <span class="hljs-keyword">if</span> (mPluginLoader != <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_RELOAD_LOADER_EXCEPTION
+                    , <span class="hljs-string">&quot;重复调用loadPluginLoader&quot;</span>);
+        &#125;
+        <span class="hljs-keyword">try</span> &#123;
+            InstalledApk installedApk;
+            <span class="hljs-keyword">try</span> &#123;
+                installedApk = mUuidManager.getPluginLoader(uuid);
+                <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled()) &#123;
+                    mLogger.info(<span class="hljs-string">&quot;取出uuid==&quot;</span> + uuid + <span class="hljs-string">&quot;的Loader apk:&quot;</span> + installedApk.apkFilePath);
+                &#125;
+            &#125; <span class="hljs-keyword">catch</span> (RemoteException e) &#123;
+                <span class="hljs-keyword">if</span> (mLogger.isErrorEnabled()) &#123;
+                    mLogger.error(<span class="hljs-string">&quot;获取Loader Apk失败&quot;</span>, e);
+                &#125;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_UUID_MANAGER_DEAD_EXCEPTION, e.getMessage());
+            &#125; <span class="hljs-keyword">catch</span> (NotFoundException e) &#123;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_FILE_NOT_FOUND_EXCEPTION, <span class="hljs-string">&quot;uuid==&quot;</span> + uuid + <span class="hljs-string">&quot;的PluginLoader没有找到。cause:&quot;</span> + e.getMessage());
+            &#125;
+            <span class="hljs-type">File</span> <span class="hljs-variable">file</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(installedApk.apkFilePath);
+            <span class="hljs-keyword">if</span> (!file.exists()) &#123;
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_FILE_NOT_FOUND_EXCEPTION, file.getAbsolutePath() + <span class="hljs-string">&quot;文件不存在&quot;</span>);
+            &#125;
+
+            <span class="hljs-type">PluginLoaderImpl</span> <span class="hljs-variable">pluginLoader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LoaderImplLoader</span>().load(installedApk, uuid, getApplicationContext());
+            pluginLoader.setUuidManager(mUuidManager);
+            mPluginLoader = pluginLoader;
+        &#125; <span class="hljs-keyword">catch</span> (RuntimeException e) &#123;
+            <span class="hljs-keyword">if</span> (mLogger.isErrorEnabled()) &#123;
+                mLogger.error(<span class="hljs-string">&quot;loadPluginLoader发生RuntimeException&quot;</span>, e);
+            &#125;
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(e);
+        &#125; <span class="hljs-keyword">catch</span> (FailedException e) &#123;
+            <span class="hljs-keyword">throw</span> e;
+        &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;
+            <span class="hljs-keyword">if</span> (mLogger.isErrorEnabled()) &#123;
+                mLogger.error(<span class="hljs-string">&quot;loadPluginLoader发生Exception&quot;</span>, e);
+            &#125;
+            <span class="hljs-type">String</span> <span class="hljs-variable">msg</span> <span class="hljs-operator">=</span> e.getCause() != <span class="hljs-literal">null</span> ? e.getCause().getMessage() : e.getMessage();
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FailedException</span>(ERROR_CODE_RUNTIME_EXCEPTION, <span class="hljs-string">&quot;加载动态实现失败 cause：&quot;</span> + msg);
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LoaderImplLoader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ImplLoader</span> &#123;
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 加载&#123;<span class="hljs-doctag">@link</span> #sLoaderFactoryImplClassName&#125;时</span>
+<span class="hljs-comment">     * 需要从宿主PathClassLoader（含双亲委派）中加载的类</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String[] sInterfaces = <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>[]&#123;
+            <span class="hljs-comment">//当runtime是动态加载的时候，runtime的ClassLoader是PathClassLoader的parent，</span>
+            <span class="hljs-comment">// 所以不需要写在这个白名单里。但是写在这里不影响，也可以兼容runtime打包在宿主的情况。</span>
+            <span class="hljs-string">&quot;com.tencent.shadow.core.runtime.container&quot;</span>,
+            <span class="hljs-string">&quot;com.tencent.shadow.dynamic.host&quot;</span>,
+            <span class="hljs-string">&quot;com.tencent.shadow.core.common&quot;</span>
+    &#125;;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">static</span> <span class="hljs-type">String</span> <span class="hljs-variable">sLoaderFactoryImplClassName</span>
+            <span class="hljs-operator">=</span> <span class="hljs-string">&quot;com.tencent.shadow.dynamic.loader.impl.LoaderFactoryImpl&quot;</span>;
+
+    PluginLoaderImpl <span class="hljs-title function_">load</span><span class="hljs-params">(InstalledApk installedApk, String uuid, Context appContext)</span> <span class="hljs-keyword">throws</span> Exception &#123;
+        <span class="hljs-type">ApkClassLoader</span> <span class="hljs-variable">pluginLoaderClassLoader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ApkClassLoader</span>(
+                installedApk,
+                LoaderImplLoader.class.getClassLoader(),
+                loadWhiteList(installedApk),
+                <span class="hljs-number">1</span>
+        );
+        <span class="hljs-type">LoaderFactory</span> <span class="hljs-variable">loaderFactory</span> <span class="hljs-operator">=</span> pluginLoaderClassLoader.getInterface(
+                LoaderFactory.class,
+                sLoaderFactoryImplClassName
+        );
+
+        <span class="hljs-keyword">return</span> loaderFactory.buildLoader(uuid, appContext);
+    &#125;
+
+    <span class="hljs-meta">@Override</span>
+    String[] getCustomWhiteList() &#123;
+        <span class="hljs-keyword">return</span> sInterfaces;
+    &#125;
+&#125;
+
+open <span class="hljs-keyword">class</span> <span class="hljs-title class_">LoaderFactoryImpl</span> : LoaderFactory &#123;
+    override fun <span class="hljs-title function_">buildLoader</span><span class="hljs-params">(p0: String, p2: Context)</span>: PluginLoaderImpl &#123;
+        <span class="hljs-keyword">return</span> PluginLoaderBinder(DynamicPluginLoader(p2, p0))
+    &#125;
+&#125;
+
+internal <span class="hljs-keyword">class</span> <span class="hljs-title class_">DynamicPluginLoader</span>(hostContext: Context, uuid: String) &#123;
+    companion object &#123;
+        <span class="hljs-keyword">private</span> const <span class="hljs-type">val</span> <span class="hljs-variable">CORE_LOADER_FACTORY_IMPL_NAME</span> <span class="hljs-operator">=</span>
+                <span class="hljs-string">&quot;com.tencent.shadow.dynamic.loader.impl.CoreLoaderFactoryImpl&quot;</span>
+    &#125;
+    fun <span class="hljs-title function_">setUuidManager</span><span class="hljs-params">(p0: UuidManager?)</span> &#123;
+        <span class="hljs-keyword">if</span> (p0 != <span class="hljs-literal">null</span>)
+            mUuidManager = p0
+        <span class="hljs-comment">//todo #30 兼容mUuidManager为null时的逻辑</span>
+    &#125;
+
+    <span class="hljs-keyword">private</span> val mPluginLoader: ShadowPluginLoader
+
+    <span class="hljs-keyword">private</span> val mDynamicLoaderClassLoader: ClassLoader = DynamicPluginLoader::class.java.classLoader!!
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> mContext: Context;
+
+    <span class="hljs-keyword">private</span> lateinit <span class="hljs-keyword">var</span> mUuidManager: UuidManager;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> mUuid: String;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">val</span> <span class="hljs-variable">mUiHandler</span> <span class="hljs-operator">=</span> Handler(Looper.getMainLooper())
+
+    <span class="hljs-comment">/**</span>
+<span class="hljs-comment">     * 同一个IServiceConnection只会对应一个ServiceConnection对象，此Map就是保存这种对应关系</span>
+<span class="hljs-comment">     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-type">val</span> <span class="hljs-variable">mConnectionMap</span> <span class="hljs-operator">=</span> HashMap&lt;IBinder, ServiceConnection&gt;()
+
+    init &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">coreLoaderFactory</span> <span class="hljs-operator">=</span> mDynamicLoaderClassLoader.getInterface(
+                    CoreLoaderFactory::class.java,
+                    CORE_LOADER_FACTORY_IMPL_NAME
+            )
+            mPluginLoader = coreLoaderFactory.build(hostContext)
+            DelegateProviderHolder.setDelegateProvider(mPluginLoader.delegateProviderKey, mPluginLoader)
+            ContentProviderDelegateProviderHolder.setContentProviderDelegateProvider(mPluginLoader)
+            mPluginLoader.onCreate()
+        &#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+            <span class="hljs-keyword">throw</span> RuntimeException(<span class="hljs-string">&quot;当前的classLoader找不到PluginLoader的实现&quot;</span>, e)
+        &#125;
+        mContext = hostContext;
+        mUuid = uuid;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">PluginLoader</span> &#123;
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_loadPlugin</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_getLoadedPlugin</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">1</span>);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_callApplicationOnCreate</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">2</span>);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_convertActivityIntent</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">3</span>);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_startPluginService</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">4</span>);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_stopPluginService</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">5</span>);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_bindPluginService</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">6</span>);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_unbindService</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">7</span>);
+    <span class="hljs-type">int</span> <span class="hljs-variable">TRANSACTION_startActivityInPluginProcess</span> <span class="hljs-operator">=</span> (IBinder.FIRST_CALL_TRANSACTION + <span class="hljs-number">8</span>);
+&#125;</code></pre></div>
+
+
+<h1 id="load-plugin-apk"><a href="#load-plugin-apk" class="headerlink" title="load plugin apk"></a>load plugin apk</h1><p>plugin.zip 内的 apk 在使用前是需要加载的，这个加载操作由 loader 负责：PluginLoader.loadPlugin(partKey)，在主 APP 侧是 BinderPluginLoader，在 plugin process 侧是 PluginLoaderBinder（实际逻辑由 DynamicPluginLoader 实现）</p>
+<p>这个步骤非常重要，因为它初始化了核心功能所需的几个组件，其基本流程如下：</p>
+<ul>
+<li>从数据库里根据 plugin id 查询得到 plugin apk 文件路径</li>
+<li>ComponentManager，包含 plugin apk 里配置的 Activity、Service 和 ContentProvider 等组件信息，我们知道这些组件实际上并没有在主 APP 的 AndroidManifest.xml 里配置，而且也没法动态增加组件，所以插件的这些组件是不能直接使用的，需要用桩技术</li>
+<li>PluginClassLoader，用来加载 plugin apk 里的类</li>
+<li>ShadowApplication</li>
+<li>Resources</li>
+<li>PluginPackageManagerImpl</li>
+<li>…</li>
+</ul>
+<p>下面一个个分析它们的作用</p>
+<div class="code-wrapper"><pre><code class="hljs java">internal <span class="hljs-keyword">class</span> <span class="hljs-title class_">DynamicPluginLoader</span>(hostContext: Context, uuid: String) &#123;
+    fun <span class="hljs-title function_">loadPlugin</span><span class="hljs-params">(partKey: String)</span> &#123;
+        <span class="hljs-type">val</span> <span class="hljs-variable">installedApk</span> <span class="hljs-operator">=</span> mUuidManager.getPlugin(mUuid, partKey)
+        <span class="hljs-type">val</span> <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> mPluginLoader.loadPlugin(installedApk)
+        future.get()
+    &#125;
+&#125;
+
+<span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ShadowPluginLoader</span>(hostAppContext: Context) : DelegateProvider, DI, ContentProviderDelegateProvider &#123;
+
+    <span class="hljs-meta">@Throws(LoadPluginException::class)</span>
+    open fun <span class="hljs-title function_">loadPlugin</span><span class="hljs-params">(</span>
+<span class="hljs-params">            installedApk: InstalledApk</span>
+<span class="hljs-params">    )</span>: Future&lt;*&gt; &#123;
+        <span class="hljs-type">val</span> <span class="hljs-variable">loadParameters</span> <span class="hljs-operator">=</span> installedApk.getLoadParameters()
+        <span class="hljs-keyword">if</span> (mLogger.isInfoEnabled) &#123;
+            mLogger.info(<span class="hljs-string">&quot;start loadPlugin&quot;</span>)
+        &#125;
+        <span class="hljs-comment">// 在这里初始化PluginServiceManager</span>
+        mPluginServiceManagerLock.withLock &#123;
+            <span class="hljs-keyword">if</span> (!::mPluginServiceManager.isInitialized) &#123;
+                mPluginServiceManager = PluginServiceManager(<span class="hljs-built_in">this</span>, mHostAppContext)
+            &#125;
+
+            mComponentManager.setPluginServiceManager(mPluginServiceManager)
+        &#125;
+
+        <span class="hljs-keyword">return</span> LoadPluginBloc.loadPlugin(
+                mExecutorService,
+                mPluginPackageInfoSet,
+                ::allPluginPackageInfo,
+                mComponentManager,
+                mLock,
+                mPluginPartsMap,
+                mHostAppContext,
+                installedApk,
+                loadParameters)
+    &#125;
+&#125;
+
+object LoadPluginBloc &#123;
+    <span class="hljs-meta">@Throws(LoadPluginException::class)</span>
+    fun <span class="hljs-title function_">loadPlugin</span><span class="hljs-params">(</span>
+<span class="hljs-params">            executorService: ExecutorService,</span>
+<span class="hljs-params">            pluginPackageInfoSet: MutableSet&lt;PackageInfo&gt;,</span>
+<span class="hljs-params">            allPluginPackageInfo: ()</span> -&gt; (Array&lt;PackageInfo&gt;),
+            componentManager: ComponentManager,
+            lock: ReentrantLock,
+            pluginPartsMap: MutableMap&lt;String, PluginParts&gt;,
+            hostAppContext: Context,
+            installedApk: InstalledApk,
+            loadParameters: LoadParameters
+    ): Future&lt;*&gt; &#123;
+        <span class="hljs-keyword">if</span> (installedApk.apkFilePath == <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">throw</span> LoadPluginException(<span class="hljs-string">&quot;apkFilePath==null&quot;</span>)
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildClassLoader</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+                lock.withLock &#123;
+                    LoadApkBloc.loadPlugin(installedApk, loadParameters, pluginPartsMap)
+                &#125;
+            &#125;)
+
+            <span class="hljs-type">val</span> <span class="hljs-variable">getPackageInfo</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">archiveFilePath</span> <span class="hljs-operator">=</span> installedApk.apkFilePath
+                <span class="hljs-type">val</span> <span class="hljs-variable">packageManager</span> <span class="hljs-operator">=</span> hostAppContext.packageManager
+
+                <span class="hljs-type">val</span> <span class="hljs-variable">packageArchiveInfo</span> <span class="hljs-operator">=</span> packageManager.getPackageArchiveInfo(
+                        archiveFilePath,
+                        PackageManager.GET_ACTIVITIES
+                                or PackageManager.GET_META_DATA
+                                or PackageManager.GET_SERVICES
+                                or PackageManager.GET_PROVIDERS
+                                or PackageManager.GET_SIGNATURES
+                )
+                        ?: <span class="hljs-keyword">throw</span> NullPointerException(<span class="hljs-string">&quot;getPackageArchiveInfo return null.archiveFilePath==$archiveFilePath&quot;</span>)
+
+                <span class="hljs-type">val</span> <span class="hljs-variable">tempContext</span> <span class="hljs-operator">=</span> ShadowContext(hostAppContext, <span class="hljs-number">0</span>).apply &#123;
+                    setBusinessName(loadParameters.businessName)
+                &#125;
+                <span class="hljs-type">val</span> <span class="hljs-variable">dataDir</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.N) &#123;
+                    tempContext.dataDir
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    File(tempContext.filesDir, <span class="hljs-string">&quot;dataDir&quot;</span>)
+                &#125;
+                dataDir.mkdirs()
+
+                packageArchiveInfo.applicationInfo.nativeLibraryDir = installedApk.libraryPath
+                packageArchiveInfo.applicationInfo.dataDir = dataDir.absolutePath
+                packageArchiveInfo.applicationInfo.processName = hostAppContext.applicationInfo.processName
+                packageArchiveInfo.applicationInfo.uid = hostAppContext.applicationInfo.uid
+
+                lock.withLock &#123; pluginPackageInfoSet.add(packageArchiveInfo) &#125;
+                packageArchiveInfo
+            &#125;)
+
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildPluginInfo</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">packageInfo</span> <span class="hljs-operator">=</span> getPackageInfo.get()
+                ParsePluginApkBloc.parse(packageInfo, loadParameters, hostAppContext)
+            &#125;)
+
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildPackageManager</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">packageInfo</span> <span class="hljs-operator">=</span> getPackageInfo.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">hostPackageManager</span> <span class="hljs-operator">=</span> hostAppContext.packageManager
+                <span class="hljs-title function_">PluginPackageManagerImpl</span><span class="hljs-params">(hostPackageManager, packageInfo, allPluginPackageInfo)</span>
+            &#125;)
+
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildResources</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">packageInfo</span> <span class="hljs-operator">=</span> getPackageInfo.get()
+                CreateResourceBloc.create(packageInfo, installedApk.apkFilePath, hostAppContext)
+            &#125;)
+
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildAppComponentFactory</span> <span class="hljs-operator">=</span> executorService.submit(Callable&lt;ShadowAppComponentFactory&gt; &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginClassLoader</span> <span class="hljs-operator">=</span> buildClassLoader.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginInfo</span> <span class="hljs-operator">=</span> buildPluginInfo.get()
+                <span class="hljs-keyword">if</span> (pluginInfo.appComponentFactory != <span class="hljs-literal">null</span>) &#123;
+                    <span class="hljs-type">val</span> <span class="hljs-variable">clazz</span> <span class="hljs-operator">=</span> pluginClassLoader.loadClass(pluginInfo.appComponentFactory)
+                    ShadowAppComponentFactory::class.java.cast(clazz.newInstance())
+                &#125; <span class="hljs-keyword">else</span> ShadowAppComponentFactory()
+            &#125;)
+
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildApplication</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginClassLoader</span> <span class="hljs-operator">=</span> buildClassLoader.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">resources</span> <span class="hljs-operator">=</span> buildResources.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginInfo</span> <span class="hljs-operator">=</span> buildPluginInfo.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">packageInfo</span> <span class="hljs-operator">=</span> getPackageInfo.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">appComponentFactory</span> <span class="hljs-operator">=</span> buildAppComponentFactory.get()
+
+                CreateApplicationBloc.createShadowApplication(
+                        pluginClassLoader,
+                        pluginInfo,
+                        resources,
+                        hostAppContext,
+                        componentManager,
+                        packageInfo.applicationInfo,
+                        appComponentFactory
+                )
+            &#125;)
+
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildRunningPlugin</span> <span class="hljs-operator">=</span> executorService.submit &#123;
+                <span class="hljs-keyword">if</span> (File(installedApk.apkFilePath).exists().not()) &#123;
+                    <span class="hljs-keyword">throw</span> LoadPluginException(<span class="hljs-string">&quot;插件文件不存在.pluginFile==&quot;</span> + installedApk.apkFilePath)
+                &#125;
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginPackageManager</span> <span class="hljs-operator">=</span> buildPackageManager.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginClassLoader</span> <span class="hljs-operator">=</span> buildClassLoader.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">resources</span> <span class="hljs-operator">=</span> buildResources.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginInfo</span> <span class="hljs-operator">=</span> buildPluginInfo.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">shadowApplication</span> <span class="hljs-operator">=</span> buildApplication.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">appComponentFactory</span> <span class="hljs-operator">=</span> buildAppComponentFactory.get()
+                lock.withLock &#123;
+                    componentManager.addPluginApkInfo(pluginInfo)
+                    pluginPartsMap[pluginInfo.partKey] = PluginParts(
+                            appComponentFactory,
+                            shadowApplication,
+                            pluginClassLoader,
+                            resources,
+                            pluginInfo.businessName,
+                            pluginPackageManager
+                    )
+                    PluginPartInfoManager.addPluginInfo(pluginClassLoader, PluginPartInfo(shadowApplication, resources,
+                            pluginClassLoader, pluginPackageManager))
+                &#125;
+            &#125;
+
+            <span class="hljs-keyword">return</span> buildRunningPlugin
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+
+<h1 id="Plugin-Application"><a href="#Plugin-Application" class="headerlink" title="Plugin Application"></a>Plugin Application</h1><p>我们知道 plugin process 是由 PluginProcessService 拉起的 APP 子进程，所以自然的 app application 的新实例会被创建并调用它的 onCreate，plugin application 并没有配置在 AndroidManifest.xml 里，我们只能模拟系统初始化 Application 的流程手动地初始化 plugin application</p>
+<p>plugin apk 是从 plugin app 项目打包而来，plugin application 当然是插件业务自定义的 Application 子类，在打包 plugin.zip 的阶段（maoyan-plugin），shadow gradle plugin 会将 plugin application 改造为 ShadowApplication 的子类</p>
+<p>通过解析 plugin apk 可以得到配置在 AndroidManifest.xml 里的 plugin appliaction（PackageManager.getPackageArchiveInfo），它是 ShadowApplication 的子类，用包含了 plugin apk 的 PluginClassLoader 实例化出来</p>
+<p>一个 plugin.zip 里可以有多个 plugin apk，根据 partKey 区分，所以在初始化 Application 时需要传入 partKey，从而找到对应 apk 里的 plugin application，然后手动调用它的生命周期方法：attachBaseContext 和 onCreate</p>
+<div class="code-wrapper"><pre><code class="hljs java">object LoadPluginBloc &#123;
+
+    <span class="hljs-comment">// 构造 ShadowApplication</span>
+    <span class="hljs-meta">@Throws(LoadPluginException::class)</span>
+    fun <span class="hljs-title function_">loadPlugin</span><span class="hljs-params">(</span>
+<span class="hljs-params">            executorService: ExecutorService,</span>
+<span class="hljs-params">            pluginPackageInfoSet: MutableSet&lt;PackageInfo&gt;,</span>
+<span class="hljs-params">            allPluginPackageInfo: ()</span> -&gt; (Array&lt;PackageInfo&gt;),
+            componentManager: ComponentManager,
+            lock: ReentrantLock,
+            pluginPartsMap: MutableMap&lt;String, PluginParts&gt;,
+            hostAppContext: Context,
+            installedApk: InstalledApk,
+            loadParameters: LoadParameters
+    ): Future&lt;*&gt; &#123;
+            <span class="hljs-comment">// ...</span>
+            <span class="hljs-type">val</span> <span class="hljs-variable">buildApplication</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginClassLoader</span> <span class="hljs-operator">=</span> buildClassLoader.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">resources</span> <span class="hljs-operator">=</span> buildResources.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">pluginInfo</span> <span class="hljs-operator">=</span> buildPluginInfo.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">packageInfo</span> <span class="hljs-operator">=</span> getPackageInfo.get()
+                <span class="hljs-type">val</span> <span class="hljs-variable">appComponentFactory</span> <span class="hljs-operator">=</span> buildAppComponentFactory.get()
+
+                CreateApplicationBloc.createShadowApplication(
+                        pluginClassLoader,
+                        pluginInfo,
+                        resources,
+                        hostAppContext,
+                        componentManager,
+                        packageInfo.applicationInfo,
+                        appComponentFactory
+                )
+            &#125;)
+            <span class="hljs-comment">// ...</span>
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-comment">/**</span>
+<span class="hljs-comment"> * 初始化插件Application类</span>
+<span class="hljs-comment"> *</span>
+<span class="hljs-comment"> * <span class="hljs-doctag">@author</span> cubershi</span>
+<span class="hljs-comment"> */</span>
+object CreateApplicationBloc &#123;
+    <span class="hljs-meta">@Throws(CreateApplicationException::class)</span>
+    fun <span class="hljs-title function_">createShadowApplication</span><span class="hljs-params">(</span>
+<span class="hljs-params">            pluginClassLoader: PluginClassLoader,</span>
+<span class="hljs-params">            pluginInfo: PluginInfo,</span>
+<span class="hljs-params">            resources: Resources,</span>
+<span class="hljs-params">            hostAppContext: Context,</span>
+<span class="hljs-params">            componentManager: ComponentManager,</span>
+<span class="hljs-params">            applicationInfo: ApplicationInfo,</span>
+<span class="hljs-params">            appComponentFactory: ShadowAppComponentFactory</span>
+<span class="hljs-params">    )</span>: ShadowApplication &#123;
+        <span class="hljs-keyword">try</span> &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">appClassName</span> <span class="hljs-operator">=</span> pluginInfo.applicationClassName
+                    ?: ShadowApplication::class.java.name
+            <span class="hljs-type">val</span> <span class="hljs-variable">shadowApplication</span> <span class="hljs-operator">=</span> appComponentFactory.instantiateApplication(pluginClassLoader, appClassName)
+            <span class="hljs-type">val</span> <span class="hljs-variable">partKey</span> <span class="hljs-operator">=</span> pluginInfo.partKey
+            shadowApplication.setPluginResources(resources)
+            shadowApplication.setPluginClassLoader(pluginClassLoader)
+            shadowApplication.setPluginComponentLauncher(componentManager)
+            shadowApplication.setBroadcasts(componentManager.getBroadcastsByPartKey(partKey))
+            shadowApplication.setAppComponentFactory(appComponentFactory)
+            shadowApplication.applicationInfo = applicationInfo
+            shadowApplication.setBusinessName(pluginInfo.businessName)
+            shadowApplication.setPluginPartKey(partKey)
+
+            <span class="hljs-comment">//和ShadowActivityDelegate.initPluginActivity一样，attachBaseContext放到最后</span>
+            shadowApplication.setHostApplicationContextAsBase(hostAppContext)
+            shadowApplication.setTheme(applicationInfo.theme)
+            <span class="hljs-keyword">return</span> shadowApplication
+        &#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+            <span class="hljs-keyword">throw</span> CreateApplicationException(e)
+        &#125;
+
+    &#125;
+&#125;
+<span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ShadowPluginLoader</span>(hostAppContext: Context) : DelegateProvider, DI, ContentProviderDelegateProvider &#123;
+
+    <span class="hljs-comment">// 手动调用 Application 的生命周期方法：attachBaseContext 和 onCreate</span>
+    fun <span class="hljs-title function_">callApplicationOnCreate</span><span class="hljs-params">(partKey: String)</span> &#123;
+        fun <span class="hljs-title function_">realAction</span><span class="hljs-params">()</span> &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">pluginParts</span> <span class="hljs-operator">=</span> getPluginParts(partKey)
+            pluginParts?.let &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">application</span> <span class="hljs-operator">=</span> pluginParts.application
+                application.attachBaseContext(mHostAppContext)
+                mPluginContentProviderManager.createContentProviderAndCallOnCreate(
+                        application, partKey, pluginParts)
+                application.onCreate()
+            &#125;
+        &#125;
+        <span class="hljs-keyword">if</span> (isUiThread()) &#123;
+            realAction()
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">waitUiLock</span> <span class="hljs-operator">=</span> CountDownLatch(<span class="hljs-number">1</span>)
+            mUiHandler.post &#123;
+                realAction()
+                waitUiLock.countDown()
+            &#125;
+            waitUiLock.await();
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<h1 id="Plugin-Activity"><a href="#Plugin-Activity" class="headerlink" title="Plugin Activity"></a>Plugin Activity</h1><p>Plugin Activity 实际上并没有在 Host AndroidManifest.xml 里注册，所以不能使用常规的方式 Context.startActivity 来打开，为了让这些没有注册的 Plugin Activity 正常运行，需要用一个桩为它们提供运行环境，这个桩 Activity 就是 PluginDefaultProxyActivity</p>
+<p>Host 通过 PluginManager.enter 替代 Context.startActivity 来打开 Plugin Activity，需要指明是哪个 plugin.zip 里的哪个 plugin.apk 里的哪个 Activity</p>
+<div class="code-wrapper"><pre><code class="hljs java">Bundle&#123;
+    pluginZipPath          = /data/user/<span class="hljs-number">0</span>/com.tencent.shadow.sample.host/files/plugin-debug.zip, 
+    KEY_PLUGIN_PART_KEY    = sample-plugin-app,
+    KEY_ACTIVITY_CLASSNAME = com.tencent.shadow.sample.plugin.app.lib.gallery.splash.SplashActivity
+&#125;
+SamplePluginManager.enter
+SamplePluginManager.onStartActivity</code></pre></div>
+
+<p>将目标 Activity 替换为桩 Activity，并在 Plugin Process 打开桩页面</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FastPluginManager</span> &#123;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startPluginActivity</span><span class="hljs-params">(InstalledPlugin installedPlugin, String partKey, Intent pluginIntent)</span> <span class="hljs-keyword">throws</span> RemoteException, TimeoutException, FailedException &#123;
+        <span class="hljs-type">Intent</span> <span class="hljs-variable">intent</span> <span class="hljs-operator">=</span> convertActivityIntent(installedPlugin, partKey, pluginIntent);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        mPluginLoader.startActivityInPluginProcess(intent);
+    &#125;
+
+    <span class="hljs-keyword">public</span> Intent <span class="hljs-title function_">convertActivityIntent</span><span class="hljs-params">(InstalledPlugin installedPlugin, String partKey, Intent pluginIntent)</span> <span class="hljs-keyword">throws</span> RemoteException, TimeoutException, FailedException &#123;
+        loadPlugin(installedPlugin.UUID, partKey);
+        <span class="hljs-type">Map</span> <span class="hljs-variable">map</span> <span class="hljs-operator">=</span> mPluginLoader.getLoadedPlugin();
+        <span class="hljs-type">Boolean</span> <span class="hljs-variable">isCall</span> <span class="hljs-operator">=</span> (Boolean) map.get(partKey);
+        <span class="hljs-keyword">if</span> (isCall == <span class="hljs-literal">null</span> || !isCall) &#123;
+            mPluginLoader.callApplicationOnCreate(partKey);
+        &#125;
+        <span class="hljs-keyword">return</span> mPluginLoader.convertActivityIntent(pluginIntent);
+    &#125;    
+&#125;
+
+<span class="hljs-comment">// Plugin Process，IPC</span>
+DynamicPluginLoader.convertActivityIntent
+SampleComponentManager.convertPluginActivityIntent
+<span class="hljs-comment">// 得到最终的 Intent，它指向桩 Activity</span>
+Intent&#123;
+    mComponent = ComponentInfo&#123;
+        mPackage = com.tencent.shadow.sample.host,
+        mClass = com.tencent.shadow.sample.plugin.runtime.PluginDefaultProxyActivity
+    &#125;,
+    mExtra = &#123;
+        CM_BUSINESS_NAME=sample-plugin-app,
+        PROCESS_ID_KEY=<span class="hljs-number">14731661</span>,
+        CM_LOADER_BUNDLE=Bundle&#123;
+            CM_CLASS_NAME=com.tencent.shadow.sample.plugin.app.lib.gallery.splash.SplashActivity,
+            CM_PACKAGE_NAME=com.tencent.shadow.sample.host,
+            CM_ACTIVITY_INFO=PluginActivityInfo&#123;
+                className = com.tencent.shadow.sample.plugin.app.lib.gallery.splash.SplashActivity,
+                themeResource = <span class="hljs-number">16973830</span>,
+                activityInfo = ActivityInfo&#123;...&#125;
+            &#125;
+        &#125;,
+        LOADER_VERSION=local,
+        CM_EXTRAS_BUNDLE=<span class="hljs-literal">null</span>,
+        CM_PART=sample-plugin-app
+    &#125;
+&#125;
+
+<span class="hljs-comment">// Plugin Process 打开桩 Activity，IPC</span>
+BinderPluginLoader.startActivityInPluginProcess
+DynamicPluginLoader.startActivityInPluginProcess
+Context.startActivity</code></pre></div>
+
+<p>桩 PluginDefaultProxyActivity 在内部实例化目标 Activity 并将 AM 的调用转发给它</p>
+<p>目标 Activity 被 Shadow Gradle Plugin 改造为继承自 ShadowActivity，一些内部调用如 setContentView 将被转发给桩 Activity</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">GeneratedPluginContainerActivity</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Activity</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">GeneratedHostActivityDelegator</span> &#123;
+  GeneratedHostActivityDelegate hostActivityDelegate;
+
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onCreate</span><span class="hljs-params">(Bundle arg0)</span> &#123;
+    <span class="hljs-keyword">if</span> (hostActivityDelegate != <span class="hljs-literal">null</span>) &#123;
+      hostActivityDelegate.onCreate(arg0);
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      <span class="hljs-built_in">super</span>.onCreate(arg0);
+    &#125;
+  &#125;
+
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onDestroy</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">if</span> (hostActivityDelegate != <span class="hljs-literal">null</span>) &#123;
+      hostActivityDelegate.onDestroy();
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      <span class="hljs-built_in">super</span>.onDestroy();
+    &#125;
+  &#125;      
+
+  <span class="hljs-meta">@Override</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">finish</span><span class="hljs-params">()</span> &#123;
+    <span class="hljs-keyword">if</span> (hostActivityDelegate != <span class="hljs-literal">null</span>) &#123;
+      hostActivityDelegate.finish();
+    &#125; <span class="hljs-keyword">else</span> &#123;
+      <span class="hljs-built_in">super</span>.finish();
+    &#125;
+  &#125;  
+&#125;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ShadowActivity</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">PluginActivity</span> &#123;
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setContentView</span><span class="hljs-params">(<span class="hljs-type">int</span> layoutResID)</span> &#123;
+        <span class="hljs-keyword">if</span> (<span class="hljs-string">&quot;merge&quot;</span>.equals(XmlPullParserUtil.getLayoutStartTagName(getResources(), layoutResID))) &#123;
+            <span class="hljs-comment">//如果传进来的xml文件的根tag是merge时，需要特殊处理</span>
+            <span class="hljs-type">View</span> <span class="hljs-variable">decorView</span> <span class="hljs-operator">=</span> hostActivityDelegator.getWindow().getDecorView();
+            <span class="hljs-type">ViewGroup</span> <span class="hljs-variable">viewGroup</span> <span class="hljs-operator">=</span> decorView.findViewById(android.R.id.content);
+            LayoutInflater.from(<span class="hljs-built_in">this</span>).inflate(layoutResID, viewGroup);
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-type">View</span> <span class="hljs-variable">inflate</span> <span class="hljs-operator">=</span> LayoutInflater.from(<span class="hljs-built_in">this</span>).inflate(layoutResID, <span class="hljs-literal">null</span>);
+            hostActivityDelegator.setContentView(inflate);
+        &#125;
+    &#125;
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startActivityForResult</span><span class="hljs-params">(Intent intent, <span class="hljs-type">int</span> requestCode, Bundle options)</span> &#123;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">Intent</span> <span class="hljs-variable">pluginIntent</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Intent</span>(intent);
+        pluginIntent.setExtrasClassLoader(mPluginClassLoader);
+        <span class="hljs-type">ComponentName</span> <span class="hljs-variable">callingActivity</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ComponentName</span>(getPackageName(), getClass().getName());
+        <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">success</span> <span class="hljs-operator">=</span> mPluginComponentLauncher.startActivityForResult(hostActivityDelegator, pluginIntent, requestCode, options, callingActivity);
+        <span class="hljs-keyword">if</span> (!success) &#123;
+            hostActivityDelegator.startActivityForResult(intent, requestCode, options);
+        &#125;
+    &#125;
+&#125;</code></pre></div>
+
+<p>一些细节问题</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ShadowActivity</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">PluginActivity</span> &#123;
+
+    <span class="hljs-comment">// 要返回 Plugin Application 而不是 Host Application</span>
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> ShadowApplication <span class="hljs-title function_">getApplication</span><span class="hljs-params">()</span> &#123;
+        <span class="hljs-keyword">return</span> mPluginApplication;
+    &#125;
+
+    <span class="hljs-comment">// 要用 Plugin Activity 名称而不是桩的名称</span>
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> SharedPreferences <span class="hljs-title function_">getPreferences</span><span class="hljs-params">(<span class="hljs-type">int</span> mode)</span> &#123;
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">super</span>.getSharedPreferences(getLocalClassName(), mode);
+    &#125;
+
+    <span class="hljs-comment">// Plugin Activity 都是没有注册进 AndroidManifest.xml 的，需要将 Intent 转发给 ComponentManager</span>
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">startActivityForResult</span><span class="hljs-params">(Intent intent, <span class="hljs-type">int</span> requestCode, Bundle options)</span> &#123;
+        <span class="hljs-keyword">final</span> <span class="hljs-type">Intent</span> <span class="hljs-variable">pluginIntent</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Intent</span>(intent);
+        pluginIntent.setExtrasClassLoader(mPluginClassLoader);
+        <span class="hljs-type">ComponentName</span> <span class="hljs-variable">callingActivity</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ComponentName</span>(getPackageName(), getClass().getName());
+        <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">success</span> <span class="hljs-operator">=</span> mPluginComponentLauncher.startActivityForResult(hostActivityDelegator, pluginIntent, requestCode, options, callingActivity);
+        <span class="hljs-keyword">if</span> (!success) &#123;
+            hostActivityDelegator.startActivityForResult(intent, requestCode, options);
+        &#125;
+    &#125;    
+&#125;</code></pre></div>
+
+<h1 id="Plugin-Service"><a href="#Plugin-Service" class="headerlink" title="Plugin Service"></a>Plugin Service</h1><p>Service 是需要静态配置在 AndroidManifest.xml 里的，那么 Plugin Service 自然也不能通过常规的 Context.startService 启动，而是由 PluginServiceManager 负责管理 Service 的生命周期</p>
+<p>所有的 Plugin Activity 都继承自 ShadowActivity，它重写了 Context.startService 把 Intent 转发给 ComponentManager 处理</p>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ShadowContext</span> &#123;
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> ComponentName <span class="hljs-title function_">startService</span><span class="hljs-params">(Intent service)</span> &#123;
+        <span class="hljs-keyword">if</span> (service.getComponent() == <span class="hljs-literal">null</span>) &#123;
+            <span class="hljs-keyword">return</span> <span class="hljs-built_in">super</span>.startService(service);
+        &#125;
+        Pair&lt;Boolean, ComponentName&gt; ret = mPluginComponentLauncher.startService(<span class="hljs-built_in">this</span>, service);
+        <span class="hljs-keyword">if</span> (!ret.first)
+            <span class="hljs-keyword">return</span> <span class="hljs-built_in">super</span>.startService(service);
+        <span class="hljs-keyword">return</span> ret.second;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ComponentManager</span> : PluginComponentLauncher &#123;
+    override fun <span class="hljs-title function_">startService</span><span class="hljs-params">(context: ShadowContext, service: Intent)</span>: Pair&lt;Boolean, ComponentName?&gt; &#123;
+        <span class="hljs-keyword">if</span> (service.isPluginComponent()) &#123;
+            <span class="hljs-comment">// 插件service intent不需要转换成container service intent，直接使用intent</span>
+            <span class="hljs-type">val</span> <span class="hljs-variable">component</span> <span class="hljs-operator">=</span> mPluginServiceManager!!.startPluginService(service)
+            <span class="hljs-keyword">if</span> (component != <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-keyword">return</span> Pair(<span class="hljs-literal">true</span>, component)
+            &#125;
+        &#125;
+        <span class="hljs-keyword">return</span> Pair(<span class="hljs-literal">false</span>, service.component)
+    &#125;
+&#125;</code></pre></div>
+
+<p>ComponentManager 又交由 PluginServiceManager 处理 Service：<br>0. 同 Plugin Activity，Plugin Service 也被改造为继承自 ShadowService</p>
+<ol>
+<li>实例化 Plugin Service</li>
+<li>attachBaseContext</li>
+<li>onCreate</li>
+<li>onStartCommand</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">class</span> <span class="hljs-title class_">PluginServiceManager</span> &#123;
+    fun <span class="hljs-title function_">startPluginService</span><span class="hljs-params">(service: Intent)</span> =
+        execInMainThread &#123;
+            delegate.startPluginService(service)
+        &#125;
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">UnsafePluginServiceManager</span> &#123;
+
+    fun <span class="hljs-title function_">startPluginService</span><span class="hljs-params">(intent: Intent)</span>: ComponentName? &#123;
+        <span class="hljs-type">val</span> <span class="hljs-variable">componentName</span> <span class="hljs-operator">=</span> intent.component!!
+
+        <span class="hljs-comment">// 检查所请求的service是否已经存在</span>
+        <span class="hljs-keyword">if</span> (!mAliveServicesMap.containsKey(componentName)) &#123;
+            <span class="hljs-comment">// 不存在则创建</span>
+            <span class="hljs-type">val</span> <span class="hljs-variable">service</span> <span class="hljs-operator">=</span> createServiceAndCallOnCreate(intent)
+            mAliveServicesMap[componentName] = service
+            <span class="hljs-comment">// 通过startService启动集合</span>
+            mServiceStartByStartServiceSet.add(componentName)
+        &#125;
+        mAliveServicesMap[componentName]?.onStartCommand(intent, <span class="hljs-number">0</span>, getNewStartId())
+        <span class="hljs-keyword">return</span> componentName
+    &#125;
+
+    <span class="hljs-keyword">private</span> fun <span class="hljs-title function_">createServiceAndCallOnCreate</span><span class="hljs-params">(intent: Intent)</span>: ShadowService &#123;
+        <span class="hljs-type">val</span> <span class="hljs-variable">service</span> <span class="hljs-operator">=</span> newServiceInstance(intent)
+        service.onCreate()
+        <span class="hljs-keyword">return</span> service
+    &#125;
+
+    <span class="hljs-keyword">private</span> fun <span class="hljs-title function_">newServiceInstance</span><span class="hljs-params">(intent: Intent)</span>: ShadowService &#123;
+        <span class="hljs-type">val</span> <span class="hljs-variable">componentName</span> <span class="hljs-operator">=</span> intent.component!!
+        <span class="hljs-type">val</span> <span class="hljs-variable">businessName</span> <span class="hljs-operator">=</span> mPluginLoader.mComponentManager.getComponentBusinessName(componentName)
+        <span class="hljs-type">val</span> <span class="hljs-variable">partKey</span> <span class="hljs-operator">=</span> mPluginLoader.mComponentManager.getComponentPartKey(componentName)
+        <span class="hljs-type">val</span> <span class="hljs-variable">className</span> <span class="hljs-operator">=</span> componentName.className
+
+        <span class="hljs-type">val</span> <span class="hljs-variable">tmpShadowDelegate</span> <span class="hljs-operator">=</span> TmpShadowDelegate()
+        mPluginLoader.inject(tmpShadowDelegate, partKey!!)
+        <span class="hljs-type">val</span> <span class="hljs-variable">service</span> <span class="hljs-operator">=</span> tmpShadowDelegate.getAppComponentFactory()
+                .instantiateService(tmpShadowDelegate.getPluginClassLoader(), className, intent)
+
+        service.setPluginResources(tmpShadowDelegate.getPluginResources())
+        service.setPluginClassLoader(tmpShadowDelegate.getPluginClassLoader())
+        service.setShadowApplication(tmpShadowDelegate.getPluginApplication())
+        service.setPluginComponentLauncher(tmpShadowDelegate.getComponentManager())
+        service.applicationInfo = tmpShadowDelegate.getPluginApplication().applicationInfo
+        service.setBusinessName(businessName)
+        service.setPluginPartKey(partKey)
+
+        <span class="hljs-comment">//和ShadowActivityDelegate.initPluginActivity一样，attachBaseContext放到最后</span>
+        service.setHostContextAsBase(mHostContext)
+        <span class="hljs-keyword">return</span> service
+    &#125;        
+&#125;</code></pre></div>
+
+<p>如果是 bindService：</p>
+<ol>
+<li>实例化 Plugin Service</li>
+<li>attachBaseContext</li>
+<li>onCreate</li>
+<li>onBind</li>
+<li>onServiceConnected</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">private</span> open <span class="hljs-keyword">class</span> <span class="hljs-title class_">UnsafePluginServiceManager</span>(
+    <span class="hljs-keyword">private</span> val mPluginLoader: ShadowPluginLoader,
+    <span class="hljs-keyword">private</span> val mHostContext: Context
+) &#123;
+
+    fun <span class="hljs-title function_">bindPluginService</span><span class="hljs-params">(intent: Intent, conn: ServiceConnection, flags: Int)</span>: Boolean &#123;
+        <span class="hljs-comment">// todo #25 目前实现未处理flags,后续实现补上</span>
+
+        <span class="hljs-type">val</span> <span class="hljs-variable">componentName</span> <span class="hljs-operator">=</span> intent.component!!
+
+        <span class="hljs-comment">// 1. 看要bind的service是否创建并在运行了</span>
+        <span class="hljs-keyword">if</span> (!mAliveServicesMap.containsKey(componentName)) &#123;
+            <span class="hljs-comment">// 如果还没创建，则创建,并保持</span>
+            <span class="hljs-type">val</span> <span class="hljs-variable">service</span> <span class="hljs-operator">=</span> createServiceAndCallOnCreate(intent)
+            mAliveServicesMap[componentName] = service
+        &#125;
+
+        <span class="hljs-type">val</span> <span class="hljs-variable">service</span> <span class="hljs-operator">=</span> mAliveServicesMap[componentName]!!
+
+        <span class="hljs-comment">// 2. 检查是否该Service之前是否被绑定过了</span>
+        <span class="hljs-keyword">if</span> (!mServiceBinderMap.containsKey(componentName)) &#123;
+            <span class="hljs-comment">// 还没调用过onBinder,在这里调用</span>
+            mServiceBinderMap[componentName] = service.onBind(intent)
+        &#125;
+
+        <span class="hljs-comment">// 3. 如果binder不为空，则要回调onServiceConnected</span>
+        mServiceBinderMap[componentName]?.let &#123;
+
+
+            <span class="hljs-comment">// 检查该connections是否存在了</span>
+            <span class="hljs-keyword">if</span> (mServiceConnectionMap.containsKey(componentName)) &#123;
+
+                <span class="hljs-keyword">if</span> (!mServiceConnectionMap[componentName]!!.contains(conn)) &#123;
+                    <span class="hljs-comment">// 如果service的bind connection集合中不包含该connection,则加入</span>
+                    mServiceConnectionMap[componentName]!!.add(conn)
+                    mConnectionIntentMap[conn] = intent
+
+
+                    <span class="hljs-comment">// 回调onServiceConnected</span>
+                    conn.onServiceConnected(componentName, it)
+                &#125; <span class="hljs-keyword">else</span> &#123;
+                    <span class="hljs-comment">// 已经包含该connection了，说明onServiceConnected已经回调过了，所以这里什么也不用干</span>
+                &#125;
+
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                <span class="hljs-comment">// 该connection是第一个bind connection</span>
+                <span class="hljs-type">val</span> <span class="hljs-variable">connectionSet</span> <span class="hljs-operator">=</span> HashSet&lt;ServiceConnection&gt;()
+                connectionSet.add(conn)
+                mServiceConnectionMap[componentName] = connectionSet
+                mConnectionIntentMap[conn] = intent
+
+                <span class="hljs-comment">// 回调onServiceConnected</span>
+                conn.onServiceConnected(componentName, it)
+            &#125;
+        &#125;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
+    &#125;
+&#125;</code></pre></div>
+
+<p>总之 Host APP 是没有 Plugin Service 记录的，所有的 Plugin Service 实例都是作为一个普通的 Java 对象被 PluginServiceManager 管理，而且不支持子进程，所有的 Plugin Service 都运行在 Plugin Process（实际上所有的 Component 都运行在 Plugin Process，不支持子进程）</p>
+<p>stopService/unbindService 则对应地执行 onDestroy/onUnbind 生命周期函数，然后移除相关实例即可</p>
+<h1 id="Plugin-ContentProvider"><a href="#Plugin-ContentProvider" class="headerlink" title="Plugin ContentProvider"></a>Plugin ContentProvider</h1><p>原先在 plugin.apk 里静态注册在 AndroidManifest.xml 里的 ContentProvider 自然也要我们手动处理：</p>
+<ol>
+<li>PackageManager.getPackageArchiveInfo + PackageManager.GET_PROVIDERS 可以获得静态注册在清单文件里的 ContentProvider</li>
+<li>在 Application.attachBaseContext 之后，并在 Application.onCreate 之前实例化它们，用 ContentProvider.attachInfo 初始化它们</li>
+</ol>
+<div class="code-wrapper"><pre><code class="hljs java">object LoadPluginBloc &#123;
+    fun <span class="hljs-title function_">loadPlugin</span><span class="hljs-params">(...)</span>: Future&lt;*&gt; &#123;
+
+        <span class="hljs-comment">// ... 从 apk 里解析出所有 ContentProvider</span>
+        <span class="hljs-type">val</span> <span class="hljs-variable">getPackageInfo</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">archiveFilePath</span> <span class="hljs-operator">=</span> installedApk.apkFilePath
+            <span class="hljs-type">val</span> <span class="hljs-variable">packageManager</span> <span class="hljs-operator">=</span> hostAppContext.packageManager
+            <span class="hljs-type">val</span> <span class="hljs-variable">packageArchiveInfo</span> <span class="hljs-operator">=</span> packageManager.getPackageArchiveInfo(
+                    archiveFilePath,
+                    PackageManager.GET_ACTIVITIES or PackageManager.GET_META_DATA or PackageManager.GET_SERVICES 
+                        or PackageManager.GET_PROVIDERS or PackageManager.GET_SIGNATURES
+            ) ?: <span class="hljs-keyword">throw</span> NullPointerException(<span class="hljs-string">&quot;getPackageArchiveInfo return null.archiveFilePath==$archiveFilePath&quot;</span>)
+            <span class="hljs-type">val</span> <span class="hljs-variable">tempContext</span> <span class="hljs-operator">=</span> ShadowContext(hostAppContext, <span class="hljs-number">0</span>).apply &#123;
+                setBusinessName(loadParameters.businessName)
+            &#125;
+            <span class="hljs-type">val</span> <span class="hljs-variable">dataDir</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">if</span> (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.N) &#123;
+                tempContext.dataDir
+            &#125; <span class="hljs-keyword">else</span> &#123;
+                File(tempContext.filesDir, <span class="hljs-string">&quot;dataDir&quot;</span>)
+            &#125;
+            dataDir.mkdirs()
+            packageArchiveInfo.applicationInfo.nativeLibraryDir = installedApk.libraryPath
+            packageArchiveInfo.applicationInfo.dataDir = dataDir.absolutePath
+            packageArchiveInfo.applicationInfo.processName = hostAppContext.applicationInfo.processName
+            packageArchiveInfo.applicationInfo.uid = hostAppContext.applicationInfo.uid
+            lock.withLock &#123; pluginPackageInfoSet.add(packageArchiveInfo) &#125;
+            packageArchiveInfo
+        &#125;)
+
+        <span class="hljs-comment">// 放入 PluginInfo._mProviders</span>
+        <span class="hljs-type">val</span> <span class="hljs-variable">buildPluginInfo</span> <span class="hljs-operator">=</span> executorService.submit(Callable &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">packageInfo</span> <span class="hljs-operator">=</span> getPackageInfo.get()
+            ParsePluginApkBloc.parse(packageInfo, loadParameters, hostAppContext)
+        &#125;)
+
+        <span class="hljs-comment">// ... 再放入 ComponentManager.mProviders</span>
+        <span class="hljs-type">val</span> <span class="hljs-variable">buildRunningPlugin</span> <span class="hljs-operator">=</span> executorService.submit &#123;
+            <span class="hljs-keyword">if</span> (File(installedApk.apkFilePath).exists().not()) &#123;
+                <span class="hljs-keyword">throw</span> LoadPluginException(<span class="hljs-string">&quot;插件文件不存在.pluginFile==&quot;</span> + installedApk.apkFilePath)
+            &#125;
+            <span class="hljs-type">val</span> <span class="hljs-variable">pluginPackageManager</span> <span class="hljs-operator">=</span> buildPackageManager.get()
+            <span class="hljs-type">val</span> <span class="hljs-variable">pluginClassLoader</span> <span class="hljs-operator">=</span> buildClassLoader.get()
+            <span class="hljs-type">val</span> <span class="hljs-variable">resources</span> <span class="hljs-operator">=</span> buildResources.get()
+            <span class="hljs-type">val</span> <span class="hljs-variable">pluginInfo</span> <span class="hljs-operator">=</span> buildPluginInfo.get()
+            <span class="hljs-type">val</span> <span class="hljs-variable">shadowApplication</span> <span class="hljs-operator">=</span> buildApplication.get()
+            <span class="hljs-type">val</span> <span class="hljs-variable">appComponentFactory</span> <span class="hljs-operator">=</span> buildAppComponentFactory.get()
+            lock.withLock &#123;
+                componentManager.addPluginApkInfo(pluginInfo)
+                pluginPartsMap[pluginInfo.partKey] = PluginParts(
+                        appComponentFactory,
+                        shadowApplication,
+                        pluginClassLoader,
+                        resources,
+                        pluginInfo.businessName,
+                        pluginPackageManager
+                )
+                PluginPartInfoManager.addPluginInfo(pluginClassLoader, PluginPartInfo(shadowApplication, resources,
+                        pluginClassLoader, pluginPackageManager))
+            &#125;
+        &#125;
+        <span class="hljs-keyword">return</span> buildRunningPlugin
+    &#125;
+&#125;
+
+<span class="hljs-comment">// 由 ComponentManager 统一管理</span>
+<span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ComponentManager</span> : PluginComponentLauncher &#123;
+    fun <span class="hljs-title function_">addPluginApkInfo</span><span class="hljs-params">(pluginInfo: PluginInfo)</span> &#123;
+        fun <span class="hljs-title function_">common</span><span class="hljs-params">(pluginComponentInfo: PluginComponentInfo,componentName:ComponentName)</span> &#123;
+            packageNameMap[pluginComponentInfo.className!!] = pluginInfo.packageName
+            <span class="hljs-type">val</span> <span class="hljs-variable">previousValue</span> <span class="hljs-operator">=</span> pluginInfoMap.put(componentName, pluginInfo)
+            <span class="hljs-keyword">if</span> (previousValue != <span class="hljs-literal">null</span>) &#123;
+                <span class="hljs-keyword">throw</span> IllegalStateException(<span class="hljs-string">&quot;重复添加Component：$componentName&quot;</span>)
+            &#125;
+            pluginComponentInfoMap[componentName] = pluginComponentInfo
+        &#125;
+
+        pluginInfo.mActivities.forEach &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">componentName</span> <span class="hljs-operator">=</span> ComponentName(pluginInfo.packageName, it.className!!)
+            common(it,componentName)
+            componentMap[componentName] = onBindContainerActivity(componentName)
+        &#125;
+
+        pluginInfo.mServices.forEach &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">componentName</span> <span class="hljs-operator">=</span> ComponentName(pluginInfo.packageName, it.className!!)
+            common(it,componentName)
+        &#125;
+
+        pluginInfo.mProviders.forEach &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">componentName</span> <span class="hljs-operator">=</span> ComponentName(pluginInfo.packageName, it.className!!)
+            mPluginContentProviderManager!!.addContentProviderInfo(pluginInfo.partKey,it,onBindContainerContentProvider(componentName))
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ShadowPluginLoader</span>(hostAppContext: Context) : DelegateProvider, DI, ContentProviderDelegateProvider &#123;
+
+    <span class="hljs-comment">// 手动调用 Application 的生命周期方法：attachBaseContext 和 onCreate</span>
+    fun <span class="hljs-title function_">callApplicationOnCreate</span><span class="hljs-params">(partKey: String)</span> &#123;
+        fun <span class="hljs-title function_">realAction</span><span class="hljs-params">()</span> &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">pluginParts</span> <span class="hljs-operator">=</span> getPluginParts(partKey)
+            pluginParts?.let &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">application</span> <span class="hljs-operator">=</span> pluginParts.application
+                application.attachBaseContext(mHostAppContext)
+                mPluginContentProviderManager.createContentProviderAndCallOnCreate(
+                        application, partKey, pluginParts)
+                application.onCreate()
+            &#125;
+        &#125;
+        <span class="hljs-keyword">if</span> (isUiThread()) &#123;
+            realAction()
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            <span class="hljs-type">val</span> <span class="hljs-variable">waitUiLock</span> <span class="hljs-operator">=</span> CountDownLatch(<span class="hljs-number">1</span>)
+            mUiHandler.post &#123;
+                realAction()
+                waitUiLock.countDown()
+            &#125;
+            waitUiLock.await();
+        &#125;
+    &#125;
+&#125;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">PluginContentProviderManager</span>() : UriConverter.UriParseDelegate &#123;
+
+    fun <span class="hljs-title function_">addContentProviderInfo</span><span class="hljs-params">(partKey: String, pluginProviderInfo: PluginProviderInfo, containerProviderInfo: ContainerProviderInfo)</span> &#123;
+        <span class="hljs-keyword">if</span> (providerMap.containsKey(pluginProviderInfo.authority)) &#123;
+            <span class="hljs-keyword">throw</span> RuntimeException(<span class="hljs-string">&quot;重复添加 ContentProvider&quot;</span>)
+        &#125;
+
+        providerAuthorityMap[pluginProviderInfo.authority!!] = containerProviderInfo.authority
+        <span class="hljs-keyword">var</span> pluginProviderInfos: HashSet&lt;PluginProviderInfo&gt;? = <span class="hljs-literal">null</span>
+        <span class="hljs-title function_">if</span> <span class="hljs-params">(pluginProviderInfoMap.containsKey(partKey)</span>) &#123;
+            pluginProviderInfos = pluginProviderInfoMap[partKey]
+        &#125; <span class="hljs-keyword">else</span> &#123;
+            pluginProviderInfos = HashSet()
+        &#125;
+        pluginProviderInfos?.add(pluginProviderInfo)
+        pluginProviderInfoMap.put(partKey, pluginProviderInfos)
+    &#125;
+
+    fun <span class="hljs-title function_">createContentProviderAndCallOnCreate</span><span class="hljs-params">(mContext: Context, partKey: String, pluginParts: PluginParts?)</span> &#123;
+        pluginProviderInfoMap[partKey]?.forEach &#123;
+            <span class="hljs-keyword">try</span> &#123;
+                <span class="hljs-type">val</span> <span class="hljs-variable">contentProvider</span> <span class="hljs-operator">=</span> pluginParts!!.appComponentFactory
+                        .instantiateProvider(pluginParts.classLoader, it.className)
+                contentProvider?.attachInfo(mContext, it.providerInfo)
+                providerMap[it.authority!!] = contentProvider
+            &#125; <span class="hljs-keyword">catch</span> (e: Exception) &#123;
+                <span class="hljs-keyword">throw</span> RuntimeException(<span class="hljs-string">&quot;partKey==$partKey className==$&#123;it.className&#125; providerInfo==$&#123;it.providerInfo&#125;&quot;</span>, e)
+            &#125;
+        &#125;
+
+    &#125;
+&#125;</code></pre></div>
+
+
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/07/05/mp4-structure/" title="MP4 文件结构浅析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">MP4 文件结构浅析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/06/28/logan/" title="日志库 Logan">
+                        <span class="hidden-mobile">日志库 Logan</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
