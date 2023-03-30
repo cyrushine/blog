@@ -111,10 +111,112 @@ public class ShadowActivity extends PluginActivity {
 
 # ContentProvider
 
+## 解析 apk 获得清单内容
 
+Via 浏览器，mark.via，4.5.1，20230222
 
+```xml
+<provider
+    android:label="@ref/0x7f0f0007"
+    android:name="mark.via.provider.BookmarksProvider"
+    android:exported="true"
+    android:multiprocess="false"
+    android:authorities="mark.via.database" />
 
+<provider
+    android:name="androidx.core.content.FileProvider"
+    android:exported="false"
+    android:authorities="mark.via.provider"
+    android:grantUriPermissions="true">
+    <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@ref/0x7f120001" />
+</provider>
 
+<provider
+    android:name="com.flurry.android.agent.FlurryContentProvider"
+    android:exported="false"
+    android:authorities="mark.via.FlurryContentProvider" />
+```
 
+```kotlin
+val apkFile = File(getExternalFilesDir(null), "via.apk")
+if (!apkFile.exists())
+    apkFile.createNewFile()
+apkFile.outputStream().use { out ->
+    assets.open("via.apk").use { it.copyTo(out) }
+}
+packageManager.getPackageArchiveInfo(apkFile.absolutePath, PackageManager.GET_PROVIDERS)?.providers?.forEach {
+    Log.d("cyrus", "${it.packageName} - ${it.name} - ${it.authority}")
+}
 
+// logcat:
+// mark.via - mark.via.provider.BookmarksProvider - mark.via.database
+// mark.via - androidx.core.content.FileProvider - mark.via.provider
+// mark.via - com.flurry.android.agent.FlurryContentProvider - mark.via.FlurryContentProvider
+```
+
+## 初始化
+
+`ContentProvider` 是在 `Application.attachBaseContext` 之后，`application.onCreate` 之前初始化的
+
+`ClassLoader.loadClass(...)` 将 plugin provider 实例化出来，然后调用 `ContentProvider.attachInfo(Context, ProviderInfo)` 初始化，里面会调用 `ContentProvider.onCreate`
+
+参数 Context 自然是 plugin application 而不是 host application
+
+参数 ProviderInfo 填充从 plugin apk 解析得到的清单内容
+
+```kotlin
+// com.tencent.shadow.core.loader.ShadowPluginLoader#callApplicationOnCreate
+fun callApplicationOnCreate(partKey: String) {
+    fun realAction() {
+        val pluginParts = getPluginParts(partKey)
+        pluginParts?.let {
+            val application = pluginParts.application
+            application.attachBaseContext(mHostAppContext)
+            mPluginContentProviderManager.createContentProviderAndCallOnCreate(
+                application, partKey, pluginParts
+            )
+            application.onCreate()
+        }
+    }
+    if (isUiThread()) {
+        realAction()
+    } else {
+        val waitUiLock = CountDownLatch(1)
+        mUiHandler.post {
+            realAction()
+            waitUiLock.countDown()
+        }
+        waitUiLock.await();
+    }
+}
+
+// com.tencent.shadow.core.loader.managers.PluginContentProviderManager#createContentProviderAndCallOnCreate
+fun createContentProviderAndCallOnCreate(
+    context: Context,
+    partKey: String,
+    pluginParts: PluginParts?
+) {
+    pluginProviderInfoMap[partKey]?.forEach {
+        try {
+            val contentProvider = pluginParts!!.appComponentFactory
+                .instantiateProvider(pluginParts.classLoader, it.className)
+            //convert PluginManifest.ProviderInfo to android.content.pm.ProviderInfo
+            val providerInfo = ProviderInfo()
+            providerInfo.packageName = context.packageName
+            providerInfo.name = it.className
+            providerInfo.authority = it.authorities
+            providerInfo.grantUriPermissions = it.grantUriPermissions
+            contentProvider?.attachInfo(context, providerInfo)
+            providerMap[it.authorities] = contentProvider
+        } catch (e: Exception) {
+            throw RuntimeException(
+                "partKey==$partKey className==${it.className} authorities==${it.authorities}",
+                e
+            )
+        }
+    }
+}
+```
 
