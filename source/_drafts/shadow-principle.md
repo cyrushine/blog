@@ -121,7 +121,9 @@ public class ShadowActivity extends PluginActivity {
 
 4. `PluginContentProviderManager` 在运行期动态地查找 uri authorities 部分有没对应的 plugin ContentProvider 实例，有的话把 uri 转换为 `content://{hostStub}/{originUri}`，也即将请求转发给 stub ContentProvider 处理
 
-5. stub ContentProvider 相当于所有 plugin ContentProvider 的已注册的代理
+5. host stub ContentProvider 根据 authorities 找到真正的 plugin ContentProvider 实例对象并调用对应方法 query/insert/...
+
+6. stub ContentProvider 相当于所有 plugin ContentProvider 的已注册的代理
 
 request 流转过程：
 
@@ -155,7 +157,7 @@ gradle 插件的实现类是 [ShadowPlugin](https://github.com/Tencent/Shadow/bl
 
 7. `CtClass.toBytecode(DataOutputStream(outputStream))` 将修改后的 class 写回至 class 文件 or jar entry
 
-拦截这些方法调用的目的都是将原始 Uri 替换为 `content://{hostStub}/{originUri}`
+拦截这些方法调用的目的都是将原始 Uri 替换为 `content://{hostStub}/{originUri}`（如果满足条件的话）
 
 ```kotlin
 abstract class ClassTransform(val project: Project) : Transform() {
@@ -509,6 +511,8 @@ class ContentProviderTransform : SpecificTransform() {
 
 用一个 Map 将 authorities 和 ContentProvider 映射起来
 
+而且它还负责在运行时将 plugin ContentProvider Uri 转换为 host stub ContentProvider Uri
+
 ```kotlin
 // com.tencent.shadow.core.loader.ShadowPluginLoader#callApplicationOnCreate
 fun callApplicationOnCreate(partKey: String) {
@@ -543,6 +547,12 @@ class PluginContentProviderManager() : UriConverter.UriParseDelegate {
      */
     private val providerMap = HashMap<String, ContentProvider>()
 
+    /**
+     * key : plugin Authority
+     * value :  containerProvider Authority
+     */
+    private val providerAuthorityMap = HashMap<String, String>()    
+
     fun createContentProviderAndCallOnCreate(
         context: Context,
         partKey: String,
@@ -569,6 +579,25 @@ class PluginContentProviderManager() : UriConverter.UriParseDelegate {
             }
         }
     }
+
+    // transform 的工作就是把 Uri.parse 用此方法替换
+    // 这样在运行时如果发现有 plugin ContentProvider Uri 就转换为 host stub ContentProvider Uri
+    override fun parse(uriString: String): Uri {
+        if (uriString.startsWith(CONTENT_PREFIX)) {
+            val uriContent = uriString.substring(CONTENT_PREFIX.length)
+            val index = uriContent.indexOf("/")
+            val originalAuthority = if (index != -1) uriContent.substring(0, index) else uriContent
+            val containerAuthority = getContainerProviderAuthority(originalAuthority)
+            if (containerAuthority != null) {
+                return Uri.parse("$CONTENT_PREFIX$containerAuthority/$uriContent")
+            }
+        }
+        return Uri.parse(uriString)
+    }    
+
+    fun getContainerProviderAuthority(pluginAuthority: String): String? {
+        return providerAuthorityMap[pluginAuthority]
+    }    
 }
 ```
 
